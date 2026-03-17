@@ -1,0 +1,26 @@
+@import '@xterm/xterm/css/xterm.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #181825;
+  color: #cdd6f4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Let the xterm viewport own its own scrolling. */
+.xterm,
+.xterm-viewport {
+  height: 100%;
+}
