@@ -3,9 +3,11 @@ import {
   IPC,
   type AgentDataEvent,
   type AgentExitEvent,
-  type AgentType,
   type AppSettings,
+  type PresetsState,
+  type StartAgentArgs,
   type StartAgentResult,
+  type TerminalPreset,
   type ThemeMode,
   type WorkspaceState
 } from '@shared/types'
@@ -38,6 +40,30 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_THEME, theme)
   },
 
+  listPresets(): Promise<PresetsState> {
+    return ipcRenderer.invoke(IPC.PRESETS_LIST)
+  },
+
+  savePreset(preset: TerminalPreset): Promise<PresetsState> {
+    return ipcRenderer.invoke(IPC.PRESETS_SAVE, preset)
+  },
+
+  deletePreset(id: string): Promise<PresetsState> {
+    return ipcRenderer.invoke(IPC.PRESETS_DELETE, id)
+  },
+
+  reorderPresets(orderedIds: string[]): Promise<PresetsState> {
+    return ipcRenderer.invoke(IPC.PRESETS_REORDER, orderedIds)
+  },
+
+  setPresetActive(id: string, active: boolean): Promise<PresetsState> {
+    return ipcRenderer.invoke(IPC.PRESETS_SET_ACTIVE, { id, active })
+  },
+
+  pickPresetImage(): Promise<{ dataUrl: string } | null> {
+    return ipcRenderer.invoke(IPC.PRESETS_PICK_IMAGE)
+  },
+
   windowMinimize(): void {
     ipcRenderer.send(IPC.WINDOW_MINIMIZE)
   },
@@ -61,13 +87,8 @@ const api = {
     return () => ipcRenderer.removeListener(IPC.WINDOW_MAXIMIZED_CHANGED, listener)
   },
 
-  startAgent(
-    agent: AgentType,
-    workspacePath: string,
-    cols?: number,
-    rows?: number
-  ): Promise<StartAgentResult> {
-    return ipcRenderer.invoke(IPC.AGENT_START, { agent, workspacePath, cols, rows })
+  startAgent(args: StartAgentArgs): Promise<StartAgentResult> {
+    return ipcRenderer.invoke(IPC.AGENT_START, args)
   },
 
   sendInput(id: string, data: string): void {

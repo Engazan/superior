@@ -3,9 +3,12 @@ export type {
   AgentExitEvent,
   AgentSession,
   AgentStatus,
-  AgentType,
   AppSettings,
+  PresetIconType,
+  PresetsState,
+  StartAgentArgs,
   StartAgentResult,
+  TerminalPreset,
   ThemeMode,
   Workspace,
   WorkspaceState

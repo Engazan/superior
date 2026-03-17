@@ -1,4 +1,5 @@
 import { TerminalView } from './TerminalView'
+import { PresetIcon } from './PresetIcon'
 import type { AgentSession } from '../types'
 
 interface Props {
@@ -43,7 +44,8 @@ export function TerminalPanel({
               }`}
             >
               <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.status]}`} />
-              <span className="font-mono">{s.agent}</span>
+              <PresetIcon iconType={s.iconType} icon={s.icon} className="h-3.5 w-3.5 text-sm" />
+              <span>{s.label}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation()

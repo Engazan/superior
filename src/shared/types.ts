@@ -1,9 +1,26 @@
-export type AgentType = 'claude' | 'codex'
-
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 export interface AppSettings {
   theme: ThemeMode
+}
+
+export type PresetIconType = 'emoji' | 'image'
+
+/** A user-defined terminal preset — a named command with an icon. */
+export interface TerminalPreset {
+  id: string
+  name: string
+  description: string
+  command: string
+  iconType: PresetIconType
+  /** emoji character, or an image data URL when iconType === 'image' */
+  icon: string
+  /** active presets are shown as launch buttons in place of the defaults */
+  active: boolean
+}
+
+export interface PresetsState {
+  presets: TerminalPreset[]
 }
 
 export interface Workspace {
@@ -18,7 +35,12 @@ export type AgentStatus = 'running' | 'exited' | 'error'
 export interface AgentSession {
   /** crypto.randomUUID() */
   id: string
-  agent: AgentType
+  /** display label (the preset name) */
+  label: string
+  /** the command run in the workspace */
+  command: string
+  iconType?: PresetIconType
+  icon?: string
   workspacePath: string
   status: AgentStatus
   pid?: number
@@ -26,6 +48,17 @@ export interface AgentSession {
   /** populated on spawn failure (ENOENT/EACCES/etc.) */
   error?: string
   createdAt: number
+}
+
+/** Payload for starting an agent session from a preset. */
+export interface StartAgentArgs {
+  command: string
+  label: string
+  iconType?: PresetIconType
+  icon?: string
+  workspacePath: string
+  cols?: number
+  rows?: number
 }
 
 /** The set of saved workspaces plus which one is currently active. */
@@ -61,6 +94,12 @@ export const IPC = {
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
+  PRESETS_LIST: 'presets:list',
+  PRESETS_SAVE: 'presets:save',
+  PRESETS_DELETE: 'presets:delete',
+  PRESETS_REORDER: 'presets:reorder',
+  PRESETS_SET_ACTIVE: 'presets:set-active',
+  PRESETS_PICK_IMAGE: 'presets:pick-image',
   WINDOW_MINIMIZE: 'window:minimize',
   WINDOW_MAXIMIZE_TOGGLE: 'window:maximize-toggle',
   WINDOW_CLOSE: 'window:close',
@@ -73,9 +112,3 @@ export const IPC = {
   AGENT_DATA: 'agent:data',
   AGENT_EXIT: 'agent:exit'
 } as const
-
-/** The label of the binary each agent type runs. */
-export const AGENT_COMMAND: Record<AgentType, string> = {
-  claude: 'claude',
-  codex: 'codex'
-}

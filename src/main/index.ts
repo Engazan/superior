@@ -3,6 +3,7 @@ import { join } from 'path'
 import { registerWorkspaceIpc } from './ipc/workspace.ipc'
 import { registerAgentIpc } from './ipc/agent.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
+import { registerPresetsIpc } from './ipc/presets.ipc'
 import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
 import { terminalService } from './services/terminal.service'
 
@@ -52,6 +53,7 @@ app.whenReady().then(() => {
   registerWorkspaceIpc()
   registerAgentIpc()
   registerSettingsIpc()
+  registerPresetsIpc()
   registerWindowIpc()
 
   createWindow()

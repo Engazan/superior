@@ -1,28 +1,15 @@
 import { randomUUID } from 'crypto'
 import type { BrowserWindow } from 'electron'
-import {
-  AGENT_COMMAND,
-  IPC,
-  type AgentSession,
-  type AgentType,
-  type StartAgentResult
-} from '@shared/types'
+import { IPC, type AgentSession, type StartAgentArgs, type StartAgentResult } from '@shared/types'
 import { terminalService } from './terminal.service'
 import { isValidWorkspaceDir } from './workspace.service'
 
-interface StartArgs {
-  agent: AgentType
-  workspacePath: string
-  cols?: number
-  rows?: number
-}
-
 /**
- * Validate, then spawn an agent CLI inside the workspace via the terminal service.
- * Streams output/exit back to the renderer over IPC.
+ * Validate, then spawn a preset's command inside the workspace via the terminal
+ * service. Streams output/exit back to the renderer over IPC.
  */
-export function startAgent(win: BrowserWindow, args: StartArgs): StartAgentResult {
-  const { agent, workspacePath } = args
+export function startAgent(win: BrowserWindow, args: StartAgentArgs): StartAgentResult {
+  const { command, label, workspacePath } = args
 
   if (!workspacePath) {
     return { error: 'No workspace selected. Open a folder first.' }
@@ -30,15 +17,23 @@ export function startAgent(win: BrowserWindow, args: StartArgs): StartAgentResul
   if (!isValidWorkspaceDir(workspacePath)) {
     return { error: 'Workspace folder is invalid or no longer exists.' }
   }
+  if (!command.trim()) {
+    return { error: 'This preset has no command to run.' }
+  }
 
-  const command = AGENT_COMMAND[agent]
   const session: AgentSession = {
     id: randomUUID(),
-    agent,
+    label,
+    command,
+    iconType: args.iconType,
+    icon: args.icon,
     workspacePath,
     status: 'running',
     createdAt: Date.now()
   }
+
+  // Friendly label for the binary name (first token of the command).
+  const bin = command.trim().split(/\s+/)[0]
 
   try {
     const pid = terminalService.spawn({
@@ -56,7 +51,7 @@ export function startAgent(win: BrowserWindow, args: StartArgs): StartAgentResul
         // A login shell exits 127 when the command isn't found on PATH.
         const message =
           exitCode === 127
-            ? `${command}: command not found. Is the ${agent} CLI installed and on your PATH?`
+            ? `${bin}: command not found. Is it installed and on your PATH?`
             : undefined
         win.webContents.send(IPC.AGENT_EXIT, { id: session.id, exitCode, message })
       }
@@ -65,11 +60,11 @@ export function startAgent(win: BrowserWindow, args: StartArgs): StartAgentResul
     return { session }
   } catch (err) {
     const e = err as NodeJS.ErrnoException
-    let message = `Failed to start ${command}: ${e.message}`
+    let message = `Failed to start ${bin}: ${e.message}`
     if (e.code === 'EACCES') {
-      message = `Permission denied launching ${command}. Check the binary's permissions.`
+      message = `Permission denied launching ${bin}. Check the binary's permissions.`
     } else if (e.code === 'ENOENT') {
-      message = `${command}: command not found. Is the ${agent} CLI installed and on your PATH?`
+      message = `${bin}: command not found. Is it installed and on your PATH?`
     }
     return { error: message }
   }

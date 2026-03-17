@@ -1,17 +1,10 @@
 import { BrowserWindow, ipcMain } from 'electron'
-import { IPC, type AgentType, type StartAgentResult } from '@shared/types'
+import { IPC, type StartAgentArgs, type StartAgentResult } from '@shared/types'
 import { killAgent, startAgent } from '../services/agent.service'
 import { terminalService } from '../services/terminal.service'
 
-interface StartPayload {
-  agent: AgentType
-  workspacePath: string
-  cols?: number
-  rows?: number
-}
-
 export function registerAgentIpc(): void {
-  ipcMain.handle(IPC.AGENT_START, (event, payload: StartPayload): StartAgentResult => {
+  ipcMain.handle(IPC.AGENT_START, (event, payload: StartAgentArgs): StartAgentResult => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { error: 'No window available to attach the session.' }
     return startAgent(win, payload)
