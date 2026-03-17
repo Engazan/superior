@@ -4,6 +4,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Semantic color tokens. Swapped by the .light / .dark class on <html>. */
+:root,
+.dark {
+  --c-bar: #181825;
+  --c-panel: #1e1e2e;
+  --c-edge: #313244;
+  --c-hover: #45475a;
+  --c-fg: #cdd6f4;
+  --c-fg2: #bac2de;
+  --c-fgdim: #9399b2;
+  --c-fgmuted: #6c7086;
+}
+
+.light {
+  --c-bar: #f2f3f5;
+  --c-panel: #ffffff;
+  --c-edge: #d7d9de;
+  --c-hover: #e6e8eb;
+  --c-fg: #1d1d1f;
+  --c-fg2: #3c4043;
+  --c-fgdim: #5f6368;
+  --c-fgmuted: #9aa0a6;
+}
+
 html,
 body,
 #root {
@@ -14,8 +38,8 @@ body,
 body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: #181825;
-  color: #cdd6f4;
+  background: var(--c-bar);
+  color: var(--c-fg);
   -webkit-font-smoothing: antialiased;
 }
 

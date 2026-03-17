@@ -1,5 +1,11 @@
 export type AgentType = 'claude' | 'codex'
 
+export type ThemeMode = 'light' | 'dark' | 'system'
+
+export interface AppSettings {
+  theme: ThemeMode
+}
+
 export interface Workspace {
   path: string
   /** basename of path */
@@ -20,6 +26,12 @@ export interface AgentSession {
   /** populated on spawn failure (ENOENT/EACCES/etc.) */
   error?: string
   createdAt: number
+}
+
+/** The set of saved workspaces plus which one is currently active. */
+export interface WorkspaceState {
+  workspaces: Workspace[]
+  activePath: string | null
 }
 
 /** Result returned from a start-agent request. */
@@ -43,8 +55,12 @@ export interface AgentExitEvent {
  * IPC channel name constants so main + preload share one source of truth.
  */
 export const IPC = {
-  WORKSPACE_OPEN: 'workspace:open',
-  WORKSPACE_GET_LAST: 'workspace:get-last',
+  WORKSPACE_LIST: 'workspace:list',
+  WORKSPACE_ADD: 'workspace:add',
+  WORKSPACE_REMOVE: 'workspace:remove',
+  WORKSPACE_SET_ACTIVE: 'workspace:set-active',
+  SETTINGS_GET: 'settings:get',
+  SETTINGS_SET_THEME: 'settings:set-theme',
   AGENT_START: 'agent:start',
   AGENT_INPUT: 'agent:input',
   AGENT_RESIZE: 'agent:resize',

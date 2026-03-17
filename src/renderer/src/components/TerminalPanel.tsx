@@ -2,7 +2,9 @@ import { TerminalView } from './TerminalView'
 import type { AgentSession } from '../types'
 
 interface Props {
+  /** All sessions across every workspace — kept mounted so buffers survive workspace switches. */
   sessions: AgentSession[]
+  activePath: string | null
   activeSessionId: string | null
   onSelect: (id: string) => void
   onClose: (id: string) => void
@@ -17,23 +19,27 @@ const STATUS_DOT: Record<AgentSession['status'], string> = {
 
 export function TerminalPanel({
   sessions,
+  activePath,
   activeSessionId,
   onSelect,
   onClose,
   onSessionUpdate
 }: Props): JSX.Element {
+  // Tabs are scoped to the active workspace; the terminal stack mounts everything.
+  const tabs = sessions.filter((s) => s.workspacePath === activePath)
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-panel">
       {/* Tab strip */}
       <div className="flex items-stretch gap-px overflow-x-auto border-b border-edge bg-bar">
-        {sessions.map((s) => {
+        {tabs.map((s) => {
           const active = s.id === activeSessionId
           return (
             <div
               key={s.id}
               onClick={() => onSelect(s.id)}
               className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs ${
-                active ? 'bg-panel text-[#cdd6f4]' : 'text-[#9399b2] hover:bg-panel/60'
+                active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
               }`}
             >
               <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.status]}`} />
@@ -43,7 +49,7 @@ export function TerminalPanel({
                   e.stopPropagation()
                   onClose(s.id)
                 }}
-                className="text-[#6c7086] opacity-0 transition group-hover:opacity-100 hover:text-[#cdd6f4]"
+                className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
                 aria-label="Close session"
                 title="Stop and close"
               >
@@ -54,27 +60,26 @@ export function TerminalPanel({
         })}
       </div>
 
-      {/* Terminal stack */}
+      {/* Terminal stack — every session stays mounted; only the active one is visible. */}
       <div className="relative min-h-0 flex-1">
-        {sessions.length === 0 ? (
-          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[#6c7086]">
-            No agent running. Open a folder, then launch Claude or Codex.
+        {tabs.length === 0 && (
+          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-fgmuted">
+            No agent running. Select a workspace, then launch Claude or Codex.
           </div>
-        ) : (
-          sessions.map((s) => (
-            <TerminalView
-              key={s.id}
-              session={s}
-              active={s.id === activeSessionId}
-              onExit={(id, exitCode) =>
-                onSessionUpdate(id, {
-                  status: exitCode === 0 ? 'exited' : 'error',
-                  exitCode
-                })
-              }
-            />
-          ))
         )}
+        {sessions.map((s) => (
+          <TerminalView
+            key={s.id}
+            session={s}
+            active={s.workspacePath === activePath && s.id === activeSessionId}
+            onExit={(id, exitCode) =>
+              onSessionUpdate(id, {
+                status: exitCode === 0 ? 'exited' : 'error',
+                exitCode
+              })
+            }
+          />
+        ))}
       </div>
     </div>
   )

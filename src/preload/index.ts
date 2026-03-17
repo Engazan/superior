@@ -4,17 +4,35 @@ import {
   type AgentDataEvent,
   type AgentExitEvent,
   type AgentType,
+  type AppSettings,
   type StartAgentResult,
-  type Workspace
+  type ThemeMode,
+  type WorkspaceState
 } from '@shared/types'
 
 const api = {
-  openWorkspace(): Promise<{ workspace: Workspace | null } | { error: string }> {
-    return ipcRenderer.invoke(IPC.WORKSPACE_OPEN)
+  listWorkspaces(): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_LIST)
   },
 
-  getLastWorkspace(): Promise<Workspace | null> {
-    return ipcRenderer.invoke(IPC.WORKSPACE_GET_LAST)
+  addWorkspace(): Promise<WorkspaceState | null | { error: string }> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_ADD)
+  },
+
+  removeWorkspace(path: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_REMOVE, path)
+  },
+
+  setActiveWorkspace(path: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_SET_ACTIVE, path)
+  },
+
+  getSettings(): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_GET)
+  },
+
+  setTheme(theme: ThemeMode): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_THEME, theme)
   },
 
   startAgent(

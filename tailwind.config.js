@@ -4,9 +4,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        panel: '#1e1e2e',
-        bar: '#181825',
-        edge: '#313244'
+        bar: 'var(--c-bar)',
+        panel: 'var(--c-panel)',
+        edge: 'var(--c-edge)',
+        hover: 'var(--c-hover)',
+        fg: 'var(--c-fg)',
+        fg2: 'var(--c-fg2)',
+        fgdim: 'var(--c-fgdim)',
+        fgmuted: 'var(--c-fgmuted)'
       }
     }
   },

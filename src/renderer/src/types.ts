@@ -4,6 +4,9 @@ export type {
   AgentSession,
   AgentStatus,
   AgentType,
+  AppSettings,
   StartAgentResult,
-  Workspace
+  ThemeMode,
+  Workspace,
+  WorkspaceState
 } from '@shared/types'

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { Terminal } from '@xterm/xterm'
+import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
+import { useTheme } from '../theme'
 import type { AgentSession } from '../types'
 
 interface Props {
@@ -10,17 +11,26 @@ interface Props {
   onExit: (id: string, exitCode: number) => void
 }
 
-const THEME = {
-  background: '#1e1e2e',
-  foreground: '#cdd6f4',
-  cursor: '#f5e0dc',
-  selectionBackground: '#585b70'
+const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
+  dark: {
+    background: '#1e1e2e',
+    foreground: '#cdd6f4',
+    cursor: '#f5e0dc',
+    selectionBackground: '#585b70'
+  },
+  light: {
+    background: '#ffffff',
+    foreground: '#1d1d1f',
+    cursor: '#1d1d1f',
+    selectionBackground: '#b3d4fc'
+  }
 }
 
 export function TerminalView({ session, active, onExit }: Props): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const { resolved } = useTheme()
 
   // Create the xterm instance once per session id and wire it to the bus + pty.
   useEffect(() => {
@@ -31,7 +41,7 @@ export function TerminalView({ session, active, onExit }: Props): JSX.Element {
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       fontSize: 13,
       cursorBlink: true,
-      theme: THEME,
+      theme: TERM_THEMES[resolved],
       scrollback: 10_000
     })
     const fit = new FitAddon()
@@ -81,6 +91,11 @@ export function TerminalView({ session, active, onExit }: Props): JSX.Element {
     // session.id is stable for the life of this component (keyed by it upstream)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id])
+
+  // Recolor an existing terminal when the theme changes (without recreating it).
+  useEffect(() => {
+    if (termRef.current) termRef.current.options.theme = TERM_THEMES[resolved]
+  }, [resolved])
 
   // Refit + focus whenever this view becomes the active tab.
   useEffect(() => {

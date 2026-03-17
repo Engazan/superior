@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { registerWorkspaceIpc } from './ipc/workspace.ipc'
 import { registerAgentIpc } from './ipc/agent.ipc'
+import { registerSettingsIpc } from './ipc/settings.ipc'
 import { terminalService } from './services/terminal.service'
 
 function createWindow(): BrowserWindow {
@@ -41,6 +42,7 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   registerWorkspaceIpc()
   registerAgentIpc()
+  registerSettingsIpc()
 
   createWindow()
 
