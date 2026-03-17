@@ -2,6 +2,7 @@ import { useEffect, useState, type DragEvent } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { PresetForm } from './PresetForm'
 import { Toggle } from './Toggle'
+import { useI18n } from '../i18n'
 import type { TerminalPreset } from '../types'
 
 interface Props {
@@ -51,6 +52,7 @@ export function PresetsSection({
   onToggleActive,
   onPickImage
 }: Props): JSX.Element {
+  const { t } = useI18n()
   const [editing, setEditing] = useState<TerminalPreset | 'new' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TerminalPreset | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
@@ -92,12 +94,12 @@ export function PresetsSection({
   return (
     <div className="relative h-full">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-fg">Terminal presets</h2>
+        <h2 className="text-lg font-semibold text-fg">{t('settings.terminalPresets')}</h2>
         <button
           className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-500"
           onClick={() => setEditing('new')}
         >
-          Pridať preset
+          {t('presets.add')}
         </button>
       </div>
 
@@ -106,19 +108,19 @@ export function PresetsSection({
           <thead className="bg-bar text-left text-xs text-fgdim">
             <tr>
               <th className="w-8 px-2 py-2"></th>
-              <th className="w-10 px-2 py-2">Icon</th>
-              <th className="px-2 py-2">Name</th>
-              <th className="px-2 py-2">Description</th>
-              <th className="px-2 py-2">Command</th>
-              <th className="w-16 px-2 py-2 text-center">Active</th>
-              <th className="w-20 px-2 py-2 text-right">Actions</th>
+              <th className="w-10 px-2 py-2">{t('presets.colIcon')}</th>
+              <th className="px-2 py-2">{t('presets.colName')}</th>
+              <th className="px-2 py-2">{t('presets.colDescription')}</th>
+              <th className="px-2 py-2">{t('presets.colCommand')}</th>
+              <th className="w-16 px-2 py-2 text-center">{t('presets.colActive')}</th>
+              <th className="w-20 px-2 py-2 text-right">{t('presets.colActions')}</th>
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-3 py-8 text-center text-sm text-fgmuted">
-                  No presets yet — add one with “Pridať preset”.
+                  {t('presets.empty')}
                 </td>
               </tr>
             ) : (
@@ -141,8 +143,8 @@ export function PresetsSection({
                     }}
                     onDragEnd={endDrag}
                     className="cursor-grab select-none px-2 py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing"
-                    title="Drag to reorder"
-                    aria-label="Drag to reorder"
+                    title={t('presets.dragReorder')}
+                    aria-label={t('presets.dragReorder')}
                   >
                     <span className="inline-flex justify-center">
                       <GripIcon />
@@ -167,16 +169,16 @@ export function PresetsSection({
                     <div className="flex justify-end gap-1">
                       <button
                         className="rounded p-1 text-fgdim hover:bg-hover hover:text-fg"
-                        title="Edit"
-                        aria-label={`Edit ${p.name}`}
+                        title={t('common.edit')}
+                        aria-label={`${t('common.edit')} ${p.name}`}
                         onClick={() => setEditing(p)}
                       >
                         ✎
                       </button>
                       <button
                         className="rounded p-1 text-fgdim hover:bg-hover hover:text-red-400"
-                        title="Delete"
-                        aria-label={`Delete ${p.name}`}
+                        title={t('common.delete')}
+                        aria-label={`${t('common.delete')} ${p.name}`}
                         onClick={() => setConfirmDelete(p)}
                       >
                         ✕
@@ -211,16 +213,16 @@ export function PresetsSection({
             className="w-full max-w-sm rounded-xl border border-edge bg-panel p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 text-base font-semibold text-fg">Delete preset</h3>
+            <h3 className="mb-2 text-base font-semibold text-fg">{t('presets.deleteTitle')}</h3>
             <p className="mb-5 text-sm text-fgdim">
-              Delete “{confirmDelete.name}”? This can’t be undone.
+              {t('presets.deleteConfirm', { name: confirmDelete.name })}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 className="rounded-md px-3 py-1.5 text-sm text-fgdim hover:text-fg"
                 onClick={() => setConfirmDelete(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-red-500"
@@ -229,7 +231,7 @@ export function PresetsSection({
                   setConfirmDelete(null)
                 }}
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

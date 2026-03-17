@@ -1,4 +1,5 @@
 import { PresetIcon } from './PresetIcon'
+import { useI18n } from '../i18n'
 import type { TerminalPreset } from '../types'
 
 interface Props {
@@ -28,6 +29,7 @@ function GearIcon(): JSX.Element {
 }
 
 export function PresetLaunchers({ presets, disabled, onLaunch, onOpenPresets }: Props): JSX.Element {
+  const { t } = useI18n()
   const active = presets.filter((p) => p.active)
 
   return (
@@ -35,8 +37,8 @@ export function PresetLaunchers({ presets, disabled, onLaunch, onOpenPresets }: 
       <button
         onClick={onOpenPresets}
         className="flex h-6 w-6 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg"
-        aria-label="Terminal presets"
-        title="Terminal presets"
+        aria-label={t('launchers.terminalPresets')}
+        title={t('launchers.terminalPresets')}
       >
         <GearIcon />
       </button>
@@ -47,7 +49,7 @@ export function PresetLaunchers({ presets, disabled, onLaunch, onOpenPresets }: 
           disabled={disabled}
           onClick={() => onLaunch(p)}
           className="flex items-center gap-1.5 rounded-md bg-edge px-2.5 py-1 text-xs font-medium text-fg transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
-          title={disabled ? 'Open a workspace first' : `Run: ${p.command}`}
+          title={disabled ? t('launchers.openWorkspaceFirst') : t('launchers.run', { command: p.command })}
         >
           <PresetIcon iconType={p.iconType} icon={p.icon} className="h-3.5 w-3.5 text-sm" />
           <span>{p.name}</span>

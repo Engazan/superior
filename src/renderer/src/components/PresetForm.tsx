@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { BUILTIN_ICONS } from '@shared/icons'
+import { useI18n } from '../i18n'
 import type { PresetIconType, TerminalPreset } from '../types'
 
 interface Props {
@@ -15,6 +16,7 @@ const inputCls =
   'w-full rounded-md border border-edge bg-bar px-3 py-1.5 text-sm text-fg outline-none focus:border-sky-500'
 
 export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JSX.Element {
+  const { t } = useI18n()
   const [name, setName] = useState(preset?.name ?? '')
   const [description, setDescription] = useState(preset?.description ?? '')
   const [command, setCommand] = useState(preset?.command ?? '')
@@ -54,20 +56,20 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-4 text-base font-semibold text-fg">
-          {preset ? 'Edit preset' : 'Add preset'}
+          {preset ? t('form.editTitle') : t('form.addTitle')}
         </h3>
 
         <div className="space-y-3">
           {/* Icon */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-xs font-medium text-fgdim">Icon</label>
+              <label className="text-xs font-medium text-fgdim">{t('form.icon')}</label>
               <button
                 type="button"
                 className="rounded-md border border-edge px-2 py-0.5 text-xs text-fgdim hover:bg-hover hover:text-fg"
                 onClick={chooseImage}
               >
-                Custom image…
+                {t('form.customImage')}
               </button>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
@@ -97,14 +99,14 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
             {iconType === 'image' && !BUILTIN_ICONS.some((bi) => bi.dataUrl === icon) && (
               <div className="mt-2 flex items-center gap-2 text-xs text-fgdim">
                 <PresetIcon iconType={iconType} icon={icon} className="h-6 w-6" />
-                <span>Custom image selected</span>
+                <span>{t('form.customImageSelected')}</span>
               </div>
             )}
           </div>
 
           {/* Name */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-fgdim">Name</label>
+            <label className="mb-1 block text-xs font-medium text-fgdim">{t('form.name')}</label>
             <input
               className={inputCls}
               value={name}
@@ -115,7 +117,9 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
 
           {/* Description */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-fgdim">Description</label>
+            <label className="mb-1 block text-xs font-medium text-fgdim">
+              {t('form.description')}
+            </label>
             <input
               className={inputCls}
               value={description}
@@ -126,7 +130,9 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
 
           {/* Command */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-fgdim">Command</label>
+            <label className="mb-1 block text-xs font-medium text-fgdim">
+              {t('form.command')}
+            </label>
             <input
               className={`${inputCls} font-mono`}
               value={command}
@@ -141,14 +147,14 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
             className="rounded-md px-3 py-1.5 text-sm text-fgdim hover:text-fg"
             onClick={onCancel}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             disabled={!canSave}
             className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={submit}
           >
-            Save
+            {t('common.save')}
           </button>
         </div>
       </div>

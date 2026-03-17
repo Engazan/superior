@@ -4,6 +4,7 @@ import {
   type AgentDataEvent,
   type AgentExitEvent,
   type AppSettings,
+  type Language,
   type PresetsState,
   type StartAgentArgs,
   type StartAgentResult,
@@ -38,6 +39,10 @@ const api = {
 
   setTheme(theme: ThemeMode): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_THEME, theme)
+  },
+
+  setLanguage(language: Language): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_LANGUAGE, language)
   },
 
   listPresets(): Promise<PresetsState> {

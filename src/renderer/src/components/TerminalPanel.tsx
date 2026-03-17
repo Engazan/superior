@@ -1,5 +1,6 @@
 import { TerminalView } from './TerminalView'
 import { PresetIcon } from './PresetIcon'
+import { useI18n } from '../i18n'
 import type { AgentSession } from '../types'
 
 interface Props {
@@ -26,6 +27,7 @@ export function TerminalPanel({
   onClose,
   onSessionUpdate
 }: Props): JSX.Element {
+  const { t } = useI18n()
   // Tabs are scoped to the active workspace; the terminal stack mounts everything.
   const tabs = sessions.filter((s) => s.workspacePath === activePath)
 
@@ -52,8 +54,8 @@ export function TerminalPanel({
                   onClose(s.id)
                 }}
                 className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
-                aria-label="Close session"
-                title="Stop and close"
+                aria-label={t('terminal.closeSession')}
+                title={t('terminal.stopClose')}
               >
                 ✕
               </button>
@@ -66,7 +68,7 @@ export function TerminalPanel({
       <div className="relative min-h-0 flex-1">
         {tabs.length === 0 && (
           <div className="flex h-full items-center justify-center px-6 text-center text-sm text-fgmuted">
-            No agent running. Select a workspace, then launch Claude or Codex.
+            {t('terminal.empty')}
           </div>
         )}
         {sessions.map((s) => (

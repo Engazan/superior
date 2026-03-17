@@ -1,7 +1,10 @@
 export type ThemeMode = 'light' | 'dark' | 'system'
 
+export type Language = 'en' | 'sk' | 'cs' | 'pl' | 'hu'
+
 export interface AppSettings {
   theme: ThemeMode
+  language: Language
 }
 
 export type PresetIconType = 'emoji' | 'image'
@@ -94,6 +97,7 @@ export const IPC = {
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
+  SETTINGS_SET_LANGUAGE: 'settings:set-language',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',

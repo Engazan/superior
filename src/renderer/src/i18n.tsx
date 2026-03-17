@@ -1,0 +1,318 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import type { Language } from './types'
+
+export const LANGUAGES: { value: Language; label: string }[] = [
+  { value: 'en', label: 'En' },
+  { value: 'sk', label: 'Sk' },
+  { value: 'cs', label: 'Cz' },
+  { value: 'pl', label: 'Pl' },
+  { value: 'hu', label: 'Hu' }
+]
+
+const en = {
+  'sidebar.openFolder': 'Open from folder',
+  'sidebar.noWorkspaces': 'No workspaces yet — add one.',
+  'sidebar.removeFromList': 'Remove from list',
+  'sidebar.settings': 'Settings',
+  'common.toggleSidebar': 'Toggle sidebar',
+  'common.cancel': 'Cancel',
+  'common.save': 'Save',
+  'common.delete': 'Delete',
+  'common.edit': 'Edit',
+  'settings.back': 'Back',
+  'settings.appearance': 'Appearance',
+  'settings.terminalPresets': 'Terminal presets',
+  'settings.language': 'Language',
+  'appearance.theme': 'Theme',
+  'appearance.themeDesc':
+    'Choose how the app looks. System follows your operating system setting.',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
+  'theme.system': 'System',
+  'language.desc': 'Choose the interface language.',
+  'presets.add': 'Add preset',
+  'presets.colIcon': 'Icon',
+  'presets.colName': 'Name',
+  'presets.colDescription': 'Description',
+  'presets.colCommand': 'Command',
+  'presets.colActive': 'Active',
+  'presets.colActions': 'Actions',
+  'presets.empty': 'No presets yet — add one.',
+  'presets.dragReorder': 'Drag to reorder',
+  'presets.deleteTitle': 'Delete preset',
+  'presets.deleteConfirm': 'Delete “{name}”? This can’t be undone.',
+  'form.addTitle': 'Add preset',
+  'form.editTitle': 'Edit preset',
+  'form.icon': 'Icon',
+  'form.customImage': 'Custom image…',
+  'form.customImageSelected': 'Custom image selected',
+  'form.name': 'Name',
+  'form.description': 'Description',
+  'form.command': 'Command',
+  'launchers.terminalPresets': 'Terminal presets',
+  'launchers.openWorkspaceFirst': 'Open a workspace first',
+  'launchers.run': 'Run: {command}',
+  'terminal.empty': 'No agent running. Select a workspace, then launch an agent.',
+  'terminal.stopClose': 'Stop and close',
+  'terminal.closeSession': 'Close session',
+  'window.minimize': 'Minimize',
+  'window.maximize': 'Maximize',
+  'window.restore': 'Restore',
+  'window.close': 'Close',
+  'error.noWorkspace': 'No workspace selected. Add or select a folder first.'
+}
+
+export type MessageKey = keyof typeof en
+
+const sk: Record<MessageKey, string> = {
+  'sidebar.openFolder': 'Otvoriť z priečinka',
+  'sidebar.noWorkspaces': 'Zatiaľ žiadne pracovné priestory — pridajte jeden.',
+  'sidebar.removeFromList': 'Odstrániť zo zoznamu',
+  'sidebar.settings': 'Nastavenia',
+  'common.toggleSidebar': 'Prepnúť bočný panel',
+  'common.cancel': 'Zrušiť',
+  'common.save': 'Uložiť',
+  'common.delete': 'Zmazať',
+  'common.edit': 'Upraviť',
+  'settings.back': 'Späť',
+  'settings.appearance': 'Vzhľad',
+  'settings.terminalPresets': 'Predvoľby terminálu',
+  'settings.language': 'Jazyk',
+  'appearance.theme': 'Téma',
+  'appearance.themeDesc':
+    'Vyberte, ako má aplikácia vyzerať. Systém sa riadi nastavením operačného systému.',
+  'theme.light': 'Svetlá',
+  'theme.dark': 'Tmavá',
+  'theme.system': 'Systém',
+  'language.desc': 'Vyberte jazyk rozhrania.',
+  'presets.add': 'Pridať predvoľbu',
+  'presets.colIcon': 'Ikona',
+  'presets.colName': 'Názov',
+  'presets.colDescription': 'Popis',
+  'presets.colCommand': 'Príkaz',
+  'presets.colActive': 'Aktívna',
+  'presets.colActions': 'Akcie',
+  'presets.empty': 'Zatiaľ žiadne predvoľby — pridajte jednu.',
+  'presets.dragReorder': 'Potiahnutím zmeníte poradie',
+  'presets.deleteTitle': 'Zmazať predvoľbu',
+  'presets.deleteConfirm': 'Zmazať „{name}“? Túto akciu nie je možné vrátiť späť.',
+  'form.addTitle': 'Pridať predvoľbu',
+  'form.editTitle': 'Upraviť predvoľbu',
+  'form.icon': 'Ikona',
+  'form.customImage': 'Vlastný obrázok…',
+  'form.customImageSelected': 'Vybraný vlastný obrázok',
+  'form.name': 'Názov',
+  'form.description': 'Popis',
+  'form.command': 'Príkaz',
+  'launchers.terminalPresets': 'Predvoľby terminálu',
+  'launchers.openWorkspaceFirst': 'Najprv otvorte pracovný priestor',
+  'launchers.run': 'Spustiť: {command}',
+  'terminal.empty': 'Žiadny agent nebeží. Vyberte pracovný priestor a spustite agenta.',
+  'terminal.stopClose': 'Zastaviť a zatvoriť',
+  'terminal.closeSession': 'Zatvoriť reláciu',
+  'window.minimize': 'Minimalizovať',
+  'window.maximize': 'Maximalizovať',
+  'window.restore': 'Obnoviť',
+  'window.close': 'Zavrieť',
+  'error.noWorkspace': 'Nie je vybraný pracovný priestor. Najprv pridajte alebo vyberte priečinok.'
+}
+
+const cs: Record<MessageKey, string> = {
+  'sidebar.openFolder': 'Otevřít ze složky',
+  'sidebar.noWorkspaces': 'Zatím žádné pracovní prostory — přidejte jeden.',
+  'sidebar.removeFromList': 'Odebrat ze seznamu',
+  'sidebar.settings': 'Nastavení',
+  'common.toggleSidebar': 'Přepnout postranní panel',
+  'common.cancel': 'Zrušit',
+  'common.save': 'Uložit',
+  'common.delete': 'Smazat',
+  'common.edit': 'Upravit',
+  'settings.back': 'Zpět',
+  'settings.appearance': 'Vzhled',
+  'settings.terminalPresets': 'Předvolby terminálu',
+  'settings.language': 'Jazyk',
+  'appearance.theme': 'Motiv',
+  'appearance.themeDesc':
+    'Vyberte, jak má aplikace vypadat. Systém se řídí nastavením operačního systému.',
+  'theme.light': 'Světlý',
+  'theme.dark': 'Tmavý',
+  'theme.system': 'Systém',
+  'language.desc': 'Vyberte jazyk rozhraní.',
+  'presets.add': 'Přidat předvolbu',
+  'presets.colIcon': 'Ikona',
+  'presets.colName': 'Název',
+  'presets.colDescription': 'Popis',
+  'presets.colCommand': 'Příkaz',
+  'presets.colActive': 'Aktivní',
+  'presets.colActions': 'Akce',
+  'presets.empty': 'Zatím žádné předvolby — přidejte jednu.',
+  'presets.dragReorder': 'Přetažením změníte pořadí',
+  'presets.deleteTitle': 'Smazat předvolbu',
+  'presets.deleteConfirm': 'Smazat „{name}“? Tuto akci nelze vrátit zpět.',
+  'form.addTitle': 'Přidat předvolbu',
+  'form.editTitle': 'Upravit předvolbu',
+  'form.icon': 'Ikona',
+  'form.customImage': 'Vlastní obrázek…',
+  'form.customImageSelected': 'Vybrán vlastní obrázek',
+  'form.name': 'Název',
+  'form.description': 'Popis',
+  'form.command': 'Příkaz',
+  'launchers.terminalPresets': 'Předvolby terminálu',
+  'launchers.openWorkspaceFirst': 'Nejprve otevřete pracovní prostor',
+  'launchers.run': 'Spustit: {command}',
+  'terminal.empty': 'Žádný agent neběží. Vyberte pracovní prostor a spusťte agenta.',
+  'terminal.stopClose': 'Zastavit a zavřít',
+  'terminal.closeSession': 'Zavřít relaci',
+  'window.minimize': 'Minimalizovat',
+  'window.maximize': 'Maximalizovat',
+  'window.restore': 'Obnovit',
+  'window.close': 'Zavřít',
+  'error.noWorkspace': 'Není vybrán pracovní prostor. Nejprve přidejte nebo vyberte složku.'
+}
+
+const pl: Record<MessageKey, string> = {
+  'sidebar.openFolder': 'Otwórz z folderu',
+  'sidebar.noWorkspaces': 'Brak obszarów roboczych — dodaj jeden.',
+  'sidebar.removeFromList': 'Usuń z listy',
+  'sidebar.settings': 'Ustawienia',
+  'common.toggleSidebar': 'Przełącz pasek boczny',
+  'common.cancel': 'Anuluj',
+  'common.save': 'Zapisz',
+  'common.delete': 'Usuń',
+  'common.edit': 'Edytuj',
+  'settings.back': 'Wstecz',
+  'settings.appearance': 'Wygląd',
+  'settings.terminalPresets': 'Presety terminala',
+  'settings.language': 'Język',
+  'appearance.theme': 'Motyw',
+  'appearance.themeDesc':
+    'Wybierz wygląd aplikacji. System podąża za ustawieniem systemu operacyjnego.',
+  'theme.light': 'Jasny',
+  'theme.dark': 'Ciemny',
+  'theme.system': 'Systemowy',
+  'language.desc': 'Wybierz język interfejsu.',
+  'presets.add': 'Dodaj preset',
+  'presets.colIcon': 'Ikona',
+  'presets.colName': 'Nazwa',
+  'presets.colDescription': 'Opis',
+  'presets.colCommand': 'Polecenie',
+  'presets.colActive': 'Aktywny',
+  'presets.colActions': 'Akcje',
+  'presets.empty': 'Brak presetów — dodaj jeden.',
+  'presets.dragReorder': 'Przeciągnij, aby zmienić kolejność',
+  'presets.deleteTitle': 'Usuń preset',
+  'presets.deleteConfirm': 'Usunąć „{name}“? Tej operacji nie można cofnąć.',
+  'form.addTitle': 'Dodaj preset',
+  'form.editTitle': 'Edytuj preset',
+  'form.icon': 'Ikona',
+  'form.customImage': 'Własny obraz…',
+  'form.customImageSelected': 'Wybrano własny obraz',
+  'form.name': 'Nazwa',
+  'form.description': 'Opis',
+  'form.command': 'Polecenie',
+  'launchers.terminalPresets': 'Presety terminala',
+  'launchers.openWorkspaceFirst': 'Najpierw otwórz obszar roboczy',
+  'launchers.run': 'Uruchom: {command}',
+  'terminal.empty': 'Żaden agent nie działa. Wybierz obszar roboczy i uruchom agenta.',
+  'terminal.stopClose': 'Zatrzymaj i zamknij',
+  'terminal.closeSession': 'Zamknij sesję',
+  'window.minimize': 'Minimalizuj',
+  'window.maximize': 'Maksymalizuj',
+  'window.restore': 'Przywróć',
+  'window.close': 'Zamknij',
+  'error.noWorkspace': 'Nie wybrano obszaru roboczego. Najpierw dodaj lub wybierz folder.'
+}
+
+const hu: Record<MessageKey, string> = {
+  'sidebar.openFolder': 'Megnyitás mappából',
+  'sidebar.noWorkspaces': 'Még nincs munkaterület — adj hozzá egyet.',
+  'sidebar.removeFromList': 'Eltávolítás a listából',
+  'sidebar.settings': 'Beállítások',
+  'common.toggleSidebar': 'Oldalsáv be/ki',
+  'common.cancel': 'Mégse',
+  'common.save': 'Mentés',
+  'common.delete': 'Törlés',
+  'common.edit': 'Szerkesztés',
+  'settings.back': 'Vissza',
+  'settings.appearance': 'Megjelenés',
+  'settings.terminalPresets': 'Terminál sablonok',
+  'settings.language': 'Nyelv',
+  'appearance.theme': 'Téma',
+  'appearance.themeDesc':
+    'Válaszd ki az alkalmazás megjelenését. A rendszer az operációs rendszer beállítását követi.',
+  'theme.light': 'Világos',
+  'theme.dark': 'Sötét',
+  'theme.system': 'Rendszer',
+  'language.desc': 'Válaszd ki a felület nyelvét.',
+  'presets.add': 'Sablon hozzáadása',
+  'presets.colIcon': 'Ikon',
+  'presets.colName': 'Név',
+  'presets.colDescription': 'Leírás',
+  'presets.colCommand': 'Parancs',
+  'presets.colActive': 'Aktív',
+  'presets.colActions': 'Műveletek',
+  'presets.empty': 'Még nincs sablon — adj hozzá egyet.',
+  'presets.dragReorder': 'Húzd az átrendezéshez',
+  'presets.deleteTitle': 'Sablon törlése',
+  'presets.deleteConfirm': 'Törlöd a(z) „{name}“ elemet? Ez nem vonható vissza.',
+  'form.addTitle': 'Sablon hozzáadása',
+  'form.editTitle': 'Sablon szerkesztése',
+  'form.icon': 'Ikon',
+  'form.customImage': 'Egyéni kép…',
+  'form.customImageSelected': 'Egyéni kép kiválasztva',
+  'form.name': 'Név',
+  'form.description': 'Leírás',
+  'form.command': 'Parancs',
+  'launchers.terminalPresets': 'Terminál sablonok',
+  'launchers.openWorkspaceFirst': 'Először nyiss meg egy munkaterületet',
+  'launchers.run': 'Futtatás: {command}',
+  'terminal.empty': 'Nincs futó ügynök. Válassz munkaterületet, majd indíts egy ügynököt.',
+  'terminal.stopClose': 'Leállítás és bezárás',
+  'terminal.closeSession': 'Munkamenet bezárása',
+  'window.minimize': 'Kis méret',
+  'window.maximize': 'Teljes méret',
+  'window.restore': 'Visszaállítás',
+  'window.close': 'Bezárás',
+  'error.noWorkspace': 'Nincs kiválasztott munkaterület. Először adj hozzá vagy válassz mappát.'
+}
+
+const messages: Record<Language, Record<MessageKey, string>> = { en, sk, cs, pl, hu }
+
+export type TFunction = (key: MessageKey, params?: Record<string, string | number>) => string
+
+interface I18nContextValue {
+  lang: Language
+  setLang: (lang: Language) => void
+  t: TFunction
+}
+
+const I18nContext = createContext<I18nContextValue | null>(null)
+
+export function I18nProvider({ children }: { children: ReactNode }): JSX.Element {
+  const [lang, setLangState] = useState<Language>('en')
+
+  useEffect(() => {
+    window.api.getSettings().then((s) => setLangState(s.language))
+  }, [])
+
+  const setLang = (next: Language): void => {
+    setLangState(next)
+    window.api.setLanguage(next)
+  }
+
+  const t: TFunction = (key, params) => {
+    let str = (messages[lang] ?? en)[key] ?? en[key] ?? key
+    if (params) {
+      for (const [k, v] of Object.entries(params)) str = str.replace(`{${k}}`, String(v))
+    }
+    return str
+  }
+
+  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>
+}
+
+export function useI18n(): I18nContextValue {
+  const ctx = useContext(I18nContext)
+  if (!ctx) throw new Error('useI18n must be used within an I18nProvider')
+  return ctx
+}

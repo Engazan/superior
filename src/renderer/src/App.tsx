@@ -5,6 +5,7 @@ import { PresetLaunchers } from './components/PresetLaunchers'
 import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { ensureBus } from './terminalBus'
+import { useI18n } from './i18n'
 import type { AgentSession, TerminalPreset, Workspace, WorkspaceState } from './types'
 
 type View = 'main' | 'settings'
@@ -12,6 +13,7 @@ type View = 'main' | 'settings'
 const isMac = window.api.platform === 'darwin'
 
 export default function App(): JSX.Element {
+  const { t } = useI18n()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activePath, setActivePath] = useState<string | null>(null)
   const [sessions, setSessions] = useState<AgentSession[]>([])
@@ -94,7 +96,7 @@ export default function App(): JSX.Element {
     async (preset: TerminalPreset) => {
       setError(null)
       if (!activeWorkspace) {
-        setError('No workspace selected. Add or select a folder first.')
+        setError(t('error.noWorkspace'))
         return
       }
       const res = await window.api.startAgent({
@@ -111,7 +113,7 @@ export default function App(): JSX.Element {
       setSessions((prev) => [...prev, res.session])
       setActiveSessionId(res.session.id)
     },
-    [activeWorkspace]
+    [activeWorkspace, t]
   )
 
   // Preset management — each call returns the new state which we mirror locally.
@@ -205,7 +207,7 @@ export default function App(): JSX.Element {
                 <button
                   className="shrink-0 text-red-300/80 hover:text-red-100"
                   onClick={() => setError(null)}
-                  aria-label="Dismiss error"
+                  aria-label={t('window.close')}
                 >
                   ✕
                 </button>

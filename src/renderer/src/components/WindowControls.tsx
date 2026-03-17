@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useI18n } from '../i18n'
 
 function MinimizeIcon(): JSX.Element {
   return (
@@ -35,6 +36,7 @@ function CloseIcon(): JSX.Element {
 }
 
 export function WindowControls(): JSX.Element {
+  const { t } = useI18n()
   const [maximized, setMaximized] = useState(false)
 
   useEffect(() => {
@@ -50,24 +52,24 @@ export function WindowControls(): JSX.Element {
       <button
         className={btn}
         onClick={() => window.api.windowMinimize()}
-        aria-label="Minimize"
-        title="Minimize"
+        aria-label={t('window.minimize')}
+        title={t('window.minimize')}
       >
         <MinimizeIcon />
       </button>
       <button
         className={btn}
         onClick={() => window.api.windowToggleMaximize()}
-        aria-label={maximized ? 'Restore' : 'Maximize'}
-        title={maximized ? 'Restore' : 'Maximize'}
+        aria-label={maximized ? t('window.restore') : t('window.maximize')}
+        title={maximized ? t('window.restore') : t('window.maximize')}
       >
         {maximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
         className="app-no-drag flex h-full w-11 items-center justify-center text-fgdim transition hover:bg-red-600 hover:text-white"
         onClick={() => window.api.windowClose()}
-        aria-label="Close"
-        title="Close"
+        aria-label={t('window.close')}
+        title={t('window.close')}
       >
         <CloseIcon />
       </button>
