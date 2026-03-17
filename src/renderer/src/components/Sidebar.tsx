@@ -1,3 +1,4 @@
+import { DragStrip } from './DragStrip'
 import type { Workspace } from '../types'
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
   onSelect: (path: string) => void
   onRemove: (path: string) => void
   onOpenSettings: () => void
+  onToggle: () => void
 }
 
 export function Sidebar({
@@ -15,10 +17,12 @@ export function Sidebar({
   onAdd,
   onSelect,
   onRemove,
-  onOpenSettings
+  onOpenSettings,
+  onToggle
 }: Props): JSX.Element {
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-bar">
+      <DragStrip onToggleSidebar={onToggle} />
       <div className="border-b border-edge p-2">
         <button
           onClick={onAdd}

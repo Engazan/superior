@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { TopBar } from './components/TopBar'
 import { Sidebar } from './components/Sidebar'
+import { SidebarToggle } from './components/SidebarToggle'
 import { AgentButtons } from './components/AgentButtons'
 import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView } from './components/SettingsView'
@@ -9,6 +9,8 @@ import type { AgentSession, AgentType, Workspace, WorkspaceState } from './types
 
 type View = 'main' | 'settings'
 
+const isMac = window.api.platform === 'darwin'
+
 export default function App(): JSX.Element {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activePath, setActivePath] = useState<string | null>(null)
@@ -16,6 +18,7 @@ export default function App(): JSX.Element {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<View>('main')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const activeWorkspace = useMemo(
     () => workspaces.find((w) => w.path === activePath) ?? null,
@@ -121,25 +124,37 @@ export default function App(): JSX.Element {
   }, [])
 
   return (
-    <div className="flex h-full flex-col bg-bar text-fg">
-      <TopBar activeWorkspace={activeWorkspace} />
-
+    <div className="flex h-full bg-bar text-fg">
       {view === 'settings' ? (
         <SettingsView onBack={() => setView('main')} />
       ) : (
-        <div className="flex min-h-0 flex-1">
-          <Sidebar
-            workspaces={workspaces}
-            activePath={activePath}
-            onAdd={addWorkspace}
-            onSelect={selectWorkspace}
-            onRemove={removeWorkspace}
-            onOpenSettings={() => setView('settings')}
-          />
+        <>
+          {!sidebarCollapsed && (
+            <Sidebar
+              workspaces={workspaces}
+              activePath={activePath}
+              onAdd={addWorkspace}
+              onSelect={selectWorkspace}
+              onRemove={removeWorkspace}
+              onOpenSettings={() => setView('settings')}
+              onToggle={() => setSidebarCollapsed((c) => !c)}
+            />
+          )}
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-3 border-b border-edge bg-bar px-4 py-3">
-              <AgentButtons disabled={!activeWorkspace} onLaunch={launchAgent} />
+            <div
+              className={`app-drag flex h-9 items-center gap-2 border-b border-edge bg-bar pr-3 ${
+                sidebarCollapsed ? (isMac ? 'pl-[68px]' : 'pl-2') : 'pl-3'
+              }`}
+              onDoubleClick={isMac ? undefined : () => window.api.windowToggleMaximize()}
+            >
+              {sidebarCollapsed && (
+                // Same x/y as the sidebar's toggle (both h-9 bars), so it doesn't move.
+                <SidebarToggle onClick={() => setSidebarCollapsed((c) => !c)} />
+              )}
+              <div className="app-no-drag">
+                <AgentButtons disabled={!activeWorkspace} onLaunch={launchAgent} />
+              </div>
             </div>
 
             {error && (
@@ -164,7 +179,7 @@ export default function App(): JSX.Element {
               onSessionUpdate={updateSession}
             />
           </div>
-        </div>
+        </>
       )}
     </div>
   )

@@ -11,6 +11,9 @@ import {
 } from '@shared/types'
 
 const api = {
+  /** Host platform, e.g. 'darwin' | 'win32' | 'linux'. */
+  platform: process.platform,
+
   listWorkspaces(): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_LIST)
   },
@@ -33,6 +36,29 @@ const api = {
 
   setTheme(theme: ThemeMode): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_THEME, theme)
+  },
+
+  windowMinimize(): void {
+    ipcRenderer.send(IPC.WINDOW_MINIMIZE)
+  },
+
+  windowToggleMaximize(): void {
+    ipcRenderer.send(IPC.WINDOW_MAXIMIZE_TOGGLE)
+  },
+
+  windowClose(): void {
+    ipcRenderer.send(IPC.WINDOW_CLOSE)
+  },
+
+  windowIsMaximized(): Promise<boolean> {
+    return ipcRenderer.invoke(IPC.WINDOW_IS_MAXIMIZED)
+  },
+
+  /** Subscribe to maximize/restore changes. Returns an unsubscribe function. */
+  onWindowMaximizedChange(cb: (maximized: boolean) => void): () => void {
+    const listener = (_e: unknown, maximized: boolean): void => cb(maximized)
+    ipcRenderer.on(IPC.WINDOW_MAXIMIZED_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.WINDOW_MAXIMIZED_CHANGED, listener)
   },
 
   startAgent(

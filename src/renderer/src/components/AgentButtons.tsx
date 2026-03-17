@@ -6,7 +6,7 @@ interface Props {
 }
 
 const base =
-  'rounded-md px-3 py-1.5 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-40'
+  'rounded-md px-2.5 py-1 text-xs font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-40'
 
 export function AgentButtons({ disabled, onLaunch }: Props): JSX.Element {
   return (

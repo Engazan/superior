@@ -3,7 +3,10 @@ import { join } from 'path'
 import { registerWorkspaceIpc } from './ipc/workspace.ipc'
 import { registerAgentIpc } from './ipc/agent.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
+import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
 import { terminalService } from './services/terminal.service'
+
+const isMac = process.platform === 'darwin'
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -14,6 +17,11 @@ function createWindow(): BrowserWindow {
     show: false,
     backgroundColor: '#181825',
     title: 'Superior',
+    // macOS: keep the native traffic lights (inset) with a custom draggable bar.
+    // Other platforms: fully frameless with our own window controls.
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 12, y: 13 } }
+      : { frame: false }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -23,6 +31,7 @@ function createWindow(): BrowserWindow {
   })
 
   win.on('ready-to-show', () => win.show())
+  attachWindowMaximizeEvents(win)
 
   // Open target=_blank / external links in the system browser, not a new window.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -43,6 +52,7 @@ app.whenReady().then(() => {
   registerWorkspaceIpc()
   registerAgentIpc()
   registerSettingsIpc()
+  registerWindowIpc()
 
   createWindow()
 
