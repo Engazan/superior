@@ -16,8 +16,15 @@ import {
 let sock: net.Socket | null = null
 let connecting: Promise<net.Socket> | null = null
 
+// How long to wait for a daemon reply before giving up, so a dead daemon can't
+// hang the renderer's await forever.
+const REQUEST_TIMEOUT_MS = 5000
+
 const pendingLists: Array<(list: DaemonSession[]) => void> = []
-const pendingSpawns = new Map<string, (res: { pid?: number }) => void>()
+const pendingSpawns = new Map<
+  string,
+  { resolve: (res: { pid?: number }) => void; reject: (err: Error) => void }
+>()
 // Compatibility with a daemon started by an older app build that does not yet
 // tag attach snapshots as replay. The first data frame after attach is the
 // synchronous scrollback snapshot (or harmlessly treated as one if empty).
@@ -65,20 +72,31 @@ function onServerMessage(msg: ServerMessage): void {
       pendingLists.shift()?.(msg.list)
       break
     case 'spawned': {
-      const resolve = pendingSpawns.get(msg.id)
-      if (resolve) {
-        resolve({ pid: msg.pid })
+      const entry = pendingSpawns.get(msg.id)
+      if (entry) {
+        entry.resolve({ pid: msg.pid })
         pendingSpawns.delete(msg.id)
       }
       break
     }
     case 'error':
       if (msg.id && pendingSpawns.has(msg.id)) {
-        pendingSpawns.get(msg.id)?.({})
+        pendingSpawns.get(msg.id)?.reject(new Error(msg.message || 'spawn failed'))
         pendingSpawns.delete(msg.id)
       }
       break
   }
+}
+
+/** Unblock every in-flight request (daemon went away): reject spawns so callers
+ * surface an error instead of a phantom session; lists resolve empty. */
+function flushPending(): void {
+  for (const { reject } of pendingSpawns.values()) {
+    reject(new Error('Terminal daemon disconnected.'))
+  }
+  pendingSpawns.clear()
+  for (const resolve of pendingLists.splice(0)) resolve([])
+  pendingReplay.clear()
 }
 
 function setupSocket(s: net.Socket): void {
@@ -88,6 +106,7 @@ function setupSocket(s: net.Socket): void {
   })
   s.on('close', () => {
     if (sock === s) sock = null
+    flushPending()
   })
   s.on('error', () => {
     /* surfaced via close */
@@ -164,16 +183,30 @@ export const daemonClient = {
     meta: DaemonSessionMeta
   }): Promise<{ pid?: number }> {
     const s = await ensureDaemon()
-    const result = new Promise<{ pid?: number }>((resolve) =>
-      pendingSpawns.set(payload.id, resolve)
-    )
+    const result = new Promise<{ pid?: number }>((resolve, reject) => {
+      pendingSpawns.set(payload.id, { resolve, reject })
+      setTimeout(() => {
+        if (pendingSpawns.delete(payload.id)) {
+          reject(new Error('Timed out waiting for the terminal daemon.'))
+        }
+      }, REQUEST_TIMEOUT_MS)
+    })
     s.write(encodeFrame({ t: 'spawn', ...payload }))
     return result
   },
 
   async list(): Promise<DaemonSession[]> {
     const s = await ensureDaemon()
-    const result = new Promise<DaemonSession[]>((resolve) => pendingLists.push(resolve))
+    const result = new Promise<DaemonSession[]>((resolve) => {
+      pendingLists.push(resolve)
+      setTimeout(() => {
+        const i = pendingLists.indexOf(resolve)
+        if (i !== -1) {
+          pendingLists.splice(i, 1)
+          resolve([])
+        }
+      }, REQUEST_TIMEOUT_MS)
+    })
     s.write(encodeFrame({ t: 'list' }))
     return result
   },

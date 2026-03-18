@@ -18,6 +18,8 @@ const logPath = process.argv[3]
 const SCROLLBACK_BYTES = 1_500_000
 const SHUTDOWN_GRACE_MS = 45_000
 const LOG_CAP_BYTES = 1_000_000
+// Largest single input frame to forward to a pty; paste bursts stay well under this.
+const MAX_INPUT_BYTES = 1_000_000
 
 function log(msg: string): void {
   if (!logPath) return
@@ -171,7 +173,8 @@ function handle(conn: Conn, msg: ClientMessage): void {
       break
     }
     case 'input':
-      sessions.get(msg.id)?.proc.write(msg.data)
+      // Guard against a pathologically large write overwhelming the pty.
+      if (msg.data.length <= MAX_INPUT_BYTES) sessions.get(msg.id)?.proc.write(msg.data)
       break
     case 'resize': {
       const s = sessions.get(msg.id)

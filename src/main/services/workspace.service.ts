@@ -1,15 +1,16 @@
-import { app, dialog } from 'electron'
+import { dialog } from 'electron'
 import { randomUUID } from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
 import type { Folder, Workspace, WorkspaceState } from '@shared/types'
+import { userDataFile, writeJsonFile } from '../lib/jsonStore'
 
 function storeFile(): string {
-  return path.join(app.getPath('userData'), 'workspaces.json')
+  return userDataFile('workspaces.json')
 }
 
 function legacyFile(): string {
-  return path.join(app.getPath('userData'), 'workspace.json')
+  return userDataFile('workspace.json')
 }
 
 /** True if the path exists and is a directory. */
@@ -19,6 +20,19 @@ export function isValidWorkspaceDir(dir: string): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * True if `target` resolves to — or inside — one of the saved workspace folders.
+ * Defense-in-depth: filesystem reads from the renderer must stay within an opened
+ * folder, so a bug or compromised renderer can't enumerate arbitrary paths.
+ */
+export function isWithinWorkspaceFolder(target: string): boolean {
+  const resolved = path.resolve(target)
+  return readState().folders.some((f) => {
+    const root = path.resolve(f.path)
+    return resolved === root || resolved.startsWith(root + path.sep)
+  })
 }
 
 function makeFolder(dir: string): Folder {
@@ -92,11 +106,7 @@ function normalize(state: WorkspaceState): WorkspaceState {
 }
 
 function saveState(state: WorkspaceState): void {
-  try {
-    fs.writeFileSync(storeFile(), JSON.stringify(state, null, 2), 'utf-8')
-  } catch (err) {
-    console.error('[workspace] failed to persist workspaces:', err)
-  }
+  writeJsonFile(storeFile(), state, 'workspace')
 }
 
 /** Return all saved folders + workspaces and the active selection. */

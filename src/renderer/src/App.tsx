@@ -1,372 +1,49 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { RightPanel } from './components/RightPanel'
 import { FilePreviewPanel } from './components/FilePreviewPanel'
-import { TerminalPanel, type LayoutMode } from './components/TerminalPanel'
-import { type LaunchConfig } from './components/AgentLauncher'
+import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
-import { type GridLayout } from './gridLayout'
-import type {
-  AgentSession,
-  Folder,
-  FsEntry,
-  GitStatus,
-  TerminalPreset,
-  Workspace,
-  WorkspaceState
-} from './types'
+import { useGitStatus } from './hooks/useGitStatus'
+import { usePresets } from './hooks/usePresets'
+import { usePreviewPane } from './hooks/usePreviewPane'
+import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 
 type View = 'main' | 'settings'
 
 export default function App(): JSX.Element {
   const { t } = useI18n()
   const { shortcuts } = useShortcuts()
-  const [folders, setFolders] = useState<Folder[]>([])
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
-  const [sessions, setSessions] = useState<AgentSession[]>([])
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<View>('main')
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Right-hand panel: fully hidden by default, toggled from the title bar.
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
-  // File chosen in the Files tree, previewed beside the terminal (null = none).
-  const [previewFile, setPreviewFile] = useState<FsEntry | null>(null)
-  // Preview pane width as a fraction of the main area, adjustable via the divider.
-  const [previewWidth, setPreviewWidth] = useState(0.5)
-  const previewRowRef = useRef<HTMLDivElement>(null)
-  // A grid cell blown up to fill the panel (null = none). Owned here so a shortcut can toggle it.
-  const [maximizedId, setMaximizedId] = useState<string | null>(null)
   // Quick-launch preset picker overlay (opened by shortcut).
   const [launcherOpen, setLauncherOpen] = useState(false)
-  const [presets, setPresets] = useState<TerminalPreset[]>([])
-  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null)
-  const [gitLoading, setGitLoading] = useState(false)
-  // Per-workspace layout mode (tabs vs grid) and grid sizing, kept in memory.
-  const [layouts, setLayouts] = useState<Record<string, LayoutMode>>({})
-  const [gridLayouts, setGridLayouts] = useState<Record<string, GridLayout>>({})
 
-  const activeWorkspace = useMemo(
-    () => workspaces.find((w) => w.id === activeWorkspaceId) ?? null,
-    [workspaces, activeWorkspaceId]
-  )
-  const activeFolder = useMemo(
-    () => folders.find((f) => f.path === activeWorkspace?.folderPath) ?? null,
-    [folders, activeWorkspace]
-  )
+  const presetsApi = usePresets()
+  const { presets } = presetsApi
+  const preview = usePreviewPane()
+  const ws = useWorkspaceSessions({ setError, t, presets })
+  const { gitStatus, gitLoading, initializeGit } = useGitStatus(ws.activeFolder, setError)
 
-  // Keep the active folder's branch current, including checkouts made in a terminal.
-  useEffect(() => {
-    if (!activeFolder) {
-      setGitStatus(null)
-      setGitLoading(false)
-      return
-    }
-
-    let active = true
-    const folderPath = activeFolder.path
-    const refresh = async (showLoading = false): Promise<void> => {
-      if (showLoading) setGitLoading(true)
-      const status = await window.api.getGitStatus(folderPath)
-      if (!active) return
-      setGitStatus(status)
-      setGitLoading(false)
-    }
-
-    setGitStatus(null)
-    void refresh(true)
-    const id = window.setInterval(() => void refresh(), 3000)
-    return () => {
-      active = false
-      window.clearInterval(id)
-    }
-  }, [activeFolder])
-
-  const initializeGit = useCallback(async () => {
-    if (!activeFolder || gitLoading) return
-    setError(null)
-    setGitLoading(true)
-    const status = await window.api.initGit(activeFolder.path)
-    setGitStatus(status)
-    setGitLoading(false)
-    if (status.error) setError(status.error)
-  }, [activeFolder, gitLoading])
-
-  // Running-terminal count per workspace, for the sidebar badges.
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const s of sessions) {
-      if (s.status === 'running') map[s.workspaceId] = (map[s.workspaceId] ?? 0) + 1
-    }
-    return map
-  }, [sessions])
-
-  // Restore folders/workspaces/presets, then reattach surviving daemon sessions.
+  // Initialize the terminal data/exit bus once on mount.
   useEffect(() => {
     ensureBus()
-    window.api.listPresets().then((state) => setPresets(state.presets))
-    ;(async () => {
-      const ws = await window.api.listWorkspaces()
-      setFolders(ws.folders)
-      setWorkspaces(ws.workspaces)
-      setActiveWorkspaceId(ws.activeWorkspaceId)
-
-      const [restored, layoutsState] = await Promise.all([
-        window.api.restoreSessions(),
-        window.api.getLayouts()
-      ])
-
-      // Keep only sessions whose workspace still exists; kill orphans.
-      const validIds = new Set(ws.workspaces.map((w) => w.id))
-      const live = restored.filter((s) => {
-        if (validIds.has(s.workspaceId)) return true
-        window.api.killAgent(s.id)
-        return false
-      })
-      setSessions(live)
-
-      const modeMap: Record<string, LayoutMode> = {}
-      const gridMap: Record<string, GridLayout> = {}
-      for (const [wsId, layout] of Object.entries(layoutsState)) {
-        if (!validIds.has(wsId)) continue
-        modeMap[wsId] = layout.mode
-        if (layout.gridLayout) gridMap[wsId] = layout.gridLayout
-      }
-      setLayouts(modeMap)
-      setGridLayouts(gridMap)
-
-      const inActive = live.filter((s) => s.workspaceId === ws.activeWorkspaceId)
-      setActiveSessionId(inActive.length ? inActive[inActive.length - 1].id : null)
-    })().catch((err) => console.error('[restore] failed:', err))
   }, [])
 
-  // Point the active session at the most recent session of a workspace.
-  const focusWorkspaceSession = useCallback(
-    (workspaceId: string | null) => {
-      const list = sessions.filter((s) => s.workspaceId === workspaceId)
-      setActiveSessionId(list.length ? list[list.length - 1].id : null)
-    },
-    [sessions]
-  )
-
-  const applyState = useCallback(
-    (state: WorkspaceState) => {
-      setFolders(state.folders)
-      setWorkspaces(state.workspaces)
-      setActiveWorkspaceId(state.activeWorkspaceId)
-      focusWorkspaceSession(state.activeWorkspaceId)
-    },
-    [focusWorkspaceSession]
-  )
-
-  const addFolder = useCallback(async () => {
-    setError(null)
-    const res = await window.api.addFolder()
-    if (!res) return // cancelled
-    if ('error' in res) {
-      setError(res.error)
-      return
-    }
-    applyState(res)
-  }, [applyState])
-
-  const removeFolder = useCallback(
-    async (folderPath: string) => {
-      setError(null)
-      const ids = new Set(
-        workspaces.filter((w) => w.folderPath === folderPath).map((w) => w.id)
-      )
-      setSessions((prev) => {
-        prev.filter((s) => ids.has(s.workspaceId)).forEach((s) => window.api.killAgent(s.id))
-        return prev.filter((s) => !ids.has(s.workspaceId))
-      })
-      applyState(await window.api.removeFolder(folderPath))
-    },
-    [workspaces, applyState]
-  )
-
-  const addWorkspace = useCallback(
-    async (folderPath: string, name: string) => {
-      setError(null)
-      applyState(await window.api.addWorkspace(folderPath, name))
-    },
-    [applyState]
-  )
-
-  const renameWorkspace = useCallback(async (id: string, name: string) => {
-    const state = await window.api.renameWorkspace(id, name)
-    setWorkspaces(state.workspaces)
-  }, [])
-
-  const selectWorkspace = useCallback(
-    async (id: string) => {
-      if (id === activeWorkspaceId) return
-      setActiveWorkspaceId(id)
-      focusWorkspaceSession(id)
-      const state = await window.api.setActiveWorkspace(id)
-      setWorkspaces(state.workspaces)
-    },
-    [activeWorkspaceId, focusWorkspaceSession]
-  )
-
-  const removeWorkspace = useCallback(async (id: string) => {
-    setError(null)
-    setSessions((prev) => {
-      prev.filter((s) => s.workspaceId === id).forEach((s) => window.api.killAgent(s.id))
-      return prev.filter((s) => s.workspaceId !== id)
-    })
-    applyState(await window.api.removeWorkspace(id))
-  }, [applyState])
-
-  const launchAgent = useCallback(
-    async (preset: TerminalPreset) => {
-      setError(null)
-      if (!activeWorkspace || !activeFolder) {
-        setError(t('error.noWorkspace'))
-        return
-      }
-      const res = await window.api.startAgent({
-        command: preset.command,
-        label: preset.name,
-        iconType: preset.iconType,
-        icon: preset.icon,
-        cwd: activeFolder.path,
-        workspaceId: activeWorkspace.id
-      })
-      if ('error' in res) {
-        setError(res.error)
-        return
-      }
-      setSessions((prev) => [...prev, res.session])
-      setActiveSessionId(res.session.id)
-    },
-    [activeWorkspace, activeFolder, t]
-  )
-
-  // Start a fresh layout from the launch wizard: set the mode and spawn each preset.
-  const startLayout = useCallback(
-    async ({ mode, presetIds }: LaunchConfig) => {
-      setError(null)
-      if (!activeWorkspace || !activeFolder) {
-        setError(t('error.noWorkspace'))
-        return
-      }
-      const wsId = activeWorkspace.id
-      setLayouts((prev) => ({ ...prev, [wsId]: mode }))
-      window.api.setLayout(wsId, { mode })
-      const launched: AgentSession[] = []
-      for (const id of presetIds) {
-        const preset = presets.find((p) => p.id === id)
-        if (!preset) continue
-        const res = await window.api.startAgent({
-          command: preset.command,
-          label: preset.name,
-          iconType: preset.iconType,
-          icon: preset.icon,
-          cwd: activeFolder.path,
-          workspaceId: wsId
-        })
-        if ('error' in res) {
-          setError(res.error)
-          continue
-        }
-        launched.push(res.session)
-      }
-      if (launched.length) {
-        setSessions((prev) => [...prev, ...launched])
-        setActiveSessionId(launched[launched.length - 1].id)
-      }
-    },
-    [activeWorkspace, activeFolder, presets, t]
-  )
-
-  // Preset management — each call returns the new state which we mirror locally.
-  const savePreset = useCallback(async (preset: TerminalPreset) => {
-    setPresets((await window.api.savePreset(preset)).presets)
-  }, [])
-  const deletePreset = useCallback(async (id: string) => {
-    setPresets((await window.api.deletePreset(id)).presets)
-  }, [])
-  const reorderPresets = useCallback(async (ids: string[]) => {
-    setPresets((await window.api.reorderPresets(ids)).presets)
-  }, [])
-  const togglePresetActive = useCallback(async (id: string, active: boolean) => {
-    setPresets((await window.api.setPresetActive(id, active)).presets)
-  }, [])
   const openPresets = useCallback(() => {
     setSettingsSection('presets')
     setView('settings')
   }, [])
-
-  const setGridLayout = useCallback(
-    (layout: GridLayout) => {
-      if (!activeWorkspaceId) return
-      setGridLayouts((prev) => ({ ...prev, [activeWorkspaceId]: layout }))
-      // Grid sizing only changes in grid mode, so the persisted mode is 'grid'.
-      window.api.setLayout(activeWorkspaceId, { mode: 'grid', gridLayout: layout })
-    },
-    [activeWorkspaceId]
-  )
-
-  const updateSession = useCallback((id: string, patch: Partial<AgentSession>) => {
-    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  }, [])
-
-  const closeSession = useCallback((id: string) => {
-    window.api.killAgent(id)
-    setSessions((prev) => {
-      const closed = prev.find((s) => s.id === id)
-      const next = prev.filter((s) => s.id !== id)
-      setActiveSessionId((curr) => {
-        if (curr !== id) return curr
-        const siblings = next.filter((s) => s.workspaceId === closed?.workspaceId)
-        return siblings.length ? siblings[siblings.length - 1].id : null
-      })
-      return next
-    })
-  }, [])
-
-  // Toggle a grid cell's maximized state and focus it (per-cell button).
-  const toggleMaximize = useCallback((id: string) => {
-    setMaximizedId((cur) => (cur === id ? null : id))
-    setActiveSessionId(id)
-  }, [])
-
-  // Maximize/restore the focused grid cell (keyboard shortcut). Grid mode only.
-  const toggleMaximizeFocused = useCallback(() => {
-    if (!activeWorkspaceId || layouts[activeWorkspaceId] !== 'grid') return
-    const cells = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
-    if (!cells.length) return
-    const id = cells.some((s) => s.id === activeSessionId) ? (activeSessionId as string) : cells[0].id
-    setMaximizedId((cur) => (cur === id ? null : id))
-    setActiveSessionId(id)
-  }, [activeWorkspaceId, layouts, activeSessionId, sessions])
-
-  const focusGridCell = useCallback(
-    (index: number): boolean => {
-      if (
-        view !== 'main' ||
-        launcherOpen ||
-        !activeWorkspaceId ||
-        layouts[activeWorkspaceId] !== 'grid'
-      ) {
-        return false
-      }
-      const target = sessions.filter((session) => session.workspaceId === activeWorkspaceId)[index]
-      if (!target) return false
-      setMaximizedId(null)
-      setActiveSessionId(target.id)
-      return true
-    },
-    [view, launcherOpen, activeWorkspaceId, layouts, sessions]
-  )
 
   // Global keyboard shortcuts. Capture phase so they win over a focused terminal;
   // suppressed while a binding is being recorded in settings.
@@ -379,7 +56,9 @@ export default function App(): JSX.Element {
         !e.altKey &&
         !e.shiftKey &&
         /^[1-9]$/.test(e.key) &&
-        focusGridCell(Number(e.key) - 1)
+        view === 'main' &&
+        !launcherOpen &&
+        ws.focusGridCell(Number(e.key) - 1)
       ) {
         e.preventDefault()
         e.stopPropagation()
@@ -400,35 +79,24 @@ export default function App(): JSX.Element {
         if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
-        toggleMaximizeFocused()
+        ws.toggleMaximizeFocused()
       } else if (chord === shortcuts.openLauncher) {
         if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
-        setLauncherOpen((o) => !o && !!activeWorkspaceId)
+        setLauncherOpen((o) => !o && !!ws.activeWorkspaceId)
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [shortcuts, view, activeWorkspaceId, toggleMaximizeFocused, focusGridCell])
-
-  // Drag the divider: preview width = distance from the row's right edge.
-  const startPreviewResize = (e: React.PointerEvent): void => {
-    e.preventDefault()
-    const row = previewRowRef.current
-    if (!row) return
-    const move = (ev: PointerEvent): void => {
-      const box = row.getBoundingClientRect()
-      const fraction = (box.right - ev.clientX) / box.width
-      setPreviewWidth(Math.min(0.8, Math.max(0.2, fraction)))
-    }
-    const up = (): void => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-  }
+  }, [
+    shortcuts,
+    view,
+    launcherOpen,
+    ws.activeWorkspaceId,
+    ws.focusGridCell,
+    ws.toggleMaximizeFocused
+  ])
 
   return (
     <div className="flex h-full flex-col bg-bar text-fg">
@@ -451,30 +119,30 @@ export default function App(): JSX.Element {
             initialSection={settingsSection}
             onBack={() => setView('main')}
             presets={presets}
-            onSavePreset={savePreset}
-            onDeletePreset={deletePreset}
-            onReorderPresets={reorderPresets}
-            onTogglePresetActive={togglePresetActive}
+            onSavePreset={presetsApi.savePreset}
+            onDeletePreset={presetsApi.deletePreset}
+            onReorderPresets={presetsApi.reorderPresets}
+            onTogglePresetActive={presetsApi.togglePresetActive}
             onPickPresetImage={() => window.api.pickPresetImage()}
-            onPresetsChanged={(state) => setPresets(state.presets)}
-            workspaces={workspaces}
-            folders={folders}
-            onKillSession={closeSession}
+            onPresetsChanged={(state) => presetsApi.setPresets(state.presets)}
+            workspaces={ws.workspaces}
+            folders={ws.folders}
+            onKillSession={ws.closeSession}
           />
         ) : (
           <>
             <Sidebar
-              folders={folders}
-              workspaces={workspaces}
-              activeWorkspaceId={activeWorkspaceId}
-              counts={counts}
+              folders={ws.folders}
+              workspaces={ws.workspaces}
+              activeWorkspaceId={ws.activeWorkspaceId}
+              counts={ws.counts}
               collapsed={sidebarCollapsed}
-              onAddFolder={addFolder}
-              onRemoveFolder={removeFolder}
-              onAddWorkspace={addWorkspace}
-              onRenameWorkspace={renameWorkspace}
-              onRemoveWorkspace={removeWorkspace}
-              onSelectWorkspace={selectWorkspace}
+              onAddFolder={ws.addFolder}
+              onRemoveFolder={ws.removeFolder}
+              onAddWorkspace={ws.addWorkspace}
+              onRenameWorkspace={ws.renameWorkspace}
+              onRemoveWorkspace={ws.removeWorkspace}
+              onSelectWorkspace={ws.selectWorkspace}
             />
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -491,40 +159,43 @@ export default function App(): JSX.Element {
                 </div>
               )}
 
-              <div ref={previewRowRef} className="flex min-h-0 min-w-0 flex-1">
+              <div ref={preview.previewRowRef} className="flex min-h-0 min-w-0 flex-1">
                 <div className="flex min-h-0 min-w-0 flex-1">
                   <TerminalPanel
-                    sessions={sessions}
-                    activeWorkspaceId={activeWorkspaceId}
-                    activeSessionId={activeSessionId}
-                    maximizedId={maximizedId}
-                    layoutMode={activeWorkspaceId ? layouts[activeWorkspaceId] : undefined}
-                    gridLayout={activeWorkspaceId ? gridLayouts[activeWorkspaceId] : undefined}
+                    sessions={ws.sessions}
+                    activeWorkspaceId={ws.activeWorkspaceId}
+                    activeSessionId={ws.activeSessionId}
+                    maximizedId={ws.maximizedId}
+                    layoutMode={ws.activeWorkspaceId ? ws.layouts[ws.activeWorkspaceId] : undefined}
+                    gridLayout={ws.activeWorkspaceId ? ws.gridLayouts[ws.activeWorkspaceId] : undefined}
                     presets={presets}
-                    onSelect={setActiveSessionId}
-                    onToggleMaximize={toggleMaximize}
-                    onClose={closeSession}
-                    onSessionUpdate={updateSession}
-                    onStart={startLayout}
-                    onLaunch={launchAgent}
+                    onSelect={ws.setActiveSessionId}
+                    onToggleMaximize={ws.toggleMaximize}
+                    onClose={ws.closeSession}
+                    onSessionUpdate={ws.updateSession}
+                    onStart={ws.startLayout}
+                    onLaunch={ws.launchAgent}
                     onManagePresets={openPresets}
-                    onGridLayoutChange={setGridLayout}
+                    onGridLayoutChange={ws.setGridLayout}
                   />
                 </div>
 
-                {previewFile && (
+                {preview.previewFile && (
                   <>
                     <div
-                      onPointerDown={startPreviewResize}
+                      onPointerDown={preview.startPreviewResize}
                       className="group flex w-1.5 shrink-0 cursor-col-resize items-stretch"
                     >
                       <span className="w-full bg-edge transition group-hover:bg-sky-500" />
                     </div>
                     <div
                       className="flex min-h-0 min-w-[280px] shrink-0 flex-col"
-                      style={{ width: `${previewWidth * 100}%` }}
+                      style={{ width: `${preview.previewWidth * 100}%` }}
                     >
-                      <FilePreviewPanel file={previewFile} onClose={() => setPreviewFile(null)} />
+                      <FilePreviewPanel
+                        file={preview.previewFile}
+                        onClose={() => preview.setPreviewFile(null)}
+                      />
                     </div>
                   </>
                 )}
@@ -533,9 +204,9 @@ export default function App(): JSX.Element {
 
             {rightSidebarOpen && (
               <RightPanel
-                folderPath={activeFolder?.path ?? null}
-                onOpenFile={setPreviewFile}
-                selectedPath={previewFile?.path ?? null}
+                folderPath={ws.activeFolder?.path ?? null}
+                onOpenFile={preview.setPreviewFile}
+                selectedPath={preview.previewFile?.path ?? null}
               />
             )}
           </>
@@ -545,7 +216,7 @@ export default function App(): JSX.Element {
       {view === 'main' && launcherOpen && (
         <QuickLaunch
           presets={presets.filter((p) => p.active)}
-          onSelect={launchAgent}
+          onSelect={ws.launchAgent}
           onClose={() => setLauncherOpen(false)}
         />
       )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { useI18n } from '../i18n'
@@ -25,33 +25,32 @@ export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX
   const [tab, setTab] = useState<Tab>('changes')
   const [diff, setDiff] = useState<GitDiff | null>(null)
   const [loading, setLoading] = useState(false)
+  // Monotonic token so a slow fetch can't overwrite a newer one (or a stale folder).
+  const reqRef = useRef(0)
 
-  const refresh = useCallback(async (): Promise<void> => {
-    if (!folderPath) return
-    setLoading(true)
-    setDiff(await window.api.getGitDiff(folderPath))
-    setLoading(false)
-  }, [folderPath])
+  const fetchDiff = useCallback(
+    async (show: boolean): Promise<void> => {
+      if (!folderPath) return
+      const token = ++reqRef.current
+      if (show) setLoading(true)
+      const result = await window.api.getGitDiff(folderPath)
+      if (token !== reqRef.current) return // superseded by a newer fetch
+      setDiff(result)
+      setLoading(false)
+    },
+    [folderPath]
+  )
 
   // Refetch on folder change and poll so the view tracks working-tree edits.
   useEffect(() => {
-    let active = true
     setDiff(null)
     if (!folderPath) return
-    const run = async (show: boolean): Promise<void> => {
-      if (show) setLoading(true)
-      const result = await window.api.getGitDiff(folderPath)
-      if (!active) return
-      setDiff(result)
-      setLoading(false)
-    }
-    void run(true)
-    const id = window.setInterval(() => void run(false), 3000)
-    return () => {
-      active = false
-      window.clearInterval(id)
-    }
-  }, [folderPath])
+    void fetchDiff(true)
+    const id = window.setInterval(() => void fetchDiff(false), 3000)
+    return () => window.clearInterval(id)
+  }, [folderPath, fetchDiff])
+
+  const refresh = useCallback((): void => void fetchDiff(true), [fetchDiff])
 
   const totals = diff?.isRepository && !diff.error ? diff.totals : null
 
@@ -79,7 +78,7 @@ export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX
       </div>
 
       {tab === 'changes' ? (
-        <ChangesView diff={diff} loading={loading} onRefresh={() => void refresh()} />
+        <ChangesView diff={diff} loading={loading} onRefresh={refresh} />
       ) : (
         <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}

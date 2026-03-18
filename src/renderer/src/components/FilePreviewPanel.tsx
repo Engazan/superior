@@ -53,6 +53,13 @@ function IconButton({
 export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const { t } = useI18n()
   const type = useMemo(() => getFilePreviewType(file), [file])
+  // Build the CodeMirror language once per file — a new Extension identity would
+  // tear down and recreate the whole editor (losing scroll/find) on every render.
+  const language = useMemo(() => {
+    if (type === 'json') return jsonLang()
+    if (type === 'code') return getCodeMirrorLanguage(file)
+    return null
+  }, [type, file])
   const [data, setData] = useState<FileReadResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -61,8 +68,14 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const copyPath = (): void => {
     void navigator.clipboard.writeText(file.path)
     setCopied(true)
-    window.setTimeout(() => setCopied(false), 1200)
   }
+
+  // Reset the "Copied" affordance after a moment; cancel if we unmount first.
+  useEffect(() => {
+    if (!copied) return
+    const id = window.setTimeout(() => setCopied(false), 1200)
+    return () => window.clearTimeout(id)
+  }, [copied])
 
   useEffect(() => {
     let active = true
@@ -122,7 +135,7 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
           <div className="flex h-full min-h-0 flex-col">
             {data.truncated && <TruncatedWarning onOpenRaw={openRaw} />}
             <div className="min-h-0 flex-1">
-              <CodeFilePreview content={prettyJson(data.content)} language={jsonLang()} />
+              <CodeFilePreview content={prettyJson(data.content)} language={language} />
             </div>
           </div>
         )
@@ -131,7 +144,7 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
           <div className="flex h-full min-h-0 flex-col">
             {data.truncated && <TruncatedWarning onOpenRaw={openRaw} />}
             <div className="min-h-0 flex-1">
-              <CodeFilePreview content={data.content} language={getCodeMirrorLanguage(file)} />
+              <CodeFilePreview content={data.content} language={language} />
             </div>
           </div>
         )

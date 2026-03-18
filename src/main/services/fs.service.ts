@@ -1,15 +1,19 @@
 import { open, readdir, stat } from 'fs/promises'
 import { join } from 'path'
 import type { FileReadOptions, FileReadResult, FsEntry, FsListResult } from '@shared/types'
+import { isWithinWorkspaceFolder } from './workspace.service'
 
 // Hidden plumbing the file tree should never surface.
 const IGNORED = new Set(['.git'])
+
+const OUTSIDE_WORKSPACE = 'Path is outside the opened workspace folders.'
 
 /**
  * List the immediate children of a directory (one level), sorted with folders
  * first then alphabetically. The tree loads levels lazily as they expand.
  */
 export async function listDir(dirPath: string): Promise<FsListResult> {
+  if (!isWithinWorkspaceFolder(dirPath)) return { entries: [], error: OUTSIDE_WORKSPACE }
   try {
     const dirents = await readdir(dirPath, { withFileTypes: true })
     const entries = dirents
@@ -40,6 +44,7 @@ const MAX_VISITED = 50_000
  * `truncated` flags an early stop.
  */
 export async function searchFiles(rootPath: string, query: string): Promise<FsListResult> {
+  if (!isWithinWorkspaceFolder(rootPath)) return { entries: [], error: OUTSIDE_WORKSPACE }
   const q = query.trim().toLowerCase()
   if (!q) return { entries: [] }
 
@@ -108,6 +113,7 @@ export async function readFilePreview(
   filePath: string,
   opts: FileReadOptions
 ): Promise<FileReadResult> {
+  if (!isWithinWorkspaceFolder(filePath)) return { ...EMPTY_READ, error: OUTSIDE_WORKSPACE }
   let size: number
   try {
     const info = await stat(filePath)

@@ -1,7 +1,5 @@
-import { app } from 'electron'
-import * as fs from 'fs'
-import * as path from 'path'
 import type { AppSettings, Language, ShortcutAction, ShortcutMap, ThemeMode } from '@shared/types'
+import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
 const DEFAULT_SHORTCUTS: ShortcutMap = {
   toggleSidebar: 'mod+b',
@@ -36,32 +34,23 @@ function normalizeShortcuts(raw: unknown): ShortcutMap {
 }
 
 function storeFile(): string {
-  return path.join(app.getPath('userData'), 'settings.json')
+  return userDataFile('settings.json')
 }
 
 /** Read persisted settings, falling back to defaults for any missing/invalid field. */
 export function getSettings(): AppSettings {
-  try {
-    const raw = fs.readFileSync(storeFile(), 'utf-8')
-    const parsed = JSON.parse(raw) as Partial<AppSettings>
-    return {
-      theme: THEMES.includes(parsed.theme as ThemeMode) ? (parsed.theme as ThemeMode) : DEFAULTS.theme,
-      language: LANGUAGES.includes(parsed.language as Language)
-        ? (parsed.language as Language)
-        : DEFAULTS.language,
-      shortcuts: normalizeShortcuts(parsed.shortcuts)
-    }
-  } catch {
-    return { ...DEFAULTS, shortcuts: { ...DEFAULT_SHORTCUTS } }
+  const parsed = readJsonFile<Partial<AppSettings>>(storeFile(), {})
+  return {
+    theme: THEMES.includes(parsed.theme as ThemeMode) ? (parsed.theme as ThemeMode) : DEFAULTS.theme,
+    language: LANGUAGES.includes(parsed.language as Language)
+      ? (parsed.language as Language)
+      : DEFAULTS.language,
+    shortcuts: normalizeShortcuts(parsed.shortcuts)
   }
 }
 
 function save(settings: AppSettings): void {
-  try {
-    fs.writeFileSync(storeFile(), JSON.stringify(settings, null, 2), 'utf-8')
-  } catch (err) {
-    console.error('[settings] failed to persist settings:', err)
-  }
+  writeJsonFile(storeFile(), settings, 'settings')
 }
 
 /** Persist the theme mode and return the updated settings. */

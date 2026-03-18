@@ -30,7 +30,10 @@ function createWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      // The renderer displays untrusted repo content (markdown, source), so keep
+      // the sandbox on as defense-in-depth. node-pty lives in the daemon, and the
+      // preload only touches electron + process.platform, so this is safe.
+      sandbox: true
     }
   })
 

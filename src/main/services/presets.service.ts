@@ -1,12 +1,13 @@
-import { app, dialog } from 'electron'
+import { dialog } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { randomUUID } from 'crypto'
 import type { PresetsState, TerminalPreset } from '@shared/types'
 import { builtinIcon } from '@shared/icons'
+import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
 function storeFile(): string {
-  return path.join(app.getPath('userData'), 'presets.json')
+  return userDataFile('presets.json')
 }
 
 /** Built-in presets seeded on first run, preserving the original Claude/Codex launchers. */
@@ -34,21 +35,15 @@ function defaultPresets(): TerminalPreset[] {
 }
 
 function save(state: PresetsState): void {
-  try {
-    fs.writeFileSync(storeFile(), JSON.stringify(state, null, 2), 'utf-8')
-  } catch (err) {
-    console.error('[presets] failed to persist presets:', err)
-  }
+  writeJsonFile(storeFile(), state, 'presets')
 }
 
 function read(): PresetsState {
-  try {
-    const raw = fs.readFileSync(storeFile(), 'utf-8')
-    const parsed = JSON.parse(raw) as Partial<PresetsState>
-    if (Array.isArray(parsed.presets)) return { presets: parsed.presets }
-  } catch {
-    /* missing/corrupt — seed defaults below */
-  }
+  const parsed = readJsonFile<PresetsState | null>(storeFile(), null, (p) => {
+    const obj = p as Partial<PresetsState>
+    return obj && Array.isArray(obj.presets) ? { presets: obj.presets } : null
+  })
+  if (parsed) return parsed
   const seeded: PresetsState = { presets: defaultPresets() }
   save(seeded)
   return seeded
@@ -117,6 +112,6 @@ export async function pickPresetImage(): Promise<{ dataUrl: string } | null> {
   const file = result.filePaths[0]
   const ext = path.extname(file).slice(1).toLowerCase()
   const mime = MIME[ext] ?? 'application/octet-stream'
-  const base64 = fs.readFileSync(file).toString('base64')
+  const base64 = (await fs.promises.readFile(file)).toString('base64')
   return { dataUrl: `data:${mime};base64,${base64}` }
 }

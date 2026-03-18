@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState, type ComponentProps } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -23,9 +23,20 @@ const schema = {
   }
 }
 
+// Constant plugin pipelines — built once so ReactMarkdown isn't handed a new
+// array identity (and forced to re-process) on every parent render.
+type MarkdownProps = ComponentProps<typeof ReactMarkdown>
+
 export function MarkdownFilePreview({ content }: Props): JSX.Element {
   const { t } = useI18n()
   const [raw, setRaw] = useState(false)
+
+  const remarkPlugins = useMemo<MarkdownProps['remarkPlugins']>(() => [remarkGfm], [])
+  const rehypePlugins = useMemo<MarkdownProps['rehypePlugins']>(
+    () => [rehypeRaw, rehypeHighlight, [rehypeSanitize, schema]],
+    []
+  )
+  const mdLanguage = useMemo(() => markdown(), [])
 
   const segBtn = (active: boolean): string =>
     `px-2 py-0.5 text-[11px] font-medium rounded transition ${
@@ -45,14 +56,11 @@ export function MarkdownFilePreview({ content }: Props): JSX.Element {
 
       {raw ? (
         <div className="min-h-0 flex-1">
-          <CodeFilePreview content={content} language={markdown()} wrap />
+          <CodeFilePreview content={content} language={mdLanguage} wrap />
         </div>
       ) : (
         <div className="md-preview min-h-0 flex-1 overflow-auto px-4 py-3 text-sm">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, rehypeHighlight, [rehypeSanitize, schema]]}
-          >
+          <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
             {content}
           </ReactMarkdown>
         </div>
