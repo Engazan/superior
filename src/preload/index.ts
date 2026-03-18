@@ -3,13 +3,16 @@ import {
   IPC,
   type AgentDataEvent,
   type AgentExitEvent,
+  type AgentSession,
   type AppSettings,
   type Language,
+  type LayoutsState,
   type PresetsState,
   type StartAgentArgs,
   type StartAgentResult,
   type TerminalPreset,
   type ThemeMode,
+  type WorkspaceLayout,
   type WorkspaceState
 } from '@shared/types'
 
@@ -21,16 +24,28 @@ const api = {
     return ipcRenderer.invoke(IPC.WORKSPACE_LIST)
   },
 
-  addWorkspace(): Promise<WorkspaceState | null | { error: string }> {
-    return ipcRenderer.invoke(IPC.WORKSPACE_ADD)
+  addFolder(): Promise<WorkspaceState | null | { error: string }> {
+    return ipcRenderer.invoke(IPC.FOLDER_ADD)
   },
 
-  removeWorkspace(path: string): Promise<WorkspaceState> {
-    return ipcRenderer.invoke(IPC.WORKSPACE_REMOVE, path)
+  removeFolder(folderPath: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.FOLDER_REMOVE, folderPath)
   },
 
-  setActiveWorkspace(path: string): Promise<WorkspaceState> {
-    return ipcRenderer.invoke(IPC.WORKSPACE_SET_ACTIVE, path)
+  addWorkspace(folderPath: string, name: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_ADD, { folderPath, name })
+  },
+
+  renameWorkspace(id: string, name: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_RENAME, { id, name })
+  },
+
+  removeWorkspace(id: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_REMOVE, id)
+  },
+
+  setActiveWorkspace(id: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_SET_ACTIVE, id)
   },
 
   getSettings(): Promise<AppSettings> {
@@ -94,6 +109,27 @@ const api = {
 
   startAgent(args: StartAgentArgs): Promise<StartAgentResult> {
     return ipcRenderer.invoke(IPC.AGENT_START, args)
+  },
+
+  /** Surviving sessions from the daemon, to rebuild the UI on launch. */
+  restoreSessions(): Promise<AgentSession[]> {
+    return ipcRenderer.invoke(IPC.AGENT_RESTORE)
+  },
+
+  attach(id: string): void {
+    ipcRenderer.send(IPC.AGENT_ATTACH, id)
+  },
+
+  detach(id: string): void {
+    ipcRenderer.send(IPC.AGENT_DETACH, id)
+  },
+
+  getLayouts(): Promise<LayoutsState> {
+    return ipcRenderer.invoke(IPC.LAYOUT_GET)
+  },
+
+  setLayout(workspaceId: string, layout: WorkspaceLayout): Promise<LayoutsState> {
+    return ipcRenderer.invoke(IPC.LAYOUT_SET, { workspaceId, layout })
   },
 
   sendInput(id: string, data: string): void {

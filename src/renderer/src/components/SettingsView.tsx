@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { PresetsSection } from './PresetsSection'
+import { DaemonsSection } from './DaemonsSection'
 import { useTheme } from '../theme'
 import { useI18n, LANGUAGES } from '../i18n'
-import type { ThemeMode, TerminalPreset } from '../types'
+import type { Folder, ThemeMode, TerminalPreset, Workspace } from '../types'
 
-export type SettingsSection = 'appearance' | 'presets'
+export type SettingsSection = 'appearance' | 'presets' | 'daemons'
 
 interface Props {
   initialSection: SettingsSection
@@ -15,6 +16,9 @@ interface Props {
   onReorderPresets: (orderedIds: string[]) => void
   onTogglePresetActive: (id: string, active: boolean) => void
   onPickPresetImage: () => Promise<{ dataUrl: string } | null>
+  workspaces: Workspace[]
+  folders: Folder[]
+  onKillSession: (id: string) => void
 }
 
 const THEME_OPTIONS: { value: ThemeMode; labelKey: 'theme.light' | 'theme.dark' | 'theme.system' }[] =
@@ -85,14 +89,18 @@ export function SettingsView({
   onDeletePreset,
   onReorderPresets,
   onTogglePresetActive,
-  onPickPresetImage
+  onPickPresetImage,
+  workspaces,
+  folders,
+  onKillSession
 }: Props): JSX.Element {
   const { t } = useI18n()
   const [section, setSection] = useState<SettingsSection>(initialSection)
 
   const nav: { id: SettingsSection; label: string }[] = [
     { id: 'appearance', label: t('settings.appearance') },
-    { id: 'presets', label: t('settings.terminalPresets') }
+    { id: 'presets', label: t('settings.terminalPresets') },
+    { id: 'daemons', label: t('settings.daemons') }
   ]
 
   return (
@@ -127,9 +135,8 @@ export function SettingsView({
 
       {/* Settings content */}
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6">
-        {section === 'appearance' ? (
-          <AppearanceSection />
-        ) : (
+        {section === 'appearance' && <AppearanceSection />}
+        {section === 'presets' && (
           <PresetsSection
             presets={presets}
             onSave={onSavePreset}
@@ -138,6 +145,9 @@ export function SettingsView({
             onToggleActive={onTogglePresetActive}
             onPickImage={onPickPresetImage}
           />
+        )}
+        {section === 'daemons' && (
+          <DaemonsSection workspaces={workspaces} folders={folders} onKill={onKillSession} />
         )}
       </div>
     </div>

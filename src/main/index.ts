@@ -5,7 +5,8 @@ import { registerAgentIpc } from './ipc/agent.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { registerPresetsIpc } from './ipc/presets.ipc'
 import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
-import { terminalService } from './services/terminal.service'
+import { registerLayoutIpc } from './ipc/layout.ipc'
+import { daemonClient } from './services/daemonClient'
 
 const isMac = process.platform === 'darwin'
 
@@ -55,6 +56,10 @@ app.whenReady().then(() => {
   registerSettingsIpc()
   registerPresetsIpc()
   registerWindowIpc()
+  registerLayoutIpc()
+
+  // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
+  daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))
 
   createWindow()
 
@@ -64,10 +69,11 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  terminalService.killAll()
+  // PTYs live in the daemon and intentionally survive — do not kill them here.
   if (process.platform !== 'darwin') app.quit()
 })
 
 app.on('before-quit', () => {
-  terminalService.killAll()
+  // Detach from the daemon without killing sessions, so they persist.
+  daemonClient.disconnect()
 })

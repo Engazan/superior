@@ -7,14 +7,15 @@ import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { type GridLayout } from './gridLayout'
-import type { AgentSession, TerminalPreset, Workspace, WorkspaceState } from './types'
+import type { AgentSession, Folder, TerminalPreset, Workspace, WorkspaceState } from './types'
 
 type View = 'main' | 'settings'
 
 export default function App(): JSX.Element {
   const { t } = useI18n()
+  const [folders, setFolders] = useState<Folder[]>([])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [activePath, setActivePath] = useState<string | null>(null)
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<AgentSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -22,30 +23,71 @@ export default function App(): JSX.Element {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [presets, setPresets] = useState<TerminalPreset[]>([])
-  // Per-workspace layout mode (tabs vs grid), kept in memory.
+  // Per-workspace layout mode (tabs vs grid) and grid sizing, kept in memory.
   const [layouts, setLayouts] = useState<Record<string, LayoutMode>>({})
-  // Per-workspace grid cell sizing.
   const [gridLayouts, setGridLayouts] = useState<Record<string, GridLayout>>({})
 
   const activeWorkspace = useMemo(
-    () => workspaces.find((w) => w.path === activePath) ?? null,
-    [workspaces, activePath]
+    () => workspaces.find((w) => w.id === activeWorkspaceId) ?? null,
+    [workspaces, activeWorkspaceId]
+  )
+  const activeFolder = useMemo(
+    () => folders.find((f) => f.path === activeWorkspace?.folderPath) ?? null,
+    [folders, activeWorkspace]
   )
 
-  // Restore saved workspaces + presets, and start listening to the agent event stream once.
+  // Running-terminal count per workspace, for the sidebar badges.
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const s of sessions) {
+      if (s.status === 'running') map[s.workspaceId] = (map[s.workspaceId] ?? 0) + 1
+    }
+    return map
+  }, [sessions])
+
+  // Restore folders/workspaces/presets, then reattach surviving daemon sessions.
   useEffect(() => {
     ensureBus()
-    window.api.listWorkspaces().then((state) => {
-      setWorkspaces(state.workspaces)
-      setActivePath(state.activePath)
-    })
     window.api.listPresets().then((state) => setPresets(state.presets))
+    ;(async () => {
+      const ws = await window.api.listWorkspaces()
+      setFolders(ws.folders)
+      setWorkspaces(ws.workspaces)
+      setActiveWorkspaceId(ws.activeWorkspaceId)
+
+      const [restored, layoutsState] = await Promise.all([
+        window.api.restoreSessions(),
+        window.api.getLayouts()
+      ])
+
+      // Keep only sessions whose workspace still exists; kill orphans.
+      const validIds = new Set(ws.workspaces.map((w) => w.id))
+      const live = restored.filter((s) => {
+        if (validIds.has(s.workspaceId)) return true
+        window.api.killAgent(s.id)
+        return false
+      })
+      setSessions(live)
+
+      const modeMap: Record<string, LayoutMode> = {}
+      const gridMap: Record<string, GridLayout> = {}
+      for (const [wsId, layout] of Object.entries(layoutsState)) {
+        if (!validIds.has(wsId)) continue
+        modeMap[wsId] = layout.mode
+        if (layout.gridLayout) gridMap[wsId] = layout.gridLayout
+      }
+      setLayouts(modeMap)
+      setGridLayouts(gridMap)
+
+      const inActive = live.filter((s) => s.workspaceId === ws.activeWorkspaceId)
+      setActiveSessionId(inActive.length ? inActive[inActive.length - 1].id : null)
+    })().catch((err) => console.error('[restore] failed:', err))
   }, [])
 
-  // Point the active session at the most recent session of the active workspace.
+  // Point the active session at the most recent session of a workspace.
   const focusWorkspaceSession = useCallback(
-    (path: string | null) => {
-      const list = sessions.filter((s) => s.workspacePath === path)
+    (workspaceId: string | null) => {
+      const list = sessions.filter((s) => s.workspaceId === workspaceId)
       setActiveSessionId(list.length ? list[list.length - 1].id : null)
     },
     [sessions]
@@ -53,16 +95,17 @@ export default function App(): JSX.Element {
 
   const applyState = useCallback(
     (state: WorkspaceState) => {
+      setFolders(state.folders)
       setWorkspaces(state.workspaces)
-      setActivePath(state.activePath)
-      focusWorkspaceSession(state.activePath)
+      setActiveWorkspaceId(state.activeWorkspaceId)
+      focusWorkspaceSession(state.activeWorkspaceId)
     },
     [focusWorkspaceSession]
   )
 
-  const addWorkspace = useCallback(async () => {
+  const addFolder = useCallback(async () => {
     setError(null)
-    const res = await window.api.addWorkspace()
+    const res = await window.api.addFolder()
     if (!res) return // cancelled
     if ('error' in res) {
       setError(res.error)
@@ -71,34 +114,58 @@ export default function App(): JSX.Element {
     applyState(res)
   }, [applyState])
 
-  const selectWorkspace = useCallback(
-    async (path: string) => {
-      if (path === activePath) return
-      setActivePath(path)
-      focusWorkspaceSession(path)
-      const state = await window.api.setActiveWorkspace(path)
-      setWorkspaces(state.workspaces)
+  const removeFolder = useCallback(
+    async (folderPath: string) => {
+      setError(null)
+      const ids = new Set(
+        workspaces.filter((w) => w.folderPath === folderPath).map((w) => w.id)
+      )
+      setSessions((prev) => {
+        prev.filter((s) => ids.has(s.workspaceId)).forEach((s) => window.api.killAgent(s.id))
+        return prev.filter((s) => !ids.has(s.workspaceId))
+      })
+      applyState(await window.api.removeFolder(folderPath))
     },
-    [activePath, focusWorkspaceSession]
+    [workspaces, applyState]
   )
 
-  const removeWorkspace = useCallback(async (path: string) => {
-    setError(null)
-    // Kill and drop any sessions belonging to the removed workspace.
-    setSessions((prev) => {
-      prev.filter((s) => s.workspacePath === path).forEach((s) => window.api.killAgent(s.id))
-      return prev.filter((s) => s.workspacePath !== path)
-    })
-    const state = await window.api.removeWorkspace(path)
+  const addWorkspace = useCallback(
+    async (folderPath: string, name: string) => {
+      setError(null)
+      applyState(await window.api.addWorkspace(folderPath, name))
+    },
+    [applyState]
+  )
+
+  const renameWorkspace = useCallback(async (id: string, name: string) => {
+    const state = await window.api.renameWorkspace(id, name)
     setWorkspaces(state.workspaces)
-    setActivePath(state.activePath)
-    setActiveSessionId(null)
   }, [])
+
+  const selectWorkspace = useCallback(
+    async (id: string) => {
+      if (id === activeWorkspaceId) return
+      setActiveWorkspaceId(id)
+      focusWorkspaceSession(id)
+      const state = await window.api.setActiveWorkspace(id)
+      setWorkspaces(state.workspaces)
+    },
+    [activeWorkspaceId, focusWorkspaceSession]
+  )
+
+  const removeWorkspace = useCallback(async (id: string) => {
+    setError(null)
+    setSessions((prev) => {
+      prev.filter((s) => s.workspaceId === id).forEach((s) => window.api.killAgent(s.id))
+      return prev.filter((s) => s.workspaceId !== id)
+    })
+    applyState(await window.api.removeWorkspace(id))
+  }, [applyState])
 
   const launchAgent = useCallback(
     async (preset: TerminalPreset) => {
       setError(null)
-      if (!activeWorkspace) {
+      if (!activeWorkspace || !activeFolder) {
         setError(t('error.noWorkspace'))
         return
       }
@@ -107,7 +174,8 @@ export default function App(): JSX.Element {
         label: preset.name,
         iconType: preset.iconType,
         icon: preset.icon,
-        workspacePath: activeWorkspace.path
+        cwd: activeFolder.path,
+        workspaceId: activeWorkspace.id
       })
       if ('error' in res) {
         setError(res.error)
@@ -116,19 +184,20 @@ export default function App(): JSX.Element {
       setSessions((prev) => [...prev, res.session])
       setActiveSessionId(res.session.id)
     },
-    [activeWorkspace, t]
+    [activeWorkspace, activeFolder, t]
   )
 
-  // Start a fresh layout from the launch wizard: set the mode and spawn each chosen preset.
+  // Start a fresh layout from the launch wizard: set the mode and spawn each preset.
   const startLayout = useCallback(
     async ({ mode, presetIds }: LaunchConfig) => {
       setError(null)
-      if (!activeWorkspace) {
+      if (!activeWorkspace || !activeFolder) {
         setError(t('error.noWorkspace'))
         return
       }
-      const path = activeWorkspace.path
-      setLayouts((prev) => ({ ...prev, [path]: mode }))
+      const wsId = activeWorkspace.id
+      setLayouts((prev) => ({ ...prev, [wsId]: mode }))
+      window.api.setLayout(wsId, { mode })
       const launched: AgentSession[] = []
       for (const id of presetIds) {
         const preset = presets.find((p) => p.id === id)
@@ -138,7 +207,8 @@ export default function App(): JSX.Element {
           label: preset.name,
           iconType: preset.iconType,
           icon: preset.icon,
-          workspacePath: path
+          cwd: activeFolder.path,
+          workspaceId: wsId
         })
         if ('error' in res) {
           setError(res.error)
@@ -151,7 +221,7 @@ export default function App(): JSX.Element {
         setActiveSessionId(launched[launched.length - 1].id)
       }
     },
-    [activeWorkspace, presets, t]
+    [activeWorkspace, activeFolder, presets, t]
   )
 
   // Preset management — each call returns the new state which we mirror locally.
@@ -174,10 +244,12 @@ export default function App(): JSX.Element {
 
   const setGridLayout = useCallback(
     (layout: GridLayout) => {
-      if (!activePath) return
-      setGridLayouts((prev) => ({ ...prev, [activePath]: layout }))
+      if (!activeWorkspaceId) return
+      setGridLayouts((prev) => ({ ...prev, [activeWorkspaceId]: layout }))
+      // Grid sizing only changes in grid mode, so the persisted mode is 'grid'.
+      window.api.setLayout(activeWorkspaceId, { mode: 'grid', gridLayout: layout })
     },
-    [activePath]
+    [activeWorkspaceId]
   )
 
   const updateSession = useCallback((id: string, patch: Partial<AgentSession>) => {
@@ -191,7 +263,7 @@ export default function App(): JSX.Element {
       const next = prev.filter((s) => s.id !== id)
       setActiveSessionId((curr) => {
         if (curr !== id) return curr
-        const siblings = next.filter((s) => s.workspacePath === closed?.workspacePath)
+        const siblings = next.filter((s) => s.workspaceId === closed?.workspaceId)
         return siblings.length ? siblings[siblings.length - 1].id : null
       })
       return next
@@ -213,16 +285,24 @@ export default function App(): JSX.Element {
             onReorderPresets={reorderPresets}
             onTogglePresetActive={togglePresetActive}
             onPickPresetImage={() => window.api.pickPresetImage()}
+            workspaces={workspaces}
+            folders={folders}
+            onKillSession={closeSession}
           />
         ) : (
           <>
             <Sidebar
+              folders={folders}
               workspaces={workspaces}
-              activePath={activePath}
+              activeWorkspaceId={activeWorkspaceId}
+              counts={counts}
               collapsed={sidebarCollapsed}
-              onAdd={addWorkspace}
-              onSelect={selectWorkspace}
-              onRemove={removeWorkspace}
+              onAddFolder={addFolder}
+              onRemoveFolder={removeFolder}
+              onAddWorkspace={addWorkspace}
+              onRenameWorkspace={renameWorkspace}
+              onRemoveWorkspace={removeWorkspace}
+              onSelectWorkspace={selectWorkspace}
               onOpenSettings={() => {
                 setSettingsSection('appearance')
                 setView('settings')
@@ -245,10 +325,10 @@ export default function App(): JSX.Element {
 
               <TerminalPanel
                 sessions={sessions}
-                activePath={activePath}
+                activeWorkspaceId={activeWorkspaceId}
                 activeSessionId={activeSessionId}
-                layoutMode={activePath ? layouts[activePath] : undefined}
-                gridLayout={activePath ? gridLayouts[activePath] : undefined}
+                layoutMode={activeWorkspaceId ? layouts[activeWorkspaceId] : undefined}
+                gridLayout={activeWorkspaceId ? gridLayouts[activeWorkspaceId] : undefined}
                 presets={presets}
                 onSelect={setActiveSessionId}
                 onClose={closeSession}

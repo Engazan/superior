@@ -23,7 +23,7 @@ export type LayoutMode = 'tabs' | 'grid'
 interface Props {
   /** All sessions across every workspace — kept mounted so buffers survive workspace switches. */
   sessions: AgentSession[]
-  activePath: string | null
+  activeWorkspaceId: string | null
   activeSessionId: string | null
   /** layout mode for the active workspace (undefined defaults to tabs) */
   layoutMode: LayoutMode | undefined
@@ -56,7 +56,7 @@ interface Layout {
 
 export function TerminalPanel({
   sessions,
-  activePath,
+  activeWorkspaceId,
   activeSessionId,
   layoutMode,
   gridLayout,
@@ -74,7 +74,7 @@ export function TerminalPanel({
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
 
   // Sessions of the active workspace, in creation order.
-  const workspaceSessions = sessions.filter((s) => s.workspacePath === activePath)
+  const workspaceSessions = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
   const isGrid = layoutMode === 'grid'
 
   // Grid: map the first MAX_GRID sessions to their slot rectangles.
@@ -86,7 +86,7 @@ export function TerminalPanel({
   const gridIndex = new Map(gridCells.map((s, i) => [s.id, i] as const))
 
   const layoutFor = (s: AgentSession): Layout => {
-    if (s.workspacePath !== activePath) return { visible: false, focused: false }
+    if (s.workspaceId !== activeWorkspaceId) return { visible: false, focused: false }
     if (isGrid) {
       const i = gridIndex.get(s.id)
       if (i === undefined) return { visible: false, focused: false }
@@ -163,9 +163,14 @@ export function TerminalPanel({
 
       {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
       <div ref={containerRef} className="relative min-h-0 flex-1">
-        {workspaceSessions.length === 0 && (
-          <AgentLauncher presets={presets} onStart={onStart} />
-        )}
+        {workspaceSessions.length === 0 &&
+          (activeWorkspaceId ? (
+            <AgentLauncher presets={presets} onStart={onStart} />
+          ) : (
+            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-fgmuted">
+              {t('terminal.noWorkspace')}
+            </div>
+          ))}
 
         {sessions.map((s) => {
           const l = layoutFor(s)

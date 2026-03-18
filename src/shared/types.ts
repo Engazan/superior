@@ -26,11 +26,23 @@ export interface PresetsState {
   presets: TerminalPreset[]
 }
 
-export interface Workspace {
+/** A project folder (cwd for its workspaces' terminals). */
+export interface Folder {
   path: string
   /** basename of path */
   name: string
   lastOpenedAt: number
+}
+
+/** A named working context inside a folder, owning its own terminals + layout. */
+export interface Workspace {
+  /** crypto.randomUUID() */
+  id: string
+  /** the folder this workspace belongs to (its terminals' cwd) */
+  folderPath: string
+  /** user-editable display name */
+  name: string
+  createdAt: number
 }
 
 export type AgentStatus = 'running' | 'exited' | 'error'
@@ -44,14 +56,35 @@ export interface AgentSession {
   command: string
   iconType?: PresetIconType
   icon?: string
-  workspacePath: string
+  /** the workspace this session belongs to */
+  workspaceId: string
   status: AgentStatus
   pid?: number
   exitCode?: number | null
   /** populated on spawn failure (ENOENT/EACCES/etc.) */
   error?: string
+  /** last known terminal size, persisted in the daemon for replay sizing */
+  cols?: number
+  rows?: number
   createdAt: number
 }
+
+export type LayoutMode = 'tabs' | 'grid'
+
+/** Grid cell sizing — row heights + per-row column widths as fractions. */
+export interface GridLayoutData {
+  rows: number[]
+  cols: number[][]
+}
+
+/** A workspace's persisted layout (tab strip vs grid + grid sizing). */
+export interface WorkspaceLayout {
+  mode: LayoutMode
+  gridLayout?: GridLayoutData
+}
+
+/** Persisted per-workspace layouts, keyed by workspace id. */
+export type LayoutsState = Record<string, WorkspaceLayout>
 
 /** Payload for starting an agent session from a preset. */
 export interface StartAgentArgs {
@@ -59,15 +92,19 @@ export interface StartAgentArgs {
   label: string
   iconType?: PresetIconType
   icon?: string
-  workspacePath: string
+  /** working directory (the workspace's folder path) */
+  cwd: string
+  /** the workspace this session belongs to */
+  workspaceId: string
   cols?: number
   rows?: number
 }
 
-/** The set of saved workspaces plus which one is currently active. */
+/** Saved folders + their workspaces, plus which workspace is active. */
 export interface WorkspaceState {
+  folders: Folder[]
   workspaces: Workspace[]
-  activePath: string | null
+  activeWorkspaceId: string | null
 }
 
 /** Result returned from a start-agent request. */
@@ -92,7 +129,10 @@ export interface AgentExitEvent {
  */
 export const IPC = {
   WORKSPACE_LIST: 'workspace:list',
+  FOLDER_ADD: 'folder:add',
+  FOLDER_REMOVE: 'folder:remove',
   WORKSPACE_ADD: 'workspace:add',
+  WORKSPACE_RENAME: 'workspace:rename',
   WORKSPACE_REMOVE: 'workspace:remove',
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
   SETTINGS_GET: 'settings:get',
@@ -114,5 +154,10 @@ export const IPC = {
   AGENT_RESIZE: 'agent:resize',
   AGENT_KILL: 'agent:kill',
   AGENT_DATA: 'agent:data',
-  AGENT_EXIT: 'agent:exit'
+  AGENT_EXIT: 'agent:exit',
+  AGENT_RESTORE: 'agent:restore',
+  AGENT_ATTACH: 'agent:attach',
+  AGENT_DETACH: 'agent:detach',
+  LAYOUT_GET: 'layout:get',
+  LAYOUT_SET: 'layout:set'
 } as const

@@ -76,6 +76,9 @@ export function TerminalView({ session, rect, visible, focused, onExit }: Props)
       }
     })
 
+    // Attach to the daemon-owned pty: replays scrollback, then streams live.
+    window.api.attach(session.id)
+
     // tell the pty our real size
     window.api.resize(session.id, term.cols, term.rows)
 
@@ -90,6 +93,7 @@ export function TerminalView({ session, rect, visible, focused, onExit }: Props)
     ro.observe(host)
 
     return () => {
+      window.api.detach(session.id)
       ro.disconnect()
       unsubscribe()
       dataDisposable.dispose()

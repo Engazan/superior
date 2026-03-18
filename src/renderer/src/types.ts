@@ -4,6 +4,7 @@ export type {
   AgentSession,
   AgentStatus,
   AppSettings,
+  Folder,
   Language,
   PresetIconType,
   PresetsState,

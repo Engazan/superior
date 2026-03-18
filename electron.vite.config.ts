@@ -9,6 +9,15 @@ export default defineConfig({
       alias: {
         '@shared': resolve(__dirname, 'src/shared')
       }
+    },
+    build: {
+      rollupOptions: {
+        // The daemon ships as a second Node entry → out/main/daemon.js.
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          daemon: resolve(__dirname, 'src/daemon/index.ts')
+        }
+      }
     }
   },
   preload: {

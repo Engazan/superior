@@ -1,75 +1,77 @@
 import { randomUUID } from 'crypto'
-import type { BrowserWindow } from 'electron'
-import { IPC, type AgentSession, type StartAgentArgs, type StartAgentResult } from '@shared/types'
-import { terminalService } from './terminal.service'
+import { type AgentSession, type StartAgentArgs, type StartAgentResult } from '@shared/types'
+import { daemonClient } from './daemonClient'
 import { isValidWorkspaceDir } from './workspace.service'
 
 /**
- * Validate, then spawn a preset's command inside the workspace via the terminal
- * service. Streams output/exit back to the renderer over IPC.
+ * Validate, then ask the daemon to spawn a preset's command. The daemon owns the
+ * pty and streams output/exit back to the renderer via daemonClient's relay.
  */
-export function startAgent(win: BrowserWindow, args: StartAgentArgs): StartAgentResult {
-  const { command, label, workspacePath } = args
+export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult> {
+  const { command, label, cwd, workspaceId } = args
 
-  if (!workspacePath) {
+  if (!cwd) {
     return { error: 'No workspace selected. Open a folder first.' }
   }
-  if (!isValidWorkspaceDir(workspacePath)) {
+  if (!isValidWorkspaceDir(cwd)) {
     return { error: 'Workspace folder is invalid or no longer exists.' }
   }
   if (!command.trim()) {
     return { error: 'This preset has no command to run.' }
   }
 
-  const session: AgentSession = {
-    id: randomUUID(),
-    label,
-    command,
-    iconType: args.iconType,
-    icon: args.icon,
-    workspacePath,
-    status: 'running',
-    createdAt: Date.now()
-  }
-
-  // Friendly label for the binary name (first token of the command).
-  const bin = command.trim().split(/\s+/)[0]
+  const id = randomUUID()
+  const createdAt = Date.now()
+  const cols = args.cols ?? 80
+  const rows = args.rows ?? 24
 
   try {
-    const pid = terminalService.spawn({
-      id: session.id,
+    const { pid } = await daemonClient.spawn({
+      id,
       command,
-      cwd: workspacePath,
-      cols: args.cols,
-      rows: args.rows,
-      onData: (data) => {
-        if (win.isDestroyed()) return
-        win.webContents.send(IPC.AGENT_DATA, { id: session.id, data })
-      },
-      onExit: (exitCode) => {
-        if (win.isDestroyed()) return
-        // A login shell exits 127 when the command isn't found on PATH.
-        const message =
-          exitCode === 127
-            ? `${bin}: command not found. Is it installed and on your PATH?`
-            : undefined
-        win.webContents.send(IPC.AGENT_EXIT, { id: session.id, exitCode, message })
-      }
+      cwd,
+      cols,
+      rows,
+      meta: { label, iconType: args.iconType, icon: args.icon, command, workspaceId, createdAt }
     })
-    session.pid = pid
+
+    const session: AgentSession = {
+      id,
+      label,
+      command,
+      iconType: args.iconType,
+      icon: args.icon,
+      workspaceId,
+      status: 'running',
+      pid,
+      cols,
+      rows,
+      createdAt
+    }
     return { session }
   } catch (err) {
-    const e = err as NodeJS.ErrnoException
-    let message = `Failed to start ${bin}: ${e.message}`
-    if (e.code === 'EACCES') {
-      message = `Permission denied launching ${bin}. Check the binary's permissions.`
-    } else if (e.code === 'ENOENT') {
-      message = `${bin}: command not found. Is it installed and on your PATH?`
-    }
-    return { error: message }
+    return { error: `Failed to start ${command.trim().split(/\s+/)[0]}: ${(err as Error).message}` }
   }
 }
 
+/** Rebuild the AgentSession list from the daemon's surviving sessions. */
+export async function restoreSessions(): Promise<AgentSession[]> {
+  const list = await daemonClient.list()
+  return list.map((s) => ({
+    id: s.id,
+    label: s.meta.label,
+    command: s.meta.command,
+    iconType: s.meta.iconType,
+    icon: s.meta.icon,
+    workspaceId: s.meta.workspaceId,
+    status: s.status,
+    pid: s.pid,
+    cols: s.cols,
+    rows: s.rows,
+    createdAt: s.meta.createdAt
+  }))
+}
+
 export function killAgent(id: string): void {
-  terminalService.kill(id)
+  daemonClient.kill(id)
 }
