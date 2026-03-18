@@ -142,5 +142,19 @@ export const pl: Record<MessageKey, string> = {
   'window.maximize': 'Maksymalizuj',
   'window.restore': 'Przywróć',
   'window.close': 'Zamknij',
-  'error.noWorkspace': 'Nie wybrano obszaru roboczego. Najpierw dodaj lub wybierz folder.'
+  'error.noWorkspace': 'Nie wybrano obszaru roboczego. Najpierw dodaj lub wybierz folder.',
+  'error.notARepo': 'Ten folder nie jest repozytorium Git.',
+  'error.branchExists': 'Gałąź o tej nazwie już istnieje.',
+  'error.branchCheckedOut': 'Ta gałąź jest już wyewidencjonowana w innym worktree.',
+  'error.worktreeCreateFailed': 'Nie udało się utworzyć worktree: {message}',
+  'sidebar.addWorktreeWorkspace': 'Nowy workspace z gałęzią…',
+  'sidebar.worktreeBranchPlaceholder': 'Nazwa gałęzi…',
+  'sidebar.createNewBranch': 'Nowa gałąź',
+  'sidebar.useExistingBranch': 'Istniejąca',
+  'sidebar.worktreeBadge': 'Workspace z gałęzią (izolowany worktree)',
+  'worktree.removeDirtyBody':
+    'Ten workspace ma niezapisane zmiany, które zostaną utracone. Usunąć mimo to?',
+  'worktree.removeRunningBody':
+    'Ten workspace ma działające terminale. Zatrzymać je i usunąć?',
+  'worktree.revealInFinder': 'Pokaż worktree w menedżerze plików'
 }

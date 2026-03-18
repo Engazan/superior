@@ -142,5 +142,19 @@ export const hu: Record<MessageKey, string> = {
   'window.maximize': 'Teljes méret',
   'window.restore': 'Visszaállítás',
   'window.close': 'Bezárás',
-  'error.noWorkspace': 'Nincs kiválasztott munkaterület. Először adj hozzá vagy válassz mappát.'
+  'error.noWorkspace': 'Nincs kiválasztott munkaterület. Először adj hozzá vagy válassz mappát.',
+  'error.notARepo': 'Ez a mappa nem Git tároló.',
+  'error.branchExists': 'Ilyen nevű ág már létezik.',
+  'error.branchCheckedOut': 'Ez az ág már ki van checkoutolva egy másik worktree-ben.',
+  'error.worktreeCreateFailed': 'A worktree létrehozása nem sikerült: {message}',
+  'sidebar.addWorktreeWorkspace': 'Új ág-munkaterület…',
+  'sidebar.worktreeBranchPlaceholder': 'Ág neve…',
+  'sidebar.createNewBranch': 'Új ág',
+  'sidebar.useExistingBranch': 'Meglévő',
+  'sidebar.worktreeBadge': 'Ág-munkaterület (izolált worktree)',
+  'worktree.removeDirtyBody':
+    'Ennek a munkaterületnek nincs commitolva a módosítása, ami elveszik. Eltávolítod mégis?',
+  'worktree.removeRunningBody':
+    'Ennek a munkaterületnek futó termináljai vannak. Leállítod és eltávolítod?',
+  'worktree.revealInFinder': 'Worktree megjelenítése a fájlkezelőben'
 }

@@ -8,8 +8,14 @@ import { parseUnifiedDiff } from './git.diff'
 
 const execFileAsync = promisify(execFile)
 
-async function git(folderPath: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['-C', folderPath, ...args], {
+/**
+ * Run a git command in `dir` and return trimmed stdout. Exported so sibling
+ * services (e.g. worktree.service) share one exec wrapper with consistent
+ * timeout / windowsHide behavior. Rejects with the raw child_process error
+ * (use {@link gitErrorMessage} to render it).
+ */
+export async function runGit(dir: string, args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync('git', ['-C', dir, ...args], {
     encoding: 'utf-8',
     timeout: 5000,
     windowsHide: true
@@ -17,9 +23,9 @@ async function git(folderPath: string, args: string[]): Promise<string> {
   return stdout.trim()
 }
 
-/** Like {@link git} but returns raw stdout (no trim) and tolerates large diffs. */
-async function gitRaw(folderPath: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['-C', folderPath, ...args], {
+/** Like {@link runGit} but returns raw stdout (no trim) and tolerates large output. */
+export async function runGitRaw(dir: string, args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync('git', ['-C', dir, ...args], {
     encoding: 'utf-8',
     timeout: 15000,
     maxBuffer: 64 * 1024 * 1024,
@@ -28,7 +34,12 @@ async function gitRaw(folderPath: string, args: string[]): Promise<string> {
   return stdout
 }
 
-function errorMessage(err: unknown): string {
+// Local aliases keep the rest of this file terse.
+const git = runGit
+const gitRaw = runGitRaw
+
+/** Render a git/child_process error into a user-facing message. */
+export function gitErrorMessage(err: unknown): string {
   const e = err as NodeJS.ErrnoException & { stderr?: string }
   if (e.code === 'ENOENT') return 'Git is not installed or is not available on PATH.'
   return e.stderr?.trim() || e.message || 'Git command failed.'
@@ -59,7 +70,7 @@ export async function getGitStatus(folderPath: string): Promise<GitStatus> {
   } catch (err) {
     const e = err as NodeJS.ErrnoException
     if (e.code === 'ENOENT') {
-      return { isRepository: false, branch: null, error: errorMessage(err) }
+      return { isRepository: false, branch: null, error: gitErrorMessage(err) }
     }
     return { isRepository: false, branch: null }
   }
@@ -74,7 +85,7 @@ export async function initGit(folderPath: string): Promise<GitStatus> {
     await git(folderPath, ['init'])
     return getGitStatus(folderPath)
   } catch (err) {
-    return { isRepository: false, branch: null, error: errorMessage(err) }
+    return { isRepository: false, branch: null, error: gitErrorMessage(err) }
   }
 }
 
@@ -166,7 +177,7 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
       branch: status.branch,
       files: [],
       totals: emptyTotals,
-      error: errorMessage(err)
+      error: gitErrorMessage(err)
     }
   }
 }

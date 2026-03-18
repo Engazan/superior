@@ -2,8 +2,14 @@ import { dialog } from 'electron'
 import { randomUUID } from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
-import type { Folder, Workspace, WorkspaceState } from '@shared/types'
+import type { Folder, Workspace, WorkspaceState, WorktreeAddArgs } from '@shared/types'
 import { userDataFile, writeJsonFile } from '../lib/jsonStore'
+import {
+  createWorktree,
+  existingWorktreePaths,
+  pruneWorktrees,
+  removeWorktree
+} from './worktree.service'
 
 function storeFile(): string {
   return userDataFile('workspaces.json')
@@ -24,7 +30,7 @@ export function isValidWorkspaceDir(dir: string): boolean {
 
 /** Canonical absolute path with symlinks resolved; falls back to a plain resolve
  * for paths that don't exist yet (the subsequent read fails on its own). */
-function canonicalPath(p: string): string {
+export function canonicalPath(p: string): string {
   try {
     return fs.realpathSync(path.resolve(p))
   } catch {
@@ -32,26 +38,41 @@ function canonicalPath(p: string): string {
   }
 }
 
-// Canonical workspace-folder roots, cached so containment checks don't re-read
-// and re-parse workspaces.json on every filesystem call. Refreshed by saveState.
-let cachedFolderRoots: string[] | null = null
+// Canonical roots the renderer may reach: opened folders PLUS the worktree
+// directories of worktree-backed workspaces (which live outside any folder).
+// Cached so containment checks don't re-read/parse workspaces.json on every
+// filesystem call. Always refreshed by saveState, so it self-invalidates after
+// any worktree create/remove — no separate invalidation needed.
+let cachedAllowedRoots: string[] | null = null
 
-function folderRoots(): string[] {
-  if (!cachedFolderRoots) {
-    cachedFolderRoots = readState().folders.map((f) => canonicalPath(f.path))
+/** Canonical folder roots + persisted worktree paths. */
+function computeAllowedRoots(state: WorkspaceState): string[] {
+  const folders = state.folders.map((f) => canonicalPath(f.path))
+  const worktrees = state.workspaces
+    .map((w) => w.worktreePath)
+    .filter((p): p is string => !!p)
+    .map(canonicalPath)
+  return [...folders, ...worktrees]
+}
+
+function allowedRoots(): string[] {
+  if (!cachedAllowedRoots) {
+    cachedAllowedRoots = computeAllowedRoots(readState())
   }
-  return cachedFolderRoots
+  return cachedAllowedRoots
 }
 
 /**
- * True if `target` resolves to — or inside — one of the saved workspace folders.
- * Defense-in-depth: filesystem reads from the renderer must stay within an opened
- * folder, so a bug or compromised renderer can't enumerate arbitrary paths. Paths
- * are canonicalized (symlinks resolved) so a symlink inside a folder can't escape.
+ * True if `target` resolves to — or inside — an opened folder or a registered
+ * worktree directory. Defense-in-depth: filesystem reads from the renderer must
+ * stay within a known root, so a bug or compromised renderer can't enumerate
+ * arbitrary paths. Paths are canonicalized (symlinks resolved) so a symlink
+ * inside a root can't escape, and worktree paths are allowlisted only once
+ * persisted on a workspace we created — never arbitrary widening.
  */
 export function isWithinWorkspaceFolder(target: string): boolean {
   const resolved = canonicalPath(target)
-  return folderRoots().some(
+  return allowedRoots().some(
     (root) => resolved === root || resolved.startsWith(root + path.sep)
   )
 }
@@ -127,7 +148,7 @@ function normalize(state: WorkspaceState): WorkspaceState {
 }
 
 function saveState(state: WorkspaceState): void {
-  cachedFolderRoots = state.folders.map((f) => canonicalPath(f.path))
+  cachedAllowedRoots = computeAllowedRoots(state)
   writeJsonFile(storeFile(), state, 'workspace')
 }
 
@@ -172,9 +193,15 @@ export async function addFolder(): Promise<WorkspaceState | null> {
   return next
 }
 
-/** Remove a folder and all of its workspaces. */
-export function removeFolder(folderPath: string): WorkspaceState {
+/** Remove a folder and all of its workspaces, tearing down any worktrees. */
+export async function removeFolder(folderPath: string): Promise<WorkspaceState> {
   const state = readState()
+  // Best-effort: drop app-managed worktrees of this folder's workspaces so they
+  // don't leak. Folder removal is a deliberate destructive action, so force.
+  const doomed = state.workspaces.filter((w) => w.folderPath === folderPath && w.worktreePath)
+  await Promise.allSettled(
+    doomed.map((w) => removeWorktree(folderPath, w.worktreePath as string, { force: true }))
+  )
   state.folders = state.folders.filter((f) => f.path !== folderPath)
   state.workspaces = state.workspaces.filter((w) => w.folderPath !== folderPath)
   const next = normalize(state)
@@ -195,6 +222,41 @@ export function addWorkspace(folderPath: string, name: string): WorkspaceState {
   return next
 }
 
+/**
+ * Create a git worktree (new or existing branch) and a workspace bound to it,
+ * then make it active. Rolls the worktree back if persistence is impossible.
+ * @throws a WORKTREE_ERROR code or raw git error (handled by the IPC layer).
+ */
+export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<WorkspaceState> {
+  const state = readState()
+  if (!state.folders.some((f) => f.path === args.folderPath)) {
+    throw new Error('worktree:invalid-folder')
+  }
+
+  const { worktreePath, branch } = await createWorktree(
+    args.folderPath,
+    args.branch.trim(),
+    args.createBranch
+  )
+
+  try {
+    const ws: Workspace = {
+      ...makeWorkspace(args.folderPath, args.name.trim() || branch),
+      worktreePath,
+      branch
+    }
+    state.workspaces.push(ws)
+    state.activeWorkspaceId = ws.id
+    const next = normalize(state)
+    saveState(next)
+    return next
+  } catch (err) {
+    // Persistence failed after the worktree was created — don't leak it.
+    await removeWorktree(args.folderPath, worktreePath, { force: true }).catch(() => undefined)
+    throw err
+  }
+}
+
 /** Rename a workspace. */
 export function renameWorkspace(id: string, name: string): WorkspaceState {
   const state = readState()
@@ -205,10 +267,19 @@ export function renameWorkspace(id: string, name: string): WorkspaceState {
   return next
 }
 
-/** Remove a workspace. The folder is kept even if it becomes empty. */
-export function removeWorkspace(id: string): WorkspaceState {
+/**
+ * Remove a workspace. The folder is kept even if it becomes empty. A
+ * worktree-backed workspace also tears down its worktree; without `force` git
+ * refuses to remove a dirty tree, so the call rejects and the workspace is left
+ * intact (the UI confirms, then retries with force).
+ */
+export async function removeWorkspace(id: string, force = false): Promise<WorkspaceState> {
   const state = readState()
   const removed = state.workspaces.find((w) => w.id === id)
+  // Tear the worktree down first; if it fails (dirty + !force), don't mutate state.
+  if (removed?.worktreePath) {
+    await removeWorktree(removed.folderPath, removed.worktreePath, { force })
+  }
   state.workspaces = state.workspaces.filter((w) => w.id !== id)
   if (state.activeWorkspaceId === id) {
     const sameFolder = state.workspaces.filter((w) => w.folderPath === removed?.folderPath)
@@ -219,6 +290,85 @@ export function removeWorkspace(id: string): WorkspaceState {
   const next = normalize(state)
   saveState(next)
   return next
+}
+
+/** Delete app-managed worktree dirs no longer referenced by any workspace. */
+function cleanOrphanWorktreeDirs(state: WorkspaceState): void {
+  const root = userDataFile('worktrees')
+  let buckets: string[]
+  try {
+    buckets = fs.readdirSync(root)
+  } catch {
+    return // no worktrees dir yet
+  }
+  const referenced = new Set(
+    state.workspaces
+      .map((w) => w.worktreePath)
+      .filter((p): p is string => !!p)
+      .map(canonicalPath)
+  )
+  for (const bucket of buckets) {
+    const bucketPath = path.join(root, bucket)
+    let children: string[]
+    try {
+      children = fs.readdirSync(bucketPath)
+    } catch {
+      continue
+    }
+    for (const child of children) {
+      const dir = path.join(bucketPath, child)
+      if (!referenced.has(canonicalPath(dir))) {
+        try {
+          fs.rmSync(dir, { recursive: true, force: true })
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    try {
+      if (fs.readdirSync(bucketPath).length === 0) fs.rmdirSync(bucketPath)
+    } catch {
+      /* not empty / gone */
+    }
+  }
+}
+
+/**
+ * On startup, reconcile persisted worktree-backed workspaces against git's
+ * actual worktree list: prune stale git admin entries, revert any workspace
+ * whose worktree directory has vanished back to its repo root (so agents never
+ * launch in a stale cwd), and delete orphan app-managed dirs. Never throws.
+ * Returns warnings for workspaces that were reverted.
+ */
+export async function reconcileWorktrees(): Promise<string[]> {
+  const warnings: string[] = []
+  let state: WorkspaceState
+  try {
+    state = readState()
+  } catch {
+    return warnings
+  }
+
+  const folders = [...new Set(state.workspaces.filter((w) => w.worktreePath).map((w) => w.folderPath))]
+  const existingByFolder = new Map<string, Set<string>>()
+  for (const folder of folders) {
+    await pruneWorktrees(folder)
+    existingByFolder.set(folder, await existingWorktreePaths(folder))
+  }
+
+  for (const ws of state.workspaces) {
+    if (!ws.worktreePath) continue
+    const existing = existingByFolder.get(ws.folderPath)
+    if (!existing || !existing.has(canonicalPath(ws.worktreePath))) {
+      warnings.push(`Worktree for "${ws.name}" is missing; reverted to the repo root.`)
+      delete ws.worktreePath
+      delete ws.branch
+    }
+  }
+
+  cleanOrphanWorktreeDirs(state)
+  saveState(normalize(state)) // also refreshes the containment allowlist cache
+  return warnings
 }
 
 /** Set the active workspace and persist it. */

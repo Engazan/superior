@@ -33,7 +33,11 @@ export default function App(): JSX.Element {
   const { presets } = presetsApi
   const preview = usePreviewPane()
   const ws = useWorkspaceSessions({ setError, t, presets })
-  const { gitStatus, gitLoading, initializeGit } = useGitStatus(ws.activeFolder, setError)
+  const { gitStatus, gitLoading, initializeGit } = useGitStatus(
+    ws.effectiveDir,
+    ws.activeFolder?.path ?? null,
+    setError
+  )
 
   // Initialize the terminal data/exit bus once on mount.
   useEffect(() => {
@@ -159,6 +163,7 @@ export default function App(): JSX.Element {
               onAddFolder={ws.addFolder}
               onRemoveFolder={ws.removeFolder}
               onAddWorkspace={ws.addWorkspace}
+              onAddWorktreeWorkspace={ws.addWorktreeWorkspace}
               onRenameWorkspace={ws.renameWorkspace}
               onRemoveWorkspace={ws.removeWorkspace}
               onSelectWorkspace={ws.selectWorkspace}
@@ -230,7 +235,7 @@ export default function App(): JSX.Element {
             >
               <RightPanel
                 active={rightSidebarOpen}
-                folderPath={ws.activeFolder?.path ?? null}
+                folderPath={ws.effectiveDir}
                 onOpenFile={preview.setPreviewFile}
                 selectedPath={preview.previewFile?.path ?? null}
               />

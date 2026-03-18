@@ -84,7 +84,52 @@ export interface Workspace {
   /** user-editable display name */
   name: string
   createdAt: number
+  /**
+   * When set, this workspace is backed by a git worktree at this absolute,
+   * canonical path. Its terminals launch with cwd = worktreePath (an isolated
+   * branch checkout) instead of folderPath, so parallel agents don't collide.
+   * Absent on plain workspaces.
+   */
+  worktreePath?: string
+  /** Branch checked out in the worktree (display + git ops). Absent on plain workspaces. */
+  branch?: string
 }
+
+/** A local branch, for the worktree-create picker. */
+export interface BranchInfo {
+  name: string
+  /** the repo's current HEAD branch */
+  isCurrent: boolean
+  /** already checked out in some worktree (can't be checked out again) */
+  isCheckedOut: boolean
+}
+
+/** Payload to create a worktree-backed workspace. */
+export interface WorktreeAddArgs {
+  folderPath: string
+  /** workspace display name */
+  name: string
+  /** branch to create (createBranch) or check out (existing) */
+  branch: string
+  /** true → create a new branch from HEAD; false → check out an existing branch */
+  createBranch: boolean
+}
+
+/** Result of creating a worktree-backed workspace. */
+export type WorktreeAddResult = WorkspaceState | { error: string }
+
+/**
+ * Stable error codes thrown by the worktree service and surfaced as `error`
+ * strings over IPC. The renderer maps these to localized messages; anything
+ * else (a raw git failure) is shown verbatim.
+ */
+export const WORKTREE_ERROR = {
+  NOT_A_REPO: 'worktree:not-a-repo',
+  BRANCH_EXISTS: 'worktree:branch-exists',
+  BRANCH_CHECKED_OUT: 'worktree:branch-checked-out',
+  INVALID_FOLDER: 'worktree:invalid-folder'
+} as const
+export type WorktreeErrorCode = (typeof WORKTREE_ERROR)[keyof typeof WORKTREE_ERROR]
 
 export type AgentStatus = 'running' | 'exited' | 'error'
 
@@ -269,6 +314,9 @@ export const IPC = {
   WORKSPACE_RENAME: 'workspace:rename',
   WORKSPACE_REMOVE: 'workspace:remove',
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
+  WORKSPACE_ADD_WORKTREE: 'workspace:add-worktree',
+  WORKTREE_LIST_BRANCHES: 'worktree:list-branches',
+  WORKTREE_IS_DIRTY: 'worktree:is-dirty',
   GIT_STATUS: 'git:status',
   GIT_INIT: 'git:init',
   GIT_DIFF: 'git:diff',

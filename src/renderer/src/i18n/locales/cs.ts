@@ -142,5 +142,19 @@ export const cs: Record<MessageKey, string> = {
   'window.maximize': 'Maximalizovat',
   'window.restore': 'Obnovit',
   'window.close': 'Zavřít',
-  'error.noWorkspace': 'Není vybrán pracovní prostor. Nejprve přidejte nebo vyberte složku.'
+  'error.noWorkspace': 'Není vybrán pracovní prostor. Nejprve přidejte nebo vyberte složku.',
+  'error.notARepo': 'Tato složka není Git repozitář.',
+  'error.branchExists': 'Větev s tímto názvem už existuje.',
+  'error.branchCheckedOut': 'Tato větev je už načtená v jiném worktree.',
+  'error.worktreeCreateFailed': 'Worktree se nepodařilo vytvořit: {message}',
+  'sidebar.addWorktreeWorkspace': 'Nový workspace s větví…',
+  'sidebar.worktreeBranchPlaceholder': 'Název větve…',
+  'sidebar.createNewBranch': 'Nová větev',
+  'sidebar.useExistingBranch': 'Existující',
+  'sidebar.worktreeBadge': 'Workspace s větví (izolovaný worktree)',
+  'worktree.removeDirtyBody':
+    'Tento workspace má neuložené změny, které se ztratí. Přesto odstranit?',
+  'worktree.removeRunningBody':
+    'Tento workspace má běžící terminály. Zastavit je a odstranit?',
+  'worktree.revealInFinder': 'Zobrazit worktree ve správci souborů'
 }

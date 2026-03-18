@@ -2,11 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type LayoutMode } from '../components/TerminalPanel'
 import { type LaunchConfig } from '../components/AgentLauncher'
 import { type GridLayout } from '../gridLayout'
-import type { AgentSession, Folder, TerminalPreset, Workspace, WorkspaceState } from '../types'
+import { type TFunction } from '../i18n'
+import {
+  WORKTREE_ERROR,
+  type AgentSession,
+  type Folder,
+  type TerminalPreset,
+  type Workspace,
+  type WorkspaceState,
+  type WorktreeAddArgs
+} from '../types'
 
 interface Deps {
   setError: (message: string | null) => void
-  t: (key: 'error.noWorkspace') => string
+  t: TFunction
   presets: TerminalPreset[]
 }
 
@@ -34,6 +43,12 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const activeFolder = useMemo(
     () => folders.find((f) => f.path === activeWorkspace?.folderPath) ?? null,
     [folders, activeWorkspace]
+  )
+  // The working directory for this workspace's terminals: its worktree when
+  // worktree-backed, else the repo root. Also drives git status/diff scoping.
+  const effectiveDir = useMemo(
+    () => activeWorkspace?.worktreePath ?? activeFolder?.path ?? null,
+    [activeWorkspace, activeFolder]
   )
 
   // Running-terminal count per workspace, for the sidebar badges.
@@ -131,6 +146,40 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [applyState, setError]
   )
 
+  // Map a worktree failure (a WORKTREE_ERROR code, or raw git stderr) to a
+  // localized message.
+  const worktreeErrorMessage = useCallback(
+    (raw: string): string => {
+      switch (raw) {
+        case WORKTREE_ERROR.NOT_A_REPO:
+        case WORKTREE_ERROR.INVALID_FOLDER:
+          return t('error.notARepo')
+        case WORKTREE_ERROR.BRANCH_EXISTS:
+          return t('error.branchExists')
+        case WORKTREE_ERROR.BRANCH_CHECKED_OUT:
+          return t('error.branchCheckedOut')
+        default:
+          return t('error.worktreeCreateFailed', { message: raw })
+      }
+    },
+    [t]
+  )
+
+  /** Create a worktree-backed workspace. Returns true on success (UI closes the form). */
+  const addWorktreeWorkspace = useCallback(
+    async (args: WorktreeAddArgs): Promise<boolean> => {
+      setError(null)
+      const res = await window.api.addWorktreeWorkspace(args)
+      if ('error' in res) {
+        setError(worktreeErrorMessage(res.error))
+        return false
+      }
+      applyState(res)
+      return true
+    },
+    [applyState, setError, worktreeErrorMessage]
+  )
+
   const renameWorkspace = useCallback(async (id: string, name: string) => {
     const state = await window.api.renameWorkspace(id, name)
     setWorkspaces(state.workspaces)
@@ -150,17 +199,36 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const removeWorkspace = useCallback(
     async (id: string) => {
       setError(null)
+      const ws = workspaces.find((w) => w.id === id)
+      const running = (counts[id] ?? 0) > 0
+
+      // Worktree-backed: confirm before discarding uncommitted work or stopping
+      // running terminals, since removal force-deletes the isolated checkout.
+      let force = false
+      if (ws?.worktreePath) {
+        const dirty = await window.api.isWorktreeDirty(ws.worktreePath)
+        if (dirty || running) {
+          const message = dirty ? t('worktree.removeDirtyBody') : t('worktree.removeRunningBody')
+          if (!window.confirm(message)) return
+          force = true
+        }
+      }
+
       sessions.filter((s) => s.workspaceId === id).forEach((s) => window.api.killAgent(s.id))
       setSessions((prev) => prev.filter((s) => s.workspaceId !== id))
-      applyState(await window.api.removeWorkspace(id))
+      try {
+        applyState(await window.api.removeWorkspace(id, force))
+      } catch (err) {
+        setError(worktreeErrorMessage((err as Error).message))
+      }
     },
-    [sessions, applyState, setError]
+    [workspaces, counts, sessions, applyState, setError, t, worktreeErrorMessage]
   )
 
   const launchAgent = useCallback(
     async (preset: TerminalPreset) => {
       setError(null)
-      if (!activeWorkspace || !activeFolder) {
+      if (!activeWorkspace || !effectiveDir) {
         setError(t('error.noWorkspace'))
         return
       }
@@ -169,7 +237,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         label: preset.name,
         iconType: preset.iconType,
         icon: preset.icon,
-        cwd: activeFolder.path,
+        cwd: effectiveDir,
         workspaceId: activeWorkspace.id
       })
       if ('error' in res) {
@@ -179,14 +247,14 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       setSessions((prev) => [...prev, res.session])
       setActiveSessionId(res.session.id)
     },
-    [activeWorkspace, activeFolder, t, setError]
+    [activeWorkspace, effectiveDir, t, setError]
   )
 
   // Start a fresh layout from the launch wizard: set the mode and spawn each preset.
   const startLayout = useCallback(
     async ({ mode, presetIds }: LaunchConfig) => {
       setError(null)
-      if (!activeWorkspace || !activeFolder) {
+      if (!activeWorkspace || !effectiveDir) {
         setError(t('error.noWorkspace'))
         return
       }
@@ -202,7 +270,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
           label: preset.name,
           iconType: preset.iconType,
           icon: preset.icon,
-          cwd: activeFolder.path,
+          cwd: effectiveDir,
           workspaceId: wsId
         })
         if ('error' in res) {
@@ -216,7 +284,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setActiveSessionId(launched[launched.length - 1].id)
       }
     },
-    [activeWorkspace, activeFolder, presets, t, setError]
+    [activeWorkspace, effectiveDir, presets, t, setError]
   )
 
   const setGridLayout = useCallback(
@@ -285,6 +353,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     activeWorkspaceId,
     activeWorkspace,
     activeFolder,
+    effectiveDir,
     sessions,
     activeSessionId,
     setActiveSessionId,
@@ -295,6 +364,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     addFolder,
     removeFolder,
     addWorkspace,
+    addWorktreeWorkspace,
     renameWorkspace,
     selectWorkspace,
     removeWorkspace,

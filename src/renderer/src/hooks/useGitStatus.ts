@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Folder, GitStatus } from '../types'
+import type { GitStatus } from '../types'
 
 interface GitStatusApi {
   gitStatus: GitStatus | null
@@ -8,29 +8,32 @@ interface GitStatusApi {
 }
 
 /**
- * Track the active folder's Git status, polling so checkouts made inside a
- * terminal are reflected. `initializeGit` runs `git init` and reports failures
- * through `onError`.
+ * Track the active workspace's Git status, polling so checkouts made inside a
+ * terminal are reflected. `gitDir` is the workspace's effective directory (its
+ * worktree when worktree-backed, else the repo root) so the branch/diff reflect
+ * the isolated tree. `initDir` is the repo root — `git init` can't run inside a
+ * worktree, and a worktree-backed workspace is already a repo, so Init only ever
+ * targets a plain folder.
  */
 export function useGitStatus(
-  activeFolder: Folder | null,
+  gitDir: string | null,
+  initDir: string | null,
   onError: (message: string | null) => void
 ): GitStatusApi {
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null)
   const [gitLoading, setGitLoading] = useState(false)
 
   useEffect(() => {
-    if (!activeFolder) {
+    if (!gitDir) {
       setGitStatus(null)
       setGitLoading(false)
       return
     }
 
     let active = true
-    const folderPath = activeFolder.path
     const refresh = async (showLoading = false): Promise<void> => {
       if (showLoading) setGitLoading(true)
-      const status = await window.api.getGitStatus(folderPath)
+      const status = await window.api.getGitStatus(gitDir)
       if (!active) return
       setGitStatus(status)
       setGitLoading(false)
@@ -43,17 +46,17 @@ export function useGitStatus(
       active = false
       window.clearInterval(id)
     }
-  }, [activeFolder])
+  }, [gitDir])
 
   const initializeGit = useCallback(async () => {
-    if (!activeFolder || gitLoading) return
+    if (!initDir || gitLoading) return
     onError(null)
     setGitLoading(true)
-    const status = await window.api.initGit(activeFolder.path)
+    const status = await window.api.initGit(initDir)
     setGitStatus(status)
     setGitLoading(false)
     if (status.error) onError(status.error)
-  }, [activeFolder, gitLoading, onError])
+  }, [initDir, gitLoading, onError])
 
   return { gitStatus, gitLoading, initializeGit }
 }

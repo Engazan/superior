@@ -5,6 +5,7 @@ import {
   type AgentExitEvent,
   type AgentSession,
   type AppSettings,
+  type BranchInfo,
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
   type CustomMemoryProvider,
@@ -22,7 +23,9 @@ import {
   type TerminalPreset,
   type ThemeMode,
   type WorkspaceLayout,
-  type WorkspaceState
+  type WorkspaceState,
+  type WorktreeAddArgs,
+  type WorktreeAddResult
 } from '@shared/types'
 
 const api = {
@@ -49,12 +52,27 @@ const api = {
     return ipcRenderer.invoke(IPC.WORKSPACE_RENAME, { id, name })
   },
 
-  removeWorkspace(id: string): Promise<WorkspaceState> {
-    return ipcRenderer.invoke(IPC.WORKSPACE_REMOVE, id)
+  removeWorkspace(id: string, force = false): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_REMOVE, { id, force })
   },
 
   setActiveWorkspace(id: string): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_SET_ACTIVE, id)
+  },
+
+  /** Local branches in a folder, for the worktree-create picker. */
+  listBranches(folderPath: string): Promise<BranchInfo[]> {
+    return ipcRenderer.invoke(IPC.WORKTREE_LIST_BRANCHES, folderPath)
+  },
+
+  /** Create a git worktree + a workspace bound to it. */
+  addWorktreeWorkspace(args: WorktreeAddArgs): Promise<WorktreeAddResult> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_ADD_WORKTREE, args)
+  },
+
+  /** True if a worktree has uncommitted changes (gate before a forced remove). */
+  isWorktreeDirty(worktreePath: string): Promise<boolean> {
+    return ipcRenderer.invoke(IPC.WORKTREE_IS_DIRTY, worktreePath)
   },
 
   getGitStatus(folderPath: string): Promise<GitStatus> {

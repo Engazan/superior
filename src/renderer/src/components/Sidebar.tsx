@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
-import type { Folder, Workspace } from '../types'
+import type { BranchInfo, Folder, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
   folders: Folder[]
@@ -12,6 +12,8 @@ interface Props {
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
   onAddWorkspace: (folderPath: string, name: string) => void
+  /** Create a worktree-backed workspace; resolves true when it succeeded. */
+  onAddWorktreeWorkspace: (args: WorktreeAddArgs) => Promise<boolean>
   onRenameWorkspace: (id: string, name: string) => void
   onRemoveWorkspace: (id: string) => void
   onSelectWorkspace: (id: string) => void
@@ -70,6 +72,161 @@ function RunningBadge({ count, title }: { count: number; title: string }): JSX.E
   )
 }
 
+function BranchGlyph(): JSX.Element {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+      aria-hidden
+    >
+      <circle cx="4" cy="3.5" r="1.75" />
+      <circle cx="4" cy="12.5" r="1.75" />
+      <circle cx="12" cy="5.5" r="1.75" />
+      <path d="M4 5.25v5.5M10.25 5.5H9A5 5 0 0 0 4 10.5" />
+    </svg>
+  )
+}
+
+/** Small branch chip shown under a worktree-backed workspace's name. */
+function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.Element {
+  return (
+    <span
+      title={title}
+      className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] font-medium text-fgmuted"
+    >
+      <BranchGlyph />
+      <span className="truncate">{branch}</span>
+    </span>
+  )
+}
+
+/**
+ * Inline form to create a worktree-backed workspace: a name, a new-vs-existing
+ * branch toggle, and the branch itself (free text for new, a picker of
+ * not-checked-out branches for existing). Submits via `onCreate`; closes on
+ * success.
+ */
+function WorktreeCreateForm({
+  folderPath,
+  onCancel,
+  onCreate
+}: {
+  folderPath: string
+  onCancel: () => void
+  onCreate: (args: WorktreeAddArgs) => Promise<boolean>
+}): JSX.Element {
+  const { t } = useI18n()
+  const [name, setName] = useState('')
+  const [mode, setMode] = useState<'new' | 'existing'>('new')
+  const [newBranch, setNewBranch] = useState('')
+  const [branches, setBranches] = useState<BranchInfo[]>([])
+  const [picked, setPicked] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    void window.api.listBranches(folderPath).then((list) => {
+      if (!active) return
+      setBranches(list)
+      setPicked(list.find((b) => !b.isCheckedOut)?.name ?? '')
+    })
+    return () => {
+      active = false
+    }
+  }, [folderPath])
+
+  const available = branches.filter((b) => !b.isCheckedOut)
+  const branch = mode === 'new' ? newBranch.trim() : picked
+  const canSubmit = !!branch && !busy
+
+  const submit = async (): Promise<void> => {
+    if (!canSubmit) return
+    setBusy(true)
+    const ok = await onCreate({
+      folderPath,
+      name: name.trim() || branch,
+      branch,
+      createBranch: mode === 'new'
+    })
+    setBusy(false)
+    if (ok) onCancel()
+  }
+
+  const field =
+    'w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none'
+  const seg = (on: boolean): string =>
+    `flex-1 rounded px-2 py-1 text-[11px] font-medium transition ${
+      on ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'
+    }`
+
+  return (
+    <div className="space-y-1.5 rounded-md border border-edge bg-panel/40 p-1.5">
+      <input
+        autoFocus
+        value={name}
+        placeholder={t('sidebar.newWorkspacePlaceholder')}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && onCancel()}
+        className={field}
+      />
+      <div className="flex gap-1 rounded border border-edge p-0.5">
+        <button className={seg(mode === 'new')} onClick={() => setMode('new')}>
+          {t('sidebar.createNewBranch')}
+        </button>
+        <button className={seg(mode === 'existing')} onClick={() => setMode('existing')}>
+          {t('sidebar.useExistingBranch')}
+        </button>
+      </div>
+      {mode === 'new' ? (
+        <input
+          value={newBranch}
+          placeholder={t('sidebar.worktreeBranchPlaceholder')}
+          onChange={(e) => setNewBranch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submit()
+            else if (e.key === 'Escape') onCancel()
+          }}
+          className={field}
+        />
+      ) : (
+        <select value={picked} onChange={(e) => setPicked(e.target.value)} className={field}>
+          {available.length === 0 && <option value="">—</option>}
+          {available.map((b) => (
+            <option key={b.name} value={b.name}>
+              {b.name}
+              {b.isCurrent ? ' ✓' : ''}
+            </option>
+          ))}
+        </select>
+      )}
+      <div className="flex items-center gap-1">
+        <button
+          disabled={!canSubmit}
+          onClick={() => void submit()}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accentBg px-2 py-1 text-xs font-medium text-accent transition hover:brightness-125 disabled:opacity-40"
+        >
+          <BranchGlyph />
+          {t('sidebar.addWorktreeWorkspace')}
+        </button>
+        <button
+          onClick={onCancel}
+          aria-label="✕"
+          className="shrink-0 rounded px-2 py-1 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function Sidebar({
   folders,
   workspaces,
@@ -79,14 +236,17 @@ export function Sidebar({
   onAddFolder,
   onRemoveFolder,
   onAddWorkspace,
+  onAddWorktreeWorkspace,
   onRenameWorkspace,
   onRemoveWorkspace,
   onSelectWorkspace
 }: Props): JSX.Element {
   const { t } = useI18n()
-  // Inline editors: which workspace is being renamed, which folder is adding a workspace.
+  // Inline editors: which workspace is being renamed, which folder is adding a
+  // plain workspace, and which folder is creating a worktree-backed one.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [addingFor, setAddingFor] = useState<string | null>(null)
+  const [worktreeFor, setWorktreeFor] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   // Folders the user has collapsed (rolled up) in the sidebar.
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
@@ -110,6 +270,7 @@ export function Sidebar({
   }
   const startAdd = (folderPath: string): void => {
     setEditingId(null)
+    setWorktreeFor(null)
     setAddingFor(folderPath)
     setDraft('')
   }
@@ -165,7 +326,7 @@ export function Sidebar({
                       <button
                         key={ws.id}
                         onClick={() => onSelectWorkspace(ws.id)}
-                        title={`${folder.name} / ${ws.name}`}
+                        title={`${folder.name} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
                         className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           active
                             ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder'
@@ -287,22 +448,54 @@ export function Sidebar({
                                   className="min-w-0 flex-1 rounded border border-edge bg-panel px-1.5 py-0.5 text-sm text-fg focus:border-accent focus:outline-none"
                                 />
                               ) : (
-                                <span
-                                  onDoubleClick={(e) => {
-                                    e.stopPropagation()
-                                    startRename(ws)
-                                  }}
-                                  className={`min-w-0 flex-1 truncate text-sm ${
-                                    active ? 'font-medium text-fg' : 'text-fg2'
-                                  }`}
-                                  title={t('sidebar.renameWorkspace')}
-                                >
-                                  {ws.name}
-                                </span>
+                                <div className="flex min-w-0 flex-1 flex-col">
+                                  <span
+                                    onDoubleClick={(e) => {
+                                      e.stopPropagation()
+                                      startRename(ws)
+                                    }}
+                                    className={`truncate text-sm ${
+                                      active ? 'font-medium text-fg' : 'text-fg2'
+                                    }`}
+                                    title={t('sidebar.renameWorkspace')}
+                                  >
+                                    {ws.name}
+                                  </span>
+                                  {ws.branch && (
+                                    <BranchBadge branch={ws.branch} title={t('sidebar.worktreeBadge')} />
+                                  )}
+                                </div>
                               )}
 
                               {n > 0 && editingId !== ws.id && (
                                 <RunningBadge count={n} title={t('sidebar.runningTerminals')} />
+                              )}
+
+                              {ws.worktreePath && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void window.api.openPath(ws.worktreePath as string)
+                                  }}
+                                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus:opacity-100 group-hover:opacity-100"
+                                  aria-label={t('worktree.revealInFinder')}
+                                  title={t('worktree.revealInFinder')}
+                                >
+                                  <svg
+                                    className="h-3.5 w-3.5"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden
+                                  >
+                                    <path d="M9 2.5h4.5V7" />
+                                    <path d="M13.5 2.5 7 9" />
+                                    <path d="M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3" />
+                                  </svg>
+                                </button>
                               )}
 
                               <button
@@ -321,9 +514,15 @@ export function Sidebar({
                         )
                       })}
 
-                      {/* Add workspace */}
+                      {/* Add workspace (plain) or a worktree-backed branch workspace */}
                       <li>
-                        {addingFor === folder.path ? (
+                        {worktreeFor === folder.path ? (
+                          <WorktreeCreateForm
+                            folderPath={folder.path}
+                            onCancel={() => setWorktreeFor(null)}
+                            onCreate={onAddWorktreeWorkspace}
+                          />
+                        ) : addingFor === folder.path ? (
                           <input
                             autoFocus
                             value={draft}
@@ -340,13 +539,28 @@ export function Sidebar({
                             className="w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
                           />
                         ) : (
-                          <button
-                            onClick={() => startAdd(folder.path)}
-                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
-                          >
-                            <span className="text-sm leading-none text-accent">+</span>
-                            {t('sidebar.addWorkspace')}
-                          </button>
+                          <div className="space-y-0.5">
+                            <button
+                              onClick={() => startAdd(folder.path)}
+                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
+                            >
+                              <span className="text-sm leading-none text-accent">+</span>
+                              {t('sidebar.addWorkspace')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setWorktreeFor(folder.path)
+                                setAddingFor(null)
+                                setEditingId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
+                            >
+                              <span className="text-accent">
+                                <BranchGlyph />
+                              </span>
+                              {t('sidebar.addWorktreeWorkspace')}
+                            </button>
+                          </div>
                         )}
                       </li>
                     </ul>

@@ -1,6 +1,8 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { registerWorkspaceIpc } from './ipc/workspace.ipc'
+import { registerWorktreeIpc } from './ipc/worktree.ipc'
+import { reconcileWorktrees } from './services/workspace.service'
 import { registerAgentIpc } from './ipc/agent.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { registerPresetsIpc } from './ipc/presets.ipc'
@@ -61,7 +63,7 @@ function createWindow(): BrowserWindow {
   return win
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Branded About panel (⌘? / app menu) instead of the default Electron one.
   app.setAboutPanelOptions({
     applicationName: 'Superior',
@@ -69,6 +71,7 @@ app.whenReady().then(() => {
   })
 
   registerWorkspaceIpc()
+  registerWorktreeIpc()
   registerAgentIpc()
   registerSettingsIpc()
   registerPresetsIpc()
@@ -79,6 +82,12 @@ app.whenReady().then(() => {
 
   // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
   daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))
+
+  // Reconcile worktree-backed workspaces before the renderer reads state, so a
+  // vanished worktree never leaves an agent launching in a stale cwd.
+  await reconcileWorktrees()
+    .then((warnings) => warnings.forEach((w) => console.warn('[worktree]', w)))
+    .catch((err) => console.error('[worktree] reconcile failed:', err))
 
   createWindow()
 

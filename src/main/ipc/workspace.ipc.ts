@@ -24,7 +24,7 @@ export function registerWorkspaceIpc(): void {
     }
   )
 
-  ipcMain.handle(IPC.FOLDER_REMOVE, (_e, folderPath: string): WorkspaceState =>
+  ipcMain.handle(IPC.FOLDER_REMOVE, (_e, folderPath: string): Promise<WorkspaceState> =>
     removeFolder(folderPath)
   )
 
@@ -40,7 +40,11 @@ export function registerWorkspaceIpc(): void {
       renameWorkspace(args.id, args.name)
   )
 
-  ipcMain.handle(IPC.WORKSPACE_REMOVE, (_e, id: string): WorkspaceState => removeWorkspace(id))
+  ipcMain.handle(
+    IPC.WORKSPACE_REMOVE,
+    (_e, args: { id: string; force?: boolean }): Promise<WorkspaceState> =>
+      removeWorkspace(args.id, args.force ?? false)
+  )
 
   ipcMain.handle(IPC.WORKSPACE_SET_ACTIVE, (_e, id: string): WorkspaceState =>
     setActiveWorkspace(id)

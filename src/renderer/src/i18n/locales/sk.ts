@@ -143,5 +143,19 @@ export const sk: Record<MessageKey, string> = {
   'window.maximize': 'Maximalizovať',
   'window.restore': 'Obnoviť',
   'window.close': 'Zavrieť',
-  'error.noWorkspace': 'Nie je vybraný pracovný priestor. Najprv pridajte alebo vyberte priečinok.'
+  'error.noWorkspace': 'Nie je vybraný pracovný priestor. Najprv pridajte alebo vyberte priečinok.',
+  'error.notARepo': 'Tento priečinok nie je Git repozitár.',
+  'error.branchExists': 'Vetva s takým názvom už existuje.',
+  'error.branchCheckedOut': 'Táto vetva je už načítaná v inom worktree.',
+  'error.worktreeCreateFailed': 'Nepodarilo sa vytvoriť worktree: {message}',
+  'sidebar.addWorktreeWorkspace': 'Nový workspace s vetvou…',
+  'sidebar.worktreeBranchPlaceholder': 'Názov vetvy…',
+  'sidebar.createNewBranch': 'Nová vetva',
+  'sidebar.useExistingBranch': 'Existujúca',
+  'sidebar.worktreeBadge': 'Workspace s vetvou (izolovaný worktree)',
+  'worktree.removeDirtyBody':
+    'Tento workspace má neuložené zmeny, ktoré sa stratia. Naozaj ho odstrániť?',
+  'worktree.removeRunningBody':
+    'Tento workspace má bežiace terminály. Zastaviť ich a odstrániť?',
+  'worktree.revealInFinder': 'Zobraziť worktree v správcovi súborov'
 }

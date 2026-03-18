@@ -139,7 +139,21 @@ export const en = {
   'window.maximize': 'Maximize',
   'window.restore': 'Restore',
   'window.close': 'Close',
-  'error.noWorkspace': 'No workspace selected. Add or select a folder first.'
+  'error.noWorkspace': 'No workspace selected. Add or select a folder first.',
+  'error.notARepo': 'This folder is not a Git repository.',
+  'error.branchExists': 'A branch with that name already exists.',
+  'error.branchCheckedOut': 'That branch is already checked out in another worktree.',
+  'error.worktreeCreateFailed': 'Could not create the worktree: {message}',
+  'sidebar.addWorktreeWorkspace': 'New branch workspace…',
+  'sidebar.worktreeBranchPlaceholder': 'Branch name…',
+  'sidebar.createNewBranch': 'New branch',
+  'sidebar.useExistingBranch': 'Existing',
+  'sidebar.worktreeBadge': 'Branch workspace (isolated worktree)',
+  'worktree.removeDirtyBody':
+    'This branch workspace has uncommitted changes that will be lost. Remove it anyway?',
+  'worktree.removeRunningBody':
+    'This branch workspace has running terminals. Stop them and remove it?',
+  'worktree.revealInFinder': 'Reveal worktree in file manager'
 }
 
 export type MessageKey = keyof typeof en
