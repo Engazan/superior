@@ -72,6 +72,8 @@ export function TerminalPanel({
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
+  // A grid cell the user blew up to fill the whole panel (over every terminal).
+  const [maximizedId, setMaximizedId] = useState<string | null>(null)
 
   // Sessions of the active workspace, in creation order.
   const workspaceSessions = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
@@ -85,11 +87,19 @@ export function TerminalPanel({
   const dividers = gridDividers(dist, layout)
   const gridIndex = new Map(gridCells.map((s, i) => [s.id, i] as const))
 
+  // Only honor a maximized id while that cell still exists in the current grid.
+  const maxId = gridCells.some((s) => s.id === maximizedId) ? maximizedId : null
+
   const layoutFor = (s: AgentSession): Layout => {
     if (s.workspaceId !== activeWorkspaceId) return { visible: false, focused: false }
     if (isGrid) {
       const i = gridIndex.get(s.id)
       if (i === undefined) return { visible: false, focused: false }
+      if (maxId) {
+        // The maximized cell fills the panel (rect undefined → no highlight ring); others hide.
+        if (s.id !== maxId) return { visible: false, focused: false }
+        return { visible: true, focused: true }
+      }
       return { rect: rects[i], visible: true, focused: s.id === activeSessionId }
     }
     const active = s.id === activeSessionId
@@ -174,6 +184,7 @@ export function TerminalPanel({
 
         {sessions.map((s) => {
           const l = layoutFor(s)
+          const isGridCell = isGrid && s.workspaceId === activeWorkspaceId && gridIndex.has(s.id)
           return (
             <TerminalView
               key={s.id}
@@ -181,6 +192,15 @@ export function TerminalPanel({
               rect={l.rect}
               visible={l.visible}
               focused={l.focused}
+              showBar={isGridCell}
+              active={s.id === activeSessionId}
+              maximized={s.id === maxId}
+              onSelect={onSelect}
+              onClose={onClose}
+              onToggleMaximize={(id) => {
+                setMaximizedId((cur) => (cur === id ? null : id))
+                onSelect(id)
+              }}
               onExit={(id, exitCode) =>
                 onSessionUpdate(id, {
                   status: exitCode === 0 ? 'exited' : 'error',
@@ -193,6 +213,7 @@ export function TerminalPanel({
 
         {/* Grid: draggable dividers double as the visible cell boundaries. */}
         {isGrid &&
+          !maxId &&
           dividers.map((d, i) => {
             const vertical = d.axis === 'v'
             const hot = resizing === d.axis
@@ -226,41 +247,6 @@ export function TerminalPanel({
                     vertical ? 'h-full w-px group-hover:w-0.5' : 'h-px w-full group-hover:h-0.5'
                   } ${hot ? `bg-sky-500 ${vertical ? 'w-0.5' : 'h-0.5'}` : 'bg-edge group-hover:bg-sky-500'}`}
                 />
-              </div>
-            )
-          })}
-
-        {/* Grid: compact per-cell chrome (label + status + close). */}
-        {isGrid &&
-          gridCells.map((s, i) => {
-            const r = rects[i]
-            return (
-              <div
-                key={`chrome-${s.id}`}
-                className="pointer-events-none absolute z-30 p-2"
-                style={{ top: `${r.top}%`, left: `${r.left}%`, width: `${r.width}%`, height: `${r.height}%` }}
-              >
-                <div
-                  onClick={() => onSelect(s.id)}
-                  className={`pointer-events-auto inline-flex w-fit max-w-full cursor-pointer items-center gap-2 rounded-md border border-edge px-2 py-1 text-xs shadow-sm ${
-                    s.id === activeSessionId ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
-                  }`}
-                >
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[s.status]}`} />
-                  <PresetIcon iconType={s.iconType} icon={s.icon} className="h-3.5 w-3.5 text-sm" />
-                  <span className="truncate">{s.label}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onClose(s.id)
-                    }}
-                    className="shrink-0 text-fgmuted transition hover:text-fg"
-                    aria-label={t('terminal.closeSession')}
-                    title={t('terminal.stopClose')}
-                  >
-                    ✕
-                  </button>
-                </div>
               </div>
             )
           })}

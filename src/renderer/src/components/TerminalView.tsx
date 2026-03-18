@@ -3,10 +3,18 @@ import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
 import { useTheme } from '../theme'
+import { useI18n } from '../i18n'
+import { PresetIcon } from './PresetIcon'
 import type { Rect } from '../gridLayout'
 import type { AgentSession } from '../types'
 
 const FULL_RECT: Rect = { top: 0, left: 0, width: 100, height: 100 }
+
+const STATUS_DOT: Record<AgentSession['status'], string> = {
+  running: 'bg-emerald-400',
+  exited: 'bg-zinc-500',
+  error: 'bg-red-500'
+}
 
 interface Props {
   session: AgentSession
@@ -16,6 +24,16 @@ interface Props {
   visible: boolean
   /** whether this terminal should grab keyboard focus */
   focused: boolean
+  /** show the per-cell topbar above the terminal (grid mode) */
+  showBar: boolean
+  /** this is the active session (drives bar styling) */
+  active: boolean
+  /** the cell is blown up to fill the whole panel */
+  maximized: boolean
+  /** the user picked this session (clicked its body or bar) */
+  onSelect: (id: string) => void
+  onClose: (id: string) => void
+  onToggleMaximize: (id: string) => void
   onExit: (id: string, exitCode: number) => void
 }
 
@@ -34,12 +52,29 @@ const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
   }
 }
 
-export function TerminalView({ session, rect, visible, focused, onExit }: Props): JSX.Element {
+export function TerminalView({
+  session,
+  rect,
+  visible,
+  focused,
+  showBar,
+  active,
+  maximized,
+  onSelect,
+  onClose,
+  onToggleMaximize,
+  onExit
+}: Props): JSX.Element {
   const r = rect ?? FULL_RECT
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const { resolved } = useTheme()
+  const { t } = useI18n()
+
+  // Keep the latest onSelect without re-running the creation effect.
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
 
   // Create the xterm instance once per session id and wire it to the bus + pty.
   useEffect(() => {
@@ -92,9 +127,15 @@ export function TerminalView({ session, rect, visible, focused, onExit }: Props)
     })
     ro.observe(host)
 
+    // Clicking into the terminal body focuses xterm's textarea; report it up so
+    // the active-session highlight follows the click, not just the chrome label.
+    const onFocusIn = (): void => onSelectRef.current(session.id)
+    host.addEventListener('focusin', onFocusIn)
+
     return () => {
       window.api.detach(session.id)
       ro.disconnect()
+      host.removeEventListener('focusin', onFocusIn)
       unsubscribe()
       dataDisposable.dispose()
       term.dispose()
@@ -143,10 +184,20 @@ export function TerminalView({ session, rect, visible, focused, onExit }: Props)
     return () => window.clearTimeout(t)
   }, [focused, session.id])
 
+  // highlight the focused cell only when a topbar is shown (grid mode);
+  // in tabs mode a single terminal is always focused, so a border would be noise
+  const highlight = focused && showBar
+
   return (
     <div
-      className={`absolute p-2 transition-opacity ${
-        visible ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'
+      className={`absolute transition-opacity ${
+        visible
+          ? // lift the active cell above the grid dividers (z-20) so its highlight
+            // ring isn't clipped by the divider lines on the shared edges
+            highlight
+            ? 'z-30 opacity-100'
+            : 'z-10 opacity-100'
+          : 'pointer-events-none z-0 opacity-0'
       }`}
       style={{
         top: `${r.top}%`,
@@ -155,7 +206,79 @@ export function TerminalView({ session, rect, visible, focused, onExit }: Props)
         height: `${r.height}%`
       }}
     >
-      <div ref={hostRef} className="h-full w-full" />
+      <div
+        className="relative flex h-full w-full flex-col overflow-hidden"
+        style={{ backgroundColor: TERM_THEMES[resolved].background }}
+      >
+        {/* Active-cell highlight, drawn above the terminal content so it stays visible. */}
+        {highlight && (
+          <div className="pointer-events-none absolute inset-0 z-10 ring-2 ring-inset ring-sky-500" />
+        )}
+        {/* Always-visible topbar; the terminal sits below it, never behind it. */}
+        {showBar && (
+          <div
+            onClick={() => onSelect(session.id)}
+            className={`flex shrink-0 cursor-pointer items-center gap-2 border-b border-edge px-2 py-1 text-xs ${
+              active ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
+            }`}
+          >
+            <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[session.status]}`} />
+            <PresetIcon
+              iconType={session.iconType}
+              icon={session.icon}
+              className="h-3.5 w-3.5 text-sm"
+            />
+            <span className="min-w-0 flex-1 truncate">{session.label}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleMaximize(session.id)
+              }}
+              className="shrink-0 text-fgmuted transition hover:text-fg"
+              aria-label={maximized ? t('terminal.restore') : t('terminal.maximize')}
+              title={maximized ? t('terminal.restore') : t('terminal.maximize')}
+            >
+              {maximized ? (
+                <svg
+                  viewBox="0 0 16 16"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9.5 6.5h-3v3M6.5 6.5L10 10M6.5 9.5L3 13M13 3l-3.5 3.5" />
+                </svg>
+              ) : (
+                <svg
+                  viewBox="0 0 16 16"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5L9 7M2.5 13.5L7 9" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onClose(session.id)
+              }}
+              className="shrink-0 text-fgmuted transition hover:text-fg"
+              aria-label={t('terminal.closeSession')}
+              title={t('terminal.stopClose')}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        <div ref={hostRef} className="min-h-0 w-full flex-1" />
+      </div>
     </div>
   )
 }
