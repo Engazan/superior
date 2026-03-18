@@ -13,7 +13,37 @@ import type {
 import { builtinIcon } from '@shared/icons'
 import { listPresets, savePreset } from './presets.service'
 
-const CLAUDE_PREFIX = '.claude-'
+interface ProviderSpec {
+  provider: CustomMemoryProvider
+  label: string
+  prefix: string
+  envVar: string
+  executable: string
+  terminalArgs: string
+  configMarkers: string[]
+}
+
+const PROVIDERS: Record<CustomMemoryProvider, ProviderSpec> = {
+  claude: {
+    provider: 'claude',
+    label: 'Claude',
+    prefix: '.claude-',
+    envVar: 'CLAUDE_CONFIG_DIR',
+    executable: 'claude',
+    terminalArgs: '--dangerously-skip-permissions',
+    configMarkers: ['.claude.json']
+  },
+  codex: {
+    provider: 'codex',
+    label: 'Codex',
+    prefix: '.codex-',
+    envVar: 'CODEX_HOME',
+    executable: 'codex',
+    terminalArgs: '--dangerously-bypass-approvals-and-sandbox',
+    configMarkers: ['config.toml']
+  }
+}
+
 const SUPPORTED_CONFIGS = ['.zshrc', '.zprofile', '.bashrc', '.bash_profile', '.profile']
 
 function homeDir(): string {
@@ -30,30 +60,39 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function assertProvider(provider: string): asserts provider is CustomMemoryProvider {
-  if (provider !== 'claude') throw new Error('Only Claude custom memory is supported.')
+function providerSpec(provider: string): ProviderSpec {
+  if (provider === 'claude' || provider === 'codex') return PROVIDERS[provider]
+  throw new Error('Unsupported custom memory provider.')
 }
 
-function assertSafeDirectoryName(directoryName: string): void {
-  if (!/^\.claude-[a-z0-9][a-z0-9-]*$/.test(directoryName)) {
-    throw new Error('Unsupported Claude memory directory name.')
+function specForDirectory(directoryName: string): ProviderSpec {
+  const spec = Object.values(PROVIDERS).find((candidate) =>
+    directoryName.startsWith(candidate.prefix)
+  )
+  if (!spec || !new RegExp(`^\\${spec.prefix}[a-z0-9][a-z0-9-]*$`).test(directoryName)) {
+    throw new Error('Unsupported custom memory directory name.')
   }
+  return spec
 }
 
-function memoryId(name: string): string {
-  return `claude:${name}`
+function profileName(spec: ProviderSpec, directoryName: string): string {
+  return directoryName.slice(spec.prefix.length)
 }
 
-function aliasName(name: string): string {
-  return `claude-${name}`
+function memoryId(spec: ProviderSpec, name: string): string {
+  return `${spec.provider}:${name}`
 }
 
-function aliasCommand(name: string): string {
-  return `alias ${aliasName(name)}='CLAUDE_CONFIG_DIR=$HOME/.claude-${name} claude'`
+function aliasName(spec: ProviderSpec, name: string): string {
+  return `${spec.executable}-${name}`
 }
 
-function terminalCommand(name: string): string {
-  return `CLAUDE_CONFIG_DIR="$HOME/.claude-${name}" claude --dangerously-skip-permissions`
+function aliasCommand(spec: ProviderSpec, name: string): string {
+  return `alias ${aliasName(spec, name)}='${spec.envVar}=$HOME/${spec.prefix}${name} ${spec.executable}'`
+}
+
+function terminalCommand(spec: ProviderSpec, name: string): string {
+  return `${spec.envVar}="$HOME/${spec.prefix}${name}" ${spec.executable} ${spec.terminalArgs}`
 }
 
 function shellConfigPaths(): string[] {
@@ -89,39 +128,47 @@ function appendLine(file: string, line: string): void {
   fs.appendFileSync(file, `${prefix}${line}\n`, 'utf-8')
 }
 
-function hasTerminalPreset(state: PresetsState, name: string): boolean {
-  const id = memoryId(name)
-  const command = terminalCommand(name)
+function hasTerminalPreset(state: PresetsState, spec: ProviderSpec, name: string): boolean {
+  const id = memoryId(spec, name)
+  const command = terminalCommand(spec, name)
   return state.presets.some((preset) => preset.customMemoryId === id || preset.command === command)
 }
 
-function discoverOne(directoryName: string, presets: PresetsState): CustomMemoryPreset {
-  const name = directoryName.slice(CLAUDE_PREFIX.length)
-  const expectedAlias = aliasCommand(name)
+function discoverOne(
+  spec: ProviderSpec,
+  directoryName: string,
+  presets: PresetsState
+): CustomMemoryPreset {
+  const name = profileName(spec, directoryName)
+  const expectedAlias = aliasCommand(spec, name)
   const aliasFiles = shellConfigPaths()
     .filter((file) => fileContainsLine(file, expectedAlias))
     .map((file) => path.basename(file))
 
   return {
-    id: memoryId(name),
-    provider: 'claude',
+    id: memoryId(spec, name),
+    provider: spec.provider,
     name,
     directoryName,
     directoryPath: path.join(homeDir(), directoryName),
-    aliasName: aliasName(name),
+    aliasName: aliasName(spec, name),
     aliasCommand: expectedAlias,
     aliasExists: aliasFiles.length > 0,
     aliasFiles,
-    terminalPresetExists: hasTerminalPreset(presets, name)
+    terminalPresetExists: hasTerminalPreset(presets, spec, name)
   }
 }
 
-function isClaudeConfigDirectory(directoryName: string, presets: PresetsState): boolean {
-  const name = directoryName.slice(CLAUDE_PREFIX.length)
+function isProviderConfigDirectory(
+  spec: ProviderSpec,
+  directoryName: string,
+  presets: PresetsState
+): boolean {
+  const name = profileName(spec, directoryName)
   const directory = path.join(homeDir(), directoryName)
-  if (fs.existsSync(path.join(directory, '.claude.json'))) return true
-  if (hasTerminalPreset(presets, name)) return true
-  const expectedAlias = aliasCommand(name)
+  if (spec.configMarkers.some((marker) => fs.existsSync(path.join(directory, marker)))) return true
+  if (hasTerminalPreset(presets, spec, name)) return true
+  const expectedAlias = aliasCommand(spec, name)
   return shellConfigPaths().some((file) => fileContainsLine(file, expectedAlias))
 }
 
@@ -136,57 +183,64 @@ export function listCustomMemoryPresets(): CustomMemoryPreset[] {
   }
 
   return entries
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        entry.name.startsWith(CLAUDE_PREFIX) &&
-        /^\.claude-[a-z0-9][a-z0-9-]*$/.test(entry.name) &&
-        isClaudeConfigDirectory(entry.name, presets)
+    .flatMap((entry) => {
+      if (!entry.isDirectory()) return []
+      let spec: ProviderSpec
+      try {
+        spec = specForDirectory(entry.name)
+      } catch {
+        return []
+      }
+      if (!isProviderConfigDirectory(spec, entry.name, presets)) return []
+      return [discoverOne(spec, entry.name, presets)]
+    })
+    .sort(
+      (a, b) => a.provider.localeCompare(b.provider) || a.name.localeCompare(b.name)
     )
-    .map((entry) => discoverOne(entry.name, presets))
-    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export function addCustomMemoryAlias(directoryName: string): CustomMemoryPreset[] {
-  assertSafeDirectoryName(directoryName)
+  const spec = specForDirectory(directoryName)
   const directory = path.join(homeDir(), directoryName)
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
     throw new Error(`Memory directory ${directoryName} does not exist.`)
   }
 
-  const name = directoryName.slice(CLAUDE_PREFIX.length)
-  const line = aliasCommand(name)
+  const name = profileName(spec, directoryName)
+  const line = aliasCommand(spec, name)
   for (const file of shellConfigPaths()) {
     if (!fileContainsLine(file, line)) appendLine(file, line)
   }
   return listCustomMemoryPresets()
 }
 
-function makeTerminalPreset(name: string): TerminalPreset {
+function makeTerminalPreset(spec: ProviderSpec, name: string): TerminalPreset {
   return {
     id: randomUUID(),
-    name: `Claude ${name}`,
-    description: `Claude with isolated memory (${CLAUDE_PREFIX}${name})`,
-    command: terminalCommand(name),
+    name: `${spec.label} ${name}`,
+    description: `${spec.label} with isolated memory (${spec.prefix}${name})`,
+    command: terminalCommand(spec, name),
     iconType: 'image',
-    icon: builtinIcon('claude')!.dataUrl,
+    icon: builtinIcon(spec.provider)!.dataUrl,
     active: true,
-    customMemoryId: memoryId(name)
+    customMemoryId: memoryId(spec, name)
   }
 }
 
 export function addCustomMemoryTerminalPreset(
   directoryName: string
 ): CustomMemoryMutationResult {
-  assertSafeDirectoryName(directoryName)
+  const spec = specForDirectory(directoryName)
   const directory = path.join(homeDir(), directoryName)
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
     throw new Error(`Memory directory ${directoryName} does not exist.`)
   }
 
-  const name = directoryName.slice(CLAUDE_PREFIX.length)
+  const name = profileName(spec, directoryName)
   let presets = listPresets()
-  if (!hasTerminalPreset(presets, name)) presets = savePreset(makeTerminalPreset(name))
+  if (!hasTerminalPreset(presets, spec, name)) {
+    presets = savePreset(makeTerminalPreset(spec, name))
+  }
   return { memories: listCustomMemoryPresets(), presets }
 }
 
@@ -194,11 +248,11 @@ export function createCustomMemoryPreset(
   providerInput: string,
   displayName: string
 ): CustomMemoryMutationResult {
-  assertProvider(providerInput)
+  const spec = providerSpec(providerInput)
   const name = slugify(displayName)
   if (!name) throw new Error('Enter a valid name.')
 
-  const directoryName = `${CLAUDE_PREFIX}${name}`
+  const directoryName = `${spec.prefix}${name}`
   const directory = path.join(homeDir(), directoryName)
   if (fs.existsSync(directory)) throw new Error(`${directoryName} already exists.`)
 

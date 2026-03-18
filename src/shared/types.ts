@@ -43,7 +43,7 @@ export interface PresetsState {
   presets: TerminalPreset[]
 }
 
-export type CustomMemoryProvider = 'claude'
+export type CustomMemoryProvider = 'claude' | 'codex'
 
 /** A provider-specific config directory discovered in the user's home folder. */
 export interface CustomMemoryPreset {

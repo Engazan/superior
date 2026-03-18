@@ -19,6 +19,11 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+const PROVIDER_UI = {
+  claude: { label: 'Claude', directoryPrefix: '.claude-', iconId: 'claude' },
+  codex: { label: 'Codex', directoryPrefix: '.codex-', iconId: 'codex' }
+} as const
+
 export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
   const { t } = useI18n()
   const [items, setItems] = useState<CustomMemoryPreset[]>([])
@@ -126,14 +131,14 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
               >
                 <PresetIcon
                   iconType="image"
-                  icon={builtinIcon('claude')?.dataUrl}
+                  icon={builtinIcon(PROVIDER_UI[item.provider].iconId)?.dataUrl}
                   className="h-8 w-8 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-fg">{item.aliasName}</span>
                     <span className="rounded bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
-                      Claude
+                      {PROVIDER_UI[item.provider].label}
                     </span>
                   </div>
                   <div className="mt-0.5 truncate font-mono text-[11px] text-fgdim">
@@ -194,13 +199,46 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                 <label className="mb-1 block text-xs font-medium text-fgdim">
                   {t('memory.provider')}
                 </label>
-                <select
-                  className={inputCls}
-                  value={provider}
-                  onChange={(event) => setProvider(event.target.value as CustomMemoryProvider)}
-                >
-                  <option value="claude">Claude</option>
-                </select>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                  {(Object.keys(PROVIDER_UI) as CustomMemoryProvider[]).map((value) => {
+                    const item = PROVIDER_UI[value]
+                    const selected = provider === value
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setProvider(value)}
+                        className={`flex items-center gap-3 rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                          selected
+                            ? 'border-accent bg-accentBg text-fg shadow-sm'
+                            : 'border-edge bg-bar text-fgdim hover:border-fgmuted hover:bg-hover hover:text-fg'
+                        }`}
+                      >
+                        <PresetIcon
+                          iconType="image"
+                          icon={builtinIcon(item.iconId)?.dataUrl}
+                          className="h-9 w-9 shrink-0"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold">{item.label}</span>
+                          <span className="mt-0.5 block truncate font-mono text-[10px] text-fgmuted">
+                            ~/{item.directoryPrefix}name
+                          </span>
+                        </span>
+                        <span
+                          className={`ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                            selected ? 'border-accent bg-accent' : 'border-fgmuted'
+                          }`}
+                          aria-hidden
+                        >
+                          {selected && <span className="h-1.5 w-1.5 rounded-full bg-panel" />}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-fgdim">
@@ -216,7 +254,12 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                   }}
                   placeholder="work"
                 />
-                <p className="mt-1.5 text-xs text-fgmuted">{t('memory.nameHint')}</p>
+                <p className="mt-1.5 text-xs text-fgmuted">
+                  {t('memory.nameHint', {
+                    directory: `${PROVIDER_UI[provider].directoryPrefix}${name.trim() || 'name'}`,
+                    alias: `${provider}-${name.trim() || 'name'}`
+                  })}
+                </p>
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
