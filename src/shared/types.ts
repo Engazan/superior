@@ -35,10 +35,33 @@ export interface TerminalPreset {
   icon: string
   /** active presets are shown as launch buttons in place of the defaults */
   active: boolean
+  /** Stable link to a managed custom-memory preset, e.g. "claude:work". */
+  customMemoryId?: string
 }
 
 export interface PresetsState {
   presets: TerminalPreset[]
+}
+
+export type CustomMemoryProvider = 'claude'
+
+/** A provider-specific config directory discovered in the user's home folder. */
+export interface CustomMemoryPreset {
+  id: string
+  provider: CustomMemoryProvider
+  name: string
+  directoryName: string
+  directoryPath: string
+  aliasName: string
+  aliasCommand: string
+  aliasExists: boolean
+  aliasFiles: string[]
+  terminalPresetExists: boolean
+}
+
+export interface CustomMemoryMutationResult {
+  memories: CustomMemoryPreset[]
+  presets: PresetsState
 }
 
 /** A project folder (cwd for its workspaces' terminals). */
@@ -170,6 +193,10 @@ export const IPC = {
   PRESETS_REORDER: 'presets:reorder',
   PRESETS_SET_ACTIVE: 'presets:set-active',
   PRESETS_PICK_IMAGE: 'presets:pick-image',
+  CUSTOM_MEMORY_LIST: 'custom-memory:list',
+  CUSTOM_MEMORY_CREATE: 'custom-memory:create',
+  CUSTOM_MEMORY_ADD_ALIAS: 'custom-memory:add-alias',
+  CUSTOM_MEMORY_ADD_TERMINAL_PRESET: 'custom-memory:add-terminal-preset',
   WINDOW_MINIMIZE: 'window:minimize',
   WINDOW_MAXIMIZE_TOGGLE: 'window:maximize-toggle',
   WINDOW_CLOSE: 'window:close',

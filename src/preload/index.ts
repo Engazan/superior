@@ -5,6 +5,9 @@ import {
   type AgentExitEvent,
   type AgentSession,
   type AppSettings,
+  type CustomMemoryMutationResult,
+  type CustomMemoryPreset,
+  type CustomMemoryProvider,
   type GitStatus,
   type Language,
   type LayoutsState,
@@ -96,6 +99,27 @@ const api = {
 
   pickPresetImage(): Promise<{ dataUrl: string } | null> {
     return ipcRenderer.invoke(IPC.PRESETS_PICK_IMAGE)
+  },
+
+  listCustomMemoryPresets(): Promise<CustomMemoryPreset[]> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_LIST)
+  },
+
+  createCustomMemoryPreset(
+    provider: CustomMemoryProvider,
+    name: string
+  ): Promise<CustomMemoryMutationResult> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_CREATE, { provider, name })
+  },
+
+  addCustomMemoryAlias(directoryName: string): Promise<CustomMemoryPreset[]> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_ALIAS, directoryName)
+  },
+
+  addCustomMemoryTerminalPreset(
+    directoryName: string
+  ): Promise<CustomMemoryMutationResult> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET, directoryName)
   },
 
   windowMinimize(): void {

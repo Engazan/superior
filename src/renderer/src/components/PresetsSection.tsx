@@ -2,8 +2,9 @@ import { useEffect, useState, type DragEvent } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { PresetForm } from './PresetForm'
 import { Toggle } from './Toggle'
+import { CustomMemoryPresets } from './CustomMemoryPresets'
 import { useI18n } from '../i18n'
-import type { TerminalPreset } from '../types'
+import type { PresetsState, TerminalPreset } from '../types'
 
 interface Props {
   presets: TerminalPreset[]
@@ -12,6 +13,7 @@ interface Props {
   onReorder: (orderedIds: string[]) => void
   onToggleActive: (id: string, active: boolean) => void
   onPickImage: () => Promise<{ dataUrl: string } | null>
+  onPresetsChanged: (state: PresetsState) => void
 }
 
 /** Place `fromId` before or after `toId` (controlled by `after`). */
@@ -50,7 +52,8 @@ export function PresetsSection({
   onDelete,
   onReorder,
   onToggleActive,
-  onPickImage
+  onPickImage,
+  onPresetsChanged
 }: Props): JSX.Element {
   const { t } = useI18n()
   const [editing, setEditing] = useState<TerminalPreset | 'new' | null>(null)
@@ -191,6 +194,8 @@ export function PresetsSection({
           </tbody>
         </table>
       </div>
+
+      <CustomMemoryPresets onPresetsChanged={onPresetsChanged} />
 
       {editing !== null && (
         <PresetForm

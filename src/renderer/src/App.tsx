@@ -396,6 +396,7 @@ export default function App(): JSX.Element {
             onReorderPresets={reorderPresets}
             onTogglePresetActive={togglePresetActive}
             onPickPresetImage={() => window.api.pickPresetImage()}
+            onPresetsChanged={(state) => setPresets(state.presets)}
             workspaces={workspaces}
             folders={folders}
             onKillSession={closeSession}

@@ -4,7 +4,7 @@ import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { useTheme } from '../theme'
 import { useI18n, LANGUAGES } from '../i18n'
-import type { Folder, ThemeMode, TerminalPreset, Workspace } from '../types'
+import type { Folder, PresetsState, ThemeMode, TerminalPreset, Workspace } from '../types'
 
 export type SettingsSection = 'appearance' | 'presets' | 'daemons' | 'keyboard'
 
@@ -17,6 +17,7 @@ interface Props {
   onReorderPresets: (orderedIds: string[]) => void
   onTogglePresetActive: (id: string, active: boolean) => void
   onPickPresetImage: () => Promise<{ dataUrl: string } | null>
+  onPresetsChanged: (state: PresetsState) => void
   workspaces: Workspace[]
   folders: Folder[]
   onKillSession: (id: string) => void
@@ -91,6 +92,7 @@ export function SettingsView({
   onReorderPresets,
   onTogglePresetActive,
   onPickPresetImage,
+  onPresetsChanged,
   workspaces,
   folders,
   onKillSession
@@ -191,6 +193,7 @@ export function SettingsView({
             onReorder={onReorderPresets}
             onToggleActive={onTogglePresetActive}
             onPickImage={onPickPresetImage}
+            onPresetsChanged={onPresetsChanged}
           />
         )}
         {section === 'daemons' && (
