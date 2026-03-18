@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { DragStrip } from './DragStrip'
 import { PresetsSection } from './PresetsSection'
 import { useTheme } from '../theme'
 import { useI18n, LANGUAGES } from '../i18n'
@@ -100,7 +99,6 @@ export function SettingsView({
     <div className="flex min-h-0 flex-1">
       {/* Settings sidebar */}
       <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-bar">
-        <DragStrip />
         <div className="border-b border-edge p-2">
           <button
             onClick={onBack}

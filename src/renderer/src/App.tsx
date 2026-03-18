@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
-import { SidebarToggle } from './components/SidebarToggle'
 import { PresetLaunchers } from './components/PresetLaunchers'
 import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
@@ -9,8 +9,6 @@ import { useI18n } from './i18n'
 import type { AgentSession, TerminalPreset, Workspace, WorkspaceState } from './types'
 
 type View = 'main' | 'settings'
-
-const isMac = window.api.platform === 'darwin'
 
 export default function App(): JSX.Element {
   const { t } = useI18n()
@@ -153,24 +151,27 @@ export default function App(): JSX.Element {
   }, [])
 
   return (
-    <div className="flex h-full bg-bar text-fg">
-      {view === 'settings' ? (
-        <SettingsView
-          initialSection={settingsSection}
-          onBack={() => setView('main')}
-          presets={presets}
-          onSavePreset={savePreset}
-          onDeletePreset={deletePreset}
-          onReorderPresets={reorderPresets}
-          onTogglePresetActive={togglePresetActive}
-          onPickPresetImage={() => window.api.pickPresetImage()}
-        />
-      ) : (
-        <>
-          {!sidebarCollapsed && (
+    <div className="flex h-full flex-col bg-bar text-fg">
+      <TitleBar showToggle={view === 'main'} onToggle={() => setSidebarCollapsed((c) => !c)} />
+
+      <div className="flex min-h-0 flex-1">
+        {view === 'settings' ? (
+          <SettingsView
+            initialSection={settingsSection}
+            onBack={() => setView('main')}
+            presets={presets}
+            onSavePreset={savePreset}
+            onDeletePreset={deletePreset}
+            onReorderPresets={reorderPresets}
+            onTogglePresetActive={togglePresetActive}
+            onPickPresetImage={() => window.api.pickPresetImage()}
+          />
+        ) : (
+          <>
             <Sidebar
               workspaces={workspaces}
               activePath={activePath}
+              collapsed={sidebarCollapsed}
               onAdd={addWorkspace}
               onSelect={selectWorkspace}
               onRemove={removeWorkspace}
@@ -178,53 +179,43 @@ export default function App(): JSX.Element {
                 setSettingsSection('appearance')
                 setView('settings')
               }}
-              onToggle={() => setSidebarCollapsed((c) => !c)}
             />
-          )}
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div
-              className={`app-drag flex h-9 items-center gap-2 border-b border-edge bg-bar pr-3 ${
-                sidebarCollapsed ? (isMac ? 'pl-[68px]' : 'pl-2') : 'pl-3'
-              }`}
-              onDoubleClick={isMac ? undefined : () => window.api.windowToggleMaximize()}
-            >
-              {sidebarCollapsed && (
-                // Same x/y as the sidebar's toggle (both h-9 bars), so it doesn't move.
-                <SidebarToggle onClick={() => setSidebarCollapsed((c) => !c)} />
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="flex h-9 items-center gap-2 border-b border-edge bg-bar px-3">
+                <PresetLaunchers
+                  presets={presets}
+                  disabled={!activeWorkspace}
+                  onLaunch={launchAgent}
+                  onOpenPresets={openPresets}
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-start justify-between gap-4 border-b border-red-900/60 bg-red-950/40 px-4 py-2 text-sm text-red-200">
+                  <span>{error}</span>
+                  <button
+                    className="shrink-0 text-red-300/80 hover:text-red-100"
+                    onClick={() => setError(null)}
+                    aria-label={t('window.close')}
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
-              <PresetLaunchers
-                presets={presets}
-                disabled={!activeWorkspace}
-                onLaunch={launchAgent}
-                onOpenPresets={openPresets}
+
+              <TerminalPanel
+                sessions={sessions}
+                activePath={activePath}
+                activeSessionId={activeSessionId}
+                onSelect={setActiveSessionId}
+                onClose={closeSession}
+                onSessionUpdate={updateSession}
               />
             </div>
-
-            {error && (
-              <div className="flex items-start justify-between gap-4 border-b border-red-900/60 bg-red-950/40 px-4 py-2 text-sm text-red-200">
-                <span>{error}</span>
-                <button
-                  className="shrink-0 text-red-300/80 hover:text-red-100"
-                  onClick={() => setError(null)}
-                  aria-label={t('window.close')}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            <TerminalPanel
-              sessions={sessions}
-              activePath={activePath}
-              activeSessionId={activeSessionId}
-              onSelect={setActiveSessionId}
-              onClose={closeSession}
-              onSessionUpdate={updateSession}
-            />
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

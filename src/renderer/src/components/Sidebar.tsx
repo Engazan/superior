@@ -1,30 +1,82 @@
-import { DragStrip } from './DragStrip'
 import { useI18n } from '../i18n'
 import type { Workspace } from '../types'
 
 interface Props {
   workspaces: Workspace[]
   activePath: string | null
+  collapsed: boolean
   onAdd: () => void
   onSelect: (path: string) => void
   onRemove: (path: string) => void
   onOpenSettings: () => void
-  onToggle: () => void
+}
+
+function initial(name: string): string {
+  return (name.trim().charAt(0) || '?').toUpperCase()
 }
 
 export function Sidebar({
   workspaces,
   activePath,
+  collapsed,
   onAdd,
   onSelect,
   onRemove,
-  onOpenSettings,
-  onToggle
+  onOpenSettings
 }: Props): JSX.Element {
   const { t } = useI18n()
+
+  // Collapsed: a narrow rail that still lets you pick / add a workspace.
+  if (collapsed) {
+    return (
+      <aside className="flex w-16 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar">
+        <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
+          <button
+            onClick={onAdd}
+            title={t('sidebar.openFolder')}
+            aria-label={t('sidebar.openFolder')}
+            className="flex h-9 w-9 items-center justify-center rounded-md bg-edge text-lg leading-none text-fg transition hover:bg-hover"
+          >
+            +
+          </button>
+        </div>
+
+        <nav className="min-h-0 flex-1 overflow-y-auto p-2">
+          <div className="flex flex-col items-center gap-1.5">
+            {workspaces.map((ws) => {
+              const active = ws.path === activePath
+              return (
+                <button
+                  key={ws.path}
+                  onClick={() => onSelect(ws.path)}
+                  title={ws.path}
+                  className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold transition ${
+                    active ? 'bg-sky-600 text-white' : 'bg-edge text-fg2 hover:bg-hover'
+                  }`}
+                >
+                  {initial(ws.name)}
+                </button>
+              )
+            })}
+          </div>
+        </nav>
+
+        <div className="flex justify-center border-t border-edge p-2">
+          <button
+            onClick={onOpenSettings}
+            title={t('sidebar.settings')}
+            aria-label={t('sidebar.settings')}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg"
+          >
+            <span className="text-base leading-none">⚙</span>
+          </button>
+        </div>
+      </aside>
+    )
+  }
+
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-bar">
-      <DragStrip onToggleSidebar={onToggle} />
       <div className="border-b border-edge p-2">
         <button
           onClick={onAdd}
