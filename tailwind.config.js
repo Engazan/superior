@@ -11,7 +11,13 @@ module.exports = {
         fg: 'var(--c-fg)',
         fg2: 'var(--c-fg2)',
         fgdim: 'var(--c-fgdim)',
-        fgmuted: 'var(--c-fgmuted)'
+        fgmuted: 'var(--c-fgmuted)',
+        accent: 'var(--c-accent)',
+        accentBg: 'var(--c-accent-bg)',
+        accentBorder: 'var(--c-accent-border)',
+        status: 'var(--c-status)',
+        statusBg: 'var(--c-status-bg)',
+        statusBorder: 'var(--c-status-border)'
       }
     }
   },

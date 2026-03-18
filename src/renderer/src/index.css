@@ -15,6 +15,12 @@
   --c-fg2: #bac2de;
   --c-fgdim: #9399b2;
   --c-fgmuted: #6c7086;
+  --c-accent: #7dd3fc;
+  --c-accent-bg: #0c4a6e;
+  --c-accent-border: #075985;
+  --c-status: #6ee7b7;
+  --c-status-bg: #064e3b;
+  --c-status-border: #047857;
 }
 
 .light {
@@ -26,6 +32,12 @@
   --c-fg2: #3c4043;
   --c-fgdim: #5f6368;
   --c-fgmuted: #9aa0a6;
+  --c-accent: #0369a1;
+  --c-accent-bg: #e0f2fe;
+  --c-accent-border: #bae6fd;
+  --c-status: #047857;
+  --c-status-bg: #d1fae5;
+  --c-status-border: #a7f3d0;
 }
 
 html,
