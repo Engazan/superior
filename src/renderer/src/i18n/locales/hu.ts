@@ -152,6 +152,28 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Új ág',
   'sidebar.useExistingBranch': 'Meglévő',
   'sidebar.worktreeBadge': 'Ág-munkaterület (izolált worktree)',
+  'worktree.createTitle': 'Új ág-munkaterület',
+  'worktree.createDescription':
+    'Dolgozzon izolált Git worktree-ben a fő mappa ágának átváltása nélkül.',
+  'worktree.branchSource': 'Ág forrása',
+  'worktree.newBranchDescription': 'Új ágat hoz létre az aktuális HEAD-ből.',
+  'worktree.existingBranchDescription': 'Egy használaton kívüli helyi ágat nyit meg.',
+  'worktree.newBranchName': 'Új ág neve',
+  'worktree.existingBranchName': 'Ág',
+  'worktree.newBranchHint': 'Az új ág a tároló aktuális HEAD állapotából indul.',
+  'worktree.existingBranchHint': 'A másik worktree-ben megnyitott ágak nem érhetők el.',
+  'worktree.loadingBranches': 'Ágak betöltése…',
+  'worktree.noBranchesAvailable': 'Nincs elérhető ág',
+  'worktree.branchInUse': 'használatban',
+  'worktree.branchLoadFailed': 'Az ágakat nem sikerült betölteni.',
+  'worktree.workspaceName': 'Munkaterület neve',
+  'worktree.workspaceNamePlaceholder': 'Azonos az ág nevével',
+  'worktree.workspaceNameHint':
+    'Ez a név jelenik meg az oldalsávon. Hagyja üresen az ág nevének használatához.',
+  'worktree.optional': 'Opcionális',
+  'worktree.isolated': 'Izolált',
+  'worktree.createAction': 'Munkaterület létrehozása',
+  'worktree.creating': 'Létrehozás…',
   'worktree.removeDirtyBody':
     'Ennek a munkaterületnek nincs commitolva a módosítása, ami elveszik. Eltávolítod mégis?',
   'worktree.removeRunningBody':

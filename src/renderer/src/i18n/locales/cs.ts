@@ -152,6 +152,28 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Nová větev',
   'sidebar.useExistingBranch': 'Existující',
   'sidebar.worktreeBadge': 'Workspace s větví (izolovaný worktree)',
+  'worktree.createTitle': 'Nový workspace s větví',
+  'worktree.createDescription':
+    'Pracujte v izolovaném Git worktree bez přepínání větví v hlavní složce.',
+  'worktree.branchSource': 'Zdroj větve',
+  'worktree.newBranchDescription': 'Vytvoří větev z aktuálního HEAD.',
+  'worktree.existingBranchDescription': 'Načte místní větev, která se právě nepoužívá.',
+  'worktree.newBranchName': 'Název nové větve',
+  'worktree.existingBranchName': 'Větev',
+  'worktree.newBranchHint': 'Nová větev začne z aktuálního HEAD repozitáře.',
+  'worktree.existingBranchHint': 'Větve otevřené v jiném worktree nejsou dostupné.',
+  'worktree.loadingBranches': 'Načítám větve…',
+  'worktree.noBranchesAvailable': 'Žádné dostupné větve',
+  'worktree.branchInUse': 'používá se',
+  'worktree.branchLoadFailed': 'Větve se nepodařilo načíst.',
+  'worktree.workspaceName': 'Název workspacu',
+  'worktree.workspaceNamePlaceholder': 'Stejný jako název větve',
+  'worktree.workspaceNameHint':
+    'Tento název se zobrazí v postranním panelu. Necháte-li jej prázdný, použije se název větve.',
+  'worktree.optional': 'Volitelné',
+  'worktree.isolated': 'Izolovaný',
+  'worktree.createAction': 'Vytvořit workspace',
+  'worktree.creating': 'Vytvářím…',
   'worktree.removeDirtyBody':
     'Tento workspace má neuložené změny, které se ztratí. Přesto odstranit?',
   'worktree.removeRunningBody':

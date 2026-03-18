@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useI18n } from '../i18n'
 import type { BranchInfo, Folder, Workspace, WorktreeAddArgs } from '../types'
 
@@ -12,8 +12,8 @@ interface Props {
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
   onAddWorkspace: (folderPath: string, name: string) => void
-  /** Create a worktree-backed workspace; resolves true when it succeeded. */
-  onAddWorktreeWorkspace: (args: WorktreeAddArgs) => Promise<boolean>
+  /** Create a worktree-backed workspace; resolves with a localized error or null. */
+  onAddWorktreeWorkspace: (args: WorktreeAddArgs) => Promise<string | null>
   onRenameWorkspace: (id: string, name: string) => void
   onRemoveWorkspace: (id: string) => void
   onSelectWorkspace: (id: string) => void
@@ -94,6 +94,23 @@ function BranchGlyph(): JSX.Element {
   )
 }
 
+function CloseGlyph(): JSX.Element {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="m6 6 12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
 /** Small branch chip shown under a worktree-backed workspace's name. */
 function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.Element {
   return (
@@ -108,10 +125,8 @@ function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.
 }
 
 /**
- * Inline form to create a worktree-backed workspace: a name, a new-vs-existing
- * branch toggle, and the branch itself (free text for new, a picker of
- * not-checked-out branches for existing). Submits via `onCreate`; closes on
- * success.
+ * Dialog to create a worktree-backed workspace: a new-vs-existing branch
+ * choice, the branch itself, and an optional display name.
  */
 function WorktreeCreateForm({
   folderPath,
@@ -120,7 +135,7 @@ function WorktreeCreateForm({
 }: {
   folderPath: string
   onCancel: () => void
-  onCreate: (args: WorktreeAddArgs) => Promise<boolean>
+  onCreate: (args: WorktreeAddArgs) => Promise<string | null>
 }): JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState('')
@@ -129,14 +144,27 @@ function WorktreeCreateForm({
   const [branches, setBranches] = useState<BranchInfo[]>([])
   const [picked, setPicked] = useState('')
   const [busy, setBusy] = useState(false)
+  const [loadingBranches, setLoadingBranches] = useState(true)
+  const [branchLoadFailed, setBranchLoadFailed] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
 
   useEffect(() => {
     let active = true
-    void window.api.listBranches(folderPath).then((list) => {
-      if (!active) return
-      setBranches(list)
-      setPicked(list.find((b) => !b.isCheckedOut)?.name ?? '')
-    })
+    void window.api
+      .listBranches(folderPath)
+      .then((list) => {
+        if (!active) return
+        setBranches(list)
+        setPicked(list.find((b) => !b.isCheckedOut)?.name ?? '')
+      })
+      .catch(() => {
+        if (active) setBranchLoadFailed(true)
+      })
+      .finally(() => {
+        if (active) setLoadingBranches(false)
+      })
     return () => {
       active = false
     }
@@ -146,84 +174,230 @@ function WorktreeCreateForm({
   const branch = mode === 'new' ? newBranch.trim() : picked
   const canSubmit = !!branch && !busy
 
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && !busy) onCancel()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [busy, onCancel])
+
   const submit = async (): Promise<void> => {
     if (!canSubmit) return
+    setCreateError(null)
     setBusy(true)
-    const ok = await onCreate({
+    const error = await onCreate({
       folderPath,
       name: name.trim() || branch,
       branch,
       createBranch: mode === 'new'
     })
     setBusy(false)
-    if (ok) onCancel()
+    if (error) setCreateError(error)
+    else onCancel()
   }
 
   const field =
-    'w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none'
-  const seg = (on: boolean): string =>
-    `flex-1 rounded px-2 py-1 text-[11px] font-medium transition ${
-      on ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'
-    }`
+    'w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fgmuted focus:border-accent focus:ring-2 focus:ring-accentBorder disabled:cursor-not-allowed disabled:opacity-60'
 
   return (
-    <div className="space-y-1.5 rounded-md border border-edge bg-panel/40 p-1.5">
-      <input
-        autoFocus
-        value={name}
-        placeholder={t('sidebar.newWorkspacePlaceholder')}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Escape' && onCancel()}
-        className={field}
-      />
-      <div className="flex gap-1 rounded border border-edge p-0.5">
-        <button className={seg(mode === 'new')} onClick={() => setMode('new')}>
-          {t('sidebar.createNewBranch')}
-        </button>
-        <button className={seg(mode === 'existing')} onClick={() => setMode('existing')}>
-          {t('sidebar.useExistingBranch')}
-        </button>
-      </div>
-      {mode === 'new' ? (
-        <input
-          value={newBranch}
-          placeholder={t('sidebar.worktreeBranchPlaceholder')}
-          onChange={(e) => setNewBranch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void submit()
-            else if (e.key === 'Escape') onCancel()
-          }}
-          className={field}
-        />
-      ) : (
-        <select value={picked} onChange={(e) => setPicked(e.target.value)} className={field}>
-          {available.length === 0 && <option value="">—</option>}
-          {available.map((b) => (
-            <option key={b.name} value={b.name}>
-              {b.name}
-              {b.isCurrent ? ' ✓' : ''}
-            </option>
-          ))}
-        </select>
-      )}
-      <div className="flex items-center gap-1">
-        <button
-          disabled={!canSubmit}
-          onClick={() => void submit()}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accentBg px-2 py-1 text-xs font-medium text-accent transition hover:brightness-125 disabled:opacity-40"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-5 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel()
+      }}
+    >
+      <form
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void submit()
+        }}
+      >
+        <div className="flex items-start gap-3 border-b border-edge px-5 py-4">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentBg text-accent ring-1 ring-inset ring-accentBorder">
+            <BranchGlyph />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id={titleId} className="text-base font-semibold text-fg">
+              {t('worktree.createTitle')}
+            </h2>
+            <p id={descriptionId} className="mt-1 text-xs leading-5 text-fgdim">
+              {t('worktree.createDescription')}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
+            aria-label={t('window.close')}
+          >
+            <CloseGlyph />
+          </button>
+        </div>
+
+        <div className="space-y-5 px-5 py-5">
+          <fieldset>
+            <legend className="mb-2 text-xs font-semibold text-fgdim">
+              {t('worktree.branchSource')}
+            </legend>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup">
+              {(
+                [
+                  ['new', 'sidebar.createNewBranch', 'worktree.newBranchDescription'],
+                  ['existing', 'sidebar.useExistingBranch', 'worktree.existingBranchDescription']
+                ] as const
+              ).map(([value, label, description]) => {
+                const selected = mode === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setMode(value)}
+                    className={`rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                      selected
+                        ? 'border-accent bg-accentBg/70'
+                        : 'border-edge bg-bar hover:border-fgmuted hover:bg-hover'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                          selected ? 'border-accent bg-accent' : 'border-fgmuted'
+                        }`}
+                        aria-hidden
+                      >
+                        {selected && <span className="h-1.5 w-1.5 rounded-full bg-panel" />}
+                      </span>
+                      <span className="text-sm font-semibold text-fg">{t(label)}</span>
+                    </span>
+                    <span className="mt-1.5 block pl-6 text-[11px] leading-4 text-fgdim">
+                      {t(description)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
+
+          <div>
+            <label htmlFor="worktree-branch" className="mb-1.5 block text-xs font-semibold text-fgdim">
+              {mode === 'new' ? t('worktree.newBranchName') : t('worktree.existingBranchName')}
+            </label>
+            {mode === 'new' ? (
+              <input
+                id="worktree-branch"
+                autoFocus
+                value={newBranch}
+                placeholder={t('sidebar.worktreeBranchPlaceholder')}
+                onChange={(event) => setNewBranch(event.target.value)}
+                className={`${field} font-mono`}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            ) : (
+              <>
+                <select
+                  id="worktree-branch"
+                  value={picked}
+                  onChange={(event) => setPicked(event.target.value)}
+                  disabled={loadingBranches || branchLoadFailed || available.length === 0}
+                  className={`${field} font-mono`}
+                >
+                  {loadingBranches && <option value="">{t('worktree.loadingBranches')}</option>}
+                  {!loadingBranches && available.length === 0 && (
+                    <option value="">{t('worktree.noBranchesAvailable')}</option>
+                  )}
+                  {branches.map((item) => (
+                    <option key={item.name} value={item.name} disabled={item.isCheckedOut}>
+                      {item.name}
+                      {item.isCheckedOut ? ` — ${t('worktree.branchInUse')}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {branchLoadFailed && (
+                  <p className="mt-1.5 text-xs text-red-300">{t('worktree.branchLoadFailed')}</p>
+                )}
+              </>
+            )}
+            <p className="mt-1.5 text-xs text-fgmuted">
+              {mode === 'new'
+                ? t('worktree.newBranchHint')
+                : t('worktree.existingBranchHint')}
+            </p>
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <label htmlFor="worktree-name" className="text-xs font-semibold text-fgdim">
+                {t('worktree.workspaceName')}
+              </label>
+              <span className="text-[10px] uppercase tracking-wide text-fgmuted">
+                {t('worktree.optional')}
+              </span>
+            </div>
+            <input
+              id="worktree-name"
+              value={name}
+              placeholder={branch || t('worktree.workspaceNamePlaceholder')}
+              onChange={(event) => setName(event.target.value)}
+              className={field}
+            />
+            <p className="mt-1.5 text-xs text-fgmuted">{t('worktree.workspaceNameHint')}</p>
+          </div>
+
+          {branch && (
+            <div className="flex items-center gap-3 rounded-lg border border-edge bg-bar px-3 py-2.5">
+              <span className="text-accent">
+                <BranchGlyph />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-mono text-xs font-medium text-fg">{branch}</p>
+                <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folderPath}</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-statusBg px-2 py-0.5 text-[10px] font-semibold text-status ring-1 ring-inset ring-statusBorder">
+                {t('worktree.isolated')}
+              </span>
+            </div>
+          )}
+
+          {createError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2.5 text-xs leading-5 text-red-700 dark:text-red-200"
+            >
+              {createError}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-edge bg-bar/50 px-5 py-4">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="flex min-w-36 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bar transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-40"
         >
           <BranchGlyph />
-          {t('sidebar.addWorktreeWorkspace')}
+            {busy ? t('worktree.creating') : t('worktree.createAction')}
         </button>
-        <button
-          onClick={onCancel}
-          aria-label="✕"
-          className="shrink-0 rounded px-2 py-1 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
-        >
-          ✕
-        </button>
+        </div>
+      </form>
       </div>
-    </div>
   )
 }
 

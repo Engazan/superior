@@ -165,17 +165,24 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [t]
   )
 
-  /** Create a worktree-backed workspace. Returns true on success (UI closes the form). */
+  /** Create a worktree-backed workspace. Returns null on success or a localized error. */
   const addWorktreeWorkspace = useCallback(
-    async (args: WorktreeAddArgs): Promise<boolean> => {
+    async (args: WorktreeAddArgs): Promise<string | null> => {
       setError(null)
-      const res = await window.api.addWorktreeWorkspace(args)
-      if ('error' in res) {
-        setError(worktreeErrorMessage(res.error))
-        return false
+      try {
+        const res = await window.api.addWorktreeWorkspace(args)
+        if ('error' in res) {
+          const message = worktreeErrorMessage(res.error)
+          setError(message)
+          return message
+        }
+        applyState(res)
+        return null
+      } catch (error) {
+        const message = worktreeErrorMessage((error as Error).message)
+        setError(message)
+        return message
       }
-      applyState(res)
-      return true
     },
     [applyState, setError, worktreeErrorMessage]
   )

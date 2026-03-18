@@ -152,6 +152,28 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Nowa gałąź',
   'sidebar.useExistingBranch': 'Istniejąca',
   'sidebar.worktreeBadge': 'Workspace z gałęzią (izolowany worktree)',
+  'worktree.createTitle': 'Nowy workspace z gałęzią',
+  'worktree.createDescription':
+    'Pracuj w izolowanym Git worktree bez przełączania gałęzi w głównym folderze.',
+  'worktree.branchSource': 'Źródło gałęzi',
+  'worktree.newBranchDescription': 'Utworzy gałąź z bieżącego HEAD.',
+  'worktree.existingBranchDescription': 'Pobierze lokalną gałąź, która nie jest używana.',
+  'worktree.newBranchName': 'Nazwa nowej gałęzi',
+  'worktree.existingBranchName': 'Gałąź',
+  'worktree.newBranchHint': 'Nowa gałąź rozpocznie się od bieżącego HEAD repozytorium.',
+  'worktree.existingBranchHint': 'Gałęzie otwarte w innym worktree są niedostępne.',
+  'worktree.loadingBranches': 'Ładowanie gałęzi…',
+  'worktree.noBranchesAvailable': 'Brak dostępnych gałęzi',
+  'worktree.branchInUse': 'w użyciu',
+  'worktree.branchLoadFailed': 'Nie udało się załadować gałęzi.',
+  'worktree.workspaceName': 'Nazwa workspace',
+  'worktree.workspaceNamePlaceholder': 'Taka sama jak nazwa gałęzi',
+  'worktree.workspaceNameHint':
+    'Ta nazwa pojawi się na pasku bocznym. Pozostaw puste, aby użyć nazwy gałęzi.',
+  'worktree.optional': 'Opcjonalne',
+  'worktree.isolated': 'Izolowany',
+  'worktree.createAction': 'Utwórz workspace',
+  'worktree.creating': 'Tworzenie…',
   'worktree.removeDirtyBody':
     'Ten workspace ma niezapisane zmiany, które zostaną utracone. Usunąć mimo to?',
   'worktree.removeRunningBody':
