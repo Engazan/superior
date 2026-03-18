@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
-import { PresetLaunchers } from './components/PresetLaunchers'
-import { TerminalPanel } from './components/TerminalPanel'
+import { TerminalPanel, type LayoutMode } from './components/TerminalPanel'
+import { type LaunchConfig } from './components/AgentLauncher'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
+import { type GridLayout } from './gridLayout'
 import type { AgentSession, TerminalPreset, Workspace, WorkspaceState } from './types'
 
 type View = 'main' | 'settings'
@@ -21,6 +22,10 @@ export default function App(): JSX.Element {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [presets, setPresets] = useState<TerminalPreset[]>([])
+  // Per-workspace layout mode (tabs vs grid), kept in memory.
+  const [layouts, setLayouts] = useState<Record<string, LayoutMode>>({})
+  // Per-workspace grid cell sizing.
+  const [gridLayouts, setGridLayouts] = useState<Record<string, GridLayout>>({})
 
   const activeWorkspace = useMemo(
     () => workspaces.find((w) => w.path === activePath) ?? null,
@@ -114,6 +119,41 @@ export default function App(): JSX.Element {
     [activeWorkspace, t]
   )
 
+  // Start a fresh layout from the launch wizard: set the mode and spawn each chosen preset.
+  const startLayout = useCallback(
+    async ({ mode, presetIds }: LaunchConfig) => {
+      setError(null)
+      if (!activeWorkspace) {
+        setError(t('error.noWorkspace'))
+        return
+      }
+      const path = activeWorkspace.path
+      setLayouts((prev) => ({ ...prev, [path]: mode }))
+      const launched: AgentSession[] = []
+      for (const id of presetIds) {
+        const preset = presets.find((p) => p.id === id)
+        if (!preset) continue
+        const res = await window.api.startAgent({
+          command: preset.command,
+          label: preset.name,
+          iconType: preset.iconType,
+          icon: preset.icon,
+          workspacePath: path
+        })
+        if ('error' in res) {
+          setError(res.error)
+          continue
+        }
+        launched.push(res.session)
+      }
+      if (launched.length) {
+        setSessions((prev) => [...prev, ...launched])
+        setActiveSessionId(launched[launched.length - 1].id)
+      }
+    },
+    [activeWorkspace, presets, t]
+  )
+
   // Preset management — each call returns the new state which we mirror locally.
   const savePreset = useCallback(async (preset: TerminalPreset) => {
     setPresets((await window.api.savePreset(preset)).presets)
@@ -131,6 +171,14 @@ export default function App(): JSX.Element {
     setSettingsSection('presets')
     setView('settings')
   }, [])
+
+  const setGridLayout = useCallback(
+    (layout: GridLayout) => {
+      if (!activePath) return
+      setGridLayouts((prev) => ({ ...prev, [activePath]: layout }))
+    },
+    [activePath]
+  )
 
   const updateSession = useCallback((id: string, patch: Partial<AgentSession>) => {
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
@@ -182,15 +230,6 @@ export default function App(): JSX.Element {
             />
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <div className="flex h-9 items-center gap-2 border-b border-edge bg-bar px-3">
-                <PresetLaunchers
-                  presets={presets}
-                  disabled={!activeWorkspace}
-                  onLaunch={launchAgent}
-                  onOpenPresets={openPresets}
-                />
-              </div>
-
               {error && (
                 <div className="flex items-start justify-between gap-4 border-b border-red-900/60 bg-red-950/40 px-4 py-2 text-sm text-red-200">
                   <span>{error}</span>
@@ -208,9 +247,16 @@ export default function App(): JSX.Element {
                 sessions={sessions}
                 activePath={activePath}
                 activeSessionId={activeSessionId}
+                layoutMode={activePath ? layouts[activePath] : undefined}
+                gridLayout={activePath ? gridLayouts[activePath] : undefined}
+                presets={presets}
                 onSelect={setActiveSessionId}
                 onClose={closeSession}
                 onSessionUpdate={updateSession}
+                onStart={startLayout}
+                onLaunch={launchAgent}
+                onManagePresets={openPresets}
+                onGridLayoutChange={setGridLayout}
               />
             </div>
           </>

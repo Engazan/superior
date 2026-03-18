@@ -3,11 +3,19 @@ import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
 import { useTheme } from '../theme'
+import type { Rect } from '../gridLayout'
 import type { AgentSession } from '../types'
+
+const FULL_RECT: Rect = { top: 0, left: 0, width: 100, height: 100 }
 
 interface Props {
   session: AgentSession
-  active: boolean
+  /** the cell this terminal occupies, in percentages; defaults to filling the panel */
+  rect?: Rect
+  /** whether this terminal is shown (vs. kept mounted but hidden) */
+  visible: boolean
+  /** whether this terminal should grab keyboard focus */
+  focused: boolean
   onExit: (id: string, exitCode: number) => void
 }
 
@@ -26,7 +34,8 @@ const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
   }
 }
 
-export function TerminalView({ session, active, onExit }: Props): JSX.Element {
+export function TerminalView({ session, rect, visible, focused, onExit }: Props): JSX.Element {
+  const r = rect ?? FULL_RECT
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -97,9 +106,9 @@ export function TerminalView({ session, active, onExit }: Props): JSX.Element {
     if (termRef.current) termRef.current.options.theme = TERM_THEMES[resolved]
   }, [resolved])
 
-  // Refit + focus whenever this view becomes the active tab.
+  // Refit whenever this view becomes visible or its cell changes size.
   useEffect(() => {
-    if (!active) return
+    if (!visible) return
     const fit = fitRef.current
     const term = termRef.current
     if (!fit || !term) return
@@ -108,19 +117,39 @@ export function TerminalView({ session, active, onExit }: Props): JSX.Element {
       try {
         fit.fit()
         window.api.resize(session.id, term.cols, term.rows)
+      } catch {
+        /* ignore */
+      }
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [visible, r.top, r.left, r.width, r.height, session.id])
+
+  // Grab keyboard focus when this becomes the focused terminal.
+  useEffect(() => {
+    if (!focused) return
+    const term = termRef.current
+    if (!term) return
+    const t = window.setTimeout(() => {
+      try {
         term.focus()
       } catch {
         /* ignore */
       }
     }, 0)
     return () => window.clearTimeout(t)
-  }, [active, session.id])
+  }, [focused, session.id])
 
   return (
     <div
-      className={`absolute inset-0 p-2 transition-opacity ${
-        active ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'
+      className={`absolute p-2 transition-opacity ${
+        visible ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'
       }`}
+      style={{
+        top: `${r.top}%`,
+        left: `${r.left}%`,
+        width: `${r.width}%`,
+        height: `${r.height}%`
+      }}
     >
       <div ref={hostRef} className="h-full w-full" />
     </div>
