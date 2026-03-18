@@ -5,6 +5,7 @@ import {
   type AgentExitEvent,
   type AgentSession,
   type AppSettings,
+  type GitStatus,
   type Language,
   type LayoutsState,
   type PresetsState,
@@ -47,6 +48,14 @@ const api = {
 
   setActiveWorkspace(id: string): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_SET_ACTIVE, id)
+  },
+
+  getGitStatus(folderPath: string): Promise<GitStatus> {
+    return ipcRenderer.invoke(IPC.GIT_STATUS, folderPath)
+  },
+
+  initGit(folderPath: string): Promise<GitStatus> {
+    return ipcRenderer.invoke(IPC.GIT_INIT, folderPath)
   },
 
   getSettings(): Promise<AppSettings> {

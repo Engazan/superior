@@ -9,7 +9,14 @@ import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
 import { type GridLayout } from './gridLayout'
-import type { AgentSession, Folder, TerminalPreset, Workspace, WorkspaceState } from './types'
+import type {
+  AgentSession,
+  Folder,
+  GitStatus,
+  TerminalPreset,
+  Workspace,
+  WorkspaceState
+} from './types'
 
 type View = 'main' | 'settings'
 
@@ -30,6 +37,8 @@ export default function App(): JSX.Element {
   // Quick-launch preset picker overlay (opened by shortcut).
   const [launcherOpen, setLauncherOpen] = useState(false)
   const [presets, setPresets] = useState<TerminalPreset[]>([])
+  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null)
+  const [gitLoading, setGitLoading] = useState(false)
   // Per-workspace layout mode (tabs vs grid) and grid sizing, kept in memory.
   const [layouts, setLayouts] = useState<Record<string, LayoutMode>>({})
   const [gridLayouts, setGridLayouts] = useState<Record<string, GridLayout>>({})
@@ -42,6 +51,43 @@ export default function App(): JSX.Element {
     () => folders.find((f) => f.path === activeWorkspace?.folderPath) ?? null,
     [folders, activeWorkspace]
   )
+
+  // Keep the active folder's branch current, including checkouts made in a terminal.
+  useEffect(() => {
+    if (!activeFolder) {
+      setGitStatus(null)
+      setGitLoading(false)
+      return
+    }
+
+    let active = true
+    const folderPath = activeFolder.path
+    const refresh = async (showLoading = false): Promise<void> => {
+      if (showLoading) setGitLoading(true)
+      const status = await window.api.getGitStatus(folderPath)
+      if (!active) return
+      setGitStatus(status)
+      setGitLoading(false)
+    }
+
+    setGitStatus(null)
+    void refresh(true)
+    const id = window.setInterval(() => void refresh(), 3000)
+    return () => {
+      active = false
+      window.clearInterval(id)
+    }
+  }, [activeFolder])
+
+  const initializeGit = useCallback(async () => {
+    if (!activeFolder || gitLoading) return
+    setError(null)
+    setGitLoading(true)
+    const status = await window.api.initGit(activeFolder.path)
+    setGitStatus(status)
+    setGitLoading(false)
+    if (status.error) setError(status.error)
+  }, [activeFolder, gitLoading])
 
   // Running-terminal count per workspace, for the sidebar badges.
   const counts = useMemo(() => {
@@ -329,7 +375,10 @@ export default function App(): JSX.Element {
     <div className="flex h-full flex-col bg-bar text-fg">
       <TitleBar
         showToggle={view === 'main'}
+        gitStatus={view === 'main' ? gitStatus : null}
+        gitLoading={gitLoading}
         onToggle={() => setSidebarCollapsed((c) => !c)}
+        onInitGit={initializeGit}
         onOpenSettings={() => {
           setSettingsSection('appearance')
           setView('settings')

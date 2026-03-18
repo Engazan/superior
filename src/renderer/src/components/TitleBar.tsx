@@ -1,15 +1,39 @@
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { useI18n } from '../i18n'
+import type { GitStatus } from '../types'
 
 const isMac = window.api.platform === 'darwin'
 
 interface Props {
   /** Show the sidebar toggle (hidden in settings, where there is no sidebar). */
   showToggle: boolean
+  gitStatus: GitStatus | null
+  gitLoading: boolean
   onToggle: () => void
+  onInitGit: () => void
   /** Open the settings view. The gear sits at the far right of the strip. */
   onOpenSettings: () => void
+}
+
+function BranchIcon(): JSX.Element {
+  return (
+    <svg
+      className="block h-3.5 w-3.5 shrink-0"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="4" cy="3.5" r="1.75" />
+      <circle cx="4" cy="12.5" r="1.75" />
+      <circle cx="12" cy="5.5" r="1.75" />
+      <path d="M4 5.25v5.5M10.25 5.5H9A5 5 0 0 0 4 10.5" />
+    </svg>
+  )
 }
 
 /**
@@ -18,8 +42,16 @@ interface Props {
  * so it stays put when the sidebar collapses to a rail. The settings gear is
  * pinned to the far right, before the window controls.
  */
-export function TitleBar({ showToggle, onToggle, onOpenSettings }: Props): JSX.Element {
+export function TitleBar({
+  showToggle,
+  gitStatus,
+  gitLoading,
+  onToggle,
+  onInitGit,
+  onOpenSettings
+}: Props): JSX.Element {
   const { t } = useI18n()
+  const showGit = showToggle && (gitLoading || gitStatus !== null)
   return (
     <header className="app-drag flex h-9 shrink-0 items-center border-b border-edge bg-bar">
       {showToggle && (
@@ -27,6 +59,34 @@ export function TitleBar({ showToggle, onToggle, onOpenSettings }: Props): JSX.E
           className={`app-no-drag flex h-full items-center pr-1 ${isMac ? 'pl-[68px]' : 'pl-1'}`}
         >
           <SidebarToggle onClick={onToggle} />
+          {showGit && (
+            <>
+              <span className="mx-2 h-4 w-px shrink-0 bg-edge" aria-hidden />
+              {gitLoading && !gitStatus ? (
+                <span className="flex h-full items-center px-1 text-xs text-fgmuted">
+                  Git…
+                </span>
+              ) : gitStatus?.isRepository ? (
+                <div
+                  className="flex h-full min-w-0 max-w-48 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
+                  title={gitStatus.branch ?? 'HEAD'}
+                >
+                  <BranchIcon />
+                  <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
+                </div>
+              ) : (
+                <button
+                  onClick={onInitGit}
+                  disabled={gitLoading || !!gitStatus?.error}
+                  title={gitStatus?.error ?? 'Initialize a Git repository in this folder'}
+                  className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
+                >
+                  <BranchIcon />
+                  <span>{gitStatus?.error ? 'Git unavailable' : 'Init git'}</span>
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 

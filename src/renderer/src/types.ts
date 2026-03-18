@@ -5,6 +5,7 @@ export type {
   AgentStatus,
   AppSettings,
   Folder,
+  GitStatus,
   Language,
   PresetIconType,
   PresetsState,

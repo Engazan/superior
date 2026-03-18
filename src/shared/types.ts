@@ -122,6 +122,14 @@ export interface WorkspaceState {
   activeWorkspaceId: string | null
 }
 
+/** Git state for the folder backing the active workspace. */
+export interface GitStatus {
+  isRepository: boolean
+  /** Current branch, or a short commit id while HEAD is detached. */
+  branch: string | null
+  error?: string
+}
+
 /** Result returned from a start-agent request. */
 export type StartAgentResult = { session: AgentSession } | { error: string }
 
@@ -150,6 +158,8 @@ export const IPC = {
   WORKSPACE_RENAME: 'workspace:rename',
   WORKSPACE_REMOVE: 'workspace:remove',
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
+  GIT_STATUS: 'git:status',
+  GIT_INIT: 'git:init',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',
