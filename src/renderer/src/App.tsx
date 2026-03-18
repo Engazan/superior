@@ -221,13 +221,20 @@ export default function App(): JSX.Element {
               </div>
             </div>
 
-            {rightSidebarOpen && (
+            {/* Always mounted so the width can animate; the inner panel keeps its
+                fixed width and is clipped while collapsed. */}
+            <div
+              className={`flex shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+                rightSidebarOpen ? 'w-96' : 'w-0'
+              }`}
+            >
               <RightPanel
+                active={rightSidebarOpen}
                 folderPath={ws.activeFolder?.path ?? null}
                 onOpenFile={preview.setPreviewFile}
                 selectedPath={preview.previewFile?.path ?? null}
               />
-            )}
+            </div>
           </>
         )}
       </div>

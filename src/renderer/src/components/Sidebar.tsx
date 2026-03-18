@@ -123,7 +123,7 @@ export function Sidebar({
   // Collapsed: a narrow rail with workspace initials + a running-count dot.
   if (collapsed) {
     return (
-      <aside className="flex w-14 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar">
+      <aside className="flex w-14 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
         <div className="flex flex-col items-center border-b border-edge p-2">
           <button
             onClick={onAddFolder}
@@ -189,7 +189,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-bar">
+    <aside className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
       <div className="border-b border-edge px-2 py-2">
         <button
           onClick={onAddFolder}

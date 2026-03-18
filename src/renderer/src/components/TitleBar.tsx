@@ -128,9 +128,14 @@ export function TitleBar({
           onClick={onToggleRight}
           title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
           aria-label={t('common.toggleRightSidebar')}
-          className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          className="group app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         >
-          <svg className="block h-[15px] w-[15px]" viewBox="0 0 15 15" fill="none" aria-hidden>
+          <svg
+            className="block h-[15px] w-[15px] transition-transform duration-150 group-active:scale-90"
+            viewBox="0 0 15 15"
+            fill="none"
+            aria-hidden
+          >
             <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" />
             <line x1="9.5" y1="2.5" x2="9.5" y2="12.5" stroke="currentColor" />
           </svg>

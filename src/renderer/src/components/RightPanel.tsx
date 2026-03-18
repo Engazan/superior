@@ -7,6 +7,9 @@ import type { FsEntry, GitDiff } from '../types'
 type Tab = 'files' | 'changes'
 
 interface Props {
+  /** Whether the panel is open. Kept mounted while closed (for the slide
+      animation), so polling is gated on this to stay idle when hidden. */
+  active: boolean
   /** Folder backing the active workspace, or null when none is selected. */
   folderPath: string | null
   /** Open a file's preview (handled at the app level so it spans the main area). */
@@ -20,7 +23,7 @@ interface Props {
  * and Changes (working-tree diff) tabs. The diff is fetched here so the +/−
  * totals can show on the Changes tab even while the Files tab is open.
  */
-export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
+export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('changes')
   const [diff, setDiff] = useState<GitDiff | null>(null)
@@ -42,13 +45,14 @@ export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX
   )
 
   // Refetch on folder change and poll so the view tracks working-tree edits.
+  // Skipped while collapsed — the panel stays mounted only for its animation.
   useEffect(() => {
     setDiff(null)
-    if (!folderPath) return
+    if (!folderPath || !active) return
     void fetchDiff(true)
     const id = window.setInterval(() => void fetchDiff(false), 3000)
     return () => window.clearInterval(id)
-  }, [folderPath, fetchDiff])
+  }, [folderPath, fetchDiff, active])
 
   const refresh = useCallback((): void => void fetchDiff(true), [fetchDiff])
 

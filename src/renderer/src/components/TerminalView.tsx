@@ -40,6 +40,9 @@ interface Props {
   active: boolean
   /** the cell is blown up to fill the whole panel */
   maximized: boolean
+  /** animate position/size changes (maximize/restore, relayout); off while
+      dragging a divider so the resize stays crisp */
+  animate: boolean
   /** the user picked this session (clicked its body or bar) */
   onSelect: (id: string) => void
   onClose: (id: string) => void
@@ -105,6 +108,7 @@ export function TerminalView({
   shortcutNumber,
   active,
   maximized,
+  animate,
   onSelect,
   onClose,
   onToggleMaximize,
@@ -254,7 +258,11 @@ export function TerminalView({
 
   return (
     <div
-      className={`absolute transition-opacity ${
+      className={`absolute ${
+        animate
+          ? 'transition-[top,left,width,height,opacity] duration-200 ease-out'
+          : 'transition-opacity'
+      } ${
         visible
           ? // lift the active cell above the grid dividers (z-20) so its highlight
             // ring isn't clipped by the divider lines on the shared edges

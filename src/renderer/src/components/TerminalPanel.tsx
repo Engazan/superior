@@ -200,6 +200,7 @@ export function TerminalPanel({
               shortcutNumber={isGridCell ? (gridIndex.get(s.id) ?? 0) + 1 : undefined}
               active={s.id === activeSessionId}
               maximized={s.id === maxId}
+              animate={!resizing}
               onSelect={onSelect}
               onClose={onClose}
               onToggleMaximize={onToggleMaximize}
