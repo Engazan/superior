@@ -152,6 +152,27 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Új ág',
   'sidebar.useExistingBranch': 'Meglévő',
   'sidebar.worktreeBadge': 'Ág-munkaterület (izolált worktree)',
+  'workspace.createModalTitle': 'Munkaterület létrehozása',
+  'workspace.createModalDescription':
+    'Válassza ki, hogyan ossza meg ez a munkaterület a projektfájlokat és a Git állapotát.',
+  'workspace.type': 'Munkaterület típusa',
+  'workspace.standardType': 'Megosztott munkaterület',
+  'workspace.standardTypeDescription': 'Saját terminálok és elrendezés, megosztott projektfájlok.',
+  'workspace.branchType': 'Ág-munkaterület',
+  'workspace.branchTypeDescription': 'Izolált Git ág és munkafájlok.',
+  'workspace.createTitle': 'Munkaterület hozzáadása',
+  'workspace.createDescription':
+    'Hozzon létre külön terminál- és elrendezési környezetet ehhez a projektmappához.',
+  'workspace.name': 'Munkaterület neve',
+  'workspace.namePlaceholder': 'pl. API hibakeresés',
+  'workspace.nameHint': 'Használjon rövid nevet, amely leírja a feladatot vagy környezetet.',
+  'workspace.duplicateName': 'Ebben a mappában már létezik ilyen nevű munkaterület.',
+  'workspace.sharedFolder': 'Megosztott mappa',
+  'workspace.sharedFolderDescription':
+    'Ennek a munkaterületnek saját termináljai és elrendezése van, de ugyanazokat a fájlokat szerkeszti, mint a mappa többi munkaterülete.',
+  'workspace.previewDescription': 'Külön terminálok és elrendezés · megosztott projektfájlok',
+  'workspace.createAction': 'Munkaterület hozzáadása',
+  'workspace.creating': 'Hozzáadás…',
   'worktree.createTitle': 'Új ág-munkaterület',
   'worktree.createDescription':
     'Dolgozzon izolált Git worktree-ben a fő mappa ágának átváltása nélkül.',

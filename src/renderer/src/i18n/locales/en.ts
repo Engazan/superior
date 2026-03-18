@@ -149,6 +149,27 @@ export const en = {
   'sidebar.createNewBranch': 'New branch',
   'sidebar.useExistingBranch': 'Existing',
   'sidebar.worktreeBadge': 'Branch workspace (isolated worktree)',
+  'workspace.createModalTitle': 'Create workspace',
+  'workspace.createModalDescription':
+    'Choose how this workspace should share project files and Git state.',
+  'workspace.type': 'Workspace type',
+  'workspace.standardType': 'Shared workspace',
+  'workspace.standardTypeDescription': 'Own terminals and layout, shared project files.',
+  'workspace.branchType': 'Branch workspace',
+  'workspace.branchTypeDescription': 'Isolated Git branch and working files.',
+  'workspace.createTitle': 'Add workspace',
+  'workspace.createDescription':
+    'Create a separate terminal and layout context for this project folder.',
+  'workspace.name': 'Workspace name',
+  'workspace.namePlaceholder': 'e.g. API debugging',
+  'workspace.nameHint': 'Use a short name that describes the task or context.',
+  'workspace.duplicateName': 'A workspace with this name already exists in this folder.',
+  'workspace.sharedFolder': 'Shared folder',
+  'workspace.sharedFolderDescription':
+    'This workspace has its own terminals and layout, but edits the same files as every other workspace in this folder.',
+  'workspace.previewDescription': 'Separate terminals and layout · shared project files',
+  'workspace.createAction': 'Add workspace',
+  'workspace.creating': 'Adding…',
   'worktree.createTitle': 'New branch workspace',
   'worktree.createDescription':
     'Work in an isolated Git worktree without switching branches in your main folder.',

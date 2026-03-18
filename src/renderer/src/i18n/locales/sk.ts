@@ -153,6 +153,27 @@ export const sk: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Nová vetva',
   'sidebar.useExistingBranch': 'Existujúca',
   'sidebar.worktreeBadge': 'Workspace s vetvou (izolovaný worktree)',
+  'workspace.createModalTitle': 'Vytvoriť workspace',
+  'workspace.createModalDescription':
+    'Vyberte, ako má tento workspace zdieľať súbory projektu a stav Gitu.',
+  'workspace.type': 'Typ workspacu',
+  'workspace.standardType': 'Zdieľaný workspace',
+  'workspace.standardTypeDescription': 'Vlastné terminály a rozloženie, zdieľané súbory projektu.',
+  'workspace.branchType': 'Workspace s vetvou',
+  'workspace.branchTypeDescription': 'Izolovaná Git vetva a pracovné súbory.',
+  'workspace.createTitle': 'Pridať workspace',
+  'workspace.createDescription':
+    'Vytvorte samostatný kontext terminálov a rozloženia pre tento projektový priečinok.',
+  'workspace.name': 'Názov workspacu',
+  'workspace.namePlaceholder': 'napr. Ladenie API',
+  'workspace.nameHint': 'Použite krátky názov, ktorý opisuje úlohu alebo kontext.',
+  'workspace.duplicateName': 'Workspace s týmto názvom už v tomto priečinku existuje.',
+  'workspace.sharedFolder': 'Zdieľaný priečinok',
+  'workspace.sharedFolderDescription':
+    'Tento workspace má vlastné terminály a rozloženie, ale upravuje rovnaké súbory ako ostatné workspaces v tomto priečinku.',
+  'workspace.previewDescription': 'Samostatné terminály a rozloženie · zdieľané súbory projektu',
+  'workspace.createAction': 'Pridať workspace',
+  'workspace.creating': 'Pridávam…',
   'worktree.createTitle': 'Nový workspace s vetvou',
   'worktree.createDescription':
     'Pracujte v izolovanom Git worktree bez prepínania vetiev v hlavnom priečinku.',

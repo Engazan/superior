@@ -152,6 +152,27 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Nová větev',
   'sidebar.useExistingBranch': 'Existující',
   'sidebar.worktreeBadge': 'Workspace s větví (izolovaný worktree)',
+  'workspace.createModalTitle': 'Vytvořit workspace',
+  'workspace.createModalDescription':
+    'Vyberte, jak má tento workspace sdílet soubory projektu a stav Gitu.',
+  'workspace.type': 'Typ workspacu',
+  'workspace.standardType': 'Sdílený workspace',
+  'workspace.standardTypeDescription': 'Vlastní terminály a rozložení, sdílené soubory projektu.',
+  'workspace.branchType': 'Workspace s větví',
+  'workspace.branchTypeDescription': 'Izolovaná Git větev a pracovní soubory.',
+  'workspace.createTitle': 'Přidat workspace',
+  'workspace.createDescription':
+    'Vytvořte samostatný kontext terminálů a rozložení pro tuto projektovou složku.',
+  'workspace.name': 'Název workspacu',
+  'workspace.namePlaceholder': 'např. Ladění API',
+  'workspace.nameHint': 'Použijte krátký název, který popisuje úkol nebo kontext.',
+  'workspace.duplicateName': 'Workspace s tímto názvem již v této složce existuje.',
+  'workspace.sharedFolder': 'Sdílená složka',
+  'workspace.sharedFolderDescription':
+    'Tento workspace má vlastní terminály a rozložení, ale upravuje stejné soubory jako ostatní workspaces v této složce.',
+  'workspace.previewDescription': 'Samostatné terminály a rozložení · sdílené soubory projektu',
+  'workspace.createAction': 'Přidat workspace',
+  'workspace.creating': 'Přidávám…',
   'worktree.createTitle': 'Nový workspace s větví',
   'worktree.createDescription':
     'Pracujte v izolovaném Git worktree bez přepínání větví v hlavní složce.',

@@ -11,7 +11,7 @@ interface Props {
   collapsed: boolean
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
-  onAddWorkspace: (folderPath: string, name: string) => void
+  onAddWorkspace: (folderPath: string, name: string) => Promise<string | null>
   /** Create a worktree-backed workspace; resolves with a localized error or null. */
   onAddWorktreeWorkspace: (args: WorktreeAddArgs) => Promise<string | null>
   onRenameWorkspace: (id: string, name: string) => void
@@ -111,6 +111,76 @@ function CloseGlyph(): JSX.Element {
   )
 }
 
+function WorkspaceGlyph(): JSX.Element {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M3 9h18M9 9v12" />
+    </svg>
+  )
+}
+
+type WorkspaceCreateKind = 'standard' | 'branch'
+
+function WorkspaceTypeSelector({
+  value,
+  onChange
+}: {
+  value: WorkspaceCreateKind
+  onChange: (value: WorkspaceCreateKind) => void
+}): JSX.Element {
+  const { t } = useI18n()
+  return (
+    <fieldset>
+      <legend className="mb-2 text-xs font-semibold text-fgdim">
+        {t('workspace.type')}
+      </legend>
+      <div className="grid grid-cols-2 gap-2" role="radiogroup">
+        {(
+          [
+            ['standard', 'workspace.standardType', 'workspace.standardTypeDescription', <WorkspaceGlyph />],
+            ['branch', 'workspace.branchType', 'workspace.branchTypeDescription', <BranchGlyph />]
+          ] as const
+        ).map(([kind, label, description, icon]) => {
+          const selected = value === kind
+          return (
+            <button
+              key={kind}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(kind)}
+              className={`rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                selected
+                  ? 'border-accent bg-accentBg/70'
+                  : 'border-edge bg-bar hover:border-fgmuted hover:bg-hover'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span className={selected ? 'text-accent' : 'text-fgmuted'}>{icon}</span>
+                <span className="text-sm font-semibold text-fg">{t(label)}</span>
+              </span>
+              <span className="mt-1.5 block text-[11px] leading-4 text-fgdim">
+                {t(description)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
 /** Small branch chip shown under a worktree-backed workspace's name. */
 function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.Element {
   return (
@@ -124,6 +194,181 @@ function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.
   )
 }
 
+/** Dialog to create another terminal/layout context in the same folder. */
+function WorkspaceCreateForm({
+  folder,
+  existingNames,
+  onCancel,
+  onCreate,
+  onSwitchType
+}: {
+  folder: Folder
+  existingNames: string[]
+  onCancel: () => void
+  onCreate: (folderPath: string, name: string) => Promise<string | null>
+  onSwitchType: (value: WorkspaceCreateKind) => void
+}): JSX.Element {
+  const { t } = useI18n()
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+  const normalizedName = name.trim()
+  const duplicate = existingNames.some(
+    (existing) => existing.trim().toLocaleLowerCase() === normalizedName.toLocaleLowerCase()
+  )
+  const canSubmit = !!normalizedName && !duplicate && !busy
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && !busy) onCancel()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [busy, onCancel])
+
+  const submit = async (): Promise<void> => {
+    if (!canSubmit) return
+    setCreateError(null)
+    setBusy(true)
+    const error = await onCreate(folder.path, normalizedName)
+    setBusy(false)
+    if (error) setCreateError(error)
+    else onCancel()
+  }
+
+  const field =
+    'w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fgmuted focus:border-accent focus:ring-2 focus:ring-accentBorder disabled:cursor-not-allowed disabled:opacity-60'
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-5 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel()
+      }}
+    >
+      <form
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void submit()
+        }}
+      >
+        <div className="flex shrink-0 items-start gap-3 border-b border-edge px-5 py-4">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentBg text-accent ring-1 ring-inset ring-accentBorder">
+            <WorkspaceGlyph />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id={titleId} className="text-base font-semibold text-fg">
+              {t('workspace.createModalTitle')}
+            </h2>
+            <p id={descriptionId} className="mt-1 text-xs leading-5 text-fgdim">
+              {t('workspace.createModalDescription')}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
+            aria-label={t('window.close')}
+          >
+            <CloseGlyph />
+          </button>
+        </div>
+
+        <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5">
+          <WorkspaceTypeSelector value="standard" onChange={onSwitchType} />
+
+          <div>
+            <label htmlFor="workspace-name" className="mb-1.5 block text-xs font-semibold text-fgdim">
+              {t('workspace.name')}
+            </label>
+            <input
+              id="workspace-name"
+              autoFocus
+              value={name}
+              placeholder={t('workspace.namePlaceholder')}
+              onChange={(event) => {
+                setName(event.target.value)
+                setCreateError(null)
+              }}
+              className={field}
+              autoComplete="off"
+            />
+            <p className={`mt-1.5 text-xs ${duplicate ? 'text-red-600 dark:text-red-300' : 'text-fgmuted'}`}>
+              {duplicate ? t('workspace.duplicateName') : t('workspace.nameHint')}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-edge bg-bar p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-hover text-fgdim">
+                <FolderIcon />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-fg">{folder.name}</p>
+                <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folder.path}</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-accentBg px-2 py-0.5 text-[10px] font-semibold text-accent ring-1 ring-inset ring-accentBorder">
+                {t('workspace.sharedFolder')}
+              </span>
+            </div>
+            <p className="mt-3 border-t border-edge pt-3 text-xs leading-5 text-fgdim">
+              {t('workspace.sharedFolderDescription')}
+            </p>
+          </div>
+
+          {normalizedName && !duplicate && (
+            <div className="flex items-center gap-3 rounded-lg border border-edge bg-bar px-3 py-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accentBg text-accent">
+                <WorkspaceGlyph />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-fg">{normalizedName}</p>
+                <p className="mt-0.5 text-[11px] text-fgmuted">{t('workspace.previewDescription')}</p>
+              </div>
+            </div>
+          )}
+
+          {createError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2.5 text-xs leading-5 text-red-700 dark:text-red-200"
+            >
+              {createError}
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-edge bg-bar/50 px-5 py-4">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="flex min-w-36 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bar transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <WorkspaceGlyph />
+            {busy ? t('workspace.creating') : t('workspace.createAction')}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 /**
  * Dialog to create a worktree-backed workspace: a new-vs-existing branch
  * choice, the branch itself, and an optional display name.
@@ -131,11 +376,13 @@ function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.
 function WorktreeCreateForm({
   folderPath,
   onCancel,
-  onCreate
+  onCreate,
+  onSwitchType
 }: {
   folderPath: string
   onCancel: () => void
   onCreate: (args: WorktreeAddArgs) => Promise<string | null>
+  onSwitchType: (value: WorkspaceCreateKind) => void
 }): JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState('')
@@ -212,22 +459,22 @@ function WorktreeCreateForm({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
         onSubmit={(event) => {
           event.preventDefault()
           void submit()
         }}
       >
-        <div className="flex items-start gap-3 border-b border-edge px-5 py-4">
+        <div className="flex shrink-0 items-start gap-3 border-b border-edge px-5 py-4">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentBg text-accent ring-1 ring-inset ring-accentBorder">
             <BranchGlyph />
           </span>
           <div className="min-w-0 flex-1">
             <h2 id={titleId} className="text-base font-semibold text-fg">
-              {t('worktree.createTitle')}
+              {t('workspace.createModalTitle')}
             </h2>
             <p id={descriptionId} className="mt-1 text-xs leading-5 text-fgdim">
-              {t('worktree.createDescription')}
+              {t('workspace.createModalDescription')}
             </p>
           </div>
           <button
@@ -241,7 +488,9 @@ function WorktreeCreateForm({
           </button>
         </div>
 
-        <div className="space-y-5 px-5 py-5">
+        <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5">
+          <WorkspaceTypeSelector value="branch" onChange={onSwitchType} />
+
           <fieldset>
             <legend className="mb-2 text-xs font-semibold text-fgdim">
               {t('worktree.branchSource')}
@@ -378,7 +627,7 @@ function WorktreeCreateForm({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-edge bg-bar/50 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-edge bg-bar/50 px-5 py-4">
           <button
             type="button"
             disabled={busy}
@@ -416,11 +665,10 @@ export function Sidebar({
   onSelectWorkspace
 }: Props): JSX.Element {
   const { t } = useI18n()
-  // Inline editors: which workspace is being renamed, which folder is adding a
-  // plain workspace, and which folder is creating a worktree-backed one.
+  // Editors: which workspace is being renamed and which folder is creating a workspace.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [addingFor, setAddingFor] = useState<string | null>(null)
-  const [worktreeFor, setWorktreeFor] = useState<string | null>(null)
+  const [createKind, setCreateKind] = useState<WorkspaceCreateKind>('standard')
   const [draft, setDraft] = useState('')
   // Folders the user has collapsed (rolled up) in the sidebar.
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
@@ -444,15 +692,8 @@ export function Sidebar({
   }
   const startAdd = (folderPath: string): void => {
     setEditingId(null)
-    setWorktreeFor(null)
+    setCreateKind('standard')
     setAddingFor(folderPath)
-    setDraft('')
-  }
-  const commitAdd = (): void => {
-    const name = draft.trim()
-    if (addingFor && name) onAddWorkspace(addingFor, name)
-    setAddingFor(null)
-    setDraft('')
   }
 
   // Collapsed: a narrow rail with workspace initials + a running-count dot.
@@ -688,53 +929,33 @@ export function Sidebar({
                         )
                       })}
 
-                      {/* Add workspace (plain) or a worktree-backed branch workspace */}
+                      {/* One entry point for plain and branch-isolated workspaces. */}
                       <li>
-                        {worktreeFor === folder.path ? (
-                          <WorktreeCreateForm
-                            folderPath={folder.path}
-                            onCancel={() => setWorktreeFor(null)}
-                            onCreate={onAddWorktreeWorkspace}
-                          />
-                        ) : addingFor === folder.path ? (
-                          <input
-                            autoFocus
-                            value={draft}
-                            placeholder={t('sidebar.newWorkspacePlaceholder')}
-                            onChange={(e) => setDraft(e.target.value)}
-                            onBlur={commitAdd}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitAdd()
-                              else if (e.key === 'Escape') {
-                                setAddingFor(null)
-                                setDraft('')
-                              }
-                            }}
-                            className="w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-fg focus:border-accent focus:outline-none"
-                          />
+                        {addingFor === folder.path ? (
+                          createKind === 'standard' ? (
+                            <WorkspaceCreateForm
+                              folder={folder}
+                              existingNames={folderWorkspaces.map((workspace) => workspace.name)}
+                              onCancel={() => setAddingFor(null)}
+                              onCreate={onAddWorkspace}
+                              onSwitchType={setCreateKind}
+                            />
+                          ) : (
+                            <WorktreeCreateForm
+                              folderPath={folder.path}
+                              onCancel={() => setAddingFor(null)}
+                              onCreate={onAddWorktreeWorkspace}
+                              onSwitchType={setCreateKind}
+                            />
+                          )
                         ) : (
-                          <div className="space-y-0.5">
-                            <button
-                              onClick={() => startAdd(folder.path)}
-                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
-                            >
-                              <span className="text-sm leading-none text-accent">+</span>
-                              {t('sidebar.addWorkspace')}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setWorktreeFor(folder.path)
-                                setAddingFor(null)
-                                setEditingId(null)
-                              }}
-                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
-                            >
-                              <span className="text-accent">
-                                <BranchGlyph />
-                              </span>
-                              {t('sidebar.addWorktreeWorkspace')}
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => startAdd(folder.path)}
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
+                          >
+                            <span className="text-sm leading-none text-accent">+</span>
+                            {t('sidebar.addWorkspace')}
+                          </button>
                         )}
                       </li>
                     </ul>

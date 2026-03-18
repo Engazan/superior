@@ -152,6 +152,27 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.createNewBranch': 'Nowa gałąź',
   'sidebar.useExistingBranch': 'Istniejąca',
   'sidebar.worktreeBadge': 'Workspace z gałęzią (izolowany worktree)',
+  'workspace.createModalTitle': 'Utwórz workspace',
+  'workspace.createModalDescription':
+    'Wybierz, jak ten workspace ma współdzielić pliki projektu i stan Git.',
+  'workspace.type': 'Typ workspace',
+  'workspace.standardType': 'Współdzielony workspace',
+  'workspace.standardTypeDescription': 'Własne terminale i układ, współdzielone pliki projektu.',
+  'workspace.branchType': 'Workspace z gałęzią',
+  'workspace.branchTypeDescription': 'Izolowana gałąź Git i pliki robocze.',
+  'workspace.createTitle': 'Dodaj workspace',
+  'workspace.createDescription':
+    'Utwórz osobny kontekst terminali i układu dla tego folderu projektu.',
+  'workspace.name': 'Nazwa workspace',
+  'workspace.namePlaceholder': 'np. Debugowanie API',
+  'workspace.nameHint': 'Użyj krótkiej nazwy opisującej zadanie lub kontekst.',
+  'workspace.duplicateName': 'Workspace o tej nazwie już istnieje w tym folderze.',
+  'workspace.sharedFolder': 'Współdzielony folder',
+  'workspace.sharedFolderDescription':
+    'Ten workspace ma własne terminale i układ, ale edytuje te same pliki co pozostałe workspaces w tym folderze.',
+  'workspace.previewDescription': 'Osobne terminale i układ · współdzielone pliki projektu',
+  'workspace.createAction': 'Dodaj workspace',
+  'workspace.creating': 'Dodawanie…',
   'worktree.createTitle': 'Nowy workspace z gałęzią',
   'worktree.createDescription':
     'Pracuj w izolowanym Git worktree bez przełączania gałęzi w głównym folderze.',

@@ -139,9 +139,16 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   )
 
   const addWorkspace = useCallback(
-    async (folderPath: string, name: string) => {
+    async (folderPath: string, name: string): Promise<string | null> => {
       setError(null)
-      applyState(await window.api.addWorkspace(folderPath, name))
+      try {
+        applyState(await window.api.addWorkspace(folderPath, name))
+        return null
+      } catch (error) {
+        const message = (error as Error).message
+        setError(message)
+        return message
+      }
     },
     [applyState, setError]
   )
