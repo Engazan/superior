@@ -75,6 +75,11 @@ function ptyEnv(): Record<string, string> {
     if (k.startsWith('ELECTRON_')) continue
     env[k] = v
   }
+  // Launched from the GUI there's no TERM/COLORTERM, so programs fall back to a
+  // dumb terminal and drop colors. Advertise a modern 256/true-colour terminal
+  // (xterm.js renders all of these) so CLIs emit full colour.
+  env.TERM = 'xterm-256color'
+  env.COLORTERM = 'truecolor'
   return env
 }
 
@@ -89,7 +94,7 @@ function spawnSession(
   if (sessions.has(id)) return
   const shell = process.env.SHELL || '/bin/zsh'
   const proc = pty.spawn(shell, ['-l', '-c', command], {
-    name: 'xterm-color',
+    name: 'xterm-256color',
     cols: cols || 80,
     rows: rows || 24,
     cwd,
