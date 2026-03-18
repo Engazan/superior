@@ -16,7 +16,7 @@ function defaultPresets(): TerminalPreset[] {
       id: randomUUID(),
       name: 'Claude',
       description: 'Anthropic Claude CLI',
-      command: 'claude',
+      command: 'claude --dangerously-skip-permissions',
       iconType: 'image',
       icon: builtinIcon('claude')!.dataUrl,
       active: true
@@ -25,7 +25,7 @@ function defaultPresets(): TerminalPreset[] {
       id: randomUUID(),
       name: 'Codex',
       description: 'Codex CLI',
-      command: 'codex',
+      command: 'codex --dangerously-bypass-approvals-and-sandbox',
       iconType: 'image',
       icon: builtinIcon('codex')!.dataUrl,
       active: true

@@ -4,8 +4,10 @@ import { Sidebar } from './components/Sidebar'
 import { TerminalPanel, type LayoutMode } from './components/TerminalPanel'
 import { type LaunchConfig } from './components/AgentLauncher'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
+import { QuickLaunch } from './components/QuickLaunch'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
+import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
 import { type GridLayout } from './gridLayout'
 import type { AgentSession, Folder, TerminalPreset, Workspace, WorkspaceState } from './types'
 
@@ -13,6 +15,7 @@ type View = 'main' | 'settings'
 
 export default function App(): JSX.Element {
   const { t } = useI18n()
+  const { shortcuts } = useShortcuts()
   const [folders, setFolders] = useState<Folder[]>([])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
@@ -22,6 +25,10 @@ export default function App(): JSX.Element {
   const [view, setView] = useState<View>('main')
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // A grid cell blown up to fill the panel (null = none). Owned here so a shortcut can toggle it.
+  const [maximizedId, setMaximizedId] = useState<string | null>(null)
+  // Quick-launch preset picker overlay (opened by shortcut).
+  const [launcherOpen, setLauncherOpen] = useState(false)
   const [presets, setPresets] = useState<TerminalPreset[]>([])
   // Per-workspace layout mode (tabs vs grid) and grid sizing, kept in memory.
   const [layouts, setLayouts] = useState<Record<string, LayoutMode>>({})
@@ -270,9 +277,64 @@ export default function App(): JSX.Element {
     })
   }, [])
 
+  // Toggle a grid cell's maximized state and focus it (per-cell button).
+  const toggleMaximize = useCallback((id: string) => {
+    setMaximizedId((cur) => (cur === id ? null : id))
+    setActiveSessionId(id)
+  }, [])
+
+  // Maximize/restore the focused grid cell (keyboard shortcut). Grid mode only.
+  const toggleMaximizeFocused = useCallback(() => {
+    if (!activeWorkspaceId || layouts[activeWorkspaceId] !== 'grid') return
+    const cells = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
+    if (!cells.length) return
+    const id = cells.some((s) => s.id === activeSessionId) ? (activeSessionId as string) : cells[0].id
+    setMaximizedId((cur) => (cur === id ? null : id))
+    setActiveSessionId(id)
+  }, [activeWorkspaceId, layouts, activeSessionId, sessions])
+
+  // Global keyboard shortcuts. Capture phase so they win over a focused terminal;
+  // suppressed while a binding is being recorded in settings.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.repeat || isRecordingShortcut()) return
+      const chord = eventToChord(e)
+      if (!chord) return
+      if (chord === shortcuts.toggleSidebar) {
+        e.preventDefault()
+        e.stopPropagation()
+        setSidebarCollapsed((c) => !c)
+      } else if (chord === shortcuts.openSettings) {
+        e.preventDefault()
+        e.stopPropagation()
+        setSettingsSection('appearance')
+        setView('settings')
+      } else if (chord === shortcuts.maximizeFocusedCell) {
+        if (view !== 'main') return
+        e.preventDefault()
+        e.stopPropagation()
+        toggleMaximizeFocused()
+      } else if (chord === shortcuts.openLauncher) {
+        if (view !== 'main') return
+        e.preventDefault()
+        e.stopPropagation()
+        setLauncherOpen((o) => !o && !!activeWorkspaceId)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [shortcuts, view, activeWorkspaceId, toggleMaximizeFocused])
+
   return (
     <div className="flex h-full flex-col bg-bar text-fg">
-      <TitleBar showToggle={view === 'main'} onToggle={() => setSidebarCollapsed((c) => !c)} />
+      <TitleBar
+        showToggle={view === 'main'}
+        onToggle={() => setSidebarCollapsed((c) => !c)}
+        onOpenSettings={() => {
+          setSettingsSection('appearance')
+          setView('settings')
+        }}
+      />
 
       <div className="flex min-h-0 flex-1">
         {view === 'settings' ? (
@@ -303,10 +365,6 @@ export default function App(): JSX.Element {
               onRenameWorkspace={renameWorkspace}
               onRemoveWorkspace={removeWorkspace}
               onSelectWorkspace={selectWorkspace}
-              onOpenSettings={() => {
-                setSettingsSection('appearance')
-                setView('settings')
-              }}
             />
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -327,10 +385,12 @@ export default function App(): JSX.Element {
                 sessions={sessions}
                 activeWorkspaceId={activeWorkspaceId}
                 activeSessionId={activeSessionId}
+                maximizedId={maximizedId}
                 layoutMode={activeWorkspaceId ? layouts[activeWorkspaceId] : undefined}
                 gridLayout={activeWorkspaceId ? gridLayouts[activeWorkspaceId] : undefined}
                 presets={presets}
                 onSelect={setActiveSessionId}
+                onToggleMaximize={toggleMaximize}
                 onClose={closeSession}
                 onSessionUpdate={updateSession}
                 onStart={startLayout}
@@ -342,6 +402,14 @@ export default function App(): JSX.Element {
           </>
         )}
       </div>
+
+      {view === 'main' && launcherOpen && (
+        <QuickLaunch
+          presets={presets.filter((p) => p.active)}
+          onSelect={launchAgent}
+          onClose={() => setLauncherOpen(false)}
+        />
+      )}
     </div>
   )
 }

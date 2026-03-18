@@ -8,6 +8,7 @@ import {
   type Language,
   type LayoutsState,
   type PresetsState,
+  type ShortcutMap,
   type StartAgentArgs,
   type StartAgentResult,
   type TerminalPreset,
@@ -58,6 +59,10 @@ const api = {
 
   setLanguage(language: Language): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_LANGUAGE, language)
+  },
+
+  setShortcuts(shortcuts: ShortcutMap): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_SHORTCUTS, shortcuts)
   },
 
   listPresets(): Promise<PresetsState> {

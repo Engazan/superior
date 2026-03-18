@@ -2,9 +2,24 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 
 export type Language = 'en' | 'sk' | 'cs' | 'pl' | 'hu'
 
+/** Configurable, rebindable keyboard shortcut actions. */
+export type ShortcutAction =
+  | 'toggleSidebar'
+  | 'openSettings'
+  | 'maximizeFocusedCell'
+  | 'openLauncher'
+
+/**
+ * A chord stored in a platform-neutral, normalized form: lowercase tokens
+ * joined by '+', e.g. 'mod+b' or 'mod+,'. 'mod' resolves to ⌘ on macOS and
+ * Ctrl elsewhere.
+ */
+export type ShortcutMap = Record<ShortcutAction, string>
+
 export interface AppSettings {
   theme: ThemeMode
   language: Language
+  shortcuts: ShortcutMap
 }
 
 export type PresetIconType = 'emoji' | 'image'
@@ -138,6 +153,7 @@ export const IPC = {
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',
+  SETTINGS_SET_SHORTCUTS: 'settings:set-shortcuts',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',

@@ -25,12 +25,16 @@ interface Props {
   sessions: AgentSession[]
   activeWorkspaceId: string | null
   activeSessionId: string | null
+  /** the grid cell blown up to fill the whole panel, or null (owned by App so shortcuts can drive it) */
+  maximizedId: string | null
   /** layout mode for the active workspace (undefined defaults to tabs) */
   layoutMode: LayoutMode | undefined
   /** saved cell sizing for the active workspace's grid (undefined → uniform) */
   gridLayout: GridLayout | undefined
   presets: TerminalPreset[]
   onSelect: (id: string) => void
+  /** toggle a grid cell's maximized state */
+  onToggleMaximize: (id: string) => void
   onClose: (id: string) => void
   onSessionUpdate: (id: string, patch: Partial<AgentSession>) => void
   /** launch wizard result — start a fresh tabs/grid layout */
@@ -58,10 +62,12 @@ export function TerminalPanel({
   sessions,
   activeWorkspaceId,
   activeSessionId,
+  maximizedId,
   layoutMode,
   gridLayout,
   presets,
   onSelect,
+  onToggleMaximize,
   onClose,
   onSessionUpdate,
   onStart,
@@ -72,8 +78,6 @@ export function TerminalPanel({
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
-  // A grid cell the user blew up to fill the whole panel (over every terminal).
-  const [maximizedId, setMaximizedId] = useState<string | null>(null)
 
   // Sessions of the active workspace, in creation order.
   const workspaceSessions = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
@@ -197,10 +201,7 @@ export function TerminalPanel({
               maximized={s.id === maxId}
               onSelect={onSelect}
               onClose={onClose}
-              onToggleMaximize={(id) => {
-                setMaximizedId((cur) => (cur === id ? null : id))
-                onSelect(id)
-              }}
+              onToggleMaximize={onToggleMaximize}
               onExit={(id, exitCode) =>
                 onSessionUpdate(id, {
                   status: exitCode === 0 ? 'exited' : 'error',

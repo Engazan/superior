@@ -1,11 +1,39 @@
 import { app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
-import type { AppSettings, Language, ThemeMode } from '@shared/types'
+import type { AppSettings, Language, ShortcutAction, ShortcutMap, ThemeMode } from '@shared/types'
 
-const DEFAULTS: AppSettings = { theme: 'system', language: 'en' }
+const DEFAULT_SHORTCUTS: ShortcutMap = {
+  toggleSidebar: 'mod+b',
+  openSettings: 'mod+,',
+  maximizeFocusedCell: 'ctrl+enter',
+  openLauncher: 'ctrl+§'
+}
+const SHORTCUT_ACTIONS: ShortcutAction[] = [
+  'toggleSidebar',
+  'openSettings',
+  'maximizeFocusedCell',
+  'openLauncher'
+]
+const DEFAULTS: AppSettings = {
+  theme: 'system',
+  language: 'en',
+  shortcuts: { ...DEFAULT_SHORTCUTS }
+}
 const THEMES: ThemeMode[] = ['light', 'dark', 'system']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
+
+/** Merge stored shortcuts over the defaults, dropping unknown actions and non-string chords. */
+function normalizeShortcuts(raw: unknown): ShortcutMap {
+  const next: ShortcutMap = { ...DEFAULT_SHORTCUTS }
+  if (raw && typeof raw === 'object') {
+    for (const action of SHORTCUT_ACTIONS) {
+      const value = (raw as Record<string, unknown>)[action]
+      if (typeof value === 'string' && value.trim()) next[action] = value
+    }
+  }
+  return next
+}
 
 function storeFile(): string {
   return path.join(app.getPath('userData'), 'settings.json')
@@ -20,10 +48,11 @@ export function getSettings(): AppSettings {
       theme: THEMES.includes(parsed.theme as ThemeMode) ? (parsed.theme as ThemeMode) : DEFAULTS.theme,
       language: LANGUAGES.includes(parsed.language as Language)
         ? (parsed.language as Language)
-        : DEFAULTS.language
+        : DEFAULTS.language,
+      shortcuts: normalizeShortcuts(parsed.shortcuts)
     }
   } catch {
-    return { ...DEFAULTS }
+    return { ...DEFAULTS, shortcuts: { ...DEFAULT_SHORTCUTS } }
   }
 }
 
@@ -50,6 +79,16 @@ export function setLanguage(language: Language): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     language: LANGUAGES.includes(language) ? language : DEFAULTS.language
+  }
+  save(next)
+  return next
+}
+
+/** Persist the keyboard shortcut map (merged over defaults) and return updated settings. */
+export function setShortcuts(shortcuts: ShortcutMap): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    shortcuts: normalizeShortcuts(shortcuts)
   }
   save(next)
   return next

@@ -15,7 +15,6 @@ interface Props {
   onRenameWorkspace: (id: string, name: string) => void
   onRemoveWorkspace: (id: string) => void
   onSelectWorkspace: (id: string) => void
-  onOpenSettings: () => void
 }
 
 function initial(name: string): string {
@@ -71,8 +70,7 @@ export function Sidebar({
   onAddWorkspace,
   onRenameWorkspace,
   onRemoveWorkspace,
-  onSelectWorkspace,
-  onOpenSettings
+  onSelectWorkspace
 }: Props): JSX.Element {
   const { t } = useI18n()
   // Inline editors: which workspace is being renamed, which folder is adding a workspace.
@@ -176,17 +174,6 @@ export function Sidebar({
             })}
           </div>
         </nav>
-
-        <div className="flex justify-center border-t border-edge p-2">
-          <button
-            onClick={onOpenSettings}
-            title={t('sidebar.settings')}
-            aria-label={t('sidebar.settings')}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg"
-          >
-            <span className="text-base leading-none">⚙</span>
-          </button>
-        </div>
       </aside>
     )
   }
@@ -358,16 +345,6 @@ export function Sidebar({
           </div>
         )}
       </nav>
-
-      {/* Settings — pinned to the bottom */}
-      <div className="border-t border-edge p-2">
-        <button
-          onClick={onOpenSettings}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg"
-        >
-          <span className="text-base leading-none">⚙</span> {t('sidebar.settings')}
-        </button>
-      </div>
     </aside>
   )
 }

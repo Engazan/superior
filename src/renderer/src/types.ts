@@ -8,6 +8,8 @@ export type {
   Language,
   PresetIconType,
   PresetsState,
+  ShortcutAction,
+  ShortcutMap,
   StartAgentArgs,
   StartAgentResult,
   TerminalPreset,

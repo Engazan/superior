@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PresetsSection } from './PresetsSection'
 import { DaemonsSection } from './DaemonsSection'
+import { KeyboardSection } from './KeyboardSection'
 import { useTheme } from '../theme'
 import { useI18n, LANGUAGES } from '../i18n'
 import type { Folder, ThemeMode, TerminalPreset, Workspace } from '../types'
 
-export type SettingsSection = 'appearance' | 'presets' | 'daemons'
+export type SettingsSection = 'appearance' | 'presets' | 'daemons' | 'keyboard'
 
 interface Props {
   initialSection: SettingsSection
@@ -96,11 +97,39 @@ export function SettingsView({
 }: Props): JSX.Element {
   const { t } = useI18n()
   const [section, setSection] = useState<SettingsSection>(initialSection)
+  const [daemonCount, setDaemonCount] = useState(0)
 
-  const nav: { id: SettingsSection; label: string }[] = [
-    { id: 'appearance', label: t('settings.appearance') },
-    { id: 'presets', label: t('settings.terminalPresets') },
-    { id: 'daemons', label: t('settings.daemons') }
+  // Poll the live daemon sessions so the nav badge stays current.
+  useEffect(() => {
+    let active = true
+    const refresh = async (): Promise<void> => {
+      const sessions = await window.api.restoreSessions()
+      if (active) setDaemonCount(sessions.length)
+    }
+    refresh()
+    const id = window.setInterval(refresh, 2500)
+    return () => {
+      active = false
+      window.clearInterval(id)
+    }
+  }, [])
+
+  const groups: {
+    label: string
+    items: { id: SettingsSection; label: string; badge?: number }[]
+  }[] = [
+    {
+      label: t('settings.personal'),
+      items: [{ id: 'appearance', label: t('settings.appearance') }]
+    },
+    {
+      label: t('settings.workflow'),
+      items: [
+        { id: 'presets', label: t('settings.terminalPresets') },
+        { id: 'daemons', label: t('settings.daemons'), badge: daemonCount },
+        { id: 'keyboard', label: t('settings.keyboard') }
+      ]
+    }
   ]
 
   return (
@@ -116,20 +145,32 @@ export function SettingsView({
           </button>
         </div>
         <nav className="min-h-0 flex-1 overflow-y-auto p-1.5">
-          <ul className="space-y-0.5">
-            {nav.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => setSection(item.id)}
-                  className={`w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition ${
-                    section === item.id ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              </li>
-            ))}
-          </ul>
+          {groups.map((group) => (
+            <div key={group.label} className="mb-3 last:mb-0">
+              <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
+                {group.label}
+              </div>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => setSection(item.id)}
+                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition ${
+                        section === item.id ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {item.badge != null && item.badge > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500/20 px-1.5 text-[11px] font-semibold text-emerald-400">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
       </aside>
 
@@ -149,6 +190,7 @@ export function SettingsView({
         {section === 'daemons' && (
           <DaemonsSection workspaces={workspaces} folders={folders} onKill={onKillSession} />
         )}
+        {section === 'keyboard' && <KeyboardSection />}
       </div>
     </div>
   )

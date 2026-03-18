@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { ThemeProvider } from './theme'
 import { I18nProvider } from './i18n'
+import { ShortcutsProvider } from './shortcuts'
 import './index.css'
 
 const container = document.getElementById('root')
@@ -12,7 +13,9 @@ if (!container) throw new Error('Root element #root not found')
 createRoot(container).render(
   <I18nProvider>
     <ThemeProvider>
-      <App />
+      <ShortcutsProvider>
+        <App />
+      </ShortcutsProvider>
     </ThemeProvider>
   </I18nProvider>
 )
