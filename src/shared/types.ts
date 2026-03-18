@@ -201,6 +201,30 @@ export interface FsListResult {
   error?: string
 }
 
+/** How to read a file for preview. */
+export interface FileReadOptions {
+  /** Read at most this many bytes; content beyond it is not loaded. */
+  maxBytes: number
+  /** Return content base64-encoded (for images) instead of utf-8 text. */
+  asBase64: boolean
+  /** When false, only stat the file (size) without reading any content. */
+  read: boolean
+}
+
+/** File content + metadata for the preview panel. Never mutates the file. */
+export interface FileReadResult {
+  /** Total size on disk, in bytes. */
+  size: number
+  /** True when the file is larger than the requested limit (content omitted/partial). */
+  truncated: boolean
+  /** Encoding of `content`; 'none' when nothing was read. */
+  encoding: 'utf8' | 'base64' | 'none'
+  content: string
+  /** True when the read bytes contained a NUL, i.e. the file looks binary. */
+  isBinary: boolean
+  error?: string
+}
+
 /** Aggregate working-tree diff for the active folder, plus per-file detail. */
 export interface GitDiff {
   isRepository: boolean
@@ -244,6 +268,8 @@ export const IPC = {
   GIT_INIT: 'git:init',
   GIT_DIFF: 'git:diff',
   FS_LIST_DIR: 'fs:list-dir',
+  FS_READ_FILE: 'fs:read-file',
+  SHELL_OPEN_PATH: 'shell:open-path',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',

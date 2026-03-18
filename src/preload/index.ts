@@ -8,6 +8,8 @@ import {
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
   type CustomMemoryProvider,
+  type FileReadOptions,
+  type FileReadResult,
   type FsListResult,
   type GitDiff,
   type GitStatus,
@@ -69,6 +71,14 @@ const api = {
 
   listDir(dirPath: string): Promise<FsListResult> {
     return ipcRenderer.invoke(IPC.FS_LIST_DIR, dirPath)
+  },
+
+  readFile(filePath: string, opts: FileReadOptions): Promise<FileReadResult> {
+    return ipcRenderer.invoke(IPC.FS_READ_FILE, filePath, opts)
+  },
+
+  openPath(filePath: string): Promise<string> {
+    return ipcRenderer.invoke(IPC.SHELL_OPEN_PATH, filePath)
   },
 
   getSettings(): Promise<AppSettings> {

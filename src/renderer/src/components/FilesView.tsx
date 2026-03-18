@@ -5,6 +5,10 @@ import type { FsEntry } from '../types'
 interface Props {
   /** Folder backing the active workspace, or null when none is selected. */
   folderPath: string | null
+  /** Called when a file (not a directory) is clicked, to open its preview. */
+  onOpenFile: (file: FsEntry) => void
+  /** Path of the file currently shown in the preview, for highlighting. */
+  selectedPath: string | null
 }
 
 function Chevron({ open }: { open: boolean }): JSX.Element {
@@ -59,15 +63,25 @@ function FileIcon(): JSX.Element {
   )
 }
 
+interface NodeProps {
+  entry: FsEntry
+  depth: number
+  onOpenFile: (file: FsEntry) => void
+  selectedPath: string | null
+}
+
 /** A single tree row; directories fetch their children lazily on first expand. */
-function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }): JSX.Element {
+function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.Element {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const toggle = async (): Promise<void> => {
-    if (!entry.isDirectory) return
+  const activate = async (): Promise<void> => {
+    if (!entry.isDirectory) {
+      onOpenFile(entry)
+      return
+    }
     const next = !open
     setOpen(next)
     if (next && children === null) {
@@ -78,12 +92,16 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }): JSX.Elem
     }
   }
 
+  const selected = !entry.isDirectory && entry.path === selectedPath
+
   return (
     <div>
       <button
-        onClick={() => void toggle()}
+        onClick={() => void activate()}
         title={entry.name}
-        className="flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg"
+        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg ${
+          selected ? 'bg-accentBg text-accent' : 'text-fgdim'
+        }`}
         style={{ paddingLeft: depth * 12 + 8 }}
       >
         {entry.isDirectory ? <Chevron open={open} /> : <span className="w-3 shrink-0" />}
@@ -101,13 +119,21 @@ function TreeNode({ entry, depth }: { entry: FsEntry; depth: number }): JSX.Elem
             {t('files.empty')}
           </div>
         ) : (
-          children?.map((child) => <TreeNode key={child.path} entry={child} depth={depth + 1} />)
+          children?.map((child) => (
+            <TreeNode
+              key={child.path}
+              entry={child}
+              depth={depth + 1}
+              onOpenFile={onOpenFile}
+              selectedPath={selectedPath}
+            />
+          ))
         ))}
     </div>
   )
 }
 
-export function FilesView({ folderPath }: Props): JSX.Element {
+export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
   const { t } = useI18n()
   const [entries, setEntries] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -140,7 +166,13 @@ export function FilesView({ folderPath }: Props): JSX.Element {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto py-1">
       {entries?.map((entry) => (
-        <TreeNode key={entry.path} entry={entry} depth={0} />
+        <TreeNode
+          key={entry.path}
+          entry={entry}
+          depth={0}
+          onOpenFile={onOpenFile}
+          selectedPath={selectedPath}
+        />
       ))}
     </div>
   )

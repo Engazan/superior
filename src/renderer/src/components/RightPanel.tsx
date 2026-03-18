@@ -2,19 +2,24 @@ import { useState } from 'react'
 import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { useI18n } from '../i18n'
+import type { FsEntry } from '../types'
 
 type Tab = 'files' | 'changes'
 
 interface Props {
   /** Folder backing the active workspace, or null when none is selected. */
   folderPath: string | null
+  /** Open a file's preview (handled at the app level so it spans the main area). */
+  onOpenFile: (file: FsEntry) => void
+  /** Path of the file currently previewed, for highlighting in the tree. */
+  selectedPath: string | null
 }
 
 /**
- * Right-hand panel toggled from the title bar. Hosts the Files and Changes
- * tabs; only Changes (a working-tree diff) is implemented for now.
+ * Right-hand panel toggled from the title bar. Hosts the Files (project tree)
+ * and Changes (working-tree diff) tabs.
  */
-export function RightPanel({ folderPath }: Props): JSX.Element {
+export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('changes')
 
@@ -39,7 +44,7 @@ export function RightPanel({ folderPath }: Props): JSX.Element {
       {tab === 'changes' ? (
         <ChangesView folderPath={folderPath} />
       ) : (
-        <FilesView folderPath={folderPath} />
+        <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}
     </aside>
   )

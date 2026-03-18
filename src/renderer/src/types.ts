@@ -7,6 +7,8 @@ export type {
   CustomMemoryMutationResult,
   CustomMemoryPreset,
   CustomMemoryProvider,
+  FileReadOptions,
+  FileReadResult,
   Folder,
   FsEntry,
   FsListResult,

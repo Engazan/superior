@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { RightPanel } from './components/RightPanel'
+import { FilePreviewPanel } from './components/FilePreviewPanel'
 import { TerminalPanel, type LayoutMode } from './components/TerminalPanel'
 import { type LaunchConfig } from './components/AgentLauncher'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
@@ -13,6 +14,7 @@ import { type GridLayout } from './gridLayout'
 import type {
   AgentSession,
   Folder,
+  FsEntry,
   GitStatus,
   TerminalPreset,
   Workspace,
@@ -35,6 +37,11 @@ export default function App(): JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Right-hand panel: fully hidden by default, toggled from the title bar.
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+  // File chosen in the Files tree, previewed beside the terminal (null = none).
+  const [previewFile, setPreviewFile] = useState<FsEntry | null>(null)
+  // Preview pane width as a fraction of the main area, adjustable via the divider.
+  const [previewWidth, setPreviewWidth] = useState(0.5)
+  const previewRowRef = useRef<HTMLDivElement>(null)
   // A grid cell blown up to fill the panel (null = none). Owned here so a shortcut can toggle it.
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
   // Quick-launch preset picker overlay (opened by shortcut).
@@ -405,6 +412,24 @@ export default function App(): JSX.Element {
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [shortcuts, view, activeWorkspaceId, toggleMaximizeFocused, focusGridCell])
 
+  // Drag the divider: preview width = distance from the row's right edge.
+  const startPreviewResize = (e: React.PointerEvent): void => {
+    e.preventDefault()
+    const row = previewRowRef.current
+    if (!row) return
+    const move = (ev: PointerEvent): void => {
+      const box = row.getBoundingClientRect()
+      const fraction = (box.right - ev.clientX) / box.width
+      setPreviewWidth(Math.min(0.8, Math.max(0.2, fraction)))
+    }
+    const up = (): void => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
   return (
     <div className="flex h-full flex-col bg-bar text-fg">
       <TitleBar
@@ -466,26 +491,53 @@ export default function App(): JSX.Element {
                 </div>
               )}
 
-              <TerminalPanel
-                sessions={sessions}
-                activeWorkspaceId={activeWorkspaceId}
-                activeSessionId={activeSessionId}
-                maximizedId={maximizedId}
-                layoutMode={activeWorkspaceId ? layouts[activeWorkspaceId] : undefined}
-                gridLayout={activeWorkspaceId ? gridLayouts[activeWorkspaceId] : undefined}
-                presets={presets}
-                onSelect={setActiveSessionId}
-                onToggleMaximize={toggleMaximize}
-                onClose={closeSession}
-                onSessionUpdate={updateSession}
-                onStart={startLayout}
-                onLaunch={launchAgent}
-                onManagePresets={openPresets}
-                onGridLayoutChange={setGridLayout}
-              />
+              <div ref={previewRowRef} className="flex min-h-0 min-w-0 flex-1">
+                <div className="flex min-h-0 min-w-0 flex-1">
+                  <TerminalPanel
+                    sessions={sessions}
+                    activeWorkspaceId={activeWorkspaceId}
+                    activeSessionId={activeSessionId}
+                    maximizedId={maximizedId}
+                    layoutMode={activeWorkspaceId ? layouts[activeWorkspaceId] : undefined}
+                    gridLayout={activeWorkspaceId ? gridLayouts[activeWorkspaceId] : undefined}
+                    presets={presets}
+                    onSelect={setActiveSessionId}
+                    onToggleMaximize={toggleMaximize}
+                    onClose={closeSession}
+                    onSessionUpdate={updateSession}
+                    onStart={startLayout}
+                    onLaunch={launchAgent}
+                    onManagePresets={openPresets}
+                    onGridLayoutChange={setGridLayout}
+                  />
+                </div>
+
+                {previewFile && (
+                  <>
+                    <div
+                      onPointerDown={startPreviewResize}
+                      className="group flex w-1.5 shrink-0 cursor-col-resize items-stretch"
+                    >
+                      <span className="w-full bg-edge transition group-hover:bg-sky-500" />
+                    </div>
+                    <div
+                      className="flex min-h-0 min-w-[280px] shrink-0 flex-col"
+                      style={{ width: `${previewWidth * 100}%` }}
+                    >
+                      <FilePreviewPanel file={previewFile} onClose={() => setPreviewFile(null)} />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            {rightSidebarOpen && <RightPanel folderPath={activeFolder?.path ?? null} />}
+            {rightSidebarOpen && (
+              <RightPanel
+                folderPath={activeFolder?.path ?? null}
+                onOpenFile={setPreviewFile}
+                selectedPath={previewFile?.path ?? null}
+              />
+            )}
           </>
         )}
       </div>
