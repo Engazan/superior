@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { EditorState, type Extension } from '@codemirror/state'
-import { EditorView, lineNumbers, highlightSpecialChars } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightSpecialChars } from '@codemirror/view'
 import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import {
+  search,
+  searchKeymap,
+  openSearchPanel,
+  highlightSelectionMatches
+} from '@codemirror/search'
 
 interface Props {
   content: string
@@ -26,10 +32,26 @@ const baseTheme = EditorView.theme({
   },
   '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'transparent' },
   '.cm-cursor': { display: 'none' },
-  '.cm-content': { caretColor: 'transparent' }
+  '.cm-content': { caretColor: 'transparent' },
+  // Find panel (Cmd/Ctrl+F) — themed to match the app.
+  '.cm-panels': { backgroundColor: 'var(--c-bar)', color: 'var(--c-fg)' },
+  '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--c-edge)' },
+  '.cm-textfield': {
+    backgroundColor: 'var(--c-panel)',
+    color: 'var(--c-fg)',
+    border: '1px solid var(--c-edge)'
+  },
+  '.cm-button': {
+    backgroundColor: 'var(--c-panel)',
+    backgroundImage: 'none',
+    color: 'var(--c-fg)',
+    border: '1px solid var(--c-edge)'
+  },
+  '.cm-searchMatch': { backgroundColor: 'rgba(250, 204, 21, 0.3)' },
+  '.cm-searchMatch-selected': { backgroundColor: 'rgba(250, 204, 21, 0.6)' }
 })
 
-/** Read-only source viewer. Never emits edits back; the document is immutable. */
+/** Read-only source viewer with in-file find (Cmd/Ctrl+F). Never edits the file. */
 export function CodeFilePreview({ content, language, wrap }: Props): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
 
@@ -42,6 +64,9 @@ export function CodeFilePreview({ content, language, wrap }: Props): JSX.Element
       highlightSpecialChars(),
       bracketMatching(),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      highlightSelectionMatches(),
+      search({ top: true }),
+      keymap.of(searchKeymap),
       baseTheme,
       EditorState.readOnly.of(true),
       EditorView.editable.of(false)
@@ -53,7 +78,23 @@ export function CodeFilePreview({ content, language, wrap }: Props): JSX.Element
       state: EditorState.create({ doc: content, extensions }),
       parent: host
     })
-    return () => view.destroy()
+
+    // Open the find panel on Cmd/Ctrl+F while a preview is showing, even when
+    // focus isn't already inside the editor. Capture so it beats other handlers.
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault()
+        e.stopPropagation()
+        view.focus()
+        openSearchPanel(view)
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+
+    return () => {
+      window.removeEventListener('keydown', onKey, true)
+      view.destroy()
+    }
   }, [content, language, wrap])
 
   return <div ref={hostRef} className="h-full overflow-hidden" />
