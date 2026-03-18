@@ -1,4 +1,4 @@
-import type { AgentExitEvent } from './types'
+import type { AgentDataEvent, AgentExitEvent } from './types'
 
 /**
  * A tiny renderer-side pub/sub over the preload's agent events.
@@ -9,11 +9,11 @@ import type { AgentExitEvent } from './types'
  * command-not-found.
  */
 interface Subscriber {
-  onData: (data: string) => void
+  onData: (data: string, replay: boolean) => void
   onExit: (e: AgentExitEvent) => void
 }
 
-const dataBuffer = new Map<string, string[]>()
+const dataBuffer = new Map<string, AgentDataEvent[]>()
 const exitBuffer = new Map<string, AgentExitEvent>()
 const subscribers = new Map<string, Subscriber>()
 let started = false
@@ -22,14 +22,14 @@ function start(): void {
   if (started) return
   started = true
 
-  window.api.onAgentData(({ id, data }) => {
+  window.api.onAgentData(({ id, data, replay }) => {
     const sub = subscribers.get(id)
     if (sub) {
-      sub.onData(data)
+      sub.onData(data, replay === true)
       return
     }
     const buf = dataBuffer.get(id) ?? []
-    buf.push(data)
+    buf.push({ id, data, replay })
     dataBuffer.set(id, buf)
   })
 
@@ -53,7 +53,7 @@ export function subscribe(id: string, sub: Subscriber): () => void {
   const buffered = dataBuffer.get(id)
   if (buffered) {
     dataBuffer.delete(id)
-    for (const chunk of buffered) sub.onData(chunk)
+    for (const chunk of buffered) sub.onData(chunk.data, chunk.replay === true)
   }
   const exited = exitBuffer.get(id)
   if (exited) {

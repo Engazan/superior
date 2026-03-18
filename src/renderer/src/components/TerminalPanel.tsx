@@ -197,6 +197,7 @@ export function TerminalPanel({
               visible={l.visible}
               focused={l.focused}
               showBar={isGridCell}
+              shortcutNumber={isGridCell ? (gridIndex.get(s.id) ?? 0) + 1 : undefined}
               active={s.id === activeSessionId}
               maximized={s.id === maxId}
               onSelect={onSelect}

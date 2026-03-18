@@ -160,6 +160,8 @@ export type StartAgentResult = { session: AgentSession } | { error: string }
 export interface AgentDataEvent {
   id: string
   data: string
+  /** Historical daemon scrollback replayed during attach, not fresh PTY output. */
+  replay?: boolean
 }
 
 /** main -> renderer exit event payload */

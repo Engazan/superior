@@ -339,11 +339,42 @@ export default function App(): JSX.Element {
     setActiveSessionId(id)
   }, [activeWorkspaceId, layouts, activeSessionId, sessions])
 
+  const focusGridCell = useCallback(
+    (index: number): boolean => {
+      if (
+        view !== 'main' ||
+        launcherOpen ||
+        !activeWorkspaceId ||
+        layouts[activeWorkspaceId] !== 'grid'
+      ) {
+        return false
+      }
+      const target = sessions.filter((session) => session.workspaceId === activeWorkspaceId)[index]
+      if (!target) return false
+      setMaximizedId(null)
+      setActiveSessionId(target.id)
+      return true
+    },
+    [view, launcherOpen, activeWorkspaceId, layouts, sessions]
+  )
+
   // Global keyboard shortcuts. Capture phase so they win over a focused terminal;
   // suppressed while a binding is being recorded in settings.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
       if (e.repeat || isRecordingShortcut()) return
+      if (
+        e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        !e.shiftKey &&
+        /^[1-9]$/.test(e.key) &&
+        focusGridCell(Number(e.key) - 1)
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
       const chord = eventToChord(e)
       if (!chord) return
       if (chord === shortcuts.toggleSidebar) {
@@ -369,7 +400,7 @@ export default function App(): JSX.Element {
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [shortcuts, view, activeWorkspaceId, toggleMaximizeFocused])
+  }, [shortcuts, view, activeWorkspaceId, toggleMaximizeFocused, focusGridCell])
 
   return (
     <div className="flex h-full flex-col bg-bar text-fg">

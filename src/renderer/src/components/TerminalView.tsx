@@ -16,6 +16,13 @@ const STATUS_DOT: Record<AgentSession['status'], string> = {
   error: 'bg-red-500'
 }
 
+// Older builds could accidentally feed xterm's OSC 10/11 color responses into
+// the PTY during attach. Remove only that exact stale response shape while
+// replaying historical scrollback; live terminal output is never sanitized.
+function sanitizeReplay(data: string): string {
+  return data.replace(/(?:10|11);rgb:(?:[0-9a-f]{4}\/){2}[0-9a-f]{4}/gi, '')
+}
+
 interface Props {
   session: AgentSession
   /** the cell this terminal occupies, in percentages; defaults to filling the panel */
@@ -26,6 +33,8 @@ interface Props {
   focused: boolean
   /** show the per-cell topbar above the terminal (grid mode) */
   showBar: boolean
+  /** one-based grid position; the first nine cells expose Ctrl+number */
+  shortcutNumber?: number
   /** this is the active session (drives bar styling) */
   active: boolean
   /** the cell is blown up to fill the whole panel */
@@ -58,6 +67,7 @@ export function TerminalView({
   visible,
   focused,
   showBar,
+  shortcutNumber,
   active,
   maximized,
   onSelect,
@@ -69,6 +79,7 @@ export function TerminalView({
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const replayWritesRef = useRef(0)
   const { resolved } = useTheme()
   const { t } = useI18n()
 
@@ -97,11 +108,28 @@ export function TerminalView({
     fitRef.current = fit
 
     // user keystrokes -> pty
-    const dataDisposable = term.onData((data) => window.api.sendInput(session.id, data))
+    const dataDisposable = term.onData((data) => {
+      // Parsing historical OSC queries (notably OSC 10/11 color queries) can
+      // make xterm generate terminal responses. Never feed those responses
+      // back into the live shell while restoring scrollback.
+      if (replayWritesRef.current > 0) return
+      window.api.sendInput(session.id, data)
+    })
 
     // pty output / exit -> xterm
     const unsubscribe = subscribe(session.id, {
-      onData: (data) => term.write(data),
+      onData: (data, replay) => {
+        if (!replay) {
+          term.write(data)
+          return
+        }
+        const restored = sanitizeReplay(data)
+        if (!restored) return
+        replayWritesRef.current += 1
+        term.write(restored, () => {
+          replayWritesRef.current = Math.max(0, replayWritesRef.current - 1)
+        })
+      },
       onExit: (e) => {
         const dim = '\x1b[2m'
         const reset = '\x1b[0m'
@@ -229,6 +257,18 @@ export function TerminalView({
               className="h-3.5 w-3.5 text-sm"
             />
             <span className="min-w-0 flex-1 truncate">{session.label}</span>
+            {shortcutNumber !== undefined && shortcutNumber <= 9 && (
+              <span
+                className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wide ${
+                  active
+                    ? 'border-accentBorder bg-accentBg text-accent'
+                    : 'border-edge bg-panel/50 text-fgmuted'
+                }`}
+                title={`Focus terminal ${shortcutNumber}`}
+              >
+                CONTROL + {shortcutNumber}
+              </span>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation()

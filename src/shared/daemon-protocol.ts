@@ -42,7 +42,7 @@ export type ClientMessage =
 
 /** Messages the daemon sends back to a client. */
 export type ServerMessage =
-  | { t: 'data'; id: string; data: string }
+  | { t: 'data'; id: string; data: string; replay?: boolean }
   | { t: 'exit'; id: string; exitCode: number; signal?: number }
   | { t: 'sessions'; list: DaemonSession[] }
   | { t: 'spawned'; id: string; pid?: number }

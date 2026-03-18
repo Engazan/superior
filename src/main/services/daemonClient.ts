@@ -18,6 +18,10 @@ let connecting: Promise<net.Socket> | null = null
 
 const pendingLists: Array<(list: DaemonSession[]) => void> = []
 const pendingSpawns = new Map<string, (res: { pid?: number }) => void>()
+// Compatibility with a daemon started by an older app build that does not yet
+// tag attach snapshots as replay. The first data frame after attach is the
+// synchronous scrollback snapshot (or harmlessly treated as one if empty).
+const pendingReplay = new Set<string>()
 
 function socketPath(): string {
   return daemonSocketPath(app.getPath('userData'))
@@ -40,9 +44,15 @@ function broadcast(channel: string, payload: unknown): void {
 
 function onServerMessage(msg: ServerMessage): void {
   switch (msg.t) {
-    case 'data':
-      broadcast(IPC.AGENT_DATA, { id: msg.id, data: msg.data })
+    case 'data': {
+      const expectedReplay = pendingReplay.delete(msg.id)
+      broadcast(IPC.AGENT_DATA, {
+        id: msg.id,
+        data: msg.data,
+        replay: msg.replay === true || expectedReplay
+      })
       break
+    }
     case 'exit': {
       const message =
         msg.exitCode === 127
@@ -169,6 +179,7 @@ export const daemonClient = {
   },
 
   attach(id: string): void {
+    pendingReplay.add(id)
     void send({ t: 'attach', id })
   },
   detach(id: string): void {

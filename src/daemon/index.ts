@@ -153,7 +153,7 @@ function handle(conn: Conn, msg: ClientMessage): void {
       // Idempotent: only replay scrollback on the first attach for this conn.
       if (!conn.attached.has(msg.id)) {
         const snap = s.buffer.snapshot()
-        if (snap) send(conn, { t: 'data', id: msg.id, data: snap })
+        if (snap) send(conn, { t: 'data', id: msg.id, data: snap, replay: true })
         conn.attached.add(msg.id)
         s.attached.add(conn)
       }
