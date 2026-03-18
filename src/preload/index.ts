@@ -8,6 +8,8 @@ import {
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
   type CustomMemoryProvider,
+  type FsListResult,
+  type GitDiff,
   type GitStatus,
   type Language,
   type LayoutsState,
@@ -59,6 +61,14 @@ const api = {
 
   initGit(folderPath: string): Promise<GitStatus> {
     return ipcRenderer.invoke(IPC.GIT_INIT, folderPath)
+  },
+
+  getGitDiff(folderPath: string): Promise<GitDiff> {
+    return ipcRenderer.invoke(IPC.GIT_DIFF, folderPath)
+  },
+
+  listDir(dirPath: string): Promise<FsListResult> {
+    return ipcRenderer.invoke(IPC.FS_LIST_DIR, dirPath)
   },
 
   getSettings(): Promise<AppSettings> {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
+import { RightPanel } from './components/RightPanel'
 import { TerminalPanel, type LayoutMode } from './components/TerminalPanel'
 import { type LaunchConfig } from './components/AgentLauncher'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
@@ -32,6 +33,8 @@ export default function App(): JSX.Element {
   const [view, setView] = useState<View>('main')
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Right-hand panel: fully hidden by default, toggled from the title bar.
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   // A grid cell blown up to fill the panel (null = none). Owned here so a shortcut can toggle it.
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
   // Quick-launch preset picker overlay (opened by shortcut).
@@ -414,6 +417,7 @@ export default function App(): JSX.Element {
           setSettingsSection('appearance')
           setView('settings')
         }}
+        onToggleRight={() => setRightSidebarOpen((o) => !o)}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -480,6 +484,8 @@ export default function App(): JSX.Element {
                 onGridLayoutChange={setGridLayout}
               />
             </div>
+
+            {rightSidebarOpen && <RightPanel folderPath={activeFolder?.path ?? null} />}
           </>
         )}
       </div>

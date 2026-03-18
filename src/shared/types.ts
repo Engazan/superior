@@ -153,6 +153,63 @@ export interface GitStatus {
   error?: string
 }
 
+/** Working-tree status of a single file in a diff. */
+export type GitFileStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked'
+
+/** One line inside a diff hunk. `content` excludes the leading +/-/space marker. */
+export interface GitDiffLine {
+  type: 'add' | 'del' | 'context'
+  content: string
+  /** Line number in the old file (null for added lines). */
+  oldLine: number | null
+  /** Line number in the new file (null for removed lines). */
+  newLine: number | null
+}
+
+/** A contiguous block of changes within a file. */
+export interface GitDiffHunk {
+  /** The raw `@@ -a,b +c,d @@` header. */
+  header: string
+  lines: GitDiffLine[]
+}
+
+/** All changes to one file relative to HEAD (or the index for fresh repos). */
+export interface GitDiffFile {
+  path: string
+  /** Original path for renames, otherwise null. */
+  oldPath: string | null
+  status: GitFileStatus
+  additions: number
+  deletions: number
+  binary: boolean
+  /** Content omitted because the file is binary or too large to display. */
+  truncated: boolean
+  hunks: GitDiffHunk[]
+}
+
+/** One entry (file or directory) inside a listed directory. */
+export interface FsEntry {
+  name: string
+  /** Absolute path to the entry. */
+  path: string
+  isDirectory: boolean
+}
+
+/** Result of listing a single directory level (children only). */
+export interface FsListResult {
+  entries: FsEntry[]
+  error?: string
+}
+
+/** Aggregate working-tree diff for the active folder, plus per-file detail. */
+export interface GitDiff {
+  isRepository: boolean
+  branch: string | null
+  files: GitDiffFile[]
+  totals: { files: number; additions: number; deletions: number }
+  error?: string
+}
+
 /** Result returned from a start-agent request. */
 export type StartAgentResult = { session: AgentSession } | { error: string }
 
@@ -185,6 +242,8 @@ export const IPC = {
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
   GIT_STATUS: 'git:status',
   GIT_INIT: 'git:init',
+  GIT_DIFF: 'git:diff',
+  FS_LIST_DIR: 'fs:list-dir',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',

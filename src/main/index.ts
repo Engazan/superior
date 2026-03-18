@@ -7,6 +7,7 @@ import { registerPresetsIpc } from './ipc/presets.ipc'
 import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
 import { registerLayoutIpc } from './ipc/layout.ipc'
 import { registerGitIpc } from './ipc/git.ipc'
+import { registerFsIpc } from './ipc/fs.ipc'
 import { daemonClient } from './services/daemonClient'
 
 const isMac = process.platform === 'darwin'
@@ -59,6 +60,7 @@ app.whenReady().then(() => {
   registerWindowIpc()
   registerLayoutIpc()
   registerGitIpc()
+  registerFsIpc()
 
   // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
   daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))

@@ -14,6 +14,8 @@ interface Props {
   onInitGit: () => void
   /** Open the settings view. The gear sits at the far right of the strip. */
   onOpenSettings: () => void
+  /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
+  onToggleRight: () => void
 }
 
 function BranchIcon(): JSX.Element {
@@ -48,7 +50,8 @@ export function TitleBar({
   gitLoading,
   onToggle,
   onInitGit,
-  onOpenSettings
+  onOpenSettings,
+  onToggleRight
 }: Props): JSX.Element {
   const { t } = useI18n()
   const showGit = showToggle && (gitLoading || gitStatus !== null)
@@ -114,6 +117,20 @@ export function TitleBar({
           >
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
             <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      )}
+
+      {showToggle && (
+        <button
+          onClick={onToggleRight}
+          title={t('common.toggleRightSidebar')}
+          aria-label={t('common.toggleRightSidebar')}
+          className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        >
+          <svg className="block h-[15px] w-[15px]" viewBox="0 0 15 15" fill="none" aria-hidden>
+            <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" />
+            <line x1="9.5" y1="2.5" x2="9.5" y2="12.5" stroke="currentColor" />
           </svg>
         </button>
       )}
