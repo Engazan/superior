@@ -85,6 +85,21 @@ export default function App(): JSX.Element {
         e.preventDefault()
         e.stopPropagation()
         setLauncherOpen((o) => !o && !!ws.activeWorkspaceId)
+      } else if (chord === shortcuts.toggleRightPanel) {
+        if (view !== 'main') return
+        e.preventDefault()
+        e.stopPropagation()
+        setRightSidebarOpen((o) => !o)
+      } else if (chord === shortcuts.closeFocusedCell) {
+        if (view !== 'main' || !ws.activeSessionId) return
+        e.preventDefault()
+        e.stopPropagation()
+        ws.closeSession(ws.activeSessionId)
+      } else if (chord === shortcuts.closePreview) {
+        if (view !== 'main' || !preview.previewFile) return
+        e.preventDefault()
+        e.stopPropagation()
+        preview.setPreviewFile(null)
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
@@ -94,8 +109,12 @@ export default function App(): JSX.Element {
     view,
     launcherOpen,
     ws.activeWorkspaceId,
+    ws.activeSessionId,
     ws.focusGridCell,
-    ws.toggleMaximizeFocused
+    ws.toggleMaximizeFocused,
+    ws.closeSession,
+    preview.previewFile,
+    preview.setPreviewFile
   ])
 
   return (

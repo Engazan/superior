@@ -1,6 +1,7 @@
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { useI18n } from '../i18n'
+import { useShortcutTitle } from '../shortcuts'
 import type { GitStatus } from '../types'
 
 const isMac = window.api.platform === 'darwin'
@@ -54,6 +55,7 @@ export function TitleBar({
   onToggleRight
 }: Props): JSX.Element {
   const { t } = useI18n()
+  const shortcutTitle = useShortcutTitle()
   const showGit = showToggle && (gitLoading || gitStatus !== null)
   return (
     <header className="app-drag flex h-9 shrink-0 items-center border-b border-edge bg-bar">
@@ -101,7 +103,7 @@ export function TitleBar({
       {showToggle && (
         <button
           onClick={onOpenSettings}
-          title={t('sidebar.settings')}
+          title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
           aria-label={t('sidebar.settings')}
           className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         >
@@ -124,7 +126,7 @@ export function TitleBar({
       {showToggle && (
         <button
           onClick={onToggleRight}
-          title={t('common.toggleRightSidebar')}
+          title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
           aria-label={t('common.toggleRightSidebar')}
           className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         >

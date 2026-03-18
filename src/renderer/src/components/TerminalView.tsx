@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
+import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
 import type { Rect } from '../gridLayout'
 import type { AgentSession } from '../types'
@@ -116,6 +117,7 @@ export function TerminalView({
   const replayWritesRef = useRef(0)
   const { resolved } = useTheme()
   const { t } = useI18n()
+  const shortcutTitle = useShortcutTitle()
 
   // Keep the latest onSelect without re-running the creation effect.
   const onSelectRef = useRef(onSelect)
@@ -300,7 +302,7 @@ export function TerminalView({
                 }`}
                 title={`Focus terminal ${shortcutNumber}`}
               >
-                CONTROL + {shortcutNumber}
+                {formatChord(`ctrl+${shortcutNumber}`)}
               </span>
             )}
             <button
@@ -310,7 +312,10 @@ export function TerminalView({
               }}
               className="shrink-0 text-fgmuted transition hover:text-fg"
               aria-label={maximized ? t('terminal.restore') : t('terminal.maximize')}
-              title={maximized ? t('terminal.restore') : t('terminal.maximize')}
+              title={shortcutTitle(
+                maximized ? t('terminal.restore') : t('terminal.maximize'),
+                'maximizeFocusedCell'
+              )}
             >
               {maximized ? (
                 <svg
@@ -345,7 +350,7 @@ export function TerminalView({
               }}
               className="shrink-0 text-fgmuted transition hover:text-fg"
               aria-label={t('terminal.closeSession')}
-              title={t('terminal.stopClose')}
+              title={shortcutTitle(t('terminal.stopClose'), 'closeFocusedCell')}
             >
               ✕
             </button>

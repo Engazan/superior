@@ -12,6 +12,12 @@ import { daemonClient } from './services/daemonClient'
 
 const isMac = process.platform === 'darwin'
 
+// Display name for the macOS app menu, About panel, tray and notifications. Must
+// be set before `ready`; otherwise dev runs inherit "Electron" from the bundle.
+// On macOS the userData dir is case-insensitive, so this keeps the existing
+// "superior" storage path. Packaged builds get the name from `build.productName`.
+app.setName('Superior')
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1100,
@@ -56,6 +62,12 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // Branded About panel (⌘? / app menu) instead of the default Electron one.
+  app.setAboutPanelOptions({
+    applicationName: 'Superior',
+    applicationVersion: app.getVersion()
+  })
+
   registerWorkspaceIpc()
   registerAgentIpc()
   registerSettingsIpc()

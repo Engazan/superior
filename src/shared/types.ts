@@ -8,6 +8,9 @@ export type ShortcutAction =
   | 'openSettings'
   | 'maximizeFocusedCell'
   | 'openLauncher'
+  | 'toggleRightPanel'
+  | 'closeFocusedCell'
+  | 'closePreview'
 
 /**
  * A chord stored in a platform-neutral, normalized form: lowercase tokens

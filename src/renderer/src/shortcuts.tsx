@@ -6,7 +6,10 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   toggleSidebar: 'mod+b',
   openSettings: 'mod+,',
   maximizeFocusedCell: 'ctrl+enter',
-  openLauncher: 'ctrl+§'
+  openLauncher: 'ctrl+§',
+  toggleRightPanel: 'mod+j',
+  closeFocusedCell: 'mod+w',
+  closePreview: 'mod+shift+w'
 }
 
 const isMac = window.api.platform === 'darwin'
@@ -111,4 +114,15 @@ export function useShortcuts(): ShortcutsContextValue {
   const ctx = useContext(ShortcutsContext)
   if (!ctx) throw new Error('useShortcuts must be used within a ShortcutsProvider')
   return ctx
+}
+
+/**
+ * Returns a builder for button tooltips that pairs a human description with the
+ * action's current chord, e.g. `Toggle sidebar (⌘ B)`. Reads live bindings, so a
+ * tooltip reflects a rebind immediately. Use as the `title` of a button whose
+ * click performs the same action as the shortcut.
+ */
+export function useShortcutTitle(): (description: string, action: ShortcutAction) => string {
+  const { shortcuts } = useShortcuts()
+  return (description, action) => `${description} (${formatChord(shortcuts[action])})`
 }

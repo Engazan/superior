@@ -5,13 +5,19 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   toggleSidebar: 'mod+b',
   openSettings: 'mod+,',
   maximizeFocusedCell: 'ctrl+enter',
-  openLauncher: 'ctrl+§'
+  openLauncher: 'ctrl+§',
+  toggleRightPanel: 'mod+j',
+  closeFocusedCell: 'mod+w',
+  closePreview: 'mod+shift+w'
 }
 const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'toggleSidebar',
   'openSettings',
   'maximizeFocusedCell',
-  'openLauncher'
+  'openLauncher',
+  'toggleRightPanel',
+  'closeFocusedCell',
+  'closePreview'
 ]
 const DEFAULTS: AppSettings = {
   theme: 'system',

@@ -5,6 +5,7 @@ import { MarkdownFilePreview } from './MarkdownFilePreview'
 import { ImageFilePreview } from './ImageFilePreview'
 import { UnsupportedFilePreview } from './UnsupportedFilePreview'
 import { useI18n } from '../i18n'
+import { useShortcutTitle } from '../shortcuts'
 import {
   IMAGE_MAX_BYTES,
   TEXT_MAX_BYTES,
@@ -31,17 +32,20 @@ function prettyJson(text: string): string {
 
 function IconButton({
   label,
+  title,
   onClick,
   children
 }: {
   label: string
+  /** Tooltip text; falls back to `label` when omitted (e.g. to append a shortcut hint). */
+  title?: string
   onClick: () => void
   children: JSX.Element
 }): JSX.Element {
   return (
     <button
       onClick={onClick}
-      title={label}
+      title={title ?? label}
       aria-label={label}
       className="grid h-7 w-7 shrink-0 place-items-center rounded text-fgmuted transition hover:bg-hover hover:text-fg"
     >
@@ -52,6 +56,7 @@ function IconButton({
 
 export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const { t } = useI18n()
+  const shortcutTitle = useShortcutTitle()
   const type = useMemo(() => getFilePreviewType(file), [file])
   // Build the CodeMirror language once per file — a new Extension identity would
   // tear down and recreate the whole editor (losing scroll/find) on every render.
@@ -189,7 +194,11 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
           </svg>
         </IconButton>
 
-        <IconButton label={t('window.close')} onClick={onClose}>
+        <IconButton
+          label={t('window.close')}
+          title={shortcutTitle(t('window.close'), 'closePreview')}
+          onClick={onClose}
+        >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
