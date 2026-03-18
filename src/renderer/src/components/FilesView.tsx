@@ -133,14 +133,51 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.El
   )
 }
 
+/** Flat result row for a search hit, showing the file name + its folder. */
+function SearchRow({
+  entry,
+  rootPath,
+  selected,
+  onOpenFile
+}: {
+  entry: FsEntry
+  rootPath: string
+  selected: boolean
+  onOpenFile: (file: FsEntry) => void
+}): JSX.Element {
+  const rel = entry.path.startsWith(rootPath) ? entry.path.slice(rootPath.length + 1) : entry.path
+  const dir = rel.slice(0, rel.length - entry.name.length).replace(/\/$/, '')
+  return (
+    <button
+      onClick={() => onOpenFile(entry)}
+      title={rel}
+      className={`flex w-full items-center gap-1.5 px-2 py-1 text-left text-xs transition hover:bg-hover hover:text-fg ${
+        selected ? 'bg-accentBg text-accent' : 'text-fgdim'
+      }`}
+    >
+      <FileIcon />
+      <span className="min-w-0 flex-1 truncate">
+        <span className="text-fg">{entry.name}</span>
+        {dir && <span className="text-fgmuted"> {dir}</span>}
+      </span>
+    </button>
+  )
+}
+
 export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
   const { t } = useI18n()
   const [entries, setEntries] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<FsEntry[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [truncated, setTruncated] = useState(false)
 
+  // Load the root tree level; clear the query when switching folders.
   useEffect(() => {
     let active = true
     setEntries(null)
+    setQuery('')
     if (!folderPath) return
     setLoading(true)
     window.api.listDir(folderPath).then((res) => {
@@ -153,27 +190,111 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
     }
   }, [folderPath])
 
+  // Debounced recursive search; empty query falls back to the tree.
+  useEffect(() => {
+    const q = query.trim()
+    if (!folderPath || !q) {
+      setResults(null)
+      setSearching(false)
+      return
+    }
+    let active = true
+    setSearching(true)
+    const id = window.setTimeout(() => {
+      window.api
+        .searchFiles(folderPath, q)
+        .then((res) => {
+          if (!active) return
+          setResults(res.entries)
+          setTruncated(res.truncated === true)
+          setSearching(false)
+        })
+        .catch((err) => {
+          if (!active) return
+          console.error('[search] failed:', err)
+          setResults([])
+          setTruncated(false)
+          setSearching(false)
+        })
+    }, 200)
+    return () => {
+      active = false
+      window.clearTimeout(id)
+    }
+  }, [query, folderPath])
+
   if (!folderPath) {
     return <div className="px-3 py-4 text-xs text-fgmuted">{t('files.noFolder')}</div>
   }
-  if (loading && entries === null) {
-    return <div className="px-3 py-4 text-xs text-fgmuted">{t('files.loading')}</div>
-  }
-  if (entries && entries.length === 0) {
-    return <div className="px-3 py-4 text-xs text-fgmuted">{t('files.empty')}</div>
-  }
+
+  const searchActive = query.trim().length > 0
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto py-1">
-      {entries?.map((entry) => (
-        <TreeNode
-          key={entry.path}
-          entry={entry}
-          depth={0}
-          onOpenFile={onOpenFile}
-          selectedPath={selectedPath}
-        />
-      ))}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 border-b border-edge p-2">
+        <div className="flex items-center gap-1.5 rounded border border-edge bg-panel px-2 py-1">
+          <svg className="h-3.5 w-3.5 shrink-0 text-fgmuted" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="7" cy="7" r="4.5" />
+            <path d="m10.5 10.5 3 3" />
+          </svg>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('files.search')}
+            className="min-w-0 flex-1 bg-transparent text-xs text-fg placeholder:text-fgmuted focus:outline-none"
+          />
+          {searchActive && (
+            <button
+              onClick={() => setQuery('')}
+              aria-label={t('window.close')}
+              className="shrink-0 text-fgmuted transition hover:text-fg"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {searchActive ? (
+        searching && results === null ? (
+          <div className="px-3 py-4 text-xs text-fgmuted">{t('files.searching')}</div>
+        ) : results && results.length === 0 ? (
+          <div className="px-3 py-4 text-xs text-fgmuted">{t('files.noResults')}</div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto py-1">
+            {results?.map((entry) => (
+              <SearchRow
+                key={entry.path}
+                entry={entry}
+                rootPath={folderPath}
+                selected={entry.path === selectedPath}
+                onOpenFile={onOpenFile}
+              />
+            ))}
+            {truncated && (
+              <div className="px-3 py-1.5 text-[11px] text-fgmuted">{t('files.searchTruncated')}</div>
+            )}
+          </div>
+        )
+      ) : loading && entries === null ? (
+        <div className="px-3 py-4 text-xs text-fgmuted">{t('files.loading')}</div>
+      ) : entries && entries.length === 0 ? (
+        <div className="px-3 py-4 text-xs text-fgmuted">{t('files.empty')}</div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+          {entries?.map((entry) => (
+            <TreeNode
+              key={entry.path}
+              entry={entry}
+              depth={0}
+              onOpenFile={onOpenFile}
+              selectedPath={selectedPath}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

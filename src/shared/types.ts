@@ -198,6 +198,8 @@ export interface FsEntry {
 /** Result of listing a single directory level (children only). */
 export interface FsListResult {
   entries: FsEntry[]
+  /** Set when the search hit its result/visit cap and stopped early. */
+  truncated?: boolean
   error?: string
 }
 
@@ -268,6 +270,7 @@ export const IPC = {
   GIT_INIT: 'git:init',
   GIT_DIFF: 'git:diff',
   FS_LIST_DIR: 'fs:list-dir',
+  FS_SEARCH: 'fs:search',
   FS_READ_FILE: 'fs:read-file',
   SHELL_OPEN_PATH: 'shell:open-path',
   SETTINGS_GET: 'settings:get',

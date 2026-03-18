@@ -1,10 +1,16 @@
 import { ipcMain, shell } from 'electron'
 import { IPC, type FileReadOptions, type FileReadResult, type FsListResult } from '@shared/types'
-import { listDir, readFilePreview } from '../services/fs.service'
+import { listDir, readFilePreview, searchFiles } from '../services/fs.service'
 
 export function registerFsIpc(): void {
   ipcMain.handle(IPC.FS_LIST_DIR, (_event, dirPath: string): Promise<FsListResult> =>
     listDir(dirPath)
+  )
+
+  ipcMain.handle(
+    IPC.FS_SEARCH,
+    (_event, rootPath: string, query: string): Promise<FsListResult> =>
+      searchFiles(rootPath, query)
   )
 
   ipcMain.handle(

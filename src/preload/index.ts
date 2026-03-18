@@ -73,6 +73,10 @@ const api = {
     return ipcRenderer.invoke(IPC.FS_LIST_DIR, dirPath)
   },
 
+  searchFiles(rootPath: string, query: string): Promise<FsListResult> {
+    return ipcRenderer.invoke(IPC.FS_SEARCH, rootPath, query)
+  },
+
   readFile(filePath: string, opts: FileReadOptions): Promise<FileReadResult> {
     return ipcRenderer.invoke(IPC.FS_READ_FILE, filePath, opts)
   },

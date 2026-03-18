@@ -1,6 +1,6 @@
 import { open, readdir, stat } from 'fs/promises'
 import { join } from 'path'
-import type { FileReadOptions, FileReadResult, FsListResult } from '@shared/types'
+import type { FileReadOptions, FileReadResult, FsEntry, FsListResult } from '@shared/types'
 
 // Hidden plumbing the file tree should never surface.
 const IGNORED = new Set(['.git'])
@@ -24,6 +24,67 @@ export async function listDir(dirPath: string): Promise<FsListResult> {
         return a.name.localeCompare(b.name)
       })
     return { entries }
+  } catch (err) {
+    return { entries: [], error: (err as Error).message }
+  }
+}
+
+// Heavy/irrelevant directories are skipped when searching the whole tree.
+const SEARCH_IGNORED = new Set(['.git', 'node_modules'])
+const MAX_RESULTS = 300
+const MAX_VISITED = 50_000
+
+/**
+ * Recursively find files whose name or relative path contains `query`
+ * (case-insensitive). Caps results and files visited so huge trees stay fast;
+ * `truncated` flags an early stop.
+ */
+export async function searchFiles(rootPath: string, query: string): Promise<FsListResult> {
+  const q = query.trim().toLowerCase()
+  if (!q) return { entries: [] }
+
+  const results: FsEntry[] = []
+  const stack: string[] = [rootPath]
+  let visited = 0
+  let truncated = false
+
+  try {
+    while (stack.length && results.length < MAX_RESULTS && visited < MAX_VISITED) {
+      const dir = stack.pop() as string
+      let dirents
+      try {
+        dirents = await readdir(dir, { withFileTypes: true })
+      } catch {
+        continue // unreadable dir — skip it
+      }
+      for (const d of dirents) {
+        if (d.isDirectory()) {
+          if (!SEARCH_IGNORED.has(d.name)) stack.push(join(dir, d.name))
+          continue
+        }
+        if (!d.isFile()) continue
+        if (++visited >= MAX_VISITED) {
+          truncated = true
+          break
+        }
+        const full = join(dir, d.name)
+        const rel = full.slice(rootPath.length + 1)
+        if (d.name.toLowerCase().includes(q) || rel.toLowerCase().includes(q)) {
+          results.push({ name: d.name, path: full, isDirectory: false })
+          if (results.length >= MAX_RESULTS) {
+            truncated = true
+            break
+          }
+        }
+      }
+    }
+
+    // Shallower paths first, then alphabetical by name.
+    results.sort((a, b) => {
+      const depth = a.path.split('/').length - b.path.split('/').length
+      return depth !== 0 ? depth : a.name.localeCompare(b.name)
+    })
+    return { entries: results, truncated }
   } catch (err) {
     return { entries: [], error: (err as Error).message }
   }
