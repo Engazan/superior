@@ -22,17 +22,38 @@ export function isValidWorkspaceDir(dir: string): boolean {
   }
 }
 
+/** Canonical absolute path with symlinks resolved; falls back to a plain resolve
+ * for paths that don't exist yet (the subsequent read fails on its own). */
+function canonicalPath(p: string): string {
+  try {
+    return fs.realpathSync(path.resolve(p))
+  } catch {
+    return path.resolve(p)
+  }
+}
+
+// Canonical workspace-folder roots, cached so containment checks don't re-read
+// and re-parse workspaces.json on every filesystem call. Refreshed by saveState.
+let cachedFolderRoots: string[] | null = null
+
+function folderRoots(): string[] {
+  if (!cachedFolderRoots) {
+    cachedFolderRoots = readState().folders.map((f) => canonicalPath(f.path))
+  }
+  return cachedFolderRoots
+}
+
 /**
  * True if `target` resolves to — or inside — one of the saved workspace folders.
  * Defense-in-depth: filesystem reads from the renderer must stay within an opened
- * folder, so a bug or compromised renderer can't enumerate arbitrary paths.
+ * folder, so a bug or compromised renderer can't enumerate arbitrary paths. Paths
+ * are canonicalized (symlinks resolved) so a symlink inside a folder can't escape.
  */
 export function isWithinWorkspaceFolder(target: string): boolean {
-  const resolved = path.resolve(target)
-  return readState().folders.some((f) => {
-    const root = path.resolve(f.path)
-    return resolved === root || resolved.startsWith(root + path.sep)
-  })
+  const resolved = canonicalPath(target)
+  return folderRoots().some(
+    (root) => resolved === root || resolved.startsWith(root + path.sep)
+  )
 }
 
 function makeFolder(dir: string): Folder {
@@ -106,6 +127,7 @@ function normalize(state: WorkspaceState): WorkspaceState {
 }
 
 function saveState(state: WorkspaceState): void {
+  cachedFolderRoots = state.folders.map((f) => canonicalPath(f.path))
   writeJsonFile(storeFile(), state, 'workspace')
 }
 

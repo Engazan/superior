@@ -18,7 +18,8 @@ const logPath = process.argv[3]
 const SCROLLBACK_BYTES = 1_500_000
 const SHUTDOWN_GRACE_MS = 45_000
 const LOG_CAP_BYTES = 1_000_000
-// Largest single input frame to forward to a pty; paste bursts stay well under this.
+// Max chunk size when forwarding input to a pty; a larger paste is split into
+// chunks of this size rather than handed over — or dropped — in one frame.
 const MAX_INPUT_BYTES = 1_000_000
 
 function log(msg: string): void {
@@ -172,10 +173,29 @@ function handle(conn: Conn, msg: ClientMessage): void {
       conn.attached.delete(msg.id)
       break
     }
-    case 'input':
-      // Guard against a pathologically large write overwhelming the pty.
-      if (msg.data.length <= MAX_INPUT_BYTES) sessions.get(msg.id)?.proc.write(msg.data)
+    case 'input': {
+      const s = sessions.get(msg.id)
+      if (!s) break
+      const data = msg.data
+      if (data.length <= MAX_INPUT_BYTES) {
+        s.proc.write(data)
+        break
+      }
+      // Deliver a large paste in bounded chunks rather than dropping it, so input
+      // is never silently lost. Cut on a safe boundary (don't split a surrogate pair).
+      let i = 0
+      while (i < data.length) {
+        let end = Math.min(i + MAX_INPUT_BYTES, data.length)
+        if (end < data.length) {
+          const code = data.charCodeAt(end - 1)
+          if (code >= 0xd800 && code <= 0xdbff) end -= 1 // keep the pair together
+        }
+        s.proc.write(data.slice(i, end))
+        i = end
+      }
+      log(`chunked oversized input for ${msg.id} (${data.length} chars)`)
       break
+    }
     case 'resize': {
       const s = sessions.get(msg.id)
       if (!s) break
