@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { useI18n } from '../i18n'
-import type { FsEntry } from '../types'
+import type { FsEntry, GitDiff } from '../types'
 
 type Tab = 'files' | 'changes'
 
@@ -17,17 +17,47 @@ interface Props {
 
 /**
  * Right-hand panel toggled from the title bar. Hosts the Files (project tree)
- * and Changes (working-tree diff) tabs.
+ * and Changes (working-tree diff) tabs. The diff is fetched here so the +/−
+ * totals can show on the Changes tab even while the Files tab is open.
  */
 export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('changes')
+  const [diff, setDiff] = useState<GitDiff | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const refresh = useCallback(async (): Promise<void> => {
+    if (!folderPath) return
+    setLoading(true)
+    setDiff(await window.api.getGitDiff(folderPath))
+    setLoading(false)
+  }, [folderPath])
+
+  // Refetch on folder change and poll so the view tracks working-tree edits.
+  useEffect(() => {
+    let active = true
+    setDiff(null)
+    if (!folderPath) return
+    const run = async (show: boolean): Promise<void> => {
+      if (show) setLoading(true)
+      const result = await window.api.getGitDiff(folderPath)
+      if (!active) return
+      setDiff(result)
+      setLoading(false)
+    }
+    void run(true)
+    const id = window.setInterval(() => void run(false), 3000)
+    return () => {
+      active = false
+      window.clearInterval(id)
+    }
+  }, [folderPath])
+
+  const totals = diff?.isRepository && !diff.error ? diff.totals : null
 
   const tabClass = (active: boolean): string =>
-    `flex-1 px-3 py-2 text-xs font-medium transition border-b-2 ${
-      active
-        ? 'border-accent text-fg'
-        : 'border-transparent text-fgmuted hover:text-fg'
+    `flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition border-b-2 ${
+      active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
     }`
 
   return (
@@ -38,11 +68,18 @@ export function RightPanel({ folderPath, onOpenFile, selectedPath }: Props): JSX
         </button>
         <button className={tabClass(tab === 'changes')} onClick={() => setTab('changes')}>
           {t('rightPanel.changes')}
+          {totals && (totals.additions > 0 || totals.deletions > 0) && (
+            <span className="font-mono text-[10px] tabular-nums">
+              {totals.additions > 0 && <span className="text-emerald-500">+{totals.additions}</span>}
+              {totals.additions > 0 && totals.deletions > 0 && ' '}
+              {totals.deletions > 0 && <span className="text-rose-500">−{totals.deletions}</span>}
+            </span>
+          )}
         </button>
       </div>
 
       {tab === 'changes' ? (
-        <ChangesView folderPath={folderPath} />
+        <ChangesView diff={diff} loading={loading} onRefresh={() => void refresh()} />
       ) : (
         <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}

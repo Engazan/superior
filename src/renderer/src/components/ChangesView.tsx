@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useI18n } from '../i18n'
 import type { GitDiff, GitDiffFile, GitFileStatus } from '../types'
 
 interface Props {
-  /** Folder backing the active workspace, or null when none is selected. */
-  folderPath: string | null
+  /** Latest working-tree diff, or null before the first load / no folder. */
+  diff: GitDiff | null
+  /** True while the first diff for the current folder is loading. */
+  loading: boolean
+  /** Trigger an immediate refetch. */
+  onRefresh: () => void
 }
 
 // Short status badge — letter + colour, mirroring common Git UIs.
@@ -110,52 +114,14 @@ function DiffFile({ file }: { file: GitDiffFile }): JSX.Element {
   )
 }
 
-export function ChangesView({ folderPath }: Props): JSX.Element {
+export function ChangesView({ diff, loading, onRefresh }: Props): JSX.Element {
   const { t } = useI18n()
-  const [diff, setDiff] = useState<GitDiff | null>(null)
-  const [loading, setLoading] = useState(false)
 
-  const refresh = useCallback(
-    async (showLoading: boolean): Promise<void> => {
-      if (!folderPath) {
-        setDiff(null)
-        return
-      }
-      if (showLoading) setLoading(true)
-      const result = await window.api.getGitDiff(folderPath)
-      setDiff(result)
-      setLoading(false)
-    },
-    [folderPath]
-  )
-
-  // Refetch on folder change and poll so the view tracks working-tree edits.
-  useEffect(() => {
-    let active = true
-    setDiff(null)
-    if (!folderPath) return
-    const run = async (show: boolean): Promise<void> => {
-      if (show) setLoading(true)
-      const result = await window.api.getGitDiff(folderPath)
-      if (!active) return
-      setDiff(result)
-      setLoading(false)
-    }
-    void run(true)
-    const id = window.setInterval(() => void run(false), 3000)
-    return () => {
-      active = false
-      window.clearInterval(id)
-    }
-  }, [folderPath])
-
-  if (!folderPath) {
-    return (
-      <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.notRepository')}</div>
-    )
-  }
   if (!diff && loading) {
     return <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.loading')}</div>
+  }
+  if (!diff) {
+    return <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.notRepository')}</div>
   }
   if (diff && (!diff.isRepository || diff.error)) {
     return (
@@ -185,7 +151,7 @@ export function ChangesView({ folderPath }: Props): JSX.Element {
           {totals.deletions > 0 && <span className="text-rose-500">−{totals.deletions}</span>}
         </span>
         <button
-          onClick={() => void refresh(true)}
+          onClick={onRefresh}
           title={t('changes.refresh')}
           aria-label={t('changes.refresh')}
           className="shrink-0 rounded p-0.5 text-fgmuted transition hover:bg-hover hover:text-fg"
