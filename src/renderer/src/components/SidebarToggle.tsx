@@ -9,11 +9,11 @@ export function SidebarToggle({ onClick }: Props): JSX.Element {
   return (
     <button
       onClick={onClick}
-      className="app-no-drag flex h-6 w-6 items-center justify-center rounded text-fgdim transition hover:bg-hover hover:text-fg"
+      className="app-no-drag grid h-full w-8 place-items-center rounded p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       aria-label={t('common.toggleSidebar')}
       title={t('common.toggleSidebar')}
     >
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden>
+      <svg className="block h-[15px] w-[15px]" viewBox="0 0 15 15" fill="none" aria-hidden>
         <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" />
         <line x1="5.5" y1="2.5" x2="5.5" y2="12.5" stroke="currentColor" />
       </svg>

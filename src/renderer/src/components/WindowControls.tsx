@@ -3,34 +3,58 @@ import { useI18n } from '../i18n'
 
 function MinimizeIcon(): JSX.Element {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-      <line x1="1.5" y1="5" x2="8.5" y2="5" stroke="currentColor" strokeWidth="1" />
+    <svg
+      className="block h-3 w-3 -translate-y-px"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+    >
+      <path d="M2 6h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   )
 }
 
 function MaximizeIcon(): JSX.Element {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-      <rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1" />
+    <svg
+      className="block h-3 w-3 -translate-y-px"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+    >
+      <rect x="2" y="2" width="8" height="8" rx=".5" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   )
 }
 
 function RestoreIcon(): JSX.Element {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-      <rect x="1.5" y="3" width="5.5" height="5.5" fill="none" stroke="currentColor" strokeWidth="1" />
-      <path d="M3.5 3V1.5H8.5V6.5H7" fill="none" stroke="currentColor" strokeWidth="1" />
+    <svg
+      className="block h-3 w-3 -translate-y-px"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+    >
+      <rect x="1.75" y="4" width="6.25" height="6.25" rx=".5" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M4 4V1.75h6.25V8H8" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   )
 }
 
 function CloseIcon(): JSX.Element {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
-      <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" stroke="currentColor" strokeWidth="1" />
-      <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" stroke="currentColor" strokeWidth="1" />
+    <svg
+      className="block h-3 w-3 -translate-y-px"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="m2.5 2.5 7 7m0-7-7 7"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
@@ -45,10 +69,10 @@ export function WindowControls(): JSX.Element {
   }, [])
 
   const btn =
-    'app-no-drag flex h-full w-11 items-center justify-center text-fgdim transition hover:bg-hover hover:text-fg'
+    'app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent'
 
   return (
-    <div className="flex items-stretch">
+    <div className="flex h-full items-stretch">
       <button
         className={btn}
         onClick={() => window.api.windowMinimize()}
@@ -66,7 +90,7 @@ export function WindowControls(): JSX.Element {
         {maximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
-        className="app-no-drag flex h-full w-11 items-center justify-center text-fgdim transition hover:bg-red-600 hover:text-white"
+        className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-300"
         onClick={() => window.api.windowClose()}
         aria-label={t('window.close')}
         title={t('window.close')}

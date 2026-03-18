@@ -59,9 +59,12 @@ function FolderIcon(): JSX.Element {
   )
 }
 
-function RunningBadge({ count }: { count: number }): JSX.Element {
+function RunningBadge({ count, title }: { count: number; title: string }): JSX.Element {
   return (
-    <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-statusBg px-1.5 text-[10px] font-bold leading-none text-status ring-1 ring-inset ring-statusBorder">
+    <span
+      title={title}
+      className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-statusBg px-1.5 text-[10px] font-bold leading-none text-status ring-1 ring-inset ring-statusBorder"
+    >
       {count}
     </span>
   )
@@ -228,9 +231,10 @@ export function Sidebar({
                       {folder.name}
                     </span>
                     {!open && folderRunning > 0 && (
-                      <span title={t('sidebar.runningTerminals')}>
-                        <RunningBadge count={folderRunning} />
-                      </span>
+                      <RunningBadge
+                        count={folderRunning}
+                        title={t('sidebar.runningTerminals')}
+                      />
                     )}
                     <button
                       onClick={(e) => {
@@ -298,9 +302,7 @@ export function Sidebar({
                               )}
 
                               {n > 0 && editingId !== ws.id && (
-                                <span title={t('sidebar.runningTerminals')}>
-                                  <RunningBadge count={n} />
-                                </span>
+                                <RunningBadge count={n} title={t('sidebar.runningTerminals')} />
                               )}
 
                               <button
