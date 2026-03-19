@@ -36,6 +36,26 @@ export const MAX_GRID = 12
 /** Smallest fraction a row/column may shrink to while dragging. */
 const MIN_FRAC = 0.08
 
+/** How close (in panel fractions) a divider must be to a guide before it snaps. */
+const SNAP_THRESHOLD = 0.025
+
+/** Even-split guides the whole panel snaps to: quarters, thirds, halves. */
+const SNAP_GUIDES = [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4]
+
+/** Snap a value to the nearest target within SNAP_THRESHOLD, else leave it as is. */
+function snapValue(value: number, targets: number[]): number {
+  let best = value
+  let bestDist = SNAP_THRESHOLD
+  for (const target of targets) {
+    const dist = Math.abs(value - target)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = target
+    }
+  }
+  return best
+}
+
 function clampCount(n: number): number {
   return Math.min(Math.max(n, 1), MAX_GRID)
 }
@@ -116,19 +136,33 @@ export function gridDividers(dist: number[], layout: GridLayout): Divider[] {
 }
 
 /**
+ * The guides a divider snaps to within the [before, before+pair] band it can
+ * move in: the even split of the two cells it separates, plus any global
+ * quarter/third/half guide that falls inside that band.
+ */
+function snapTargets(before: number, pair: number): number[] {
+  const lo = before
+  const hi = before + pair
+  return [before + pair / 2, ...SNAP_GUIDES.filter((g) => g > lo && g < hi)]
+}
+
+/**
  * Move one divider so its boundary sits at `fraction` (0..1) of the panel along
  * its axis, adjusting only the two cells it separates. Returns a new layout.
+ * When `snap` is true the boundary snaps to nearby even-split guides.
  */
 export function applyDividerDrag(
   layout: GridLayout,
   d: Divider,
-  fraction: number
+  fraction: number,
+  snap = true
 ): GridLayout {
-  const f = clamp(fraction, 0, 1)
+  const f0 = clamp(fraction, 0, 1)
   if (d.axis === 'h') {
     const i = d.rowIndex
     const before = layout.rows.slice(0, i).reduce((a, b) => a + b, 0)
     const pair = layout.rows[i] + layout.rows[i + 1]
+    const f = snap ? snapValue(f0, snapTargets(before, pair)) : f0
     const top = clamp(f - before, MIN_FRAC, pair - MIN_FRAC)
     const rows = layout.rows.slice()
     rows[i] = top
@@ -140,6 +174,7 @@ export function applyDividerDrag(
   const rowCols = layout.cols[r]
   const before = rowCols.slice(0, j).reduce((a, b) => a + b, 0)
   const pair = rowCols[j] + rowCols[j + 1]
+  const f = snap ? snapValue(f0, snapTargets(before, pair)) : f0
   const left = clamp(f - before, MIN_FRAC, pair - MIN_FRAC)
   const newRow = rowCols.slice()
   newRow[j] = left

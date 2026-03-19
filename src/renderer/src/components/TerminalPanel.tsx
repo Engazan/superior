@@ -112,6 +112,7 @@ export function TerminalPanel({
 
   // Drag a divider: convert the pointer position to a fraction of the panel and
   // resize the two cells it separates. The layout is snapshotted at drag start.
+  // Dividers snap to even-split guides; hold Alt to drag freely.
   const startDrag = (d: Divider) => (e: React.PointerEvent): void => {
     e.preventDefault()
     const el = containerRef.current
@@ -123,7 +124,7 @@ export function TerminalPanel({
         d.axis === 'v'
           ? (ev.clientX - box.left) / box.width
           : (ev.clientY - box.top) / box.height
-      onGridLayoutChange(applyDividerDrag(layout, d, fraction))
+      onGridLayoutChange(applyDividerDrag(layout, d, fraction, !ev.altKey))
     }
     const up = (): void => {
       setResizing(null)
