@@ -63,6 +63,65 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.startup-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at center, color-mix(in srgb, var(--c-accent) 8%, transparent), transparent 36%),
+    var(--c-bar);
+  opacity: 1;
+  transition: opacity 250ms ease;
+}
+
+.startup-splash--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.startup-splash__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.startup-splash__brand {
+  color: var(--c-fg);
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  line-height: 1;
+  padding-left: 0.32em;
+}
+
+.startup-splash__loader {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--c-edge);
+  border-top-color: var(--c-accent);
+  border-radius: 9999px;
+  animation: startup-loader-spin 700ms linear infinite;
+}
+
+@keyframes startup-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-splash {
+    transition: none;
+  }
+
+  .startup-splash__loader {
+    animation-duration: 1400ms;
+  }
+}
+
 /* Let the xterm viewport own its own scrolling. */
 .xterm,
 .xterm-viewport {
