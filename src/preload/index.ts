@@ -22,6 +22,7 @@ import {
   type StartAgentResult,
   type TerminalPreset,
   type ThemeMode,
+  type UiState,
   type WorkspaceLayout,
   type WorkspaceState,
   type WorktreeAddArgs,
@@ -117,6 +118,10 @@ const api = {
 
   setShortcuts(shortcuts: ShortcutMap): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_SHORTCUTS, shortcuts)
+  },
+
+  setUiState(ui: UiState): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_UI, ui)
   },
 
   listPresets(): Promise<PresetsState> {

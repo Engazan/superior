@@ -251,6 +251,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         label: preset.name,
         iconType: preset.iconType,
         icon: preset.icon,
+        color: preset.color,
         cwd: effectiveDir,
         workspaceId: activeWorkspace.id
       })
@@ -284,6 +285,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
           label: preset.name,
           iconType: preset.iconType,
           icon: preset.icon,
+          color: preset.color,
           cwd: effectiveDir,
           workspaceId: wsId
         })

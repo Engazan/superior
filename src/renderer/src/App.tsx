@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { RightPanel } from './components/RightPanel'
@@ -43,6 +43,27 @@ export default function App(): JSX.Element {
   useEffect(() => {
     ensureBus()
   }, [])
+
+  // Restore the persisted sidebar layout once on mount; only after that do we
+  // start persisting changes, so the initial defaults don't overwrite the store.
+  const uiLoaded = useRef(false)
+  useEffect(() => {
+    window.api.getSettings().then((s) => {
+      setSidebarCollapsed(s.ui.sidebarCollapsed)
+      setRightSidebarOpen(s.ui.rightSidebarOpen)
+      uiLoaded.current = true
+    })
+  }, [])
+
+  // Persist the sidebar layout whenever it changes (after the initial restore).
+  useEffect(() => {
+    if (!uiLoaded.current) return
+    window.api.setUiState({ sidebarCollapsed, rightSidebarOpen })
+  }, [sidebarCollapsed, rightSidebarOpen])
+
+  // Tint the top bar with the active session's preset color.
+  const activeSessionColor =
+    ws.sessions.find((s) => s.id === ws.activeSessionId)?.color ?? null
 
   const openPresets = useCallback(() => {
     setSettingsSection('presets')
@@ -134,6 +155,7 @@ export default function App(): JSX.Element {
           setView('settings')
         }}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
+        activeColor={activeSessionColor}
       />
 
       <div className="flex min-h-0 flex-1">

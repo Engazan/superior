@@ -5,6 +5,7 @@ export interface DaemonSessionMeta {
   label: string
   iconType?: PresetIconType
   icon?: string
+  color?: string
   command: string
   workspaceId: string
   createdAt: number

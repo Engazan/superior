@@ -56,10 +56,24 @@ function terminalPreset(): TerminalPreset {
   }
 }
 
+/** A 3- or 6-digit hex color, optionally prefixed with '#'. */
+const HEX_COLOR = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+
+/** Drop a preset's color if it isn't a valid hex string. */
+function sanitizeColor(preset: TerminalPreset): TerminalPreset {
+  if (preset.color && !HEX_COLOR.test(preset.color)) {
+    const { color: _color, ...rest } = preset
+    return rest
+  }
+  return preset
+}
+
 function read(): PresetsState {
   const parsed = readJsonFile<PresetsState | null>(storeFile(), null, (p) => {
     const obj = p as Partial<PresetsState>
-    return obj && Array.isArray(obj.presets) ? { presets: obj.presets } : null
+    return obj && Array.isArray(obj.presets)
+      ? { presets: obj.presets.map(sanitizeColor) }
+      : null
   })
   if (parsed) {
     // Backfill the Terminal preset for installs created before it existed.

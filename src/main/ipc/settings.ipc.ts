@@ -4,13 +4,15 @@ import {
   type AppSettings,
   type Language,
   type ShortcutMap,
-  type ThemeMode
+  type ThemeMode,
+  type UiState
 } from '@shared/types'
 import {
   getSettings,
   setLanguage,
   setShortcuts,
-  setTheme
+  setTheme,
+  setUi
 } from '../services/settings.service'
 
 export function registerSettingsIpc(): void {
@@ -25,4 +27,6 @@ export function registerSettingsIpc(): void {
   ipcMain.handle(IPC.SETTINGS_SET_SHORTCUTS, (_event, shortcuts: ShortcutMap): AppSettings =>
     setShortcuts(shortcuts)
   )
+
+  ipcMain.handle(IPC.SETTINGS_SET_UI, (_event, ui: UiState): AppSettings => setUi(ui))
 }

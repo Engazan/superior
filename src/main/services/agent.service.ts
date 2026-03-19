@@ -30,7 +30,15 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       cwd,
       cols,
       rows,
-      meta: { label, iconType: args.iconType, icon: args.icon, command, workspaceId, createdAt }
+      meta: {
+        label,
+        iconType: args.iconType,
+        icon: args.icon,
+        color: args.color,
+        command,
+        workspaceId,
+        createdAt
+      }
     })
 
     const session: AgentSession = {
@@ -39,6 +47,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       command,
       iconType: args.iconType,
       icon: args.icon,
+      color: args.color,
       workspaceId,
       status: 'running',
       pid,
@@ -62,6 +71,7 @@ export async function restoreSessions(): Promise<AgentSession[]> {
     command: s.meta.command,
     iconType: s.meta.iconType,
     icon: s.meta.icon,
+    color: s.meta.color,
     workspaceId: s.meta.workspaceId,
     status: s.status,
     pid: s.pid,

@@ -1,4 +1,11 @@
-import type { AppSettings, Language, ShortcutAction, ShortcutMap, ThemeMode } from '@shared/types'
+import type {
+  AppSettings,
+  Language,
+  ShortcutAction,
+  ShortcutMap,
+  ThemeMode,
+  UiState
+} from '@shared/types'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
 const DEFAULT_SHORTCUTS: ShortcutMap = {
@@ -19,10 +26,15 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'closeFocusedCell',
   'closePreview'
 ]
+const DEFAULT_UI: UiState = {
+  sidebarCollapsed: false,
+  rightSidebarOpen: false
+}
 const DEFAULTS: AppSettings = {
   theme: 'system',
   language: 'en',
-  shortcuts: { ...DEFAULT_SHORTCUTS }
+  shortcuts: { ...DEFAULT_SHORTCUTS },
+  ui: { ...DEFAULT_UI }
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
@@ -39,6 +51,17 @@ function normalizeShortcuts(raw: unknown): ShortcutMap {
   return next
 }
 
+/** Coerce stored UI layout flags to booleans, falling back to defaults. */
+function normalizeUi(raw: unknown): UiState {
+  const next: UiState = { ...DEFAULT_UI }
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>
+    if (typeof obj.sidebarCollapsed === 'boolean') next.sidebarCollapsed = obj.sidebarCollapsed
+    if (typeof obj.rightSidebarOpen === 'boolean') next.rightSidebarOpen = obj.rightSidebarOpen
+  }
+  return next
+}
+
 function storeFile(): string {
   return userDataFile('settings.json')
 }
@@ -51,7 +74,8 @@ export function getSettings(): AppSettings {
     language: LANGUAGES.includes(parsed.language as Language)
       ? (parsed.language as Language)
       : DEFAULTS.language,
-    shortcuts: normalizeShortcuts(parsed.shortcuts)
+    shortcuts: normalizeShortcuts(parsed.shortcuts),
+    ui: normalizeUi(parsed.ui)
   }
 }
 
@@ -84,6 +108,16 @@ export function setShortcuts(shortcuts: ShortcutMap): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     shortcuts: normalizeShortcuts(shortcuts)
+  }
+  save(next)
+  return next
+}
+
+/** Persist the sidebar layout state and return the updated settings. */
+export function setUi(ui: UiState): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    ui: normalizeUi(ui)
   }
   save(next)
   return next

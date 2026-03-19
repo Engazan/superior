@@ -19,10 +19,17 @@ export type ShortcutAction =
  */
 export type ShortcutMap = Record<ShortcutAction, string>
 
+/** Persisted layout state for the left/right sidebars, restored on launch. */
+export interface UiState {
+  sidebarCollapsed: boolean
+  rightSidebarOpen: boolean
+}
+
 export interface AppSettings {
   theme: ThemeMode
   language: Language
   shortcuts: ShortcutMap
+  ui: UiState
 }
 
 export type PresetIconType = 'emoji' | 'image'
@@ -36,6 +43,8 @@ export interface TerminalPreset {
   iconType: PresetIconType
   /** emoji character, or an image data URL when iconType === 'image' */
   icon: string
+  /** optional hex tint (e.g. '#D97757') used for the top bar while this session is active */
+  color?: string
   /** active presets are shown as launch buttons in place of the defaults */
   active: boolean
   /** Stable link to a managed custom-memory preset, e.g. "claude:work". */
@@ -142,6 +151,8 @@ export interface AgentSession {
   command: string
   iconType?: PresetIconType
   icon?: string
+  /** optional hex tint inherited from the launching preset, used for the top bar */
+  color?: string
   /** the workspace this session belongs to */
   workspaceId: string
   status: AgentStatus
@@ -178,6 +189,7 @@ export interface StartAgentArgs {
   label: string
   iconType?: PresetIconType
   icon?: string
+  color?: string
   /** working directory (the workspace's folder path) */
   cwd: string
   /** the workspace this session belongs to */
@@ -328,6 +340,7 @@ export const IPC = {
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',
   SETTINGS_SET_SHORTCUTS: 'settings:set-shortcuts',
+  SETTINGS_SET_UI: 'settings:set-ui',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',

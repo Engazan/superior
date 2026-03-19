@@ -15,6 +15,9 @@ interface Props {
 const inputCls =
   'w-full rounded-md border border-edge bg-bar px-3 py-1.5 text-sm text-fg outline-none focus:border-sky-500'
 
+/** Quick-pick tints for the top bar; users can also choose any custom color. */
+const COLOR_SWATCHES = ['#D97757', '#10A37F', '#3B82F6', '#A855F7', '#EAB308', '#EF4444']
+
 export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState(preset?.name ?? '')
@@ -22,6 +25,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
   const [command, setCommand] = useState(preset?.command ?? '')
   const [iconType, setIconType] = useState<PresetIconType>(preset?.iconType ?? 'image')
   const [icon, setIcon] = useState(preset?.icon ?? BUILTIN_ICONS[0].dataUrl)
+  const [color, setColor] = useState<string | null>(preset?.color ?? null)
 
   // Command may be left empty: an empty command launches a plain interactive shell.
   const canSave = name.trim().length > 0
@@ -43,6 +47,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
       command: command.trim(),
       iconType,
       icon,
+      color: color ?? undefined,
       active: preset?.active ?? false
     })
   }
@@ -140,6 +145,53 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
               onChange={(e) => setCommand(e.target.value)}
               placeholder="claude"
             />
+          </div>
+
+          {/* Color — tints the top bar while a session from this preset is active. */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-fgdim">{t('form.color')}</label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setColor(null)}
+                className={`rounded-md border px-2 py-1 text-xs ${
+                  color === null
+                    ? 'border-sky-500 bg-bar text-fg'
+                    : 'border-edge text-fgdim hover:bg-hover'
+                }`}
+              >
+                {t('form.colorNone')}
+              </button>
+              {COLOR_SWATCHES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  title={c}
+                  className={`h-7 w-7 rounded-md border ${
+                    color?.toLowerCase() === c.toLowerCase()
+                      ? 'border-sky-500 ring-1 ring-sky-500'
+                      : 'border-edge'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+              <label
+                title={t('form.colorCustom')}
+                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-edge"
+                style={{ backgroundColor: color ?? 'transparent' }}
+              >
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-fgdim">
+                  +
+                </span>
+                <input
+                  type="color"
+                  value={color ?? '#888888'}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+              </label>
+            </div>
           </div>
         </div>
 
