@@ -23,7 +23,8 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
   const [iconType, setIconType] = useState<PresetIconType>(preset?.iconType ?? 'image')
   const [icon, setIcon] = useState(preset?.icon ?? BUILTIN_ICONS[0].dataUrl)
 
-  const canSave = name.trim().length > 0 && command.trim().length > 0
+  // Command may be left empty: an empty command launches a plain interactive shell.
+  const canSave = name.trim().length > 0
 
   const chooseImage = async (): Promise<void> => {
     const res = await onPickImage()

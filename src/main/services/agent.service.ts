@@ -16,9 +16,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
   if (!isValidWorkspaceDir(cwd)) {
     return { error: 'Workspace folder is invalid or no longer exists.' }
   }
-  if (!command.trim()) {
-    return { error: 'This preset has no command to run.' }
-  }
+  // An empty command is allowed: the daemon launches a plain interactive shell.
 
   const id = randomUUID()
   const createdAt = Date.now()
@@ -50,7 +48,8 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
     }
     return { session }
   } catch (err) {
-    return { error: `Failed to start ${command.trim().split(/\s+/)[0]}: ${(err as Error).message}` }
+    const what = command.trim().split(/\s+/)[0] || label || 'terminal'
+    return { error: `Failed to start ${what}: ${(err as Error).message}` }
   }
 }
 

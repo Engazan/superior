@@ -23,7 +23,8 @@ const SPECS: Spec[] = [
   { id: 'pi', label: 'Pi', glyph: 'π', color: '#EC4899' },
   { id: 'copilot', label: 'Copilot', glyph: 'Cp', color: '#24292F' },
   { id: 'cursor', label: 'Cursor Agent', glyph: 'Cu', color: '#0F172A' },
-  { id: 'droid', label: 'Droid', glyph: 'D', color: '#3DDC84' }
+  { id: 'droid', label: 'Droid', glyph: 'D', color: '#3DDC84' },
+  { id: 'terminal', label: 'Terminal', glyph: '>_', color: '#1E293B' }
 ]
 
 function toDataUrl(glyph: string, color: string): string {

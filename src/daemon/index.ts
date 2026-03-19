@@ -96,7 +96,10 @@ function spawnSession(
 ): void {
   if (sessions.has(id)) return
   const shell = process.env.SHELL || '/bin/zsh'
-  const proc = pty.spawn(shell, ['-l', '-c', command], {
+  // No command → a plain interactive login shell (a "normal terminal");
+  // otherwise run the command in a login shell.
+  const shellArgs = command.trim() ? ['-l', '-c', command] : ['-l', '-i']
+  const proc = pty.spawn(shell, shellArgs, {
     name: 'xterm-256color',
     cols: cols || 80,
     rows: rows || 24,

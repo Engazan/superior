@@ -30,7 +30,8 @@ function defaultPresets(): TerminalPreset[] {
       iconType: 'image',
       icon: builtinIcon('codex')!.dataUrl,
       active: true
-    }
+    },
+    terminalPreset()
   ]
 }
 
@@ -38,12 +39,42 @@ function save(state: PresetsState): void {
   writeJsonFile(storeFile(), state, 'presets')
 }
 
+/** Stable id for the built-in Terminal preset so we can backfill it exactly once. */
+const TERMINAL_PRESET_ID = 'builtin-terminal'
+
+/** The built-in plain-shell preset, appended to existing installs that predate it. */
+function terminalPreset(): TerminalPreset {
+  return {
+    id: TERMINAL_PRESET_ID,
+    name: 'Terminal',
+    description: 'Plain interactive shell',
+    // Empty command → the daemon launches a plain interactive login shell.
+    command: '',
+    iconType: 'image',
+    icon: builtinIcon('terminal')!.dataUrl,
+    active: true
+  }
+}
+
 function read(): PresetsState {
   const parsed = readJsonFile<PresetsState | null>(storeFile(), null, (p) => {
     const obj = p as Partial<PresetsState>
     return obj && Array.isArray(obj.presets) ? { presets: obj.presets } : null
   })
-  if (parsed) return parsed
+  if (parsed) {
+    // Backfill the Terminal preset for installs created before it existed.
+    const legacy = parsed.presets.find((p) => p.command.trim() === 'exec $SHELL -il')
+    if (legacy) {
+      // Normalize an earlier Terminal preset to the stable id + empty command.
+      legacy.id = TERMINAL_PRESET_ID
+      legacy.command = ''
+      save(parsed)
+    } else if (!parsed.presets.some((p) => p.id === TERMINAL_PRESET_ID)) {
+      parsed.presets.push(terminalPreset())
+      save(parsed)
+    }
+    return parsed
+  }
   const seeded: PresetsState = { presets: defaultPresets() }
   save(seeded)
   return seeded
