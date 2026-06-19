@@ -1,11 +1,18 @@
+<div align="center">
+
 # Superior
 
-A minimal desktop core. Open a local project folder and run agent CLIs
-(`claude`, `codex`) inside it, with live output in an embedded, tabbed terminal.
+A minimal desktop core. Open a local project folder and run agent CLIs (`claude`, `codex`) inside it, with live output in an embedded, tabbed terminal.
 
-## Preview
+[![Download](https://img.shields.io/github/v/release/Engazan/superior?label=Download&style=for-the-badge&logo=github)](https://github.com/Engazan/superior/releases)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#license)
+![Platforms](https://img.shields.io/badge/Platforms-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey?style=for-the-badge)
+
+### ⬇️ [**Download the latest release**](https://github.com/Engazan/superior/releases)
 
 ![Superior application preview](docs/app-preview.png)
+
+</div>
 
 ## Stack
 
@@ -52,3 +59,7 @@ src/main/                    # Electron main: services + IPC
 src/preload/index.ts         # contextBridge -> window.api
 src/renderer/src/            # React UI (TopBar, WorkspaceSelector, AgentButtons, TerminalPanel/View)
 ```
+
+## License
+
+MIT
