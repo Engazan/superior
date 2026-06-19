@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "description": "Minimal desktop core: open a folder and run agent CLIs in an embedded terminal.",
   "main": "out/main/index.js",
-  "author": "",
+  "author": {
+    "name": "Patrik Horváth",
+    "email": "Engazan.eu@icloud.com"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -16,14 +19,13 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:linux": "npm run build && electron-builder --linux",
-    "start": "electron-vite preview",
-    "rebuild": "electron-rebuild -f -w node-pty",
-    "postinstall": "electron-rebuild -f -w node-pty"
+    "start": "electron-vite preview"
   },
   "build": {
     "appId": "com.superior.app",
     "productName": "Superior",
     "asar": true,
+    "npmRebuild": false,
     "files": [
       "out/**",
       "node_modules/node-pty/**"
@@ -84,7 +86,6 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.7.1",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

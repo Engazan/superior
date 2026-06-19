@@ -27,18 +27,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      # node-pty is a native module: Linux needs the build toolchain to compile
-      # it (and electron-rebuild) when no prebuilt binary matches.
+      # node-pty ships Windows/macOS prebuilds, but Linux is compiled during
+      # npm ci and therefore needs a native build toolchain.
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential python3
 
-      # `npm ci` runs the postinstall electron-rebuild for node-pty.
       - name: Install dependencies
         run: npm ci
 
@@ -47,15 +46,33 @@ jobs:
 
       - name: Build and package
         run: npm run ${{ matrix.script }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Each OS job appends its installers to the same tag's release; the first
-      # job to run creates it. Drafted so you can review before publishing.
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: superior-${{ matrix.os }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: ignore
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          draft: false
           files: |
             dist/*.dmg
             dist/*.zip

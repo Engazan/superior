@@ -25,18 +25,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      # node-pty is a native module: Linux needs the build toolchain to compile
-      # it (and electron-rebuild) when no prebuilt binary matches.
+      # node-pty ships Windows/macOS prebuilds, but Linux is compiled during
+      # npm ci and therefore needs a native build toolchain.
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential python3
 
-      # `npm ci` runs the postinstall electron-rebuild for node-pty.
       - name: Install dependencies
         run: npm ci
 
@@ -45,8 +44,6 @@ jobs:
 
       - name: Build and package
         run: npm run ${{ matrix.script }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
