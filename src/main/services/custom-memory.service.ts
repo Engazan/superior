@@ -46,6 +46,8 @@ const PROVIDERS: Record<CustomMemoryProvider, ProviderSpec> = {
 
 const SUPPORTED_CONFIGS = ['.zshrc', '.zprofile', '.bashrc', '.bash_profile', '.profile']
 
+const isWindows = process.platform === 'win32'
+
 function homeDir(): string {
   return app.isReady() ? app.getPath('home') : os.homedir()
 }
@@ -88,14 +90,64 @@ function aliasName(spec: ProviderSpec, name: string): string {
 }
 
 function aliasCommand(spec: ProviderSpec, name: string): string {
+  // The alias goes into the user's own interactive shell config. POSIX shells
+  // run a login shell (bash/zsh); on Windows the daemon's interactive terminal
+  // is PowerShell, so emit a PowerShell function instead of a bash alias.
+  if (isWindows) {
+    return `function ${aliasName(spec, name)} { $env:${spec.envVar}="$HOME\\${spec.prefix}${name}"; ${spec.executable} @args }`
+  }
   return `alias ${aliasName(spec, name)}='${spec.envVar}=$HOME/${spec.prefix}${name} ${spec.executable}'`
 }
 
 function terminalCommand(spec: ProviderSpec, name: string): string {
+  // This command is executed by the daemon: POSIX via a login shell, Windows via
+  // cmd.exe (`/c`), which needs `set "VAR=..." && cmd` rather than inline env.
+  if (isWindows) {
+    return `set "${spec.envVar}=%USERPROFILE%\\${spec.prefix}${name}" && ${spec.executable} ${spec.terminalArgs}`
+  }
   return `${spec.envVar}="$HOME/${spec.prefix}${name}" ${spec.executable} ${spec.terminalArgs}`
 }
 
+/**
+ * The "Documents" base where PowerShell keeps its profiles. OneDrive's Known
+ * Folder Move silently redirects Documents, so PowerShell loads its profile from
+ * `%OneDrive%\Documents` rather than `%USERPROFILE%\Documents` — honour that when
+ * the OneDrive folder actually exists, else fall back to the home Documents.
+ */
+function documentsBase(): string {
+  const oneDrive = process.env.OneDrive || process.env.OneDriveConsumer
+  if (oneDrive) {
+    const redirected = path.join(oneDrive, 'Documents')
+    if (fs.existsSync(redirected)) return redirected
+  }
+  return path.join(homeDir(), 'Documents')
+}
+
+/**
+ * Profile files for both PowerShell editions that may be installed:
+ * Windows PowerShell 5.1 (`WindowsPowerShell\`) and PowerShell 7+ (`PowerShell\`).
+ * Writing the alias to both makes it available regardless of which one the user
+ * opens, since neither edition reads the other's profile.
+ */
+function powershellProfilePaths(): string[] {
+  const base = documentsBase()
+  const file = 'Microsoft.PowerShell_profile.ps1'
+  return [
+    path.join(base, 'WindowsPowerShell', file), // Windows PowerShell 5.1
+    path.join(base, 'PowerShell', file) // PowerShell 7+
+  ]
+}
+
 function shellConfigPaths(): string[] {
+  // On Windows the interactive shell is PowerShell. Prefer any profiles that
+  // already exist; if none do, seed both editions' profiles so the alias works
+  // whichever one the user launches.
+  if (isWindows) {
+    const profiles = powershellProfilePaths()
+    const existing = profiles.filter((file) => fs.existsSync(file))
+    return existing.length > 0 ? existing : profiles
+  }
+
   const home = homeDir()
   const existing = SUPPORTED_CONFIGS.map((file) => path.join(home, file)).filter((file) =>
     fs.existsSync(file)
@@ -104,6 +156,17 @@ function shellConfigPaths(): string[] {
   const preferred =
     currentShell.includes('bash') ? path.join(home, '.bashrc') : path.join(home, '.zshrc')
   return existing.length > 0 ? existing : [preferred]
+}
+
+/**
+ * Short label for a shell-config file shown in the UI. POSIX rc files are
+ * distinct by name (.bashrc, .zshrc); the two PowerShell profiles share a
+ * filename, so disambiguate them by their edition folder (WindowsPowerShell vs
+ * PowerShell).
+ */
+function configLabel(file: string): string {
+  if (isWindows) return path.join(path.basename(path.dirname(file)), path.basename(file))
+  return path.basename(file)
 }
 
 function fileContainsLine(file: string, line: string): boolean {
@@ -143,7 +206,7 @@ function discoverOne(
   const expectedAlias = aliasCommand(spec, name)
   const aliasFiles = shellConfigPaths()
     .filter((file) => fileContainsLine(file, expectedAlias))
-    .map((file) => path.basename(file))
+    .map(configLabel)
 
   return {
     id: memoryId(spec, name),

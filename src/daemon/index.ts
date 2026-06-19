@@ -86,6 +86,29 @@ function ptyEnv(): Record<string, string> {
   return env
 }
 
+/**
+ * Pick the shell + args to run `command` (or, when empty, a plain interactive
+ * shell) on the host platform.
+ *  - POSIX: a login shell so the user's real PATH (nvm, ~/.local/bin, …) is
+ *    available even when the app is launched from a GUI; `-l -c` for a command,
+ *    `-l -i` for an interactive terminal. Falls back to bash/sh (never zsh,
+ *    which many Linux installs lack) when $SHELL is unset.
+ *  - Windows: COMSPEC (cmd.exe) with `/c` for a command, or PowerShell for a
+ *    plain interactive terminal. The `-l` family of flags is POSIX-only.
+ */
+function resolveShell(command: string): { shell: string; shellArgs: string[] } {
+  const hasCommand = command.trim().length > 0
+  if (process.platform === 'win32') {
+    if (hasCommand) {
+      const shell = process.env.COMSPEC || 'cmd.exe'
+      return { shell, shellArgs: ['/d', '/s', '/c', command] }
+    }
+    return { shell: 'powershell.exe', shellArgs: ['-NoLogo'] }
+  }
+  const shell = process.env.SHELL || '/bin/bash'
+  return { shell, shellArgs: hasCommand ? ['-l', '-c', command] : ['-l', '-i'] }
+}
+
 function spawnSession(
   id: string,
   command: string,
@@ -95,10 +118,7 @@ function spawnSession(
   meta: DaemonSessionMeta
 ): void {
   if (sessions.has(id)) return
-  const shell = process.env.SHELL || '/bin/zsh'
-  // No command → a plain interactive login shell (a "normal terminal");
-  // otherwise run the command in a login shell.
-  const shellArgs = command.trim() ? ['-l', '-c', command] : ['-l', '-i']
+  const { shell, shellArgs } = resolveShell(command)
   const proc = pty.spawn(shell, shellArgs, {
     name: 'xterm-256color',
     cols: cols || 80,

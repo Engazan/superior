@@ -1,5 +1,5 @@
 import { open, readdir, stat } from 'fs/promises'
-import { join } from 'path'
+import { join, sep } from 'path'
 import type { FileReadOptions, FileReadResult, FsEntry, FsListResult } from '@shared/types'
 import { isWithinWorkspaceFolder } from './workspace.service'
 
@@ -86,7 +86,7 @@ export async function searchFiles(rootPath: string, query: string): Promise<FsLi
 
     // Shallower paths first, then alphabetical by name.
     results.sort((a, b) => {
-      const depth = a.path.split('/').length - b.path.split('/').length
+      const depth = a.path.split(sep).length - b.path.split(sep).length
       return depth !== 0 ? depth : a.name.localeCompare(b.name)
     })
     return { entries: results, truncated }

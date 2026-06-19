@@ -15,21 +15,31 @@ for true-TTY process execution and `@xterm/xterm` for terminal rendering.
 ## Scripts
 
 ```bash
-npm install     # installs deps and rebuilds node-pty against Electron (postinstall)
-npm run dev     # launch the app in development (HMR)
-npm run build   # type-check + build main/preload/renderer into out/
-npm start       # preview the production build
-npm run rebuild # manually rebuild node-pty if Electron is upgraded
+npm install      # installs deps and rebuilds node-pty against Electron (postinstall)
+npm run dev      # launch the app in development (HMR)
+npm run build    # type-check + build main/preload/renderer into out/
+npm start        # preview the production build
+npm run rebuild  # manually rebuild node-pty if Electron is upgraded
+
+npm run dist:mac    # package a macOS dmg/zip
+npm run dist:win    # package a Windows nsis installer/zip
+npm run dist:linux  # package a Linux AppImage/deb
 ```
+
+Builds run per-platform on their native OS (CI uses a macOS/Windows/Linux matrix —
+see `.github/workflows/build.yml`). `node-pty` is a native module, so packaging on
+Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `python3`.
 
 ## How it works
 
 - **Open from folder** → native directory picker (main process). The chosen path is
   validated and persisted to `workspace.json` under the app's `userData` dir, then
   restored on next launch.
-- **Open Claude / Open Codex** → spawns the CLI via a *login shell*
-  (`$SHELL -l -c <cmd>`) with `cwd` set to the workspace, so your real `PATH`
-  (e.g. `~/.local/bin`, nvm) is available even when launched from Finder.
+- **Open Claude / Open Codex** → spawns the CLI through the host shell with `cwd`
+  set to the workspace. On macOS/Linux that's a *login shell* (`$SHELL -l -c <cmd>`,
+  falling back to `/bin/bash`) so your real `PATH` (e.g. `~/.local/bin`, nvm) is
+  available even when launched from Finder; on Windows it's `cmd.exe /c <cmd>`
+  (and a plain terminal opens PowerShell).
 - Each launched agent gets its own terminal tab; Claude and Codex can run concurrently.
 
 ## Layout
