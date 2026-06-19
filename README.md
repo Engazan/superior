@@ -3,6 +3,10 @@
 A minimal desktop core. Open a local project folder and run agent CLIs
 (`claude`, `codex`) inside it, with live output in an embedded, tabbed terminal.
 
+## Preview
+
+![Superior application preview](docs/app-preview.png)
+
 ## Stack
 
 Electron + React + TypeScript + Vite (`electron-vite`) + Tailwind CSS, with `node-pty`
