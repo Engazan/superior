@@ -60,6 +60,8 @@ export const pl: Record<MessageKey, string> = {
   'keyboard.toggleRightPanel': 'Przełącz panel Pliki / Zmiany',
   'keyboard.closeFocusedCell': 'Zamknij aktywny terminal',
   'keyboard.closePreview': 'Zamknij podgląd pliku',
+  'keyboard.prevTerminal': 'Poprzedni terminal',
+  'keyboard.nextTerminal': 'Następny terminal',
   'keyboard.recording': 'Naciśnij klawisze…',
   'keyboard.reset': 'Przywróć domyślne',
   'settings.appearance': 'Wygląd',

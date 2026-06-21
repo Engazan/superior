@@ -125,6 +125,14 @@ export default function App(): JSX.Element {
         e.preventDefault()
         e.stopPropagation()
         preview.setPreviewFile(null)
+      } else if (chord === shortcuts.prevTerminal) {
+        if (view !== 'main' || launcherOpen || !ws.cycleSession(-1)) return
+        e.preventDefault()
+        e.stopPropagation()
+      } else if (chord === shortcuts.nextTerminal) {
+        if (view !== 'main' || launcherOpen || !ws.cycleSession(1)) return
+        e.preventDefault()
+        e.stopPropagation()
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
@@ -138,6 +146,7 @@ export default function App(): JSX.Element {
     ws.focusGridCell,
     ws.toggleMaximizeFocused,
     ws.closeSession,
+    ws.cycleSession,
     preview.previewFile,
     preview.setPreviewFile
   ])

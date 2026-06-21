@@ -60,6 +60,8 @@ export const hu: Record<MessageKey, string> = {
   'keyboard.toggleRightPanel': 'Fájlok / Változások panel ki-be',
   'keyboard.closeFocusedCell': 'Aktív terminál bezárása',
   'keyboard.closePreview': 'Fájl előnézet bezárása',
+  'keyboard.prevTerminal': 'Előző terminál',
+  'keyboard.nextTerminal': 'Következő terminál',
   'keyboard.recording': 'Nyomjon billentyűket…',
   'keyboard.reset': 'Alapértelmezett visszaállítása',
   'settings.appearance': 'Megjelenés',

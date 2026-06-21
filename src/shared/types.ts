@@ -11,6 +11,8 @@ export type ShortcutAction =
   | 'toggleRightPanel'
   | 'closeFocusedCell'
   | 'closePreview'
+  | 'prevTerminal'
+  | 'nextTerminal'
 
 /**
  * A chord stored in a platform-neutral, normalized form: lowercase tokens

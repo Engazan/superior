@@ -9,7 +9,9 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   openLauncher: 'ctrl+§',
   toggleRightPanel: 'mod+j',
   closeFocusedCell: 'mod+w',
-  closePreview: 'mod+shift+w'
+  closePreview: 'mod+shift+w',
+  prevTerminal: 'ctrl+arrowleft',
+  nextTerminal: 'ctrl+arrowright'
 }
 
 const isMac = window.api.platform === 'darwin'

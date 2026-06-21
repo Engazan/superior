@@ -57,6 +57,8 @@ export const en = {
   'keyboard.toggleRightPanel': 'Toggle Files / Changes panel',
   'keyboard.closeFocusedCell': 'Close focused terminal',
   'keyboard.closePreview': 'Close file preview',
+  'keyboard.prevTerminal': 'Previous terminal',
+  'keyboard.nextTerminal': 'Next terminal',
   'keyboard.recording': 'Press keys…',
   'keyboard.reset': 'Reset to default',
   'settings.appearance': 'Appearance',

@@ -349,6 +349,24 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     setActiveSessionId(id)
   }, [activeWorkspaceId, layouts, activeSessionId, sessions])
 
+  // Step the active session to the previous (-1) or next (+1) terminal of the
+  // active workspace, wrapping around the ends. Works in both tabs and grid
+  // mode. Returns false when there's nothing to cycle (fewer than two sessions).
+  const cycleSession = useCallback(
+    (direction: 1 | -1): boolean => {
+      if (!activeWorkspaceId) return false
+      const list = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
+      if (list.length < 2) return false
+      const current = list.findIndex((s) => s.id === activeSessionId)
+      const base = current === -1 ? 0 : current
+      const next = (base + direction + list.length) % list.length
+      setMaximizedId(null)
+      setActiveSessionId(list[next].id)
+      return true
+    },
+    [activeWorkspaceId, sessions, activeSessionId]
+  )
+
   // Focus the Nth grid cell of the active workspace. UI-mode guards live in the
   // caller. Returns false when there's no such cell (grid mode required).
   const focusGridCell = useCallback(
@@ -391,6 +409,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     closeSession,
     toggleMaximize,
     toggleMaximizeFocused,
-    focusGridCell
+    focusGridCell,
+    cycleSession
   }
 }

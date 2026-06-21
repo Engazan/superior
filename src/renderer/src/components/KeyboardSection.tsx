@@ -10,7 +10,9 @@ const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
   { id: 'openLauncher', labelKey: 'keyboard.openLauncher' },
   { id: 'toggleRightPanel', labelKey: 'keyboard.toggleRightPanel' },
   { id: 'closeFocusedCell', labelKey: 'keyboard.closeFocusedCell' },
-  { id: 'closePreview', labelKey: 'keyboard.closePreview' }
+  { id: 'closePreview', labelKey: 'keyboard.closePreview' },
+  { id: 'prevTerminal', labelKey: 'keyboard.prevTerminal' },
+  { id: 'nextTerminal', labelKey: 'keyboard.nextTerminal' }
 ]
 
 /** Rebindable keyboard shortcuts. Click a chord to record a new key combination. */

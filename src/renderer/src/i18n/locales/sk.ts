@@ -60,6 +60,8 @@ export const sk: Record<MessageKey, string> = {
   'keyboard.toggleRightPanel': 'Prepnúť panel Súbory / Zmeny',
   'keyboard.closeFocusedCell': 'Zavrieť aktívny terminál',
   'keyboard.closePreview': 'Zavrieť náhľad súboru',
+  'keyboard.prevTerminal': 'Predchádzajúci terminál',
+  'keyboard.nextTerminal': 'Nasledujúci terminál',
   'keyboard.recording': 'Stlačte klávesy…',
   'keyboard.reset': 'Obnoviť predvolené',
   'settings.appearance': 'Vzhľad',
