@@ -14,6 +14,7 @@ import { usePresets } from './hooks/usePresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 import { useTerminalActivity } from './hooks/useTerminalActivity'
+import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useAttentionColor } from './attentionColor'
 
 type View = 'main' | 'settings'
@@ -74,6 +75,7 @@ export default function App(): JSX.Element {
     ws.activeWorkspaceId
   )
   const { attentionColor } = useAttentionColor()
+  const update = useUpdateCheck()
   const busyWorkspaceIds = useMemo(() => {
     const set = new Set<string>()
     for (const s of ws.sessions) {
@@ -210,6 +212,7 @@ export default function App(): JSX.Element {
               busyWorkspaceIds={busyWorkspaceIds}
               attentionWorkspaceIds={attentionWorkspaceIds}
               attentionColor={attentionColor}
+              update={update}
               collapsed={sidebarCollapsed}
               onAddFolder={ws.addFolder}
               onRemoveFolder={ws.removeFolder}

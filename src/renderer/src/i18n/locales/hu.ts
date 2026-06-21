@@ -11,6 +11,8 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Mappa eltávolítása',
   'sidebar.runningTerminals': 'Futó terminálok',
   'sidebar.workingTerminals': 'Dolgozik…',
+  'update.available': 'Elérhető a(z) {version} verzió',
+  'update.action': 'Frissítés',
   'sidebar.settings': 'Beállítások',
   'common.toggleSidebar': 'Oldalsáv be/ki',
   'common.toggleRightSidebar': 'Jobb oldalsáv be/ki',

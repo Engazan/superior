@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-21
+
+### Added
+
+- **Update notifications.** The app checks the project's GitHub releases on
+  launch (and every few hours) and, when a newer version is published, shows a
+  banner with an **Update** button at the bottom of the sidebar. The button
+  opens the release page to download the new build; the collapsed sidebar shows
+  a compact update badge instead. Localized in all five languages.
+
 ## [0.2.0] - 2026-06-21
 
 ### Added

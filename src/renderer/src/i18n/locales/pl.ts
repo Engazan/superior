@@ -11,6 +11,8 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Usuń folder',
   'sidebar.runningTerminals': 'Działające terminale',
   'sidebar.workingTerminals': 'Pracuje…',
+  'update.available': 'Dostępna wersja {version}',
+  'update.action': 'Aktualizuj',
   'sidebar.settings': 'Ustawienia',
   'common.toggleSidebar': 'Przełącz pasek boczny',
   'common.toggleRightSidebar': 'Przełącz prawy panel',

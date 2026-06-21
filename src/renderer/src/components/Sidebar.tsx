@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 import { useI18n } from '../i18n'
-import type { BranchInfo, Folder, Workspace, WorktreeAddArgs } from '../types'
+import type { BranchInfo, Folder, UpdateInfo, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
   folders: Folder[]
@@ -14,6 +14,8 @@ interface Props {
   attentionWorkspaceIds: Set<string>
   /** hex color used for the attention pulse */
   attentionColor: string
+  /** latest update-check result, or null until the first check resolves */
+  update: UpdateInfo | null
   collapsed: boolean
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
@@ -75,6 +77,26 @@ function RunningBadge({ count, title }: { count: number; title: string }): JSX.E
     >
       {count}
     </span>
+  )
+}
+
+/** Download-style glyph for the "update available" affordance. */
+function UpdateGlyph({ className }: { className?: string }): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`shrink-0 ${className ?? 'h-4 w-4'}`}
+      aria-hidden
+    >
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
   )
 }
 
@@ -680,6 +702,7 @@ export function Sidebar({
   busyWorkspaceIds,
   attentionWorkspaceIds,
   attentionColor,
+  update,
   collapsed,
   onAddFolder,
   onRemoveFolder,
@@ -810,6 +833,19 @@ export function Sidebar({
             })}
           </div>
         </nav>
+        {update?.updateAvailable && (
+          <div className="shrink-0 border-t border-edge p-2">
+            <button
+              onClick={() => window.api.openReleasePage(update.releaseUrl)}
+              title={t('update.available', { version: update.latestVersion ?? '' })}
+              aria-label={t('update.available', { version: update.latestVersion ?? '' })}
+              className="relative mx-auto flex h-8 w-8 items-center justify-center rounded-md text-accent transition hover:bg-hover"
+            >
+              <UpdateGlyph />
+              <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full border-2 border-bar bg-accent" />
+            </button>
+          </div>
+        )}
       </aside>
     )
   }
@@ -1024,6 +1060,24 @@ export function Sidebar({
           </div>
         )}
       </nav>
+      {update?.updateAvailable && (
+        <div className="shrink-0 border-t border-edge p-2">
+          <div className="rounded-md bg-accentBg/50 px-2.5 py-2 ring-1 ring-inset ring-accentBorder">
+            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-fg">
+              <UpdateGlyph className="h-3.5 w-3.5 text-accent" />
+              <span className="truncate">
+                {t('update.available', { version: update.latestVersion ?? '' })}
+              </span>
+            </div>
+            <button
+              onClick={() => window.api.openReleasePage(update.releaseUrl)}
+              className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {t('update.action')}
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

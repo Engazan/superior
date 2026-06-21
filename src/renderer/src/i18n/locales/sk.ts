@@ -11,6 +11,8 @@ export const sk: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Odstrániť priečinok',
   'sidebar.runningTerminals': 'Bežiace terminály',
   'sidebar.workingTerminals': 'Pracuje…',
+  'update.available': 'Dostupná verzia {version}',
+  'update.action': 'Aktualizovať',
   'sidebar.settings': 'Nastavenia',
   'common.toggleSidebar': 'Prepnúť bočný panel',
   'common.toggleRightSidebar': 'Prepnúť pravý panel',

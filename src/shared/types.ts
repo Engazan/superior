@@ -21,6 +21,18 @@ export type ShortcutAction =
  */
 export type ShortcutMap = Record<ShortcutAction, string>
 
+/** Result of checking the project's GitHub releases for a newer version. */
+export interface UpdateInfo {
+  /** The running app version (from app.getVersion()). */
+  currentVersion: string
+  /** Latest published release version without a leading 'v', or null if unknown. */
+  latestVersion: string | null
+  /** True when latestVersion is strictly newer than currentVersion. */
+  updateAvailable: boolean
+  /** Web page to open to get the update (the latest release, else the list). */
+  releaseUrl: string
+}
+
 /** Persisted layout state for the left/right sidebars, restored on launch. */
 export interface UiState {
   sidebarCollapsed: boolean
@@ -371,5 +383,7 @@ export const IPC = {
   AGENT_ATTACH: 'agent:attach',
   AGENT_DETACH: 'agent:detach',
   LAYOUT_GET: 'layout:get',
-  LAYOUT_SET: 'layout:set'
+  LAYOUT_SET: 'layout:set',
+  UPDATE_CHECK: 'update:check',
+  UPDATE_OPEN: 'update:open'
 } as const

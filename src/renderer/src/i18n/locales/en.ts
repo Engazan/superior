@@ -9,6 +9,8 @@ export const en = {
   'sidebar.removeFolder': 'Remove folder',
   'sidebar.runningTerminals': 'Running terminals',
   'sidebar.workingTerminals': 'Working…',
+  'update.available': 'Version {version} available',
+  'update.action': 'Update',
   'sidebar.settings': 'Settings',
   'common.toggleSidebar': 'Toggle sidebar',
   'common.toggleRightSidebar': 'Toggle right panel',

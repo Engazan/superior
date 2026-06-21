@@ -36,6 +36,7 @@ export type {
   StartAgentResult,
   TerminalPreset,
   ThemeMode,
+  UpdateInfo,
   Workspace,
   WorkspaceState,
   WorktreeAddArgs,

@@ -11,6 +11,8 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Odebrat složku',
   'sidebar.runningTerminals': 'Běžící terminály',
   'sidebar.workingTerminals': 'Pracuje…',
+  'update.available': 'Dostupná verze {version}',
+  'update.action': 'Aktualizovat',
   'sidebar.settings': 'Nastavení',
   'common.toggleSidebar': 'Přepnout postranní panel',
   'common.toggleRightSidebar': 'Přepnout pravý panel',

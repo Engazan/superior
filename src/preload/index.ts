@@ -23,6 +23,7 @@ import {
   type TerminalPreset,
   type ThemeMode,
   type UiState,
+  type UpdateInfo,
   type WorkspaceLayout,
   type WorkspaceState,
   type WorktreeAddArgs,
@@ -126,6 +127,14 @@ const api = {
 
   setAttentionColor(color: string): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_ATTENTION_COLOR, color)
+  },
+
+  checkForUpdates(): Promise<UpdateInfo> {
+    return ipcRenderer.invoke(IPC.UPDATE_CHECK)
+  },
+
+  openReleasePage(url: string): Promise<void> {
+    return ipcRenderer.invoke(IPC.UPDATE_OPEN, url)
   },
 
   listPresets(): Promise<PresetsState> {
