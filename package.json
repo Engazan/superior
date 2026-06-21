@@ -27,6 +27,7 @@
     "productName": "Superior",
     "asar": true,
     "npmRebuild": false,
+    "afterPack": "build/after-pack.cjs",
     "files": [
       "out/**",
       "node_modules/node-pty/**"

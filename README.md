@@ -14,6 +14,30 @@ A minimal desktop core. Open a local project folder and run agent CLIs (`claude`
 
 </div>
 
+## Install
+
+### macOS
+
+The macOS build is **ad-hoc signed but not notarized**, so on first launch Gatekeeper
+blocks it as coming from an *unidentified developer*. This is expected — the app is not
+damaged. Open it once in either way and macOS remembers the choice:
+
+- **Right-click (or Control-click) Superior.app → Open**, then confirm **Open**, or
+- launch it once (it gets blocked), then go to **System Settings → Privacy & Security
+  → Open Anyway**.
+
+If macOS instead says *"Superior is damaged and can't be opened"*, the download kept its
+quarantine flag — strip it once from a terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Superior.app
+```
+
+### Windows
+
+The Windows build is unsigned, so SmartScreen may warn on first run — choose
+**More info → Run anyway**.
+
 ## Stack
 
 Electron + React + TypeScript + Vite (`electron-vite`) + Tailwind CSS, with `node-pty`
