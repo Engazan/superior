@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-06-21
+
+### Fixed
+
+- **macOS "damaged and can't be opened" error.** Release builds are now signed
+  with a Developer ID and notarized by Apple, so they open with a normal
+  double-click instead of being blocked by Gatekeeper. Unsigned builds also get
+  an ad-hoc signature as a fallback so they can be opened via right-click → Open.
+- **Terminal daemon timeout in packaged builds.** Restored the executable bit on
+  node-pty's bundled `spawn-helper`, which npm strips from the tarball; without
+  it the terminal failed with "Timed out waiting for the terminal daemon."
+
 ## [0.3.0] - 2026-06-21
 
 ### Added
