@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-06-21
+
+### Added
+
+- **In-app auto-update.** When a new version is available, the **Update** button
+  now downloads the signed build in the background — showing a progress bar — and
+  then offers **Restart & install** to apply it, instead of opening the GitHub
+  release page. If a release has no update feed (or in dev), it falls back to
+  opening the download page. Localized in all five languages.
+
+  Note: auto-update activates for users running this version or newer; updating
+  from an older build still opens the release page once.
+
 ## [0.4.0] - 2026-06-21
 
 ### Added
