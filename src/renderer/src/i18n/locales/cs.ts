@@ -9,6 +9,7 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.renameWorkspace': 'Dvojklikem přejmenujete',
   'sidebar.removeWorkspace': 'Odebrat workspace',
   'sidebar.removeFolder': 'Odebrat složku',
+  'sidebar.reorderFolder': 'Přetažením změníte pořadí',
   'sidebar.runningTerminals': 'Běžící terminály',
   'sidebar.workingTerminals': 'Pracuje…',
   'update.available': 'Dostupná verze {version}',

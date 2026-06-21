@@ -9,6 +9,7 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.renameWorkspace': 'Kliknij dwukrotnie, aby zmienić nazwę',
   'sidebar.removeWorkspace': 'Usuń workspace',
   'sidebar.removeFolder': 'Usuń folder',
+  'sidebar.reorderFolder': 'Przeciągnij, aby zmienić kolejność',
   'sidebar.runningTerminals': 'Działające terminale',
   'sidebar.workingTerminals': 'Pracuje…',
   'update.available': 'Dostępna wersja {version}',

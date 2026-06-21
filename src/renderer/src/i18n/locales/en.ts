@@ -7,6 +7,7 @@ export const en = {
   'sidebar.renameWorkspace': 'Double-click to rename',
   'sidebar.removeWorkspace': 'Remove workspace',
   'sidebar.removeFolder': 'Remove folder',
+  'sidebar.reorderFolder': 'Drag to reorder',
   'sidebar.runningTerminals': 'Running terminals',
   'sidebar.workingTerminals': 'Working…',
   'update.available': 'Version {version} available',

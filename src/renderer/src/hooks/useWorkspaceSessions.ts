@@ -138,6 +138,28 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [workspaces, sessions, applyState, setError]
   )
 
+  // Drag-to-reorder in the sidebar: apply the new order optimistically, then
+  // persist. On failure, fall back to the authoritative state from disk.
+  const reorderFolders = useCallback(
+    async (orderedPaths: string[]) => {
+      setFolders((prev) => {
+        const byPath = new Map(prev.map((f) => [f.path, f]))
+        const next = orderedPaths.map((p) => byPath.get(p)).filter((f): f is Folder => !!f)
+        for (const f of prev) if (!next.includes(f)) next.push(f)
+        return next
+      })
+      try {
+        const state = await window.api.reorderFolders(orderedPaths)
+        setFolders(state.folders)
+      } catch (error) {
+        setError((error as Error).message)
+        const state = await window.api.listWorkspaces()
+        setFolders(state.folders)
+      }
+    },
+    [setError]
+  )
+
   const addWorkspace = useCallback(
     async (folderPath: string, name: string): Promise<string | null> => {
       setError(null)
@@ -397,6 +419,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     counts,
     addFolder,
     removeFolder,
+    reorderFolders,
     addWorkspace,
     addWorktreeWorkspace,
     renameWorkspace,

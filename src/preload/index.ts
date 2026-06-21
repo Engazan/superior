@@ -46,6 +46,11 @@ const api = {
     return ipcRenderer.invoke(IPC.FOLDER_REMOVE, folderPath)
   },
 
+  /** Persist a new folder order (the sidebar's drag-to-reorder). */
+  reorderFolders(orderedPaths: string[]): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.FOLDER_REORDER, orderedPaths)
+  },
+
   addWorkspace(folderPath: string, name: string): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_ADD, { folderPath, name })
   },

@@ -19,6 +19,8 @@ interface Props {
   collapsed: boolean
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
+  /** Persist a new folder order after a drag-to-reorder in the sidebar. */
+  onReorderFolders: (orderedPaths: string[]) => void
   onAddWorkspace: (folderPath: string, name: string) => Promise<string | null>
   /** Create a worktree-backed workspace; resolves with a localized error or null. */
   onAddWorktreeWorkspace: (args: WorktreeAddArgs) => Promise<string | null>
@@ -46,6 +48,26 @@ function Chevron({ open }: { open: boolean }): JSX.Element {
       aria-hidden
     >
       <path d="M9 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+function GripIcon(): JSX.Element {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="shrink-0"
+      aria-hidden
+    >
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
     </svg>
   )
 }
@@ -706,6 +728,7 @@ export function Sidebar({
   collapsed,
   onAddFolder,
   onRemoveFolder,
+  onReorderFolders,
   onAddWorkspace,
   onAddWorktreeWorkspace,
   onRenameWorkspace,
@@ -720,6 +743,23 @@ export function Sidebar({
   const [draft, setDraft] = useState('')
   // Folders the user has collapsed (rolled up) in the sidebar.
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
+  // Drag-to-reorder: the folder being dragged and the one currently hovered.
+  const [draggingFolder, setDraggingFolder] = useState<string | null>(null)
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
+
+  // Move `dragged` to `target`'s slot and persist the resulting folder order.
+  const dropFolder = (dragged: string, target: string): void => {
+    setDragOverFolder(null)
+    setDraggingFolder(null)
+    if (dragged === target) return
+    const paths = folders.map((f) => f.path)
+    const from = paths.indexOf(dragged)
+    const to = paths.indexOf(target)
+    if (from === -1 || to === -1) return
+    paths.splice(from, 1)
+    paths.splice(to, 0, dragged)
+    onReorderFolders(paths)
+  }
 
   const toggleFolder = (path: string): void =>
     setCollapsedFolders((prev) => {
@@ -877,11 +917,41 @@ export function Sidebar({
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
               return (
                 <div key={folder.path}>
-                  {/* Folder header — click to collapse / expand */}
+                  {/* Folder header — click to collapse / expand, drag to reorder */}
                   <div
+                    draggable
                     onClick={() => toggleFolder(folder.path)}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move'
+                      e.dataTransfer.setData('text/plain', folder.path)
+                      setDraggingFolder(folder.path)
+                    }}
+                    onDragOver={(e) => {
+                      if (!draggingFolder || draggingFolder === folder.path) return
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = 'move'
+                      if (dragOverFolder !== folder.path) setDragOverFolder(folder.path)
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverFolder === folder.path) setDragOverFolder(null)
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      const dragged = e.dataTransfer.getData('text/plain') || draggingFolder
+                      if (dragged) dropFolder(dragged, folder.path)
+                    }}
+                    onDragEnd={() => {
+                      setDraggingFolder(null)
+                      setDragOverFolder(null)
+                    }}
                     title={folder.path}
-                    className="group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-fgdim transition hover:bg-hover"
+                    className={`group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-fgdim transition hover:bg-hover ${
+                      draggingFolder === folder.path ? 'opacity-40' : ''
+                    } ${
+                      dragOverFolder === folder.path && draggingFolder !== folder.path
+                        ? 'ring-1 ring-inset ring-accentBorder'
+                        : ''
+                    }`}
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <Chevron open={open} />
@@ -898,6 +968,13 @@ export function Sidebar({
                         title={t('sidebar.runningTerminals')}
                       />
                     )}
+                    <span
+                      title={t('sidebar.reorderFolder')}
+                      aria-hidden
+                      className="flex h-5 w-4 shrink-0 cursor-grab items-center justify-center text-fgmuted opacity-0 transition group-hover:opacity-100"
+                    >
+                      <GripIcon />
+                    </span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

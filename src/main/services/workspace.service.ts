@@ -209,6 +209,34 @@ export async function removeFolder(folderPath: string): Promise<WorkspaceState> 
   return next
 }
 
+/**
+ * Reorder folders to match the given list of paths. Paths are applied in the
+ * order received; any folder omitted from the list (e.g. added concurrently)
+ * keeps its relative position by being appended afterwards. Unknown paths are
+ * ignored. Workspaces and the active selection are untouched.
+ */
+export function reorderFolders(orderedPaths: string[]): WorkspaceState {
+  const state = readState()
+  const byPath = new Map(state.folders.map((f) => [f.path, f]))
+  const reordered: Folder[] = []
+  const seen = new Set<string>()
+  for (const p of orderedPaths) {
+    const folder = byPath.get(p)
+    if (folder && !seen.has(p)) {
+      reordered.push(folder)
+      seen.add(p)
+    }
+  }
+  // Preserve any folders the caller didn't mention, in their existing order.
+  for (const f of state.folders) {
+    if (!seen.has(f.path)) reordered.push(f)
+  }
+  state.folders = reordered
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
 /** Create a new workspace under a folder and make it active. */
 export function addWorkspace(folderPath: string, name: string): WorkspaceState {
   const state = readState()

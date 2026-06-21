@@ -338,6 +338,7 @@ export const IPC = {
   WORKSPACE_LIST: 'workspace:list',
   FOLDER_ADD: 'folder:add',
   FOLDER_REMOVE: 'folder:remove',
+  FOLDER_REORDER: 'folder:reorder',
   WORKSPACE_ADD: 'workspace:add',
   WORKSPACE_RENAME: 'workspace:rename',
   WORKSPACE_REMOVE: 'workspace:remove',

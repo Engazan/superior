@@ -216,6 +216,7 @@ export default function App(): JSX.Element {
               collapsed={sidebarCollapsed}
               onAddFolder={ws.addFolder}
               onRemoveFolder={ws.removeFolder}
+              onReorderFolders={ws.reorderFolders}
               onAddWorkspace={ws.addWorkspace}
               onAddWorktreeWorkspace={ws.addWorktreeWorkspace}
               onRenameWorkspace={ws.renameWorkspace}

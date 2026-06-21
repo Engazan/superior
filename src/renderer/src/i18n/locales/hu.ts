@@ -9,6 +9,7 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.renameWorkspace': 'Dupla kattintás az átnevezéshez',
   'sidebar.removeWorkspace': 'Munkaterület eltávolítása',
   'sidebar.removeFolder': 'Mappa eltávolítása',
+  'sidebar.reorderFolder': 'Húzással átrendezhető',
   'sidebar.runningTerminals': 'Futó terminálok',
   'sidebar.workingTerminals': 'Dolgozik…',
   'update.available': 'Elérhető a(z) {version} verzió',

@@ -7,6 +7,7 @@ import {
   removeFolder,
   removeWorkspace,
   renameWorkspace,
+  reorderFolders,
   setActiveWorkspace
 } from '../services/workspace.service'
 
@@ -26,6 +27,10 @@ export function registerWorkspaceIpc(): void {
 
   ipcMain.handle(IPC.FOLDER_REMOVE, (_e, folderPath: string): Promise<WorkspaceState> =>
     removeFolder(folderPath)
+  )
+
+  ipcMain.handle(IPC.FOLDER_REORDER, (_e, orderedPaths: string[]): WorkspaceState =>
+    reorderFolders(orderedPaths)
   )
 
   ipcMain.handle(
