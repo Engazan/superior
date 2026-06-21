@@ -160,7 +160,12 @@ export function TerminalView({
     const unsubscribe = subscribe(session.id, {
       onData: (data, replay) => {
         if (!replay) {
-          term.write(data)
+          // Follow the tail: pin to the bottom on new output, but only when the
+          // user hasn't scrolled up to read history. Checked per-chunk *before*
+          // the write so a burst keeps following, yet scrolling up pauses it.
+          const buf = term.buffer.active
+          const atBottom = buf.viewportY >= buf.baseY
+          term.write(data, atBottom ? () => term.scrollToBottom() : undefined)
           return
         }
         const restored = sanitizeReplay(data)
