@@ -44,7 +44,7 @@
         "zip"
       ],
       "category": "public.app-category.developer-tools",
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
       "gatekeeperAssess": false
     },
     "win": {

@@ -46,6 +46,17 @@ jobs:
 
       - name: Build and package
         run: npm run ${{ matrix.script }}
+        env:
+          # macOS Developer ID signing + notarization. CSC_* are scoped to the
+          # mac runner because electron-builder also reads CSC_LINK for Windows
+          # signing — leaking the mac cert there would break the Windows build.
+          # The APPLE_* vars are only read by the mac notarization path, so they
+          # are harmless (and empty) on the other runners.
+          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

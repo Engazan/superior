@@ -18,16 +18,12 @@ A minimal desktop core. Open a local project folder and run agent CLIs (`claude`
 
 ### macOS
 
-The macOS build is **ad-hoc signed but not notarized**, so on first launch Gatekeeper
-blocks it as coming from an *unidentified developer*. This is expected — the app is not
-damaged. Open it once in either way and macOS remembers the choice:
+Release builds are **signed with a Developer ID and notarized by Apple**, so they open
+with a normal double-click — no Gatekeeper warning.
 
-- **Right-click (or Control-click) Superior.app → Open**, then confirm **Open**, or
-- launch it once (it gets blocked), then go to **System Settings → Privacy & Security
-  → Open Anyway**.
-
-If macOS instead says *"Superior is damaged and can't be opened"*, the download kept its
-quarantine flag — strip it once from a terminal:
+If you ever hit *"Superior is damaged and can't be opened"* (only happens with an older,
+unsigned build, or a download that kept its quarantine flag), strip the flag once from a
+terminal:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Superior.app
