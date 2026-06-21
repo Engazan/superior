@@ -10,6 +10,7 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.removeWorkspace': 'Munkaterület eltávolítása',
   'sidebar.removeFolder': 'Mappa eltávolítása',
   'sidebar.runningTerminals': 'Futó terminálok',
+  'sidebar.workingTerminals': 'Dolgozik…',
   'sidebar.settings': 'Beállítások',
   'common.toggleSidebar': 'Oldalsáv be/ki',
   'common.toggleRightSidebar': 'Jobb oldalsáv be/ki',
@@ -81,6 +82,10 @@ export const hu: Record<MessageKey, string> = {
   'appearance.theme': 'Téma',
   'appearance.themeDesc':
     'Válaszd ki az alkalmazás megjelenését. A rendszer az operációs rendszer beállítását követi.',
+  'appearance.attentionColor': 'Figyelmeztető szín',
+  'appearance.attentionColorDesc':
+    'Az a szín, amellyel egy munkaterület füle villog, amikor egy terminálja befejezi a munkát, miközben máshol vagy.',
+  'appearance.resetColor': 'Visszaállítás',
   'theme.light': 'Világos',
   'theme.dark': 'Sötét',
   'theme.system': 'Rendszer',

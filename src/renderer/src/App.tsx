@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { RightPanel } from './components/RightPanel'
@@ -13,6 +13,8 @@ import { useGitStatus } from './hooks/useGitStatus'
 import { usePresets } from './hooks/usePresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
+import { useTerminalActivity } from './hooks/useTerminalActivity'
+import { useAttentionColor } from './attentionColor'
 
 type View = 'main' | 'settings'
 
@@ -64,6 +66,21 @@ export default function App(): JSX.Element {
   // Tint the top bar with the active session's preset color.
   const activeSessionColor =
     ws.sessions.find((s) => s.id === ws.activeSessionId)?.color ?? null
+
+  // Live terminal signals: `busy` drives the "working" spinner, `attention`
+  // pulses the tab of a workspace whose terminal finished while unfocused.
+  const { busy: busySessions, attention: attentionWorkspaceIds } = useTerminalActivity(
+    ws.sessions,
+    ws.activeWorkspaceId
+  )
+  const { attentionColor } = useAttentionColor()
+  const busyWorkspaceIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of ws.sessions) {
+      if (s.status === 'running' && busySessions.has(s.id)) set.add(s.workspaceId)
+    }
+    return set
+  }, [ws.sessions, busySessions])
 
   const openPresets = useCallback(() => {
     setSettingsSection('presets')
@@ -190,6 +207,9 @@ export default function App(): JSX.Element {
               workspaces={ws.workspaces}
               activeWorkspaceId={ws.activeWorkspaceId}
               counts={ws.counts}
+              busyWorkspaceIds={busyWorkspaceIds}
+              attentionWorkspaceIds={attentionWorkspaceIds}
+              attentionColor={attentionColor}
               collapsed={sidebarCollapsed}
               onAddFolder={ws.addFolder}
               onRemoveFolder={ws.removeFolder}

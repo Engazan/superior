@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type CSSProperties } from 'react'
 import { useI18n } from '../i18n'
 import type { BranchInfo, Folder, Workspace, WorktreeAddArgs } from '../types'
 
@@ -8,6 +8,12 @@ interface Props {
   activeWorkspaceId: string | null
   /** running-terminal count per workspace id */
   counts: Record<string, number>
+  /** workspace ids with a terminal actively producing output */
+  busyWorkspaceIds: Set<string>
+  /** workspace ids whose terminal finished while unfocused (tab pulses) */
+  attentionWorkspaceIds: Set<string>
+  /** hex color used for the attention pulse */
+  attentionColor: string
   collapsed: boolean
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
@@ -69,6 +75,22 @@ function RunningBadge({ count, title }: { count: number; title: string }): JSX.E
     >
       {count}
     </span>
+  )
+}
+
+/** A small spinning ring shown while a workspace's terminals are working. */
+function WorkingSpinner({ title, className }: { title?: string; className?: string }): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={`shrink-0 animate-spin text-status ${className ?? 'h-3.5 w-3.5'}`}
+      aria-hidden
+    >
+      {title && <title>{title}</title>}
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -655,6 +677,9 @@ export function Sidebar({
   workspaces,
   activeWorkspaceId,
   counts,
+  busyWorkspaceIds,
+  attentionWorkspaceIds,
+  attentionColor,
   collapsed,
   onAddFolder,
   onRemoveFolder,
@@ -716,6 +741,8 @@ export function Sidebar({
             {folders.map((folder, i) => {
               const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
+              const folderBusy = folderWorkspaces.some((w) => busyWorkspaceIds.has(w.id))
+              const folderAttn = folderWorkspaces.some((w) => attentionWorkspaceIds.has(w.id))
               return (
                 <div key={folder.path} className="flex w-full flex-col items-center gap-1.5">
                   {i > 0 && <div className="my-1 h-px w-6 bg-edge" />}
@@ -728,8 +755,17 @@ export function Sidebar({
                     className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <FolderIcon />
-                    {folderRunning > 0 && (
-                      <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar bg-status" />
+                    {folderBusy ? (
+                      <WorkingSpinner className="absolute -right-0.5 -top-0.5 h-3 w-3" />
+                    ) : folderAttn ? (
+                      <span
+                        style={{ '--attn': attentionColor } as CSSProperties}
+                        className="attention-pulse-dot absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar"
+                      />
+                    ) : (
+                      folderRunning > 0 && (
+                        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar bg-status" />
+                      )
                     )}
                   </button>
 
@@ -737,20 +773,34 @@ export function Sidebar({
                   {folderWorkspaces.map((ws) => {
                     const active = ws.id === activeWorkspaceId
                     const n = counts[ws.id] ?? 0
+                    const busy = busyWorkspaceIds.has(ws.id)
+                    const attn = attentionWorkspaceIds.has(ws.id)
                     return (
                       <button
                         key={ws.id}
                         onClick={() => onSelectWorkspace(ws.id)}
                         title={`${folder.name} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
+                        style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
                         className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           active
                             ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder'
-                            : 'text-fgdim hover:bg-hover hover:text-fg'
+                            : attn
+                              ? 'attention-pulse text-fg'
+                              : 'text-fgdim hover:bg-hover hover:text-fg'
                         }`}
                       >
                         {initial(ws.name)}
-                        {n > 0 && (
-                          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar bg-status" />
+                        {busy ? (
+                          <WorkingSpinner className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5" />
+                        ) : attn ? (
+                          <span
+                            style={{ '--attn': attentionColor } as CSSProperties}
+                            className="attention-pulse-dot absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar"
+                          />
+                        ) : (
+                          n > 0 && (
+                            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar bg-status" />
+                          )
                         )}
                       </button>
                     )
@@ -831,19 +881,24 @@ export function Sidebar({
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
                         const n = counts[ws.id] ?? 0
+                        const attn = attentionWorkspaceIds.has(ws.id)
                         return (
                           <li key={ws.id}>
                             <div
                               onClick={() => onSelectWorkspace(ws.id)}
+                              style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
                               className={`group relative flex min-h-8 cursor-pointer items-center gap-2 rounded-md px-2 py-1 transition ${
                                 active
                                   ? 'bg-accentBg text-fg'
-                                  : 'text-fg2 hover:bg-hover'
+                                  : attn
+                                    ? 'attention-pulse text-fg'
+                                    : 'text-fg2 hover:bg-hover'
                               }`}
                             >
                               <span
+                                style={attn ? { backgroundColor: attentionColor } : undefined}
                                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                                  active ? 'bg-accent' : 'bg-fgmuted'
+                                  active ? 'bg-accent' : attn ? '' : 'bg-fgmuted'
                                 }`}
                               />
                               {active && (
@@ -882,6 +937,9 @@ export function Sidebar({
                                 </div>
                               )}
 
+                              {editingId !== ws.id && busyWorkspaceIds.has(ws.id) && (
+                                <WorkingSpinner title={t('sidebar.workingTerminals')} />
+                              )}
                               {n > 0 && editingId !== ws.id && (
                                 <RunningBadge count={n} title={t('sidebar.runningTerminals')} />
                               )}

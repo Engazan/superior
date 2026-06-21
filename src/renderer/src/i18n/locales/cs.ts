@@ -10,6 +10,7 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.removeWorkspace': 'Odebrat workspace',
   'sidebar.removeFolder': 'Odebrat složku',
   'sidebar.runningTerminals': 'Běžící terminály',
+  'sidebar.workingTerminals': 'Pracuje…',
   'sidebar.settings': 'Nastavení',
   'common.toggleSidebar': 'Přepnout postranní panel',
   'common.toggleRightSidebar': 'Přepnout pravý panel',
@@ -81,6 +82,10 @@ export const cs: Record<MessageKey, string> = {
   'appearance.theme': 'Motiv',
   'appearance.themeDesc':
     'Vyberte, jak má aplikace vypadat. Systém se řídí nastavením operačního systému.',
+  'appearance.attentionColor': 'Barva upozornění',
+  'appearance.attentionColorDesc':
+    'Barva, kterou bliká karta pracovního prostoru, když některý jeho terminál dokončí práci a vy jste jinde.',
+  'appearance.resetColor': 'Obnovit',
   'theme.light': 'Světlý',
   'theme.dark': 'Tmavý',
   'theme.system': 'Systém',

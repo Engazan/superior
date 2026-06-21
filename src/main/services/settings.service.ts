@@ -15,7 +15,9 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   openLauncher: 'ctrl+§',
   toggleRightPanel: 'mod+j',
   closeFocusedCell: 'mod+w',
-  closePreview: 'mod+shift+w'
+  closePreview: 'mod+shift+w',
+  prevTerminal: 'ctrl+arrowleft',
+  nextTerminal: 'ctrl+arrowright'
 }
 const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'toggleSidebar',
@@ -24,17 +26,22 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'openLauncher',
   'toggleRightPanel',
   'closeFocusedCell',
-  'closePreview'
+  'closePreview',
+  'prevTerminal',
+  'nextTerminal'
 ]
 const DEFAULT_UI: UiState = {
   sidebarCollapsed: false,
   rightSidebarOpen: false
 }
+/** Catppuccin peach — a warm "done" tint that reads against the dark UI. */
+const DEFAULT_ATTENTION_COLOR = '#fab387'
 const DEFAULTS: AppSettings = {
   theme: 'system',
   language: 'en',
   shortcuts: { ...DEFAULT_SHORTCUTS },
-  ui: { ...DEFAULT_UI }
+  ui: { ...DEFAULT_UI },
+  attentionColor: DEFAULT_ATTENTION_COLOR
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
@@ -62,6 +69,13 @@ function normalizeUi(raw: unknown): UiState {
   return next
 }
 
+/** Accept only a valid #rgb / #rrggbb hex color, else fall back to the default. */
+function normalizeColor(raw: unknown): string {
+  return typeof raw === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw.trim())
+    ? raw.trim().toLowerCase()
+    : DEFAULT_ATTENTION_COLOR
+}
+
 function storeFile(): string {
   return userDataFile('settings.json')
 }
@@ -75,7 +89,8 @@ export function getSettings(): AppSettings {
       ? (parsed.language as Language)
       : DEFAULTS.language,
     shortcuts: normalizeShortcuts(parsed.shortcuts),
-    ui: normalizeUi(parsed.ui)
+    ui: normalizeUi(parsed.ui),
+    attentionColor: normalizeColor(parsed.attentionColor)
   }
 }
 
@@ -118,6 +133,16 @@ export function setUi(ui: UiState): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     ui: normalizeUi(ui)
+  }
+  save(next)
+  return next
+}
+
+/** Persist the workspace-attention pulse color and return the updated settings. */
+export function setAttentionColor(color: string): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    attentionColor: normalizeColor(color)
   }
   save(next)
   return next

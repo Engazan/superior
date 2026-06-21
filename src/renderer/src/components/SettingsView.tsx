@@ -3,6 +3,7 @@ import { PresetsSection } from './PresetsSection'
 import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { useTheme } from '../theme'
+import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
 import { useI18n, LANGUAGES } from '../i18n'
 import type { Folder, PresetsState, ThemeMode, TerminalPreset, Workspace } from '../types'
 
@@ -33,6 +34,8 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: 'theme.light' | 'theme.dark' 
 function AppearanceSection(): JSX.Element {
   const { mode, setMode } = useTheme()
   const { lang, setLang, t } = useI18n()
+  const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
+  const isDefaultAttention = attentionColor.toLowerCase() === DEFAULT_ATTENTION_COLOR
 
   return (
     <>
@@ -59,7 +62,7 @@ function AppearanceSection(): JSX.Element {
         </div>
       </section>
 
-      <section className="max-w-md">
+      <section className="mb-8 max-w-md">
         <div className="mb-1.5 text-sm font-medium text-fg">{t('settings.language')}</div>
         <p className="mb-3 text-xs text-fgdim">{t('language.desc')}</p>
         <div className="inline-flex rounded-lg border border-edge bg-bar p-1">
@@ -77,6 +80,35 @@ function AppearanceSection(): JSX.Element {
               </button>
             )
           })}
+        </div>
+      </section>
+
+      <section className="max-w-md">
+        <div className="mb-1.5 text-sm font-medium text-fg">{t('appearance.attentionColor')}</div>
+        <p className="mb-3 text-xs text-fgdim">{t('appearance.attentionColorDesc')}</p>
+        <div className="flex items-center gap-3">
+          <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge">
+            <span
+              className="attention-pulse-dot h-5 w-5 rounded-full"
+              style={{ ['--attn' as string]: attentionColor }}
+            />
+            <input
+              type="color"
+              value={attentionColor}
+              onChange={(e) => setAttentionColor(e.target.value)}
+              className="absolute inset-0 cursor-pointer opacity-0"
+              aria-label={t('appearance.attentionColor')}
+            />
+          </label>
+          <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
+          {!isDefaultAttention && (
+            <button
+              onClick={resetAttentionColor}
+              className="rounded-md px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
+            >
+              {t('appearance.resetColor')}
+            </button>
+          )}
         </div>
       </section>
     </>

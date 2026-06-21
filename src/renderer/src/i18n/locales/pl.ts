@@ -10,6 +10,7 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.removeWorkspace': 'Usuń workspace',
   'sidebar.removeFolder': 'Usuń folder',
   'sidebar.runningTerminals': 'Działające terminale',
+  'sidebar.workingTerminals': 'Pracuje…',
   'sidebar.settings': 'Ustawienia',
   'common.toggleSidebar': 'Przełącz pasek boczny',
   'common.toggleRightSidebar': 'Przełącz prawy panel',
@@ -81,6 +82,10 @@ export const pl: Record<MessageKey, string> = {
   'appearance.theme': 'Motyw',
   'appearance.themeDesc':
     'Wybierz wygląd aplikacji. System podąża za ustawieniem systemu operacyjnego.',
+  'appearance.attentionColor': 'Kolor powiadomienia',
+  'appearance.attentionColorDesc':
+    'Kolor, którym pulsuje karta przestrzeni roboczej, gdy jeden z jej terminali skończy pracę, a Ciebie nie ma.',
+  'appearance.resetColor': 'Resetuj',
   'theme.light': 'Jasny',
   'theme.dark': 'Ciemny',
   'theme.system': 'Systemowy',

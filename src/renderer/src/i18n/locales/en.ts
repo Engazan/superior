@@ -8,6 +8,7 @@ export const en = {
   'sidebar.removeWorkspace': 'Remove workspace',
   'sidebar.removeFolder': 'Remove folder',
   'sidebar.runningTerminals': 'Running terminals',
+  'sidebar.workingTerminals': 'Working…',
   'sidebar.settings': 'Settings',
   'common.toggleSidebar': 'Toggle sidebar',
   'common.toggleRightSidebar': 'Toggle right panel',
@@ -77,6 +78,10 @@ export const en = {
   'daemons.orphan': 'No workspace',
   'appearance.theme': 'Theme',
   'appearance.themeDesc': 'Choose how the app looks. System follows your operating system setting.',
+  'appearance.attentionColor': 'Attention color',
+  'appearance.attentionColorDesc':
+    "Color a workspace tab pulses with when one of its terminals finishes while you're elsewhere.",
+  'appearance.resetColor': 'Reset',
   'theme.light': 'Light',
   'theme.dark': 'Dark',
   'theme.system': 'System',

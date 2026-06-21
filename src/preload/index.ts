@@ -124,6 +124,10 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_UI, ui)
   },
 
+  setAttentionColor(color: string): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_ATTENTION_COLOR, color)
+  },
+
   listPresets(): Promise<PresetsState> {
     return ipcRenderer.invoke(IPC.PRESETS_LIST)
   },

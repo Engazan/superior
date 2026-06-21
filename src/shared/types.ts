@@ -32,6 +32,8 @@ export interface AppSettings {
   language: Language
   shortcuts: ShortcutMap
   ui: UiState
+  /** Hex color a workspace tab pulses with when one of its terminals finishes. */
+  attentionColor: string
 }
 
 export type PresetIconType = 'emoji' | 'image'
@@ -343,6 +345,7 @@ export const IPC = {
   SETTINGS_SET_LANGUAGE: 'settings:set-language',
   SETTINGS_SET_SHORTCUTS: 'settings:set-shortcuts',
   SETTINGS_SET_UI: 'settings:set-ui',
+  SETTINGS_SET_ATTENTION_COLOR: 'settings:set-attention-color',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',

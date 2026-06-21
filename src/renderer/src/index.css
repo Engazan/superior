@@ -122,6 +122,54 @@ body {
   }
 }
 
+/*
+ * Workspace "finished" pulse. The color comes from a --attn CSS variable set
+ * inline (the user-configurable attention color), so the same keyframes work
+ * for any hue. `attention-pulse` tints a tab's background; `attention-pulse-dot`
+ * pulses a small status dot.
+ */
+@keyframes attention-pulse {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--attn) 26%, transparent);
+  }
+}
+
+.attention-pulse {
+  animation: attention-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes attention-pulse-dot {
+  0%,
+  100% {
+    background-color: var(--attn);
+    opacity: 1;
+  }
+  50% {
+    background-color: var(--attn);
+    opacity: 0.35;
+  }
+}
+
+.attention-pulse-dot {
+  background-color: var(--attn);
+  animation: attention-pulse-dot 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-pulse {
+    animation: none;
+    background-color: color-mix(in srgb, var(--attn) 22%, transparent);
+  }
+
+  .attention-pulse-dot {
+    animation: none;
+  }
+}
+
 /* Let the xterm viewport own its own scrolling. */
 .xterm,
 .xterm-viewport {
