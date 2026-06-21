@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
@@ -119,6 +119,8 @@ export function TerminalView({
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const replayWritesRef = useRef(0)
+  // Last size we told the pty, so we can skip redundant resizes.
+  const lastSizeRef = useRef<{ cols: number; rows: number } | null>(null)
   const { resolved } = useTheme()
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
@@ -126,6 +128,32 @@ export function TerminalView({
   // Keep the latest onSelect without re-running the creation effect.
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+
+  // Read current visibility from inside the once-registered ResizeObserver.
+  const visibleRef = useRef(visible)
+  visibleRef.current = visible
+
+  // Measure the terminal and push its size to the pty — but only when it's
+  // visible and the size actually changed. A hidden terminal keeps its last
+  // size, so toggling visibility on a workspace switch never resizes the pty.
+  // That matters because a resize makes the shell/agent redraw its prompt
+  // (SIGWINCH), and that redraw is indistinguishable from real output — it would
+  // otherwise flip the session to "busy" and pulse a workspace that isn't
+  // actually running anything.
+  const syncSize = useCallback(() => {
+    const term = termRef.current
+    const fit = fitRef.current
+    if (!term || !fit || !visibleRef.current) return
+    try {
+      fit.fit()
+    } catch {
+      return // element not measurable yet
+    }
+    const last = lastSizeRef.current
+    if (last && last.cols === term.cols && last.rows === term.rows) return
+    lastSizeRef.current = { cols: term.cols, rows: term.rows }
+    window.api.resize(session.id, term.cols, term.rows)
+  }, [session.id])
 
   // Create the xterm instance once per session id and wire it to the bus + pty.
   useEffect(() => {
@@ -187,17 +215,10 @@ export function TerminalView({
     // Attach to the daemon-owned pty: replays scrollback, then streams live.
     window.api.attach(session.id)
 
-    // tell the pty our real size
-    window.api.resize(session.id, term.cols, term.rows)
+    // tell the pty our real size (no-op while hidden; synced on first show)
+    syncSize()
 
-    const ro = new ResizeObserver(() => {
-      try {
-        fit.fit()
-        window.api.resize(session.id, term.cols, term.rows)
-      } catch {
-        /* element not measurable yet */
-      }
-    })
+    const ro = new ResizeObserver(() => syncSize())
     ro.observe(host)
 
     // Clicking into the terminal body focuses xterm's textarea; report it up so
@@ -224,23 +245,15 @@ export function TerminalView({
     if (termRef.current) termRef.current.options.theme = TERM_THEMES[resolved]
   }, [resolved])
 
-  // Refit whenever this view becomes visible or its cell changes size.
+  // Refit whenever this view becomes visible or its cell changes size. syncSize
+  // skips the pty resize when the measured size is unchanged, so simply becoming
+  // visible (same size as when it was hidden) never provokes a redraw.
   useEffect(() => {
     if (!visible) return
-    const fit = fitRef.current
-    const term = termRef.current
-    if (!fit || !term) return
     // next tick so the container has its final (visible) dimensions
-    const t = window.setTimeout(() => {
-      try {
-        fit.fit()
-        window.api.resize(session.id, term.cols, term.rows)
-      } catch {
-        /* ignore */
-      }
-    }, 0)
+    const t = window.setTimeout(syncSize, 0)
     return () => window.clearTimeout(t)
-  }, [visible, r.top, r.left, r.width, r.height, session.id])
+  }, [visible, r.top, r.left, r.width, r.height, syncSize])
 
   // Grab keyboard focus when this becomes the focused terminal.
   useEffect(() => {

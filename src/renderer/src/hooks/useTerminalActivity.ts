@@ -23,7 +23,9 @@ export interface TerminalActivity {
  *   terminal that finishes while its workspace is focused never flags it.
  *
  * Replay chunks (scrollback restored on attach) are ignored, so reattaching a
- * session never looks busy or raises attention.
+ * session never looks busy or raises attention. (Workspace switches are kept
+ * quiet upstream: TerminalView never resizes a hidden pty, so switching never
+ * provokes the SIGWINCH redraw that would otherwise look like activity.)
  */
 export function useTerminalActivity(
   sessions: AgentSession[],
