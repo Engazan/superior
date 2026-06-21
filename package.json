@@ -38,6 +38,13 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Engazan",
+        "repo": "superior"
+      }
+    ],
     "mac": {
       "target": [
         "dmg",
@@ -80,6 +87,7 @@
     "@codemirror/view": "^6.43.1",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
+    "electron-updater": "^6.8.9",
     "highlight.js": "^11.11.1",
     "node-pty": "^1.0.0",
     "react-markdown": "^10.1.0",

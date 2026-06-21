@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // electron-updater is bundled into the main process (not externalized) so it
+    // ships inside out/main without having to enumerate its node_modules tree in
+    // electron-builder's `files` allowlist.
+    plugins: [externalizeDepsPlugin({ exclude: ['electron-updater'] })],
     resolve: {
       alias: {
         '@shared': resolve(__dirname, 'src/shared')

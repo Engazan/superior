@@ -33,6 +33,18 @@ export interface UpdateInfo {
   releaseUrl: string
 }
 
+/** Lifecycle phase of a user-initiated in-app update download. */
+export type UpdatePhase = 'idle' | 'downloading' | 'downloaded' | 'error'
+
+/** Progress pushed from the main process while downloading/installing an update. */
+export interface UpdateProgress {
+  phase: UpdatePhase
+  /** Download completion, 0–100, while phase is 'downloading'. */
+  percent?: number
+  /** Present when phase is 'error' (e.g. the release has no update feed yet). */
+  error?: string
+}
+
 /** Persisted layout state for the left/right sidebars, restored on launch. */
 export interface UiState {
   sidebarCollapsed: boolean
@@ -386,5 +398,8 @@ export const IPC = {
   LAYOUT_GET: 'layout:get',
   LAYOUT_SET: 'layout:set',
   UPDATE_CHECK: 'update:check',
-  UPDATE_OPEN: 'update:open'
+  UPDATE_OPEN: 'update:open',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_STATUS: 'update:status'
 } as const

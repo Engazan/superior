@@ -1,5 +1,8 @@
-import { app, net, shell } from 'electron'
-import type { UpdateInfo } from '@shared/types'
+import { app, BrowserWindow, net, shell } from 'electron'
+import electronUpdater from 'electron-updater'
+import { IPC, type UpdateInfo, type UpdateProgress } from '@shared/types'
+
+const { autoUpdater } = electronUpdater
 
 // The published repository whose GitHub releases we check against.
 const OWNER = 'Engazan'
@@ -62,4 +65,66 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 export function openReleasePage(url?: string): Promise<void> {
   const safe = url && /^https:\/\/github\.com\//i.test(url) ? url : RELEASES_PAGE
   return shell.openExternal(safe)
+}
+
+// ── In-app download + install (electron-updater) ──────────────────────────────
+
+/** Push the current download/install phase to the renderer's update banner. */
+function sendStatus(status: UpdateProgress): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(IPC.UPDATE_STATUS, status)
+  }
+}
+
+/**
+ * Wire electron-updater's events to the renderer once at startup. We download
+ * only on an explicit user click (autoDownload = false) but let a finished
+ * download install on quit as a safety net (autoInstallOnAppQuit = true).
+ */
+export function initAutoUpdater(): void {
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('download-progress', (p) => {
+    sendStatus({ phase: 'downloading', percent: Math.round(p.percent) })
+  })
+  autoUpdater.on('update-downloaded', () => {
+    sendStatus({ phase: 'downloaded' })
+  })
+  autoUpdater.on('update-not-available', () => {
+    // The banner came from our GitHub check, but the updater feed disagrees
+    // (e.g. the release predates auto-update metadata). Fall back to the page.
+    sendStatus({ phase: 'error', error: 'not-available' })
+  })
+  autoUpdater.on('error', (err) => {
+    sendStatus({ phase: 'error', error: err?.message ?? String(err) })
+  })
+}
+
+/**
+ * Begin downloading the latest update. In a packaged build this pulls the
+ * signed artifact via electron-updater (events drive the progress UI). In dev
+ * there is no update feed, so we just open the release page and reset the UI.
+ */
+export async function downloadUpdate(): Promise<void> {
+  if (!app.isPackaged) {
+    await openReleasePage()
+    sendStatus({ phase: 'idle' })
+    return
+  }
+  try {
+    sendStatus({ phase: 'downloading', percent: 0 })
+    const result = await autoUpdater.checkForUpdates()
+    // checkForUpdates resolves before the download finishes; kick it off and let
+    // the 'update-downloaded' event flip the UI to "restart to install".
+    if (result?.updateInfo) await autoUpdater.downloadUpdate()
+  } catch (err) {
+    sendStatus({ phase: 'error', error: err instanceof Error ? err.message : String(err) })
+  }
+}
+
+/** Quit and install a downloaded update, relaunching the app afterwards. */
+export function quitAndInstall(): void {
+  // Defer past the IPC reply so the renderer call resolves before we tear down.
+  setImmediate(() => autoUpdater.quitAndInstall(false, true))
 }

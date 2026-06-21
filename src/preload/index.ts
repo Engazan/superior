@@ -24,6 +24,7 @@ import {
   type ThemeMode,
   type UiState,
   type UpdateInfo,
+  type UpdateProgress,
   type WorkspaceLayout,
   type WorkspaceState,
   type WorktreeAddArgs,
@@ -140,6 +141,23 @@ const api = {
 
   openReleasePage(url: string): Promise<void> {
     return ipcRenderer.invoke(IPC.UPDATE_OPEN, url)
+  },
+
+  /** Start downloading the latest update (progress arrives via onUpdateStatus). */
+  downloadUpdate(): Promise<void> {
+    return ipcRenderer.invoke(IPC.UPDATE_DOWNLOAD)
+  },
+
+  /** Quit and install a downloaded update, relaunching afterwards. */
+  installUpdate(): Promise<void> {
+    return ipcRenderer.invoke(IPC.UPDATE_INSTALL)
+  },
+
+  /** Subscribe to update download/install progress. Returns an unsubscribe fn. */
+  onUpdateStatus(cb: (status: UpdateProgress) => void): () => void {
+    const listener = (_e: unknown, payload: UpdateProgress): void => cb(payload)
+    ipcRenderer.on(IPC.UPDATE_STATUS, listener)
+    return () => ipcRenderer.removeListener(IPC.UPDATE_STATUS, listener)
   },
 
   listPresets(): Promise<PresetsState> {

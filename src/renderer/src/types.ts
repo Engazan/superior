@@ -37,6 +37,7 @@ export type {
   TerminalPreset,
   ThemeMode,
   UpdateInfo,
+  UpdateProgress,
   Workspace,
   WorkspaceState,
   WorktreeAddArgs,
