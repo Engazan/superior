@@ -113,6 +113,8 @@ export interface Folder {
   displayName?: string
   /** User-uploaded custom icon as a data URL, shown instead of the default folder glyph. */
   icon?: string
+  /** Hex color (e.g. '#3B82F6') tinting the folder's row background in the sidebar. */
+  color?: string
   lastOpenedAt: number
 }
 
@@ -120,6 +122,7 @@ export interface Folder {
 export interface FolderUpdate {
   displayName?: string | null
   icon?: string | null
+  color?: string | null
 }
 
 /** A named working context inside a folder, owning its own terminals + layout. */

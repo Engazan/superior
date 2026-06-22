@@ -255,6 +255,10 @@ export function updateFolder(folderPath: string, patch: FolderUpdate): Workspace
       if (patch.icon) folder.icon = patch.icon
       else delete folder.icon
     }
+    if (patch.color !== undefined) {
+      if (patch.color) folder.color = patch.color
+      else delete folder.color
+    }
   }
   const next = normalize(state)
   saveState(next)

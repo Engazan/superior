@@ -15,6 +15,7 @@ export const hu: Record<MessageKey, string> = {
   'folder.displayName': 'Megjelenített név',
   'folder.displayNameHint': 'Hagyja üresen a mappa nevének használatához.',
   'folder.icon': 'Ikon',
+  'folder.color': 'Oldalsáv háttérszíne',
   'folder.uploadIcon': 'Ikon feltöltése',
   'folder.removeIcon': 'Eltávolítás',
   'folder.path': 'Elérési út',

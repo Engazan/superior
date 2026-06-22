@@ -13,6 +13,7 @@ export const en = {
   'folder.displayName': 'Display name',
   'folder.displayNameHint': 'Leave empty to use the folder name.',
   'folder.icon': 'Icon',
+  'folder.color': 'Sidebar background color',
   'folder.uploadIcon': 'Upload icon',
   'folder.removeIcon': 'Remove',
   'folder.path': 'Path',

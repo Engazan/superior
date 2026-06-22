@@ -15,6 +15,7 @@ export const pl: Record<MessageKey, string> = {
   'folder.displayName': 'Wyświetlana nazwa',
   'folder.displayNameHint': 'Pozostaw puste, aby użyć nazwy folderu.',
   'folder.icon': 'Ikona',
+  'folder.color': 'Kolor tła w panelu bocznym',
   'folder.uploadIcon': 'Prześlij ikonę',
   'folder.removeIcon': 'Usuń',
   'folder.path': 'Ścieżka',

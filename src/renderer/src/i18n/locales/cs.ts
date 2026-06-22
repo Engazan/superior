@@ -15,6 +15,7 @@ export const cs: Record<MessageKey, string> = {
   'folder.displayName': 'Zobrazovaný název',
   'folder.displayNameHint': 'Ponechte prázdné pro použití názvu složky.',
   'folder.icon': 'Ikona',
+  'folder.color': 'Barva pozadí v panelu',
   'folder.uploadIcon': 'Nahrát ikonu',
   'folder.removeIcon': 'Odebrat',
   'folder.path': 'Cesta',
