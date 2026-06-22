@@ -238,6 +238,12 @@ export interface GitStatus {
   isRepository: boolean
   /** Current branch, or a short commit id while HEAD is detached. */
   branch: string | null
+  /** Number of files with uncommitted changes (tracked + untracked). */
+  changedFiles?: number
+  /** Total added lines across the working-tree diff (incl. untracked). */
+  additions?: number
+  /** Total removed lines across the working-tree diff. */
+  deletions?: number
   error?: string
 }
 

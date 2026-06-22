@@ -58,6 +58,51 @@ async function currentBranch(folderPath: string): Promise<string> {
   }
 }
 
+/**
+ * Cheap working-tree summary for the title bar: changed-file count plus total
+ * added/removed lines. Uses `--numstat` (no hunk parsing) for tracked changes
+ * and reads untracked files as all-additions, mirroring {@link getGitDiff}'s
+ * totals without the cost of building diff hunks. Bounded so polling stays light.
+ */
+async function getDiffStats(
+  folderPath: string
+): Promise<{ changedFiles: number; additions: number; deletions: number }> {
+  let changedFiles = 0
+  let additions = 0
+  let deletions = 0
+
+  const base = (await hasCommits(folderPath)) ? ['diff', 'HEAD'] : ['diff', '--cached']
+  const numstat = await gitRaw(folderPath, [...base, '--numstat', '--no-ext-diff', '-M'])
+  for (const line of numstat.split('\n')) {
+    if (!line.trim()) continue
+    changedFiles++
+    const [add, del] = line.split('\t')
+    // Binary files report '-' for both columns; count them as a changed file only.
+    if (add !== '-') additions += Number(add) || 0
+    if (del !== '-') deletions += Number(del) || 0
+  }
+
+  for (const rel of await listUntracked(folderPath)) {
+    changedFiles++
+    additions += await countUntrackedLines(folderPath, rel)
+  }
+
+  return { changedFiles, additions, deletions }
+}
+
+/** Line count of an untracked file, treated as all-additions (0 for binary/oversized). */
+async function countUntrackedLines(folderPath: string, rel: string): Promise<number> {
+  try {
+    const buf = await readFile(join(folderPath, rel))
+    if (buf.includes(0) || buf.byteLength > MAX_UNTRACKED_BYTES) return 0
+    const rows = buf.toString('utf-8').split('\n')
+    if (rows.length && rows[rows.length - 1] === '') rows.pop()
+    return rows.length
+  } catch {
+    return 0
+  }
+}
+
 export async function getGitStatus(folderPath: string): Promise<GitStatus> {
   if (!isWithinWorkspaceFolder(folderPath)) {
     return { isRepository: false, branch: null, error: 'Workspace folder is invalid.' }
@@ -66,7 +111,9 @@ export async function getGitStatus(folderPath: string): Promise<GitStatus> {
   try {
     const inside = await git(folderPath, ['rev-parse', '--is-inside-work-tree'])
     if (inside !== 'true') return { isRepository: false, branch: null }
-    return { isRepository: true, branch: await currentBranch(folderPath) }
+    const branch = await currentBranch(folderPath)
+    const stats = await getDiffStats(folderPath)
+    return { isRepository: true, branch, ...stats }
   } catch (err) {
     const e = err as NodeJS.ErrnoException
     if (e.code === 'ENOENT') {

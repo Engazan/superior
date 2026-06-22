@@ -102,11 +102,17 @@ export function TitleBar({
                 </span>
               ) : gitStatus?.isRepository ? (
                 <div
-                  className="flex h-full min-w-0 max-w-48 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
+                  className="flex h-full min-w-0 max-w-64 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
                   title={gitStatus.branch ?? 'HEAD'}
                 >
                   <BranchIcon />
                   <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
+                  {!!gitStatus.additions && (
+                    <span className="shrink-0 text-emerald-500">+{gitStatus.additions}</span>
+                  )}
+                  {!!gitStatus.deletions && (
+                    <span className="shrink-0 text-rose-500">−{gitStatus.deletions}</span>
+                  )}
                 </div>
               ) : (
                 <button
