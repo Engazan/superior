@@ -11,6 +11,7 @@ import {
   type CustomMemoryProvider,
   type FileReadOptions,
   type FileReadResult,
+  type FolderUpdate,
   type FsListResult,
   type GitDiff,
   type GitStatus,
@@ -50,6 +51,11 @@ const api = {
   /** Persist a new folder order (the sidebar's drag-to-reorder). */
   reorderFolders(orderedPaths: string[]): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.FOLDER_REORDER, orderedPaths)
+  },
+
+  /** Update a folder's display name / custom icon (its path stays fixed). */
+  updateFolder(folderPath: string, patch: FolderUpdate): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.FOLDER_UPDATE, { folderPath, patch })
   },
 
   addWorkspace(folderPath: string, name: string): Promise<WorkspaceState> {

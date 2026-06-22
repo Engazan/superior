@@ -19,6 +19,7 @@ export type {
   FileReadOptions,
   FileReadResult,
   Folder,
+  FolderUpdate,
   FsEntry,
   FsListResult,
   GitDiff,

@@ -217,6 +217,7 @@ export default function App(): JSX.Element {
               onAddFolder={ws.addFolder}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
+              onUpdateFolder={ws.updateFolder}
               onAddWorkspace={ws.addWorkspace}
               onAddWorktreeWorkspace={ws.addWorktreeWorkspace}
               onRenameWorkspace={ws.renameWorkspace}

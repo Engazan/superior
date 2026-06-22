@@ -2,7 +2,7 @@ import { dialog } from 'electron'
 import { randomUUID } from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
-import type { Folder, Workspace, WorkspaceState, WorktreeAddArgs } from '@shared/types'
+import type { Folder, FolderUpdate, Workspace, WorkspaceState, WorktreeAddArgs } from '@shared/types'
 import { userDataFile, writeJsonFile } from '../lib/jsonStore'
 import {
   createWorktree,
@@ -232,6 +232,30 @@ export function reorderFolders(orderedPaths: string[]): WorkspaceState {
     if (!seen.has(f.path)) reordered.push(f)
   }
   state.folders = reordered
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/**
+ * Update a folder's display name and/or custom icon. The folder's path is
+ * immutable — only its visuals change. A field set to null clears it (falling
+ * back to the basename / default glyph); undefined leaves it untouched.
+ */
+export function updateFolder(folderPath: string, patch: FolderUpdate): WorkspaceState {
+  const state = readState()
+  const folder = state.folders.find((f) => f.path === folderPath)
+  if (folder) {
+    if (patch.displayName !== undefined) {
+      const trimmed = patch.displayName?.trim()
+      if (trimmed) folder.displayName = trimmed
+      else delete folder.displayName
+    }
+    if (patch.icon !== undefined) {
+      if (patch.icon) folder.icon = patch.icon
+      else delete folder.icon
+    }
+  }
   const next = normalize(state)
   saveState(next)
   return next

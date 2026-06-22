@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 import { useI18n, type TFunction } from '../i18n'
 import type { UpdateController } from '../hooks/useUpdateCheck'
-import type { BranchInfo, Folder, Workspace, WorktreeAddArgs } from '../types'
+import type { BranchInfo, Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
   folders: Folder[]
@@ -22,6 +22,8 @@ interface Props {
   onRemoveFolder: (path: string) => void
   /** Persist a new folder order after a drag-to-reorder in the sidebar. */
   onReorderFolders: (orderedPaths: string[]) => void
+  /** Update a folder's display name / custom icon (its path is immutable). */
+  onUpdateFolder: (folderPath: string, patch: FolderUpdate) => void
   onAddWorkspace: (folderPath: string, name: string) => Promise<string | null>
   /** Create a worktree-backed workspace; resolves with a localized error or null. */
   onAddWorktreeWorkspace: (args: WorktreeAddArgs) => Promise<string | null>
@@ -102,6 +104,47 @@ function FolderIcon(): JSX.Element {
       aria-hidden
     >
       <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    </svg>
+  )
+}
+
+/** A folder's custom icon when set, else the default folder glyph. `size` is px. */
+function FolderGlyph({ folder, size = 14 }: { folder: Folder; size?: number }): JSX.Element {
+  if (folder.icon) {
+    return (
+      <img
+        src={folder.icon}
+        alt=""
+        aria-hidden
+        className="shrink-0 rounded-sm object-cover"
+        style={{ width: size, height: size }}
+      />
+    )
+  }
+  return <FolderIcon />
+}
+
+/** Display label for a folder — its user-chosen name, falling back to the basename. */
+function folderLabel(folder: Folder): string {
+  return folder.displayName?.trim() || folder.name
+}
+
+function PencilGlyph(): JSX.Element {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0 text-fgmuted"
+      aria-hidden
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   )
 }
@@ -393,7 +436,7 @@ function WorkspaceCreateForm({
                 <FolderIcon />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-fg">{folder.name}</p>
+                <p className="truncate text-sm font-semibold text-fg">{folderLabel(folder)}</p>
                 <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folder.path}</p>
               </div>
               <span className="shrink-0 rounded-full bg-accentBg px-2 py-0.5 text-[10px] font-semibold text-accent ring-1 ring-inset ring-accentBorder">
@@ -731,6 +774,178 @@ function WorktreeCreateForm({
   )
 }
 
+/**
+ * Dialog to edit a folder's visuals: a custom display name and an uploaded
+ * icon. The folder's path is immutable and shown read-only for reference.
+ */
+function FolderEditForm({
+  folder,
+  onCancel,
+  onSave
+}: {
+  folder: Folder
+  onCancel: () => void
+  onSave: (patch: FolderUpdate) => void
+}): JSX.Element {
+  const { t } = useI18n()
+  const [name, setName] = useState(folder.displayName ?? '')
+  // undefined = leave icon untouched; string = new icon; null = clear icon.
+  const [icon, setIcon] = useState<string | null | undefined>(undefined)
+  const titleId = useId()
+  const descriptionId = useId()
+
+  // The icon currently shown in the preview: the pending edit, else the stored one.
+  const previewIcon = icon === undefined ? folder.icon : icon
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onCancel])
+
+  const pickIcon = async (): Promise<void> => {
+    const picked = await window.api.pickPresetImage()
+    if (picked) setIcon(picked.dataUrl)
+  }
+
+  const submit = (): void => {
+    onSave({
+      displayName: name.trim() || null,
+      ...(icon === undefined ? {} : { icon })
+    })
+    onCancel()
+  }
+
+  const field =
+    'w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fgmuted focus:border-accent focus:ring-2 focus:ring-accentBorder'
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-5 backdrop-blur-[2px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel()
+      }}
+    >
+      <form
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
+        onSubmit={(event) => {
+          event.preventDefault()
+          submit()
+        }}
+      >
+        <div className="flex shrink-0 items-start gap-3 border-b border-edge px-5 py-4">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentBg text-accent ring-1 ring-inset ring-accentBorder">
+            <FolderIcon />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id={titleId} className="text-base font-semibold text-fg">
+              {t('folder.editModalTitle')}
+            </h2>
+            <p id={descriptionId} className="mt-1 text-xs leading-5 text-fgdim">
+              {t('folder.editModalDescription')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={t('window.close')}
+          >
+            <CloseGlyph />
+          </button>
+        </div>
+
+        <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5">
+          <div>
+            <span className="mb-1.5 block text-xs font-semibold text-fgdim">
+              {t('folder.icon')}
+            </span>
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-hover text-fgdim ring-1 ring-inset ring-edge">
+                {previewIcon ? (
+                  <img src={previewIcon} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <FolderIcon />
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => void pickIcon()}
+                className="rounded-lg border border-edge bg-bar px-3 py-2 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {t('folder.uploadIcon')}
+              </button>
+              {previewIcon && (
+                <button
+                  type="button"
+                  onClick={() => setIcon(null)}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  {t('folder.removeIcon')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="folder-name" className="mb-1.5 block text-xs font-semibold text-fgdim">
+              {t('folder.displayName')}
+            </label>
+            <input
+              id="folder-name"
+              autoFocus
+              value={name}
+              placeholder={folder.name}
+              onChange={(event) => setName(event.target.value)}
+              className={field}
+              autoComplete="off"
+            />
+            <p className="mt-1.5 text-xs text-fgmuted">{t('folder.displayNameHint')}</p>
+          </div>
+
+          <div className="rounded-xl border border-edge bg-bar p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-hover text-fgdim">
+                <FolderIcon />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
+                  {t('folder.path')}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-fg" title={folder.path}>
+                  {folder.path}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-edge bg-bar/50 px-5 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className="flex min-w-36 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bar transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-panel"
+          >
+            {t('folder.saveAction')}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 export function Sidebar({
   folders,
   workspaces,
@@ -744,6 +959,7 @@ export function Sidebar({
   onAddFolder,
   onRemoveFolder,
   onReorderFolders,
+  onUpdateFolder,
   onAddWorkspace,
   onAddWorktreeWorkspace,
   onRenameWorkspace,
@@ -758,6 +974,10 @@ export function Sidebar({
   const [draft, setDraft] = useState('')
   // Folders the user has collapsed (rolled up) in the sidebar.
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
+  // Right-click context menu for a folder, anchored at the cursor.
+  const [folderMenu, setFolderMenu] = useState<{ path: string; x: number; y: number } | null>(null)
+  // The folder currently open in the edit dialog.
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
   // Drag-to-reorder: the folder being dragged and the one currently hovered.
   const [draggingFolder, setDraggingFolder] = useState<string | null>(null)
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
@@ -799,10 +1019,56 @@ export function Sidebar({
     setAddingFor(folderPath)
   }
 
+  // Context menu + edit dialog for folders. Shared between the collapsed rail and
+  // the expanded sidebar, both of which render this fragment.
+  const menuFolder = folderMenu ? folders.find((f) => f.path === folderMenu.path) ?? null : null
+  const folderOverlays = (
+    <>
+      {folderMenu && menuFolder && (
+        <div className="fixed inset-0 z-50" onClick={() => setFolderMenu(null)}>
+          <div
+            className="absolute min-w-40 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-2xl"
+            style={{ top: folderMenu.y, left: folderMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setEditingFolder(menuFolder)
+                setFolderMenu(null)
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-hover"
+            >
+              <PencilGlyph />
+              {t('folder.edit')}
+            </button>
+            <button
+              onClick={() => {
+                onRemoveFolder(menuFolder.path)
+                setFolderMenu(null)
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-hover"
+            >
+              <span className="flex w-3.5 justify-center text-fgmuted">✕</span>
+              {t('sidebar.removeFolder')}
+            </button>
+          </div>
+        </div>
+      )}
+      {editingFolder && (
+        <FolderEditForm
+          folder={editingFolder}
+          onCancel={() => setEditingFolder(null)}
+          onSave={(patch) => onUpdateFolder(editingFolder.path, patch)}
+        />
+      )}
+    </>
+  )
+
   // Collapsed: a narrow rail with workspace initials + a running-count dot.
   if (collapsed) {
     return (
       <aside className="flex w-14 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
+        {folderOverlays}
         <div className="flex flex-col items-center border-b border-edge p-2">
           <button
             onClick={onAddFolder}
@@ -828,11 +1094,15 @@ export function Sidebar({
                   {/* Project marker — folder glyph; jumps to its first workspace */}
                   <button
                     onClick={() => folderWorkspaces[0] && onSelectWorkspace(folderWorkspaces[0].id)}
-                    title={folder.name}
-                    aria-label={folder.name}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setFolderMenu({ path: folder.path, x: e.clientX, y: e.clientY })
+                    }}
+                    title={folderLabel(folder)}
+                    aria-label={folderLabel(folder)}
                     className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
-                    <FolderIcon />
+                    <FolderGlyph folder={folder} />
                     {folderBusy ? (
                       <WorkingSpinner className="absolute -right-0.5 -top-0.5 h-3 w-3" />
                     ) : folderAttn ? (
@@ -924,6 +1194,7 @@ export function Sidebar({
 
   return (
     <aside className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
+      {folderOverlays}
       <div className="border-b border-edge px-2 py-2">
         <button
           onClick={onAddFolder}
@@ -953,6 +1224,10 @@ export function Sidebar({
                   <div
                     draggable
                     onClick={() => toggleFolder(folder.path)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setFolderMenu({ path: folder.path, x: e.clientX, y: e.clientY })
+                    }}
                     onDragStart={(e) => {
                       e.dataTransfer.effectAllowed = 'move'
                       e.dataTransfer.setData('text/plain', folder.path)
@@ -989,10 +1264,10 @@ export function Sidebar({
                       <Chevron open={open} />
                     </span>
                     <span className="text-fgmuted">
-                      <FolderIcon />
+                      <FolderGlyph folder={folder} />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-fgdim">
-                      {folder.name}
+                      {folderLabel(folder)}
                     </span>
                     {!open && folderRunning > 0 && (
                       <RunningBadge
@@ -1007,6 +1282,17 @@ export function Sidebar({
                     >
                       <GripIcon />
                     </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingFolder(folder)
+                      }}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus:opacity-100 group-hover:opacity-100"
+                      aria-label={t('folder.edit')}
+                      title={t('folder.edit')}
+                    >
+                      <PencilGlyph />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

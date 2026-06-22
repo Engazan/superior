@@ -7,6 +7,7 @@ import {
   WORKTREE_ERROR,
   type AgentSession,
   type Folder,
+  type FolderUpdate,
   type TerminalPreset,
   type Workspace,
   type WorkspaceState,
@@ -155,6 +156,20 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setError((error as Error).message)
         const state = await window.api.listWorkspaces()
         setFolders(state.folders)
+      }
+    },
+    [setError]
+  )
+
+  // Edit a folder's display name / custom icon; its path is immutable.
+  const updateFolder = useCallback(
+    async (folderPath: string, patch: FolderUpdate) => {
+      setError(null)
+      try {
+        const state = await window.api.updateFolder(folderPath, patch)
+        setFolders(state.folders)
+      } catch (error) {
+        setError((error as Error).message)
       }
     },
     [setError]
@@ -420,6 +435,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     addFolder,
     removeFolder,
     reorderFolders,
+    updateFolder,
     addWorkspace,
     addWorktreeWorkspace,
     renameWorkspace,

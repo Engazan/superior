@@ -109,7 +109,17 @@ export interface Folder {
   path: string
   /** basename of path */
   name: string
+  /** User-chosen display name shown instead of `name` in the sidebar. The path is immutable. */
+  displayName?: string
+  /** User-uploaded custom icon as a data URL, shown instead of the default folder glyph. */
+  icon?: string
   lastOpenedAt: number
+}
+
+/** Patch for {@link Folder} visuals; a null field clears the stored value. */
+export interface FolderUpdate {
+  displayName?: string | null
+  icon?: string | null
 }
 
 /** A named working context inside a folder, owning its own terminals + layout. */
@@ -357,6 +367,7 @@ export const IPC = {
   FOLDER_ADD: 'folder:add',
   FOLDER_REMOVE: 'folder:remove',
   FOLDER_REORDER: 'folder:reorder',
+  FOLDER_UPDATE: 'folder:update',
   WORKSPACE_ADD: 'workspace:add',
   WORKSPACE_RENAME: 'workspace:rename',
   WORKSPACE_REMOVE: 'workspace:remove',

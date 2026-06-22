@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { IPC, type WorkspaceState } from '@shared/types'
+import { IPC, type FolderUpdate, type WorkspaceState } from '@shared/types'
 import {
   addFolder,
   addWorkspace,
@@ -8,7 +8,8 @@ import {
   removeWorkspace,
   renameWorkspace,
   reorderFolders,
-  setActiveWorkspace
+  setActiveWorkspace,
+  updateFolder
 } from '../services/workspace.service'
 
 export function registerWorkspaceIpc(): void {
@@ -31,6 +32,12 @@ export function registerWorkspaceIpc(): void {
 
   ipcMain.handle(IPC.FOLDER_REORDER, (_e, orderedPaths: string[]): WorkspaceState =>
     reorderFolders(orderedPaths)
+  )
+
+  ipcMain.handle(
+    IPC.FOLDER_UPDATE,
+    (_e, args: { folderPath: string; patch: FolderUpdate }): WorkspaceState =>
+      updateFolder(args.folderPath, args.patch)
   )
 
   ipcMain.handle(
