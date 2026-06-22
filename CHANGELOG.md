@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-06-22
+
+### Added
+
+- **Edit a project's appearance.** Right-click a project (folder) in the sidebar
+  — or use the pencil button that appears on hover — to open an **Edit** dialog
+  where you can upload a custom folder icon and set a display name. The project's
+  path stays fixed; only its look changes. Localized in all five languages.
+- **Diff stats next to the branch.** The title bar now shows the working-tree
+  line counts beside the branch name — green `+added` and red `−removed` — when
+  the folder is a Git repository and has uncommitted changes.
+
 ## [0.5.0] - 2026-06-21
 
 ### Added
