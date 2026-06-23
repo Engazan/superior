@@ -17,7 +17,13 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   closeFocusedCell: 'mod+w',
   closePreview: 'mod+shift+w',
   prevTerminal: 'ctrl+arrowleft',
-  nextTerminal: 'ctrl+arrowright'
+  nextTerminal: 'ctrl+arrowright',
+  openFolder: 'mod+o',
+  prevWorkspace: 'mod+shift+arrowup',
+  nextWorkspace: 'mod+shift+arrowdown',
+  prevProfile: 'mod+shift+arrowleft',
+  nextProfile: 'mod+shift+arrowright',
+  manageProfiles: 'mod+shift+p'
 }
 const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'toggleSidebar',
@@ -28,7 +34,13 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'closeFocusedCell',
   'closePreview',
   'prevTerminal',
-  'nextTerminal'
+  'nextTerminal',
+  'openFolder',
+  'prevWorkspace',
+  'nextWorkspace',
+  'prevProfile',
+  'nextProfile',
+  'manageProfiles'
 ]
 const DEFAULT_UI: UiState = {
   sidebarCollapsed: false,

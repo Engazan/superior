@@ -459,6 +459,38 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [activeWorkspaceId, sessions, activeSessionId]
   )
 
+  // Step the active workspace to the previous (-1) or next (+1) workspace within
+  // the active profile, in sidebar order (folders, then their workspaces),
+  // wrapping around. Returns false when there are fewer than two to cycle.
+  const cycleWorkspace = useCallback(
+    (direction: 1 | -1): boolean => {
+      const order = visibleFolders.flatMap((f) =>
+        workspaces.filter((w) => w.folderPath === f.path)
+      )
+      if (order.length < 2) return false
+      const current = order.findIndex((w) => w.id === activeWorkspaceId)
+      const base = current === -1 ? 0 : current
+      const next = (base + direction + order.length) % order.length
+      void selectWorkspace(order[next].id)
+      return true
+    },
+    [visibleFolders, workspaces, activeWorkspaceId, selectWorkspace]
+  )
+
+  // Step the active profile to the previous (-1) or next (+1) one, wrapping
+  // around. Returns false when there are fewer than two profiles.
+  const cycleProfile = useCallback(
+    (direction: 1 | -1): boolean => {
+      if (profiles.length < 2) return false
+      const current = profiles.findIndex((p) => p.id === activeProfileId)
+      const base = current === -1 ? 0 : current
+      const next = (base + direction + profiles.length) % profiles.length
+      void selectProfile(profiles[next].id)
+      return true
+    },
+    [profiles, activeProfileId, selectProfile]
+  )
+
   // Focus the Nth grid cell of the active workspace. UI-mode guards live in the
   // caller. Returns false when there's no such cell (grid mode required).
   const focusGridCell = useCallback(
@@ -511,6 +543,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     toggleMaximize,
     toggleMaximizeFocused,
     focusGridCell,
-    cycleSession
+    cycleSession,
+    cycleWorkspace,
+    cycleProfile
   }
 }

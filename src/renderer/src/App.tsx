@@ -155,6 +155,32 @@ export default function App(): JSX.Element {
         if (view !== 'main' || launcherOpen || !ws.cycleSession(1)) return
         e.preventDefault()
         e.stopPropagation()
+      } else if (chord === shortcuts.openFolder) {
+        if (view !== 'main') return
+        e.preventDefault()
+        e.stopPropagation()
+        void ws.addFolder()
+      } else if (chord === shortcuts.prevWorkspace) {
+        if (view !== 'main' || launcherOpen || !ws.cycleWorkspace(-1)) return
+        e.preventDefault()
+        e.stopPropagation()
+      } else if (chord === shortcuts.nextWorkspace) {
+        if (view !== 'main' || launcherOpen || !ws.cycleWorkspace(1)) return
+        e.preventDefault()
+        e.stopPropagation()
+      } else if (chord === shortcuts.prevProfile) {
+        if (view !== 'main' || !ws.cycleProfile(-1)) return
+        e.preventDefault()
+        e.stopPropagation()
+      } else if (chord === shortcuts.nextProfile) {
+        if (view !== 'main' || !ws.cycleProfile(1)) return
+        e.preventDefault()
+        e.stopPropagation()
+      } else if (chord === shortcuts.manageProfiles) {
+        if (view !== 'main') return
+        e.preventDefault()
+        e.stopPropagation()
+        setProfileManagerOpen((o) => !o)
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
@@ -169,6 +195,9 @@ export default function App(): JSX.Element {
     ws.toggleMaximizeFocused,
     ws.closeSession,
     ws.cycleSession,
+    ws.addFolder,
+    ws.cycleWorkspace,
+    ws.cycleProfile,
     preview.previewFile,
     preview.setPreviewFile
   ])

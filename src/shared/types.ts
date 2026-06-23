@@ -13,6 +13,12 @@ export type ShortcutAction =
   | 'closePreview'
   | 'prevTerminal'
   | 'nextTerminal'
+  | 'openFolder'
+  | 'prevWorkspace'
+  | 'nextWorkspace'
+  | 'prevProfile'
+  | 'nextProfile'
+  | 'manageProfiles'
 
 /**
  * A chord stored in a platform-neutral, normalized form: lowercase tokens

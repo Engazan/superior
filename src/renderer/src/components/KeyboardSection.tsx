@@ -12,7 +12,13 @@ const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
   { id: 'closeFocusedCell', labelKey: 'keyboard.closeFocusedCell' },
   { id: 'closePreview', labelKey: 'keyboard.closePreview' },
   { id: 'prevTerminal', labelKey: 'keyboard.prevTerminal' },
-  { id: 'nextTerminal', labelKey: 'keyboard.nextTerminal' }
+  { id: 'nextTerminal', labelKey: 'keyboard.nextTerminal' },
+  { id: 'openFolder', labelKey: 'keyboard.openFolder' },
+  { id: 'prevWorkspace', labelKey: 'keyboard.prevWorkspace' },
+  { id: 'nextWorkspace', labelKey: 'keyboard.nextWorkspace' },
+  { id: 'prevProfile', labelKey: 'keyboard.prevProfile' },
+  { id: 'nextProfile', labelKey: 'keyboard.nextProfile' },
+  { id: 'manageProfiles', labelKey: 'keyboard.manageProfiles' }
 ]
 
 /** Rebindable keyboard shortcuts. Click a chord to record a new key combination. */

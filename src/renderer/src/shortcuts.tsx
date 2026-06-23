@@ -11,7 +11,13 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   closeFocusedCell: 'mod+w',
   closePreview: 'mod+shift+w',
   prevTerminal: 'ctrl+arrowleft',
-  nextTerminal: 'ctrl+arrowright'
+  nextTerminal: 'ctrl+arrowright',
+  openFolder: 'mod+o',
+  prevWorkspace: 'mod+shift+arrowup',
+  nextWorkspace: 'mod+shift+arrowdown',
+  prevProfile: 'mod+shift+arrowleft',
+  nextProfile: 'mod+shift+arrowright',
+  manageProfiles: 'mod+shift+p'
 }
 
 const isMac = window.api.platform === 'darwin'
