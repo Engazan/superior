@@ -6,6 +6,7 @@ import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
+import { UsageBadge } from './UsageBadge'
 import type { Rect } from '../gridLayout'
 import type { AgentSession } from '../types'
 
@@ -319,6 +320,7 @@ export function TerminalView({
               className="h-3.5 w-3.5 text-sm"
             />
             <span className="min-w-0 flex-1 truncate">{session.label}</span>
+            <UsageBadge sessionId={session.id} />
             {shortcutNumber !== undefined && shortcutNumber <= 9 && (
               <span
                 className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wide ${

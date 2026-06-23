@@ -64,6 +64,12 @@ export interface AppSettings {
   ui: UiState
   /** Hex color a workspace tab pulses with when one of its terminals finishes. */
   attentionColor: string
+  /**
+   * Show live Claude usage (5h/7d limit, cost) in the terminal topbar. Off by
+   * default because enabling it installs a status-line wrapper into the Claude
+   * config dirs the app launches (to read the subscription rate limits).
+   */
+  usageTracking: boolean
 }
 
 export type PresetIconType = 'emoji' | 'image'
@@ -447,6 +453,49 @@ export interface AgentExitEvent {
 }
 
 /**
+ * Live token/cost usage for a session running a Claude CLI, derived from Claude
+ * Code's own JSONL transcript for that working directory. Only emitted for
+ * sessions whose command resolves to `claude` (or a `claude-*` custom-memory
+ * variant); other terminals never produce this event.
+ */
+export interface AgentUsage {
+  id: string
+  /** Model id from the latest assistant turn, e.g. 'claude-opus-4-8'. */
+  model: string | null
+  /** Tokens occupying the context window right now (the latest turn's input). */
+  contextTokens: number
+  /** Context window size the percentage is measured against (200k, or 1M when exceeded). */
+  contextLimit: number
+  /** Cumulative non-cached input tokens billed across the session. */
+  inputTokens: number
+  /** Cumulative output tokens across the session. */
+  outputTokens: number
+  /** Cumulative cache-read input tokens across the session. */
+  cacheReadTokens: number
+  /** Cumulative cache-creation (write) input tokens across the session. */
+  cacheCreationTokens: number
+  /** Sum of the four token buckets above. */
+  totalTokens: number
+  /** Spend in USD — Claude's own figure when available, else a pricing estimate;
+   *  null when neither is known. */
+  costUsd: number | null
+  /**
+   * Percentage of the rolling 5-hour subscription limit already used (0–100), or
+   * null when unknown. Sourced from Claude's status-line hook, so it only appears
+   * for sessions launched after the status-line wrapper was installed. "Remaining"
+   * is `100 - fiveHourPct`.
+   */
+  fiveHourPct: number | null
+  /** Percentage of the rolling 7-day subscription limit used (0–100), or null. */
+  sevenDayPct: number | null
+  /** When the 5-hour window resets (raw value from Claude, often ISO), or null. */
+  resetsAt: string | null
+  /** Number of assistant turns seen in the transcript. */
+  messageCount: number
+  updatedAt: number
+}
+
+/**
  * IPC channel name constants so main + preload share one source of truth.
  */
 export const IPC = {
@@ -481,6 +530,7 @@ export const IPC = {
   SETTINGS_SET_SHORTCUTS: 'settings:set-shortcuts',
   SETTINGS_SET_UI: 'settings:set-ui',
   SETTINGS_SET_ATTENTION_COLOR: 'settings:set-attention-color',
+  SETTINGS_SET_USAGE_TRACKING: 'settings:set-usage-tracking',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',
@@ -504,6 +554,8 @@ export const IPC = {
   AGENT_KILL: 'agent:kill',
   AGENT_DATA: 'agent:data',
   AGENT_EXIT: 'agent:exit',
+  AGENT_USAGE: 'agent:usage',
+  AGENT_USAGE_GET: 'agent:usage-get',
   AGENT_RESTORE: 'agent:restore',
   AGENT_ATTACH: 'agent:attach',
   AGENT_DETACH: 'agent:detach',

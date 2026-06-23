@@ -4,6 +4,7 @@ import {
   type AgentDataEvent,
   type AgentExitEvent,
   type AgentSession,
+  type AgentUsage,
   type AppSettings,
   type BranchInfo,
   type BranchSwitchResult,
@@ -177,6 +178,11 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_ATTENTION_COLOR, color)
   },
 
+  /** Enable/disable live Claude usage in the terminal topbar. */
+  setUsageTracking(enabled: boolean): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_USAGE_TRACKING, enabled)
+  },
+
   checkForUpdates(): Promise<UpdateInfo> {
     return ipcRenderer.invoke(IPC.UPDATE_CHECK)
   },
@@ -329,6 +335,18 @@ const api = {
     const listener = (_e: unknown, payload: AgentExitEvent): void => cb(payload)
     ipcRenderer.on(IPC.AGENT_EXIT, listener)
     return () => ipcRenderer.removeListener(IPC.AGENT_EXIT, listener)
+  },
+
+  /** Current Claude usage snapshots, to prime the store on load. */
+  getUsageSnapshots(): Promise<AgentUsage[]> {
+    return ipcRenderer.invoke(IPC.AGENT_USAGE_GET)
+  },
+
+  /** Subscribe to live Claude token/cost usage. Returns an unsubscribe function. */
+  onAgentUsage(cb: (usage: AgentUsage) => void): () => void {
+    const listener = (_e: unknown, payload: AgentUsage): void => cb(payload)
+    ipcRenderer.on(IPC.AGENT_USAGE, listener)
+    return () => ipcRenderer.removeListener(IPC.AGENT_USAGE, listener)
   }
 }
 

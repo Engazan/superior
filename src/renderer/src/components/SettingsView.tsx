@@ -4,8 +4,38 @@ import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { useTheme } from '../theme'
 import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
+import { clearUsageStore, primeUsageStore } from '../usageStore'
 import { useI18n, LANGUAGES } from '../i18n'
 import type { Folder, PresetsState, ThemeMode, TerminalPreset, Workspace } from '../types'
+
+/** A small on/off switch. */
+function Toggle({
+  checked,
+  onChange,
+  label
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+}): JSX.Element {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition ${
+        checked ? 'bg-accent' : 'bg-edge'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+          checked ? 'translate-x-4' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
+  )
+}
 
 export type SettingsSection = 'appearance' | 'presets' | 'daemons' | 'keyboard'
 
@@ -36,6 +66,19 @@ function AppearanceSection(): JSX.Element {
   const { lang, setLang, t } = useI18n()
   const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
   const isDefaultAttention = attentionColor.toLowerCase() === DEFAULT_ATTENTION_COLOR
+
+  const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
+  useEffect(() => {
+    window.api.getSettings().then((s) => setUsageTracking(s.usageTracking))
+  }, [])
+
+  const toggleUsageTracking = (next: boolean): void => {
+    setUsageTracking(next)
+    // Reflect the change immediately, then persist (main starts/stops tracking).
+    if (next) primeUsageStore()
+    else clearUsageStore()
+    window.api.setUsageTracking(next).then((s) => setUsageTracking(s.usageTracking))
+  }
 
   return (
     <>
@@ -109,6 +152,20 @@ function AppearanceSection(): JSX.Element {
               {t('appearance.resetColor')}
             </button>
           )}
+        </div>
+      </section>
+
+      <section className="mt-8 max-w-md">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="mb-1.5 text-sm font-medium text-fg">{t('usage.tracking')}</div>
+            <p className="text-xs text-fgdim">{t('usage.trackingDesc')}</p>
+          </div>
+          <Toggle
+            checked={usageTracking === true}
+            onChange={toggleUsageTracking}
+            label={t('usage.tracking')}
+          />
         </div>
       </section>
     </>

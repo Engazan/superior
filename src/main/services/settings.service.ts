@@ -53,7 +53,8 @@ const DEFAULTS: AppSettings = {
   language: 'en',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ui: { ...DEFAULT_UI },
-  attentionColor: DEFAULT_ATTENTION_COLOR
+  attentionColor: DEFAULT_ATTENTION_COLOR,
+  usageTracking: false
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
@@ -102,7 +103,9 @@ export function getSettings(): AppSettings {
       : DEFAULTS.language,
     shortcuts: normalizeShortcuts(parsed.shortcuts),
     ui: normalizeUi(parsed.ui),
-    attentionColor: normalizeColor(parsed.attentionColor)
+    attentionColor: normalizeColor(parsed.attentionColor),
+    usageTracking:
+      typeof parsed.usageTracking === 'boolean' ? parsed.usageTracking : DEFAULTS.usageTracking
   }
 }
 
@@ -155,6 +158,16 @@ export function setAttentionColor(color: string): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     attentionColor: normalizeColor(color)
+  }
+  save(next)
+  return next
+}
+
+/** Persist whether Claude usage tracking is enabled and return the updated settings. */
+export function setUsageTracking(enabled: boolean): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    usageTracking: Boolean(enabled)
   }
   save(next)
   return next

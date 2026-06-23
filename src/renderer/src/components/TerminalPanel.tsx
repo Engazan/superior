@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetIcon } from './PresetIcon'
+import { UsageBadge } from './UsageBadge'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
 import { useI18n } from '../i18n'
@@ -154,6 +155,7 @@ export function TerminalPanel({
                   <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.status]}`} />
                   <PresetIcon iconType={s.iconType} icon={s.icon} className="h-3.5 w-3.5 text-sm" />
                   <span className="whitespace-nowrap">{s.label}</span>
+                  <UsageBadge sessionId={s.id} />
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

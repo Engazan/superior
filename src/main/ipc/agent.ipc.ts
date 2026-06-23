@@ -1,7 +1,14 @@
 import { ipcMain } from 'electron'
-import { IPC, type AgentSession, type StartAgentArgs, type StartAgentResult } from '@shared/types'
+import {
+  IPC,
+  type AgentSession,
+  type AgentUsage,
+  type StartAgentArgs,
+  type StartAgentResult
+} from '@shared/types'
 import { killAgent, restoreSessions, startAgent } from '../services/agent.service'
 import { daemonClient } from '../services/daemonClient'
+import { getUsageSnapshots } from '../services/usage.service'
 
 export function registerAgentIpc(): void {
   ipcMain.handle(IPC.AGENT_START, (_event, payload: StartAgentArgs): Promise<StartAgentResult> =>
@@ -9,6 +16,8 @@ export function registerAgentIpc(): void {
   )
 
   ipcMain.handle(IPC.AGENT_RESTORE, (): Promise<AgentSession[]> => restoreSessions())
+
+  ipcMain.handle(IPC.AGENT_USAGE_GET, (): AgentUsage[] => getUsageSnapshots())
 
   ipcMain.handle(IPC.AGENT_KILL, (_event, id: string): void => {
     killAgent(id)

@@ -3,6 +3,7 @@ import * as net from 'net'
 import { join } from 'path'
 import { app, BrowserWindow } from 'electron'
 import { IPC } from '@shared/types'
+import { stopUsageTracking } from './usage.service'
 import {
   FrameDecoder,
   daemonSocketPath,
@@ -61,6 +62,7 @@ function onServerMessage(msg: ServerMessage): void {
       break
     }
     case 'exit': {
+      stopUsageTracking(msg.id)
       const message =
         msg.exitCode === 127
           ? 'command not found. Is it installed and on your PATH?'

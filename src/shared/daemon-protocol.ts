@@ -7,6 +7,8 @@ export interface DaemonSessionMeta {
   icon?: string
   color?: string
   command: string
+  /** Working directory the session launched in; used to locate its Claude transcript. */
+  cwd: string
   workspaceId: string
   createdAt: number
 }

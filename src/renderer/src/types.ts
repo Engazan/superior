@@ -11,6 +11,7 @@ export type {
   AgentExitEvent,
   AgentSession,
   AgentStatus,
+  AgentUsage,
   AppSettings,
   BranchInfo,
   BranchSwitchResult,

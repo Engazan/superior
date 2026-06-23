@@ -13,8 +13,10 @@ import {
   setLanguage,
   setShortcuts,
   setTheme,
-  setUi
+  setUi,
+  setUsageTracking
 } from '../services/settings.service'
+import { syncUsageTracking } from '../services/agent.service'
 
 export function registerSettingsIpc(): void {
   ipcMain.handle(IPC.SETTINGS_GET, (): AppSettings => getSettings())
@@ -33,5 +35,14 @@ export function registerSettingsIpc(): void {
 
   ipcMain.handle(IPC.SETTINGS_SET_ATTENTION_COLOR, (_event, color: string): AppSettings =>
     setAttentionColor(color)
+  )
+
+  ipcMain.handle(
+    IPC.SETTINGS_SET_USAGE_TRACKING,
+    async (_event, enabled: boolean): Promise<AppSettings> => {
+      const settings = setUsageTracking(enabled)
+      await syncUsageTracking(settings.usageTracking)
+      return settings
+    }
   )
 }
