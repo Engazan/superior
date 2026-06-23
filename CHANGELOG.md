@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-06-23
+
+### Added
+
+- **Profiles.** A new **PROFILE** switch in the center of the title bar opens a
+  dropdown to pick a profile — each profile keeps its own separate set of
+  projects (folders). A **Manage profiles…** entry opens a dialog to add,
+  rename, and delete profiles. Deleting a profile removes its folders and their
+  workspaces; the last remaining profile can't be deleted. Existing projects are
+  migrated into a **Default** profile on first launch, and the selected profile
+  is remembered across restarts. Localized in all five languages.
+- **Remembered folder expand/collapse state.** Whether a project is rolled up or
+  expanded in the sidebar is now saved, so each project reopens in the same state
+  you left it in.
+
 ## [0.6.0] - 2026-06-22
 
 ### Added
