@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-06-23
+
+### Added
+
+- **Switch Git branches from the title bar.** Click the branch name to open a
+  searchable dropdown of local branches and check one out. Switching never
+  discards work: non-conflicting edits are carried over, while conflicting
+  uncommitted changes are detected and offered a **Stash & switch** (recoverable
+  later with `git stash pop`). Branches checked out in another worktree are
+  listed but disabled. The search box also doubles as a name field — type a new
+  name to **create a branch from the current one** and switch to it.
+- **More keyboard shortcuts.** Open folder, previous/next workspace,
+  previous/next profile, and manage profiles are now rebindable in
+  **Settings → Keyboard**, so the app can be driven entirely from the keyboard.
+- **CLI availability check.** Terminal presets show whether `claude` and `codex`
+  are installed and runnable in the terminal this app launches. When a CLI is
+  installed but invisible to the app's shell (its PATH lives only in an
+  interactive rc file like `~/.zshrc`), a one-click fix adds it to the env file
+  the app's shell actually reads.
+
+### Changed
+
+- **Steadier title bar.** The bar is now a fixed three-column layout, so the
+  centered profile switcher no longer shifts when the left side changes width
+  (Git status appearing/disappearing, branch name, switching profile/folder).
+
+### Fixed
+
+- **Profile keeps its active project.** Switching to another profile and back now
+  restores the project you had focused instead of jumping to a different one.
+
 ## [0.7.0] - 2026-06-23
 
 ### Added
