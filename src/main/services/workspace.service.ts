@@ -373,6 +373,10 @@ export function updateFolder(folderPath: string, patch: FolderUpdate): Workspace
       if (patch.color) folder.color = patch.color
       else delete folder.color
     }
+    if (patch.collapsed !== undefined) {
+      if (patch.collapsed) folder.collapsed = true
+      else delete folder.collapsed
+    }
   }
   const next = normalize(state)
   saveState(next)

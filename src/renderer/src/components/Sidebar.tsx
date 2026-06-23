@@ -1030,8 +1030,6 @@ export function Sidebar({
   const [addingFor, setAddingFor] = useState<string | null>(null)
   const [createKind, setCreateKind] = useState<WorkspaceCreateKind>('standard')
   const [draft, setDraft] = useState('')
-  // Folders the user has collapsed (rolled up) in the sidebar.
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
   // Right-click context menu for a folder, anchored at the cursor.
   const [folderMenu, setFolderMenu] = useState<{ path: string; x: number; y: number } | null>(null)
   // The folder currently open in the edit dialog.
@@ -1054,13 +1052,9 @@ export function Sidebar({
     onReorderFolders(paths)
   }
 
-  const toggleFolder = (path: string): void =>
-    setCollapsedFolders((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
+  // Persist the expand/collapse state on the folder so it survives a restart.
+  const toggleFolder = (folder: Folder): void =>
+    onUpdateFolder(folder.path, { collapsed: !folder.collapsed })
 
   const startRename = (ws: Workspace): void => {
     setAddingFor(null)
@@ -1275,7 +1269,7 @@ export function Sidebar({
           <div className="space-y-3">
             {folders.map((folder) => {
               const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
-              const open = !collapsedFolders.has(folder.path)
+              const open = !folder.collapsed
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
               return (
                 <div
@@ -1286,7 +1280,7 @@ export function Sidebar({
                   {/* Folder header — click to collapse / expand, drag to reorder */}
                   <div
                     draggable
-                    onClick={() => toggleFolder(folder.path)}
+                    onClick={() => toggleFolder(folder)}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setFolderMenu({ path: folder.path, x: e.clientX, y: e.clientY })

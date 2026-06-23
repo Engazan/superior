@@ -133,6 +133,8 @@ export interface Folder {
   icon?: string
   /** Hex color (e.g. '#3B82F6') tinting the folder's row background in the sidebar. */
   color?: string
+  /** True when the user has rolled the folder up in the sidebar; persisted across restarts. */
+  collapsed?: boolean
   lastOpenedAt: number
 }
 
@@ -141,6 +143,8 @@ export interface FolderUpdate {
   displayName?: string | null
   icon?: string | null
   color?: string | null
+  /** Sidebar expand/collapse state. Absent leaves it untouched. */
+  collapsed?: boolean
 }
 
 /** A named working context inside a folder, owning its own terminals + layout. */
