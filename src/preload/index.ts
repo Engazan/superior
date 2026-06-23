@@ -132,6 +132,11 @@ const api = {
     return ipcRenderer.invoke(IPC.GIT_SWITCH_BRANCH, { folderPath, branch, opts })
   },
 
+  /** Create `branch` from the current HEAD and switch to it. */
+  createBranch(folderPath: string, branch: string): Promise<BranchSwitchResult> {
+    return ipcRenderer.invoke(IPC.GIT_CREATE_BRANCH, { folderPath, branch })
+  },
+
   listDir(dirPath: string): Promise<FsListResult> {
     return ipcRenderer.invoke(IPC.FS_LIST_DIR, dirPath)
   },

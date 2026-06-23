@@ -265,6 +265,8 @@ export const cs: Record<MessageKey, string> = {
   'branch.none': 'Žádné větve',
   'branch.loading': 'Načítám větve…',
   'branch.switching': 'Přepínám…',
+  'branch.creating': 'Vytvářím…',
+  'branch.createFrom': 'Vytvořit „{branch}“ z {from}',
   'branch.dirtyBody': 'Neuložené změny brání přepnutí na „{branch}“. Odložit je (stash) a přepnout?',
   'branch.stashAndSwitch': 'Odložit a přepnout',
   'branch.stashedNote': 'Vaše změny byly odloženy. Obnovíte je příkazem: git stash pop',

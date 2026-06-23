@@ -179,6 +179,33 @@ export async function switchBranch(
   }
 }
 
+/**
+ * Create `branch` from the current HEAD and switch to it (`git checkout -b`).
+ * This is the safe case for dirty trees: the new branch starts at the same
+ * commit as HEAD, so any uncommitted edits move along with no possible conflict.
+ * Fails (surfaced verbatim) when the name already exists or is invalid.
+ */
+export async function createBranch(folderPath: string, branch: string): Promise<BranchSwitchResult> {
+  if (!isWithinWorkspaceFolder(folderPath)) {
+    return { status: null, error: 'Workspace folder is invalid.' }
+  }
+  const name = branch.trim()
+  if (!name) return { status: null, error: 'Enter a branch name.' }
+  try {
+    const inside = await git(folderPath, ['rev-parse', '--is-inside-work-tree'])
+    if (inside !== 'true') return { status: null, error: 'This folder is not a Git repository.' }
+  } catch (err) {
+    return { status: null, error: gitErrorMessage(err) }
+  }
+  try {
+    await git(folderPath, ['checkout', '-b', name])
+    return { status: await getGitStatus(folderPath) }
+  } catch (err) {
+    const status = await getGitStatus(folderPath).catch(() => null)
+    return { status, error: gitErrorMessage(err) }
+  }
+}
+
 export async function initGit(folderPath: string): Promise<GitStatus> {
   if (!isWithinWorkspaceFolder(folderPath)) {
     return { isRepository: false, branch: null, error: 'Workspace folder is invalid.' }

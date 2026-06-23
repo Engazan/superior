@@ -102,6 +102,12 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
     return q ? list.filter((b) => b.name.toLowerCase().includes(q)) : list
   }, [branches, query])
 
+  // Offer to create the typed name as a new branch (from the current HEAD) when
+  // it isn't already an existing branch.
+  const newName = query.trim()
+  const canCreate =
+    branches !== null && newName.length > 0 && !branches.some((b) => b.name === newName)
+
   const doSwitch = async (branch: string, stash: boolean): Promise<void> => {
     setBusy(branch)
     setError(null)
@@ -126,6 +132,24 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
       } else {
         setOpen(false)
       }
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const doCreate = async (): Promise<void> => {
+    if (!canCreate) return
+    setBusy(newName)
+    setError(null)
+    setNote(null)
+    try {
+      const res = await window.api.createBranch(gitDir, newName)
+      if (res.error) {
+        setError(res.error)
+        return
+      }
+      onSwitched()
+      setOpen(false)
     } finally {
       setBusy(null)
     }
@@ -193,6 +217,21 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
               })
             )}
           </div>
+
+          {canCreate && (
+            <button
+              onClick={() => void doCreate()}
+              disabled={busy !== null}
+              className="flex w-full items-center gap-2 border-t border-edge px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover disabled:opacity-50"
+            >
+              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">+</span>
+              <span className="truncate">
+                {busy === newName
+                  ? t('branch.creating')
+                  : t('branch.createFrom', { branch: newName, from: currentBranch })}
+              </span>
+            </button>
+          )}
 
           {conflict && (
             <div className="border-t border-edge bg-amber-500/10 p-2.5 text-xs">

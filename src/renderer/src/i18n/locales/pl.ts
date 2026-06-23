@@ -265,6 +265,8 @@ export const pl: Record<MessageKey, string> = {
   'branch.none': 'Brak gałęzi',
   'branch.loading': 'Ładowanie gałęzi…',
   'branch.switching': 'Przełączanie…',
+  'branch.creating': 'Tworzenie…',
+  'branch.createFrom': 'Utwórz „{branch}” z {from}',
   'branch.dirtyBody': 'Niezapisane zmiany blokują przełączenie na „{branch}”. Schować je (stash) i przełączyć?',
   'branch.stashAndSwitch': 'Schowaj i przełącz',
   'branch.stashedNote': 'Twoje zmiany zostały schowane. Przywróć je później poleceniem: git stash pop',

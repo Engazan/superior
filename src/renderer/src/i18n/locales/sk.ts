@@ -266,6 +266,8 @@ export const sk: Record<MessageKey, string> = {
   'branch.none': 'Žiadne vetvy',
   'branch.loading': 'Načítavam vetvy…',
   'branch.switching': 'Prepínam…',
+  'branch.creating': 'Vytváram…',
+  'branch.createFrom': 'Vytvoriť „{branch}“ z {from}',
   'branch.dirtyBody': 'Neuložené zmeny bránia prepnutiu na „{branch}“. Odložiť ich (stash) a prepnúť?',
   'branch.stashAndSwitch': 'Odložiť a prepnúť',
   'branch.stashedNote': 'Vaše zmeny boli odložené. Obnovíte ich príkazom: git stash pop',

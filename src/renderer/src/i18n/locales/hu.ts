@@ -265,6 +265,8 @@ export const hu: Record<MessageKey, string> = {
   'branch.none': 'Nincsenek ágak',
   'branch.loading': 'Ágak betöltése…',
   'branch.switching': 'Váltás…',
+  'branch.creating': 'Létrehozás…',
+  'branch.createFrom': '„{branch}” létrehozása innen: {from}',
   'branch.dirtyBody': 'A nem mentett változások megakadályozzák a(z) „{branch}” ágra váltást. Eltegyük (stash) és váltsunk?',
   'branch.stashAndSwitch': 'Eltevés és váltás',
   'branch.stashedNote': 'A változások el lettek téve. Később visszaállíthatod: git stash pop',

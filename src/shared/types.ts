@@ -470,6 +470,7 @@ export const IPC = {
   GIT_INIT: 'git:init',
   GIT_DIFF: 'git:diff',
   GIT_SWITCH_BRANCH: 'git:switch-branch',
+  GIT_CREATE_BRANCH: 'git:create-branch',
   FS_LIST_DIR: 'fs:list-dir',
   FS_SEARCH: 'fs:search',
   FS_READ_FILE: 'fs:read-file',

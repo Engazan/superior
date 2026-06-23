@@ -261,6 +261,8 @@ export const en = {
   'branch.none': 'No branches found',
   'branch.loading': 'Loading branches…',
   'branch.switching': 'Switching…',
+  'branch.creating': 'Creating…',
+  'branch.createFrom': 'Create “{branch}” from {from}',
   'branch.dirtyBody': 'Uncommitted changes would block switching to “{branch}”. Stash them and switch?',
   'branch.stashAndSwitch': 'Stash & switch',
   'branch.stashedNote': 'Your changes were stashed. Restore them later with: git stash pop',
