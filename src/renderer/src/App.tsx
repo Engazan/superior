@@ -6,6 +6,7 @@ import { FilePreviewPanel } from './components/FilePreviewPanel'
 import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
+import { ProfileManager } from './components/ProfileManager'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
@@ -31,6 +32,8 @@ export default function App(): JSX.Element {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   // Quick-launch preset picker overlay (opened by shortcut).
   const [launcherOpen, setLauncherOpen] = useState(false)
+  // "Manage profiles" modal, opened from the title-bar profile switcher.
+  const [profileManagerOpen, setProfileManagerOpen] = useState(false)
 
   const presetsApi = usePresets()
   const { presets } = presetsApi
@@ -183,6 +186,10 @@ export default function App(): JSX.Element {
           setView('settings')
         }}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
+        profiles={ws.profiles}
+        activeProfileId={ws.activeProfileId}
+        onSelectProfile={ws.selectProfile}
+        onManageProfiles={() => setProfileManagerOpen(true)}
         activeColor={activeSessionColor}
       />
 
@@ -205,7 +212,7 @@ export default function App(): JSX.Element {
         ) : (
           <>
             <Sidebar
-              folders={ws.folders}
+              folders={ws.visibleFolders}
               workspaces={ws.workspaces}
               activeWorkspaceId={ws.activeWorkspaceId}
               counts={ws.counts}
@@ -305,6 +312,17 @@ export default function App(): JSX.Element {
           presets={presets.filter((p) => p.active)}
           onSelect={ws.launchAgent}
           onClose={() => setLauncherOpen(false)}
+        />
+      )}
+
+      {profileManagerOpen && (
+        <ProfileManager
+          profiles={ws.profiles}
+          activeProfileId={ws.activeProfileId}
+          onAdd={ws.addProfile}
+          onRename={ws.renameProfile}
+          onRemove={ws.removeProfile}
+          onClose={() => setProfileManagerOpen(false)}
         />
       )}
     </div>

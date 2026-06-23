@@ -2,7 +2,14 @@ import { dialog } from 'electron'
 import { randomUUID } from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
-import type { Folder, FolderUpdate, Workspace, WorkspaceState, WorktreeAddArgs } from '@shared/types'
+import type {
+  Folder,
+  FolderUpdate,
+  Profile,
+  Workspace,
+  WorkspaceState,
+  WorktreeAddArgs
+} from '@shared/types'
 import { userDataFile, writeJsonFile } from '../lib/jsonStore'
 import {
   createWorktree,
@@ -77,8 +84,14 @@ export function isWithinWorkspaceFolder(target: string): boolean {
   )
 }
 
-function makeFolder(dir: string): Folder {
-  return { path: dir, name: path.basename(dir) || dir, lastOpenedAt: Date.now() }
+const DEFAULT_PROFILE_NAME = 'Default'
+
+function makeProfile(name: string): Profile {
+  return { id: randomUUID(), name: name.trim() || 'Profile', createdAt: Date.now() }
+}
+
+function makeFolder(dir: string, profileId: string): Folder {
+  return { path: dir, name: path.basename(dir) || dir, profileId, lastOpenedAt: Date.now() }
 }
 
 function makeWorkspace(folderPath: string, name: string): Workspace {
@@ -92,6 +105,8 @@ function readState(): WorkspaceState {
     const parsed = JSON.parse(raw) as Record<string, unknown>
     if (Array.isArray(parsed.folders)) {
       return normalize({
+        profiles: Array.isArray(parsed.profiles) ? (parsed.profiles as Profile[]) : [],
+        activeProfileId: (parsed.activeProfileId as string | null) ?? null,
         folders: parsed.folders as Folder[],
         workspaces: Array.isArray(parsed.workspaces) ? (parsed.workspaces as Workspace[]) : [],
         activeWorkspaceId: (parsed.activeWorkspaceId as string | null) ?? null
@@ -119,7 +134,8 @@ function migrateFolders(oldFolders: Folder[], activePath: string | null): Worksp
     workspaces.push(ws)
     if (f.path === activePath) activeWorkspaceId = ws.id
   }
-  return normalize({ folders, workspaces, activeWorkspaceId })
+  // normalize seeds the Default profile and assigns these folders to it.
+  return normalize({ profiles: [], activeProfileId: null, folders, workspaces, activeWorkspaceId })
 }
 
 /** If an old single-workspace file exists, seed from it (best effort). */
@@ -133,18 +149,54 @@ function migrateLegacy(): WorkspaceState {
   } catch {
     /* no legacy file */
   }
-  return { folders: [], workspaces: [], activeWorkspaceId: null }
+  return normalize({ profiles: [], activeProfileId: null, folders: [], workspaces: [], activeWorkspaceId: null })
 }
 
-/** Keep activeWorkspaceId pointing at an existing workspace (or null). */
+/**
+ * Guarantee at least one profile, a valid activeProfileId, and that every folder
+ * carries a profileId. Legacy folders (no profileId) and folders pointing at a
+ * deleted profile are adopted by the active profile, so nothing is orphaned.
+ */
+function ensureProfiles(state: WorkspaceState): WorkspaceState {
+  const profiles = state.profiles.length ? [...state.profiles] : [makeProfile(DEFAULT_PROFILE_NAME)]
+  const valid = new Set(profiles.map((p) => p.id))
+  const activeProfileId =
+    state.activeProfileId && valid.has(state.activeProfileId)
+      ? state.activeProfileId
+      : profiles[0].id
+  const folders = state.folders.map((f) =>
+    f.profileId && valid.has(f.profileId) ? f : { ...f, profileId: activeProfileId }
+  )
+  return { ...state, profiles, activeProfileId, folders }
+}
+
+/**
+ * Keep the persisted invariants: a seeded profile set, and an activeWorkspaceId
+ * that points at an existing workspace *within the active profile* (or null).
+ * The sidebar only renders the active profile's folders, so the active workspace
+ * must live there too.
+ */
 function normalize(state: WorkspaceState): WorkspaceState {
-  const has = (id: string | null): boolean => !!id && state.workspaces.some((w) => w.id === id)
-  const activeWorkspaceId = has(state.activeWorkspaceId)
-    ? state.activeWorkspaceId
-    : state.workspaces.length
-      ? state.workspaces[state.workspaces.length - 1].id
-      : null
-  return { folders: state.folders, workspaces: state.workspaces, activeWorkspaceId }
+  const s = ensureProfiles(state)
+  const profilePaths = new Set(
+    s.folders.filter((f) => f.profileId === s.activeProfileId).map((f) => f.path)
+  )
+  const inProfile = (id: string | null): boolean => {
+    const ws = id ? s.workspaces.find((w) => w.id === id) : undefined
+    return !!ws && profilePaths.has(ws.folderPath)
+  }
+  let activeWorkspaceId = s.activeWorkspaceId
+  if (!inProfile(activeWorkspaceId)) {
+    const candidates = s.workspaces.filter((w) => profilePaths.has(w.folderPath))
+    activeWorkspaceId = candidates.length ? candidates[candidates.length - 1].id : null
+  }
+  return {
+    profiles: s.profiles,
+    activeProfileId: s.activeProfileId,
+    folders: s.folders,
+    workspaces: s.workspaces,
+    activeWorkspaceId
+  }
 }
 
 function saveState(state: WorkspaceState): void {
@@ -178,16 +230,78 @@ export async function addFolder(): Promise<WorkspaceState | null> {
   const state = readState()
   const existing = state.folders.find((f) => f.path === dir)
   if (!existing) {
-    state.folders.push(makeFolder(dir))
+    // New folders join the active profile; existing ones keep their profile but
+    // switch the active profile to the one that owns them so they're visible.
+    state.folders.push(makeFolder(dir, state.activeProfileId as string))
     const ws = makeWorkspace(dir, 'Main')
     state.workspaces.push(ws)
     state.activeWorkspaceId = ws.id
   } else {
     existing.lastOpenedAt = Date.now()
+    // Re-opening a folder filed under another profile activates that profile so
+    // the folder (and its newly-active workspace) is actually shown.
+    if (existing.profileId) state.activeProfileId = existing.profileId
     const ws = state.workspaces.find((w) => w.folderPath === dir)
     if (ws) state.activeWorkspaceId = ws.id
   }
 
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/**
+ * Create a new profile and switch to it (its folder list starts empty). The
+ * caller then opens folders into it. Returns the updated state.
+ */
+export function addProfile(name: string): WorkspaceState {
+  const state = readState()
+  const profile = makeProfile(name)
+  state.profiles.push(profile)
+  state.activeProfileId = profile.id
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/** Rename a profile. */
+export function renameProfile(id: string, name: string): WorkspaceState {
+  const state = readState()
+  const profile = state.profiles.find((p) => p.id === id)
+  if (profile) profile.name = name.trim() || profile.name
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/**
+ * Remove a profile along with all of its folders and their workspaces, tearing
+ * down any worktrees. The last remaining profile can't be removed (there must
+ * always be one). If the active profile is removed, another becomes active.
+ */
+export async function removeProfile(id: string): Promise<WorkspaceState> {
+  const state = readState()
+  if (state.profiles.length <= 1 || !state.profiles.some((p) => p.id === id)) {
+    return normalize(state)
+  }
+  const doomedPaths = new Set(state.folders.filter((f) => f.profileId === id).map((f) => f.path))
+  const doomed = state.workspaces.filter((w) => doomedPaths.has(w.folderPath) && w.worktreePath)
+  await Promise.allSettled(
+    doomed.map((w) => removeWorktree(w.folderPath, w.worktreePath as string, { force: true }))
+  )
+  state.folders = state.folders.filter((f) => f.profileId !== id)
+  state.workspaces = state.workspaces.filter((w) => !doomedPaths.has(w.folderPath))
+  state.profiles = state.profiles.filter((p) => p.id !== id)
+  if (state.activeProfileId === id) state.activeProfileId = state.profiles[0]?.id ?? null
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/** Switch the active profile; normalize re-points the active workspace into it. */
+export function setActiveProfile(id: string): WorkspaceState {
+  const state = readState()
+  if (state.profiles.some((p) => p.id === id)) state.activeProfileId = id
   const next = normalize(state)
   saveState(next)
   return next

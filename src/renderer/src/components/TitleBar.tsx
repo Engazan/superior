@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react'
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
+import { ProfileSwitcher } from './ProfileSwitcher'
 import { useI18n } from '../i18n'
 import { useShortcutTitle } from '../shortcuts'
-import type { GitStatus } from '../types'
+import type { GitStatus, Profile } from '../types'
 
 const isMac = window.api.platform === 'darwin'
 
@@ -18,6 +19,13 @@ interface Props {
   onOpenSettings: () => void
   /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
   onToggleRight: () => void
+  /** Profiles for the center switcher (each owns its own folders). */
+  profiles: Profile[]
+  activeProfileId: string | null
+  /** Select a profile from the center dropdown. */
+  onSelectProfile: (id: string) => void
+  /** Open the "Manage profiles" modal. */
+  onManageProfiles: () => void
   /** Hex tint of the active session's preset; tints the strip when set. */
   activeColor?: string | null
 }
@@ -76,6 +84,10 @@ export function TitleBar({
   onInitGit,
   onOpenSettings,
   onToggleRight,
+  profiles,
+  activeProfileId,
+  onSelectProfile,
+  onManageProfiles,
   activeColor
 }: Props): JSX.Element {
   const { t } = useI18n()
@@ -131,9 +143,18 @@ export function TitleBar({
       )}
 
       <div
-        className="h-full flex-1"
+        className="flex h-full flex-1 items-center justify-center"
         onDoubleClick={isMac ? undefined : () => window.api.windowToggleMaximize()}
-      />
+      >
+        {showToggle && (
+          <ProfileSwitcher
+            profiles={profiles}
+            activeProfileId={activeProfileId}
+            onSelect={onSelectProfile}
+            onManage={onManageProfiles}
+          />
+        )}
+      </div>
 
       {showToggle && (
         <button

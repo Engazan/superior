@@ -104,11 +104,29 @@ export interface CustomMemoryMutationResult {
   presets: PresetsState
 }
 
+/**
+ * A named set of folders. Profiles let one user keep separate, switchable
+ * collections of projects (e.g. "Work" vs "Personal"). Every install has at
+ * least one profile; legacy folders are migrated into a "Default" profile.
+ */
+export interface Profile {
+  /** crypto.randomUUID() */
+  id: string
+  /** user-editable display name */
+  name: string
+  createdAt: number
+}
+
 /** A project folder (cwd for its workspaces' terminals). */
 export interface Folder {
   path: string
   /** basename of path */
   name: string
+  /**
+   * The profile this folder belongs to. Always present in normalized state; an
+   * absent value (legacy data) is migrated to the active/default profile on read.
+   */
+  profileId?: string
   /** User-chosen display name shown instead of `name` in the sidebar. The path is immutable. */
   displayName?: string
   /** User-uploaded custom icon as a data URL, shown instead of the default folder glyph. */
@@ -239,8 +257,12 @@ export interface StartAgentArgs {
   rows?: number
 }
 
-/** Saved folders + their workspaces, plus which workspace is active. */
+/** Saved profiles + folders + their workspaces, plus the active selections. */
 export interface WorkspaceState {
+  /** Always non-empty in normalized state (a "Default" profile is seeded). */
+  profiles: Profile[]
+  /** The currently selected profile; the sidebar shows only its folders. */
+  activeProfileId: string | null
   folders: Folder[]
   workspaces: Workspace[]
   activeWorkspaceId: string | null
@@ -367,6 +389,10 @@ export interface AgentExitEvent {
  */
 export const IPC = {
   WORKSPACE_LIST: 'workspace:list',
+  PROFILE_ADD: 'profile:add',
+  PROFILE_RENAME: 'profile:rename',
+  PROFILE_REMOVE: 'profile:remove',
+  PROFILE_SET_ACTIVE: 'profile:set-active',
   FOLDER_ADD: 'folder:add',
   FOLDER_REMOVE: 'folder:remove',
   FOLDER_REORDER: 'folder:reorder',

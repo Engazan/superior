@@ -2,18 +2,33 @@ import { ipcMain } from 'electron'
 import { IPC, type FolderUpdate, type WorkspaceState } from '@shared/types'
 import {
   addFolder,
+  addProfile,
   addWorkspace,
   listWorkspaces,
   removeFolder,
+  removeProfile,
   removeWorkspace,
+  renameProfile,
   renameWorkspace,
   reorderFolders,
+  setActiveProfile,
   setActiveWorkspace,
   updateFolder
 } from '../services/workspace.service'
 
 export function registerWorkspaceIpc(): void {
   ipcMain.handle(IPC.WORKSPACE_LIST, (): WorkspaceState => listWorkspaces())
+
+  ipcMain.handle(IPC.PROFILE_ADD, (_e, name: string): WorkspaceState => addProfile(name))
+
+  ipcMain.handle(
+    IPC.PROFILE_RENAME,
+    (_e, args: { id: string; name: string }): WorkspaceState => renameProfile(args.id, args.name)
+  )
+
+  ipcMain.handle(IPC.PROFILE_REMOVE, (_e, id: string): Promise<WorkspaceState> => removeProfile(id))
+
+  ipcMain.handle(IPC.PROFILE_SET_ACTIVE, (_e, id: string): WorkspaceState => setActiveProfile(id))
 
   ipcMain.handle(
     IPC.FOLDER_ADD,

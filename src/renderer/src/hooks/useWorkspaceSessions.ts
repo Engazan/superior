@@ -8,6 +8,7 @@ import {
   type AgentSession,
   type Folder,
   type FolderUpdate,
+  type Profile,
   type TerminalPreset,
   type Workspace,
   type WorkspaceState,
@@ -26,6 +27,8 @@ interface Deps {
  * the UI-state hooks and wires the handlers to the layout.
  */
 export function useWorkspaceSessions({ setError, t, presets }: Deps) {
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
   const [folders, setFolders] = useState<Folder[]>([])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
@@ -36,6 +39,13 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const [gridLayouts, setGridLayouts] = useState<Record<string, GridLayout>>({})
   // A grid cell blown up to fill the panel (null = none).
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
+
+  // Only the active profile's folders are shown in the sidebar; workspaces are
+  // grouped under folders, so filtering folders transitively scopes everything.
+  const visibleFolders = useMemo(
+    () => folders.filter((f) => f.profileId === activeProfileId),
+    [folders, activeProfileId]
+  )
 
   const activeWorkspace = useMemo(
     () => workspaces.find((w) => w.id === activeWorkspaceId) ?? null,
@@ -65,6 +75,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   useEffect(() => {
     ;(async () => {
       const ws = await window.api.listWorkspaces()
+      setProfiles(ws.profiles)
+      setActiveProfileId(ws.activeProfileId)
       setFolders(ws.folders)
       setWorkspaces(ws.workspaces)
       setActiveWorkspaceId(ws.activeWorkspaceId)
@@ -109,6 +121,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
 
   const applyState = useCallback(
     (state: WorkspaceState) => {
+      setProfiles(state.profiles)
+      setActiveProfileId(state.activeProfileId)
       setFolders(state.folders)
       setWorkspaces(state.workspaces)
       setActiveWorkspaceId(state.activeWorkspaceId)
@@ -173,6 +187,47 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       }
     },
     [setError]
+  )
+
+  // Create a profile (switches to it; its folder list starts empty).
+  const addProfile = useCallback(
+    async (name: string) => {
+      setError(null)
+      applyState(await window.api.addProfile(name))
+    },
+    [applyState, setError]
+  )
+
+  const renameProfile = useCallback(async (id: string, name: string) => {
+    const state = await window.api.renameProfile(id, name)
+    setProfiles(state.profiles)
+  }, [])
+
+  // Delete a profile and every folder/workspace it owns, killing their sessions.
+  const removeProfile = useCallback(
+    async (id: string) => {
+      setError(null)
+      const doomedPaths = new Set(
+        folders.filter((f) => f.profileId === id).map((f) => f.path)
+      )
+      const doomedWsIds = new Set(
+        workspaces.filter((w) => doomedPaths.has(w.folderPath)).map((w) => w.id)
+      )
+      sessions
+        .filter((s) => doomedWsIds.has(s.workspaceId))
+        .forEach((s) => window.api.killAgent(s.id))
+      setSessions((prev) => prev.filter((s) => !doomedWsIds.has(s.workspaceId)))
+      applyState(await window.api.removeProfile(id))
+    },
+    [folders, workspaces, sessions, applyState, setError]
+  )
+
+  const selectProfile = useCallback(
+    async (id: string) => {
+      if (id === activeProfileId) return
+      applyState(await window.api.setActiveProfile(id))
+    },
+    [activeProfileId, applyState]
   )
 
   const addWorkspace = useCallback(
@@ -419,7 +474,10 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   )
 
   return {
+    profiles,
+    activeProfileId,
     folders,
+    visibleFolders,
     workspaces,
     activeWorkspaceId,
     activeWorkspace,
@@ -432,6 +490,10 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     gridLayouts,
     maximizedId,
     counts,
+    addProfile,
+    renameProfile,
+    removeProfile,
+    selectProfile,
     addFolder,
     removeFolder,
     reorderFolders,

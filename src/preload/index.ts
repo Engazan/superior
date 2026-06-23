@@ -40,6 +40,24 @@ const api = {
     return ipcRenderer.invoke(IPC.WORKSPACE_LIST)
   },
 
+  /** Create a new (empty) profile and switch to it. */
+  addProfile(name: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.PROFILE_ADD, name)
+  },
+
+  renameProfile(id: string, name: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.PROFILE_RENAME, { id, name })
+  },
+
+  /** Delete a profile and all of its folders/workspaces (never the last one). */
+  removeProfile(id: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.PROFILE_REMOVE, id)
+  },
+
+  setActiveProfile(id: string): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.PROFILE_SET_ACTIVE, id)
+  },
+
   addFolder(): Promise<WorkspaceState | null | { error: string }> {
     return ipcRenderer.invoke(IPC.FOLDER_ADD)
   },

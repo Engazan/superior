@@ -31,6 +31,7 @@ export type {
   Language,
   PresetIconType,
   PresetsState,
+  Profile,
   ShortcutAction,
   ShortcutMap,
   StartAgentArgs,
