@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-06-23
+
+### Fixed
+
+- **Folders stop pulsing while still working.** A short pause in a terminal's
+  output is no longer mistaken for the prompt finishing, so a folder no longer
+  starts its attention pulse while its loader is still spinning. The pulse now
+  fires only once the session has truly gone idle.
+
 ## [0.8.0] - 2026-06-23
 
 ### Added
