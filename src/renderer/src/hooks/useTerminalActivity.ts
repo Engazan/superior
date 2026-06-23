@@ -20,7 +20,10 @@ export interface TerminalActivity {
  * - **attention**: when a session finishes (busy→idle, or exits while busy) and
  *   its workspace is *not* the focused one, that workspace is flagged so the
  *   sidebar can pulse its tab. Focusing a workspace clears its flag, and a
- *   terminal that finishes while its workspace is focused never flags it.
+ *   terminal that finishes while its workspace is focused never flags it. If the
+ *   session starts producing output again, the flag is dropped — the idle gap
+ *   was a mid-task pause, not the end of the prompt, so the tab must not pulse
+ *   while work is still streaming.
  *
  * Replay chunks (scrollback restored on attach) are ignored, so reattaching a
  * session never looks busy or raises attention. (Workspace switches are kept
@@ -80,13 +83,28 @@ export function useTerminalActivity(
       if (replay) return
       const existing = timers.current.get(id)
       if (existing) clearTimeout(existing)
-      else
+      else {
+        // idle → busy: this session is producing output again.
         setBusy((prev) => {
           if (prev.has(id)) return prev
           const next = new Set(prev)
           next.add(id)
           return next
         })
+        // Output resumed after an idle gap, so any attention we raised for this
+        // workspace was a false positive — the agent merely paused mid-task
+        // (thinking, waiting on a tool) rather than finishing. Drop the flag so
+        // the tab stops pulsing while work is still streaming; it'll be raised
+        // again only if the session goes idle for good.
+        const wsId = wsOfRef.current.get(id)
+        if (wsId)
+          setAttention((prev) => {
+            if (!prev.has(wsId)) return prev
+            const next = new Set(prev)
+            next.delete(wsId)
+            return next
+          })
+      }
       timers.current.set(
         id,
         setTimeout(() => finish(id), IDLE_MS)
