@@ -257,5 +257,16 @@ export const cs: Record<MessageKey, string> = {
     'Tento workspace má neuložené změny, které se ztratí. Přesto odstranit?',
   'worktree.removeRunningBody':
     'Tento workspace má běžící terminály. Zastavit je a odstranit?',
-  'worktree.revealInFinder': 'Zobrazit worktree ve správci souborů'
+  'worktree.revealInFinder': 'Zobrazit worktree ve správci souborů',
+  'branch.switch': 'Přepnout větev',
+  'branch.search': 'Hledat větve…',
+  'branch.current': 'aktuální',
+  'branch.inUse': 'používá se',
+  'branch.none': 'Žádné větve',
+  'branch.loading': 'Načítám větve…',
+  'branch.switching': 'Přepínám…',
+  'branch.dirtyBody': 'Neuložené změny brání přepnutí na „{branch}“. Odložit je (stash) a přepnout?',
+  'branch.stashAndSwitch': 'Odložit a přepnout',
+  'branch.stashedNote': 'Vaše změny byly odloženy. Obnovíte je příkazem: git stash pop',
+  'branch.switchFailed': 'Nepodařilo se přepnout větev: {message}'
 }

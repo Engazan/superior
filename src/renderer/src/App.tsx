@@ -39,7 +39,7 @@ export default function App(): JSX.Element {
   const { presets } = presetsApi
   const preview = usePreviewPane()
   const ws = useWorkspaceSessions({ setError, t, presets })
-  const { gitStatus, gitLoading, initializeGit } = useGitStatus(
+  const { gitStatus, gitLoading, initializeGit, refresh: refreshGitStatus } = useGitStatus(
     ws.effectiveDir,
     ws.activeFolder?.path ?? null,
     setError
@@ -210,6 +210,11 @@ export default function App(): JSX.Element {
         gitLoading={gitLoading}
         onToggle={() => setSidebarCollapsed((c) => !c)}
         onInitGit={initializeGit}
+        gitDir={ws.effectiveDir}
+        branchSwitchable={
+          view === 'main' && !!gitStatus?.isRepository && !ws.activeWorkspace?.worktreePath
+        }
+        onBranchSwitched={refreshGitStatus}
         onOpenSettings={() => {
           setSettingsSection('appearance')
           setView('settings')

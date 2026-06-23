@@ -257,5 +257,16 @@ export const hu: Record<MessageKey, string> = {
     'Ennek a munkaterületnek nincs commitolva a módosítása, ami elveszik. Eltávolítod mégis?',
   'worktree.removeRunningBody':
     'Ennek a munkaterületnek futó termináljai vannak. Leállítod és eltávolítod?',
-  'worktree.revealInFinder': 'Worktree megjelenítése a fájlkezelőben'
+  'worktree.revealInFinder': 'Worktree megjelenítése a fájlkezelőben',
+  'branch.switch': 'Ág váltása',
+  'branch.search': 'Ágak keresése…',
+  'branch.current': 'jelenlegi',
+  'branch.inUse': 'használatban',
+  'branch.none': 'Nincsenek ágak',
+  'branch.loading': 'Ágak betöltése…',
+  'branch.switching': 'Váltás…',
+  'branch.dirtyBody': 'A nem mentett változások megakadályozzák a(z) „{branch}” ágra váltást. Eltegyük (stash) és váltsunk?',
+  'branch.stashAndSwitch': 'Eltevés és váltás',
+  'branch.stashedNote': 'A változások el lettek téve. Később visszaállíthatod: git stash pop',
+  'branch.switchFailed': 'Nem sikerült ágat váltani: {message}'
 }

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
+import { BranchSwitcher } from './BranchSwitcher'
 import { useI18n } from '../i18n'
 import { useShortcutTitle } from '../shortcuts'
 import type { GitStatus, Profile } from '../types'
@@ -15,6 +16,12 @@ interface Props {
   gitLoading: boolean
   onToggle: () => void
   onInitGit: () => void
+  /** Active workspace's effective repo dir, for the branch switcher. */
+  gitDir: string | null
+  /** True when the current branch may be switched (a repo, not a worktree workspace). */
+  branchSwitchable: boolean
+  /** Re-read git status right after a successful branch switch. */
+  onBranchSwitched: () => void
   /** Open the settings view. The gear sits at the far right of the strip. */
   onOpenSettings: () => void
   /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
@@ -82,6 +89,9 @@ export function TitleBar({
   gitLoading,
   onToggle,
   onInitGit,
+  gitDir,
+  branchSwitchable,
+  onBranchSwitched,
   onOpenSettings,
   onToggleRight,
   profiles,
@@ -118,11 +128,21 @@ export function TitleBar({
                   <span className="flex h-full items-center px-1 text-xs text-fgmuted">Git…</span>
                 ) : gitStatus?.isRepository ? (
                   <div
-                    className="flex h-full min-w-0 max-w-64 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
+                    className="flex h-full min-w-0 max-w-72 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
                     title={gitStatus.branch ?? 'HEAD'}
                   >
-                    <BranchIcon />
-                    <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
+                    {branchSwitchable && gitDir ? (
+                      <BranchSwitcher
+                        gitDir={gitDir}
+                        currentBranch={gitStatus.branch ?? 'HEAD'}
+                        onSwitched={onBranchSwitched}
+                      />
+                    ) : (
+                      <>
+                        <BranchIcon />
+                        <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
+                      </>
+                    )}
                     {!!gitStatus.additions && (
                       <span className="shrink-0 text-emerald-500">+{gitStatus.additions}</span>
                     )}

@@ -2,7 +2,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import type { GitDiff, GitDiffFile, GitDiffLine, GitStatus } from '@shared/types'
+import type { BranchSwitchResult, GitDiff, GitDiffFile, GitDiffLine, GitStatus } from '@shared/types'
 import { isWithinWorkspaceFolder } from './workspace.service'
 import { parseUnifiedDiff } from './git.diff'
 
@@ -120,6 +120,62 @@ export async function getGitStatus(folderPath: string): Promise<GitStatus> {
       return { isRepository: false, branch: null, error: gitErrorMessage(err) }
     }
     return { isRepository: false, branch: null }
+  }
+}
+
+/**
+ * Switch the working tree at `folderPath` to `branch`.
+ *
+ * Handling possible uncommitted edits (the whole reason this is delicate):
+ *  - Non-conflicting changes are carried over by `git checkout` — no data loss.
+ *  - Conflicting changes make git refuse the checkout; we detect that and return
+ *    `dirtyConflict` rather than forcing anything, so nothing is ever discarded.
+ *    The caller can retry with `stash: true`, which pushes all changes (incl.
+ *    untracked) onto the stash — fully recoverable later with `git stash pop`.
+ *  - A branch checked out in another worktree makes git refuse; the error is
+ *    surfaced verbatim (and such branches are disabled in the picker).
+ */
+export async function switchBranch(
+  folderPath: string,
+  branch: string,
+  opts: { stash?: boolean } = {}
+): Promise<BranchSwitchResult> {
+  if (!isWithinWorkspaceFolder(folderPath)) {
+    return { status: null, error: 'Workspace folder is invalid.' }
+  }
+  try {
+    const inside = await git(folderPath, ['rev-parse', '--is-inside-work-tree'])
+    if (inside !== 'true') return { status: null, error: 'This folder is not a Git repository.' }
+  } catch (err) {
+    return { status: null, error: gitErrorMessage(err) }
+  }
+
+  let stashed = false
+  try {
+    if (opts.stash) {
+      // Only stash when there's something to stash, so we don't create an empty
+      // entry. `--include-untracked` clears any blocker the checkout might hit.
+      const dirty = (await gitRaw(folderPath, ['status', '--porcelain'])).trim().length > 0
+      if (dirty) {
+        await git(folderPath, [
+          'stash',
+          'push',
+          '--include-untracked',
+          '-m',
+          `superior: auto-stash before switching to ${branch}`
+        ])
+        stashed = true
+      }
+    }
+    await git(folderPath, ['checkout', branch])
+    return { status: await getGitStatus(folderPath), stashed }
+  } catch (err) {
+    const message = gitErrorMessage(err)
+    // git's wording when local changes would be lost by the checkout.
+    const dirtyConflict =
+      /would be overwritten|commit your changes or stash/i.test(message)
+    const status = await getGitStatus(folderPath).catch(() => null)
+    return { status, error: message, dirtyConflict }
   }
 }
 

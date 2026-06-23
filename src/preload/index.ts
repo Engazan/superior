@@ -6,6 +6,7 @@ import {
   type AgentSession,
   type AppSettings,
   type BranchInfo,
+  type BranchSwitchResult,
   type CliToolFixResult,
   type CliToolId,
   type CliToolStatus,
@@ -120,6 +121,15 @@ const api = {
 
   getGitDiff(folderPath: string): Promise<GitDiff> {
     return ipcRenderer.invoke(IPC.GIT_DIFF, folderPath)
+  },
+
+  /** Check out `branch` in `folderPath`. Pass `{ stash: true }` to retry past a dirty-tree conflict. */
+  switchBranch(
+    folderPath: string,
+    branch: string,
+    opts?: { stash?: boolean }
+  ): Promise<BranchSwitchResult> {
+    return ipcRenderer.invoke(IPC.GIT_SWITCH_BRANCH, { folderPath, branch, opts })
   },
 
   listDir(dirPath: string): Promise<FsListResult> {

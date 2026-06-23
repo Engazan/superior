@@ -257,5 +257,16 @@ export const pl: Record<MessageKey, string> = {
     'Ten workspace ma niezapisane zmiany, które zostaną utracone. Usunąć mimo to?',
   'worktree.removeRunningBody':
     'Ten workspace ma działające terminale. Zatrzymać je i usunąć?',
-  'worktree.revealInFinder': 'Pokaż worktree w menedżerze plików'
+  'worktree.revealInFinder': 'Pokaż worktree w menedżerze plików',
+  'branch.switch': 'Przełącz gałąź',
+  'branch.search': 'Szukaj gałęzi…',
+  'branch.current': 'bieżąca',
+  'branch.inUse': 'w użyciu',
+  'branch.none': 'Brak gałęzi',
+  'branch.loading': 'Ładowanie gałęzi…',
+  'branch.switching': 'Przełączanie…',
+  'branch.dirtyBody': 'Niezapisane zmiany blokują przełączenie na „{branch}”. Schować je (stash) i przełączyć?',
+  'branch.stashAndSwitch': 'Schowaj i przełącz',
+  'branch.stashedNote': 'Twoje zmiany zostały schowane. Przywróć je później poleceniem: git stash pop',
+  'branch.switchFailed': 'Nie udało się przełączyć gałęzi: {message}'
 }

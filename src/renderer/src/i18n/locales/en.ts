@@ -253,7 +253,18 @@ export const en = {
     'This branch workspace has uncommitted changes that will be lost. Remove it anyway?',
   'worktree.removeRunningBody':
     'This branch workspace has running terminals. Stop them and remove it?',
-  'worktree.revealInFinder': 'Reveal worktree in file manager'
+  'worktree.revealInFinder': 'Reveal worktree in file manager',
+  'branch.switch': 'Switch branch',
+  'branch.search': 'Search branches…',
+  'branch.current': 'current',
+  'branch.inUse': 'in use',
+  'branch.none': 'No branches found',
+  'branch.loading': 'Loading branches…',
+  'branch.switching': 'Switching…',
+  'branch.dirtyBody': 'Uncommitted changes would block switching to “{branch}”. Stash them and switch?',
+  'branch.stashAndSwitch': 'Stash & switch',
+  'branch.stashedNote': 'Your changes were stashed. Restore them later with: git stash pop',
+  'branch.switchFailed': 'Could not switch branch: {message}'
 }
 
 export type MessageKey = keyof typeof en

@@ -332,6 +332,18 @@ export interface GitStatus {
   error?: string
 }
 
+/** Outcome of switching the checked-out branch from the title-bar switcher. */
+export interface BranchSwitchResult {
+  /** Fresh status after a successful switch, else the unchanged current status (or null). */
+  status: GitStatus | null
+  /** A user-facing error when the switch failed; absent on success. */
+  error?: string
+  /** True when uncommitted changes block a plain checkout — the UI offers to stash. */
+  dirtyConflict?: boolean
+  /** True when local changes were stashed to complete the switch (recoverable via `git stash pop`). */
+  stashed?: boolean
+}
+
 /** Working-tree status of a single file in a diff. */
 export type GitFileStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked'
 
@@ -457,6 +469,7 @@ export const IPC = {
   GIT_STATUS: 'git:status',
   GIT_INIT: 'git:init',
   GIT_DIFF: 'git:diff',
+  GIT_SWITCH_BRANCH: 'git:switch-branch',
   FS_LIST_DIR: 'fs:list-dir',
   FS_SEARCH: 'fs:search',
   FS_READ_FILE: 'fs:read-file',

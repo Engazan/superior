@@ -5,6 +5,8 @@ interface GitStatusApi {
   gitStatus: GitStatus | null
   gitLoading: boolean
   initializeGit: () => Promise<void>
+  /** Re-read status now (e.g. right after switching branch), without waiting for the poll. */
+  refresh: () => Promise<void>
 }
 
 /**
@@ -48,6 +50,11 @@ export function useGitStatus(
     }
   }, [gitDir])
 
+  const refresh = useCallback(async () => {
+    if (!gitDir) return
+    setGitStatus(await window.api.getGitStatus(gitDir))
+  }, [gitDir])
+
   const initializeGit = useCallback(async () => {
     if (!initDir || gitLoading) return
     onError(null)
@@ -58,5 +65,5 @@ export function useGitStatus(
     if (status.error) onError(status.error)
   }, [initDir, gitLoading, onError])
 
-  return { gitStatus, gitLoading, initializeGit }
+  return { gitStatus, gitLoading, initializeGit, refresh }
 }
