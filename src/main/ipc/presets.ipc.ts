@@ -1,6 +1,9 @@
 import { ipcMain } from 'electron'
 import {
   IPC,
+  type CliToolFixResult,
+  type CliToolId,
+  type CliToolStatus,
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
   type PresetsState,
@@ -20,6 +23,7 @@ import {
   createCustomMemoryPreset,
   listCustomMemoryPresets
 } from '../services/custom-memory.service'
+import { checkCliTools, fixCliTool } from '../services/cli-tools.service'
 
 export function registerPresetsIpc(): void {
   ipcMain.handle(IPC.PRESETS_LIST, (): PresetsState => listPresets())
@@ -65,4 +69,8 @@ export function registerPresetsIpc(): void {
     (_event, directoryName: string): CustomMemoryMutationResult =>
       addCustomMemoryTerminalPreset(directoryName)
   )
+
+  ipcMain.handle(IPC.CLI_TOOLS_CHECK, (): CliToolStatus[] => checkCliTools())
+
+  ipcMain.handle(IPC.CLI_TOOL_FIX, (_e, id: CliToolId): CliToolFixResult => fixCliTool(id))
 }

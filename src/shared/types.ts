@@ -110,6 +110,40 @@ export interface CustomMemoryMutationResult {
   presets: PresetsState
 }
 
+/** A CLI the built-in presets launch, checked for availability on startup. */
+export type CliToolId = 'claude' | 'codex'
+
+/**
+ * Health of a CLI tool relative to the terminal this app spawns. The daemon runs
+ * preset commands in a login shell (`$SHELL -l -c …`), so a CLI can be installed
+ * yet still "not found" when its PATH/alias only lives in an interactive-only rc
+ * file (e.g. ~/.zshrc). {@link availableInShell} reflects the shell the app uses.
+ */
+export interface CliToolStatus {
+  id: CliToolId
+  /** Display name, e.g. 'Claude'. */
+  label: string
+  /** The command the presets invoke, e.g. 'claude'. */
+  executable: string
+  /** The CLI was found somewhere on disk / in any of the user's shells. */
+  installed: boolean
+  /** The command resolves in the login shell the daemon launches presets with. */
+  availableInShell: boolean
+  /** Absolute path to the binary when discovered, else null. */
+  installedPath: string | null
+  /** Installed but not visible to the app's shell, and we can repair it. */
+  fixable: boolean
+}
+
+/** Result of an attempted auto-fix (adding the binary's dir to the shell env file). */
+export interface CliToolFixResult {
+  status: CliToolStatus
+  /** The shell config file that was written to (basename), when a fix was applied. */
+  fixedFile?: string
+  /** Stable reason code when no fix was applied: 'not-installed' | 'unsupported' | 'already-available'. */
+  error?: string
+}
+
 /**
  * A named set of folders. Profiles let one user keep separate, switchable
  * collections of projects (e.g. "Work" vs "Personal"). Every install has at
@@ -437,6 +471,8 @@ export const IPC = {
   CUSTOM_MEMORY_CREATE: 'custom-memory:create',
   CUSTOM_MEMORY_ADD_ALIAS: 'custom-memory:add-alias',
   CUSTOM_MEMORY_ADD_TERMINAL_PRESET: 'custom-memory:add-terminal-preset',
+  CLI_TOOLS_CHECK: 'cli-tools:check',
+  CLI_TOOL_FIX: 'cli-tools:fix',
   WINDOW_MINIMIZE: 'window:minimize',
   WINDOW_MAXIMIZE_TOGGLE: 'window:maximize-toggle',
   WINDOW_CLOSE: 'window:close',

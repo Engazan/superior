@@ -6,6 +6,9 @@ import {
   type AgentSession,
   type AppSettings,
   type BranchInfo,
+  type CliToolFixResult,
+  type CliToolId,
+  type CliToolStatus,
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
   type CustomMemoryProvider,
@@ -227,6 +230,16 @@ const api = {
     directoryName: string
   ): Promise<CustomMemoryMutationResult> {
     return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET, directoryName)
+  },
+
+  /** Whether claude/codex are installed and resolvable in the app's terminal. */
+  checkCliTools(): Promise<CliToolStatus[]> {
+    return ipcRenderer.invoke(IPC.CLI_TOOLS_CHECK)
+  },
+
+  /** Auto-fix a CLI that's installed but not on the app shell's PATH. */
+  fixCliTool(id: CliToolId): Promise<CliToolFixResult> {
+    return ipcRenderer.invoke(IPC.CLI_TOOL_FIX, id)
   },
 
   windowMinimize(): void {

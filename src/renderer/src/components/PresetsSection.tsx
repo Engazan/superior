@@ -3,6 +3,7 @@ import { PresetIcon } from './PresetIcon'
 import { PresetForm } from './PresetForm'
 import { Toggle } from './Toggle'
 import { CustomMemoryPresets } from './CustomMemoryPresets'
+import { CliToolsHealth } from './CliToolsHealth'
 import { useI18n } from '../i18n'
 import type { PresetsState, TerminalPreset } from '../types'
 
@@ -194,6 +195,8 @@ export function PresetsSection({
           </tbody>
         </table>
       </div>
+
+      <CliToolsHealth />
 
       <CustomMemoryPresets onPresetsChanged={onPresetsChanged} />
 
