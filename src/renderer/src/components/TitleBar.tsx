@@ -95,57 +95,61 @@ export function TitleBar({
   const showGit = showToggle && (gitLoading || gitStatus !== null)
   // Tint only on the main view; settings has no active session.
   const tint = showToggle ? tintStyle(activeColor) : undefined
+  const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header
       className="app-drag flex h-9 shrink-0 items-center border-b border-edge bg-bar transition-colors duration-200"
       style={tint}
     >
-      {showToggle && (
-        <div
-          className={`app-no-drag flex h-full items-center pr-1 ${isMac ? 'pl-[68px]' : 'pl-1'}`}
-        >
-          <SidebarToggle onClick={onToggle} />
-          {showGit && (
-            <>
-              <span className="mx-2 h-4 w-px shrink-0 bg-edge" aria-hidden />
-              {gitLoading && !gitStatus ? (
-                <span className="flex h-full items-center px-1 text-xs text-fgmuted">
-                  Git…
-                </span>
-              ) : gitStatus?.isRepository ? (
-                <div
-                  className="flex h-full min-w-0 max-w-64 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
-                  title={gitStatus.branch ?? 'HEAD'}
-                >
-                  <BranchIcon />
-                  <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
-                  {!!gitStatus.additions && (
-                    <span className="shrink-0 text-emerald-500">+{gitStatus.additions}</span>
-                  )}
-                  {!!gitStatus.deletions && (
-                    <span className="shrink-0 text-rose-500">−{gitStatus.deletions}</span>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={onInitGit}
-                  disabled={gitLoading || !!gitStatus?.error}
-                  title={gitStatus?.error ?? 'Initialize a Git repository in this folder'}
-                  className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
-                >
-                  <BranchIcon />
-                  <span>{gitStatus?.error ? 'Git unavailable' : 'Init git'}</span>
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
+      {/* LEFT — sidebar toggle + git status. flex-1 (equal to the right column)
+          so the center column stays pinned to the window's true center even as
+          this side's width changes (git appears/disappears, branch name, …). */}
       <div
-        className="flex h-full flex-1 items-center justify-center"
-        onDoubleClick={isMac ? undefined : () => window.api.windowToggleMaximize()}
+        className={`flex h-full min-w-0 flex-1 items-center ${isMac ? 'pl-[68px]' : 'pl-1'}`}
+        onDoubleClick={onMaximize}
       >
+        {showToggle && (
+          <div className="app-no-drag flex h-full min-w-0 items-center pr-1">
+            <SidebarToggle onClick={onToggle} />
+            {showGit && (
+              <>
+                <span className="mx-2 h-4 w-px shrink-0 bg-edge" aria-hidden />
+                {gitLoading && !gitStatus ? (
+                  <span className="flex h-full items-center px-1 text-xs text-fgmuted">Git…</span>
+                ) : gitStatus?.isRepository ? (
+                  <div
+                    className="flex h-full min-w-0 max-w-64 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
+                    title={gitStatus.branch ?? 'HEAD'}
+                  >
+                    <BranchIcon />
+                    <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
+                    {!!gitStatus.additions && (
+                      <span className="shrink-0 text-emerald-500">+{gitStatus.additions}</span>
+                    )}
+                    {!!gitStatus.deletions && (
+                      <span className="shrink-0 text-rose-500">−{gitStatus.deletions}</span>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={onInitGit}
+                    disabled={gitLoading || !!gitStatus?.error}
+                    title={gitStatus?.error ?? 'Initialize a Git repository in this folder'}
+                    className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
+                  >
+                    <BranchIcon />
+                    <span>{gitStatus?.error ? 'Git unavailable' : 'Init git'}</span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CENTER — profile switcher. shrink-0 with an auto width, centered between
+          the two equal-width side columns, so it never shifts. */}
+      <div className="flex h-full shrink-0 items-center justify-center" onDoubleClick={onMaximize}>
         {showToggle && (
           <ProfileSwitcher
             profiles={profiles}
@@ -156,49 +160,53 @@ export function TitleBar({
         )}
       </div>
 
-      {showToggle && (
-        <button
-          onClick={onOpenSettings}
-          title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
-          aria-label={t('sidebar.settings')}
-          className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-        >
-          <svg
-            className="block h-[17px] w-[17px]"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
+      {/* RIGHT — settings + right-panel toggles + window controls. flex-1 to mirror
+          the left column; its content is right-aligned. */}
+      <div className="flex h-full min-w-0 flex-1 items-center justify-end" onDoubleClick={onMaximize}>
+        {showToggle && (
+          <button
+            onClick={onOpenSettings}
+            title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
+            aria-label={t('sidebar.settings')}
+            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
           >
-            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
-      )}
+            <svg
+              className="block h-[17px] w-[17px]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        )}
 
-      {showToggle && (
-        <button
-          onClick={onToggleRight}
-          title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
-          aria-label={t('common.toggleRightSidebar')}
-          className="group app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-        >
-          <svg
-            className="block h-[15px] w-[15px] transition-transform duration-150 group-active:scale-90"
-            viewBox="0 0 15 15"
-            fill="none"
-            aria-hidden
+        {showToggle && (
+          <button
+            onClick={onToggleRight}
+            title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
+            aria-label={t('common.toggleRightSidebar')}
+            className="group app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
           >
-            <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" />
-            <line x1="9.5" y1="2.5" x2="9.5" y2="12.5" stroke="currentColor" />
-          </svg>
-        </button>
-      )}
+            <svg
+              className="block h-[15px] w-[15px] transition-transform duration-150 group-active:scale-90"
+              viewBox="0 0 15 15"
+              fill="none"
+              aria-hidden
+            >
+              <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" />
+              <line x1="9.5" y1="2.5" x2="9.5" y2="12.5" stroke="currentColor" />
+            </svg>
+          </button>
+        )}
 
-      {!isMac && <WindowControls />}
+        {!isMac && <WindowControls />}
+      </div>
     </header>
   )
 }
