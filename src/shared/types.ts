@@ -154,6 +154,12 @@ export interface Profile {
   id: string
   /** user-editable display name */
   name: string
+  /**
+   * The workspace that was active last time this profile was selected. Restored
+   * when the profile is re-activated, so switching profiles away and back keeps
+   * the previous selection instead of jumping to another folder.
+   */
+  lastWorkspaceId?: string
   createdAt: number
 }
 

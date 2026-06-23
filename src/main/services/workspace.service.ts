@@ -185,10 +185,23 @@ function normalize(state: WorkspaceState): WorkspaceState {
     const ws = id ? s.workspaces.find((w) => w.id === id) : undefined
     return !!ws && profilePaths.has(ws.folderPath)
   }
+  const activeProfile = s.profiles.find((p) => p.id === s.activeProfileId)
   let activeWorkspaceId = s.activeWorkspaceId
   if (!inProfile(activeWorkspaceId)) {
-    const candidates = s.workspaces.filter((w) => profilePaths.has(w.folderPath))
-    activeWorkspaceId = candidates.length ? candidates[candidates.length - 1].id : null
+    // Prefer the workspace this profile had active last, so switching away and
+    // back restores the previous selection instead of jumping to another folder.
+    const remembered = activeProfile?.lastWorkspaceId ?? null
+    if (inProfile(remembered)) {
+      activeWorkspaceId = remembered
+    } else {
+      const candidates = s.workspaces.filter((w) => profilePaths.has(w.folderPath))
+      activeWorkspaceId = candidates.length ? candidates[candidates.length - 1].id : null
+    }
+  }
+  // Persist the active profile's selection for the next time it's re-activated.
+  if (activeProfile) {
+    if (activeWorkspaceId) activeProfile.lastWorkspaceId = activeWorkspaceId
+    else delete activeProfile.lastWorkspaceId
   }
   return {
     profiles: s.profiles,
