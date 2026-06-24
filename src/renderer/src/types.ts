@@ -47,6 +47,8 @@ export type {
   PresetsState,
   Profile,
   ShortcutAction,
+  ShellCommandInstallResult,
+  ShellCommandStatus,
   ShortcutMap,
   StartAgentArgs,
   StartAgentResult,

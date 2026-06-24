@@ -3,6 +3,7 @@ import { PresetsSection } from './PresetsSection'
 import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { IntegrationsSection } from './IntegrationsSection'
+import { ShellCommandSection } from './ShellCommandSection'
 import { useTheme } from '../theme'
 import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
 import { clearUsageStore, primeUsageStore } from '../usageStore'
@@ -46,7 +47,13 @@ function Toggle({
   )
 }
 
-export type SettingsSection = 'appearance' | 'integrations' | 'presets' | 'daemons' | 'keyboard'
+export type SettingsSection =
+  | 'appearance'
+  | 'integrations'
+  | 'presets'
+  | 'daemons'
+  | 'keyboard'
+  | 'shell'
 
 interface Props {
   initialSection: SettingsSection
@@ -266,7 +273,8 @@ export function SettingsView({
         { id: 'integrations', label: t('settings.integrations') },
         { id: 'presets', label: t('settings.terminalPresets') },
         { id: 'daemons', label: t('settings.daemons'), badge: daemonCount },
-        { id: 'keyboard', label: t('settings.keyboard') }
+        { id: 'keyboard', label: t('settings.keyboard') },
+        { id: 'shell', label: t('settings.shellCommand') }
       ]
     }
   ]
@@ -340,6 +348,7 @@ export function SettingsView({
           <DaemonsSection workspaces={workspaces} folders={folders} onKill={onKillSession} />
         )}
         {section === 'keyboard' && <KeyboardSection />}
+        {section === 'shell' && <ShellCommandSection />}
       </div>
     </div>
   )

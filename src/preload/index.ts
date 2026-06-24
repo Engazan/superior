@@ -30,6 +30,8 @@ import {
   type Language,
   type LayoutsState,
   type PresetsState,
+  type ShellCommandInstallResult,
+  type ShellCommandStatus,
   type ShortcutMap,
   type StartAgentArgs,
   type StartAgentResult,
@@ -103,6 +105,23 @@ const api = {
 
   setActiveWorkspace(id: string): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_SET_ACTIVE, id)
+  },
+
+  /** Workspace state pushed by main (e.g. a folder opened via `superior .`). */
+  onWorkspaceStateChanged(cb: (state: WorkspaceState) => void): () => void {
+    const listener = (_e: unknown, state: WorkspaceState): void => cb(state)
+    ipcRenderer.on(IPC.WORKSPACE_STATE_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.WORKSPACE_STATE_CHANGED, listener)
+  },
+
+  /** Whether the `superior` shell command is installed and resolvable. */
+  getShellCommandStatus(): Promise<ShellCommandStatus> {
+    return ipcRenderer.invoke(IPC.SHELL_COMMAND_STATUS)
+  },
+
+  /** Install the `superior` shell command (and put it on PATH). */
+  installShellCommand(): Promise<ShellCommandInstallResult> {
+    return ipcRenderer.invoke(IPC.SHELL_COMMAND_INSTALL)
   },
 
   /** Local branches in a folder, for the worktree-create picker. */

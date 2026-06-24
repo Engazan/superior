@@ -575,6 +575,31 @@ export interface CloneArgs {
 /** Result of a clone: updated workspace state, a user cancel, or an error code. */
 export type CloneResult = { state: WorkspaceState } | { canceled: true } | { error: string }
 
+/** State of the `superior` shell command that opens a folder in the app. */
+export interface ShellCommandStatus {
+  /** The command name, e.g. `superior`. */
+  command: string
+  /** The launcher file exists on disk. */
+  installed: boolean
+  /** The command resolves in the user's login shell (on PATH). */
+  resolvable: boolean
+  /** Absolute path to the installed launcher, or null when absent. */
+  path: string | null
+}
+
+/** Outcome of installing the `superior` shell command. */
+export interface ShellCommandInstallResult {
+  ok: boolean
+  /** Where the launcher was written. */
+  path?: string
+  /** The file PATH was extended in (POSIX) or 'PATH' (Windows), when a change was needed. */
+  pathNote?: string
+  /** Whether the command resolves right away (vs. needing a fresh shell). */
+  resolvable?: boolean
+  /** Error message on failure. */
+  error?: string
+}
+
 /**
  * IPC channel name constants so main + preload share one source of truth.
  */
@@ -593,6 +618,10 @@ export const IPC = {
   WORKSPACE_REMOVE: 'workspace:remove',
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
   WORKSPACE_ADD_WORKTREE: 'workspace:add-worktree',
+  /** Main → renderer: workspace state changed out-of-band (e.g. `superior .`). */
+  WORKSPACE_STATE_CHANGED: 'workspace:state-changed',
+  SHELL_COMMAND_STATUS: 'shell-command:status',
+  SHELL_COMMAND_INSTALL: 'shell-command:install',
   WORKTREE_LIST_BRANCHES: 'worktree:list-branches',
   WORKTREE_IS_DIRTY: 'worktree:is-dirty',
   GIT_STATUS: 'git:status',
