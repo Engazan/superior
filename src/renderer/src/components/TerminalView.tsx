@@ -317,7 +317,7 @@ export function TerminalView({
             <PresetIcon
               iconType={session.iconType}
               icon={session.icon}
-              className="h-3.5 w-3.5 text-sm"
+              className="h-4 w-4 text-sm"
             />
             <span className="min-w-0 flex-1 truncate">{session.label}</span>
             <UsageBadge sessionId={session.id} />

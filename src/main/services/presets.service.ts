@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { randomUUID } from 'crypto'
 import type { PresetsState, TerminalPreset } from '@shared/types'
-import { builtinIcon } from '@shared/icons'
+import { builtinIcon, upgradeBuiltinIcon } from '@shared/icons'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
 function storeFile(): string {
@@ -60,19 +60,22 @@ function terminalPreset(): TerminalPreset {
 const HEX_COLOR = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 /** Drop a preset's color if it isn't a valid hex string. */
-function sanitizeColor(preset: TerminalPreset): TerminalPreset {
-  if (preset.color && !HEX_COLOR.test(preset.color)) {
-    const { color: _color, ...rest } = preset
+function sanitizePreset(preset: TerminalPreset): TerminalPreset {
+  const next: TerminalPreset =
+    preset.iconType === 'image' ? { ...preset, icon: upgradeBuiltinIcon(preset.icon) } : preset
+
+  if (next.color && !HEX_COLOR.test(next.color)) {
+    const { color: _color, ...rest } = next
     return rest
   }
-  return preset
+  return next
 }
 
 function read(): PresetsState {
   const parsed = readJsonFile<PresetsState | null>(storeFile(), null, (p) => {
     const obj = p as Partial<PresetsState>
     return obj && Array.isArray(obj.presets)
-      ? { presets: obj.presets.map(sanitizeColor) }
+      ? { presets: obj.presets.map(sanitizePreset) }
       : null
   })
   if (parsed) {

@@ -153,7 +153,7 @@ export function TerminalPanel({
                   }`}
                 >
                   <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.status]}`} />
-                  <PresetIcon iconType={s.iconType} icon={s.icon} className="h-3.5 w-3.5 text-sm" />
+                  <PresetIcon iconType={s.iconType} icon={s.icon} className="h-4 w-4 text-sm" />
                   <span className="whitespace-nowrap">{s.label}</span>
                   <UsageBadge sessionId={s.id} />
                   <button
