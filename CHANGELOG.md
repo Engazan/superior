@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-06-24
+
+### Added
+
+- **Open a folder from the terminal.** Install a `superior` command (one click in
+  **Settings → Command line**) and run `superior .` in any directory to open it in
+  the app. If the app is already running, the folder opens in the current window
+  instead of launching a second instance; otherwise it starts the app with that
+  folder active. The installer writes the launcher and puts it on PATH without
+  needing elevated permissions.
+
 ## [0.8.1] - 2026-06-23
 
 ### Fixed
