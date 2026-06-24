@@ -70,7 +70,15 @@ export interface AppSettings {
    * config dirs the app launches (to read the subscription rate limits).
    */
   usageTracking: boolean
+  /**
+   * Which figure the usage badge shows up front in the topbar. The hover
+   * tooltip always lists every stat regardless of this choice.
+   */
+  usagePrimary: UsagePrimary
 }
+
+/** The single usage figure shown front-and-center in the topbar badge. */
+export type UsagePrimary = 'remaining' | 'sevenDay' | 'cost' | 'tokens' | 'context'
 
 export type PresetIconType = 'emoji' | 'image'
 
@@ -495,6 +503,78 @@ export interface AgentUsage {
   updatedAt: number
 }
 
+/** A git forge the user can connect to in order to browse/clone repositories. */
+export type IntegrationProvider = 'github' | 'gitlab' | 'gitea'
+
+/** A saved connection to a git forge: where it lives plus an access token. */
+export interface Integration {
+  /** crypto.randomUUID() */
+  id: string
+  provider: IntegrationProvider
+  /** User-facing label, e.g. "Work Gitea". */
+  name: string
+  /**
+   * Base URL of the instance, e.g. 'http://localhost:3000' or 'https://gitlab.com'.
+   * For github.com it may be left blank (api.github.com is assumed).
+   */
+  baseUrl: string
+  /** Personal access token used for API calls and authenticated clones. */
+  token: string
+}
+
+export interface IntegrationsState {
+  integrations: Integration[]
+}
+
+/** A connection draft for the test-connection check (may be unsaved, so no id). */
+export interface IntegrationDraft {
+  provider: IntegrationProvider
+  baseUrl: string
+  token: string
+}
+
+/** Outcome of a "test connection" probe against a forge's API. */
+export interface IntegrationTestResult {
+  ok: boolean
+  /** Authenticated account name on success (login/username). */
+  username?: string
+  /** Stable error code (or a raw message) when ok is false. */
+  error?: string
+}
+
+/** A repository returned by a forge, normalized across the three providers. */
+export interface RemoteRepo {
+  /** Stable id within its forge, stringified. */
+  id: string
+  /** Short name, e.g. 'superior'. */
+  name: string
+  /** Namespaced name, e.g. 'patrik/superior'. */
+  fullName: string
+  description: string
+  /** Clean HTTPS clone URL (no embedded credentials). */
+  cloneUrl: string
+  private: boolean
+  defaultBranch: string
+}
+
+export interface RepoListResult {
+  repos: RemoteRepo[]
+  /** Stable error code (or raw message) when the listing failed. */
+  error?: string
+}
+
+/** Payload to clone a forge repo into a freshly-picked local directory. */
+export interface CloneArgs {
+  integrationId: string
+  /** The repo's clean HTTPS clone URL. */
+  cloneUrl: string
+  /** Namespaced name, used to name the destination subfolder. */
+  fullName: string
+}
+
+/** Result of a clone: updated workspace state, a user cancel, or an error code. */
+export type CloneResult = { state: WorkspaceState } | { canceled: true } | { error: string }
+
 /**
  * IPC channel name constants so main + preload share one source of truth.
  */
@@ -531,6 +611,13 @@ export const IPC = {
   SETTINGS_SET_UI: 'settings:set-ui',
   SETTINGS_SET_ATTENTION_COLOR: 'settings:set-attention-color',
   SETTINGS_SET_USAGE_TRACKING: 'settings:set-usage-tracking',
+  SETTINGS_SET_USAGE_PRIMARY: 'settings:set-usage-primary',
+  INTEGRATIONS_LIST: 'integrations:list',
+  INTEGRATIONS_SAVE: 'integrations:save',
+  INTEGRATIONS_DELETE: 'integrations:delete',
+  INTEGRATIONS_TEST: 'integrations:test',
+  INTEGRATIONS_LIST_REPOS: 'integrations:list-repos',
+  INTEGRATIONS_CLONE: 'integrations:clone',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',

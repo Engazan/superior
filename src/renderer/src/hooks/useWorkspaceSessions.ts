@@ -6,6 +6,7 @@ import { type TFunction } from '../i18n'
 import {
   WORKTREE_ERROR,
   type AgentSession,
+  type CloneArgs,
   type Folder,
   type FolderUpdate,
   type Profile,
@@ -141,6 +142,23 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     }
     applyState(res)
   }, [applyState, setError])
+
+  /**
+   * Clone a forge repo (main picks the destination dir) and open it as a folder.
+   * Returns a stable error code on failure, or null on success/cancel so the
+   * caller (the clone modal) can localize and stay open on error.
+   */
+  const cloneRepository = useCallback(
+    async (args: CloneArgs): Promise<string | null> => {
+      setError(null)
+      const res = await window.api.cloneRepository(args)
+      if ('canceled' in res) return null
+      if ('error' in res) return res.error
+      applyState(res.state)
+      return null
+    },
+    [applyState, setError]
+  )
 
   const removeFolder = useCallback(
     async (folderPath: string) => {
@@ -527,6 +545,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     removeProfile,
     selectProfile,
     addFolder,
+    cloneRepository,
     removeFolder,
     reorderFolders,
     updateFolder,

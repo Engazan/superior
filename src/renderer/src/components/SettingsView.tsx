@@ -2,11 +2,20 @@ import { useEffect, useState } from 'react'
 import { PresetsSection } from './PresetsSection'
 import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
+import { IntegrationsSection } from './IntegrationsSection'
 import { useTheme } from '../theme'
 import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
 import { clearUsageStore, primeUsageStore } from '../usageStore'
+import { useUsagePrimary } from '../usagePrimary'
 import { useI18n, LANGUAGES } from '../i18n'
-import type { Folder, PresetsState, ThemeMode, TerminalPreset, Workspace } from '../types'
+import type {
+  Folder,
+  PresetsState,
+  ThemeMode,
+  TerminalPreset,
+  UsagePrimary,
+  Workspace
+} from '../types'
 
 /** A small on/off switch. */
 function Toggle({
@@ -37,11 +46,14 @@ function Toggle({
   )
 }
 
-export type SettingsSection = 'appearance' | 'presets' | 'daemons' | 'keyboard'
+export type SettingsSection = 'appearance' | 'integrations' | 'presets' | 'daemons' | 'keyboard'
 
 interface Props {
   initialSection: SettingsSection
   onBack: () => void
+  /** Called after the user adds/edits/removes an integration, so the sidebar's
+   *  clone affordance can refresh. */
+  onIntegrationsChanged?: () => void
   presets: TerminalPreset[]
   onSavePreset: (preset: TerminalPreset) => void
   onDeletePreset: (id: string) => void
@@ -61,11 +73,28 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: 'theme.light' | 'theme.dark' 
     { value: 'system', labelKey: 'theme.system' }
   ]
 
+const USAGE_PRIMARY_OPTIONS: {
+  value: UsagePrimary
+  labelKey:
+    | 'usage.primaryRemaining'
+    | 'usage.primarySevenDay'
+    | 'usage.primaryCost'
+    | 'usage.primaryTokens'
+    | 'usage.primaryContext'
+}[] = [
+  { value: 'remaining', labelKey: 'usage.primaryRemaining' },
+  { value: 'sevenDay', labelKey: 'usage.primarySevenDay' },
+  { value: 'cost', labelKey: 'usage.primaryCost' },
+  { value: 'tokens', labelKey: 'usage.primaryTokens' },
+  { value: 'context', labelKey: 'usage.primaryContext' }
+]
+
 function AppearanceSection(): JSX.Element {
   const { mode, setMode } = useTheme()
   const { lang, setLang, t } = useI18n()
   const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
   const isDefaultAttention = attentionColor.toLowerCase() === DEFAULT_ATTENTION_COLOR
+  const { usagePrimary, setUsagePrimary } = useUsagePrimary()
 
   const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
   useEffect(() => {
@@ -167,6 +196,23 @@ function AppearanceSection(): JSX.Element {
             label={t('usage.tracking')}
           />
         </div>
+        {usageTracking === true && (
+          <div className="mt-4">
+            <div className="mb-1.5 text-sm font-medium text-fg">{t('usage.primary')}</div>
+            <p className="mb-3 text-xs text-fgdim">{t('usage.primaryDesc')}</p>
+            <select
+              value={usagePrimary}
+              onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
+              className="w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:ring-2 focus:ring-accentBorder"
+            >
+              {USAGE_PRIMARY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </section>
     </>
   )
@@ -175,6 +221,7 @@ function AppearanceSection(): JSX.Element {
 export function SettingsView({
   initialSection,
   onBack,
+  onIntegrationsChanged,
   presets,
   onSavePreset,
   onDeletePreset,
@@ -216,6 +263,7 @@ export function SettingsView({
     {
       label: t('settings.workflow'),
       items: [
+        { id: 'integrations', label: t('settings.integrations') },
         { id: 'presets', label: t('settings.terminalPresets') },
         { id: 'daemons', label: t('settings.daemons'), badge: daemonCount },
         { id: 'keyboard', label: t('settings.keyboard') }
@@ -274,6 +322,9 @@ export function SettingsView({
       {/* Settings content */}
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6">
         {section === 'appearance' && <AppearanceSection />}
+        {section === 'integrations' && (
+          <IntegrationsSection onChanged={onIntegrationsChanged} />
+        )}
         {section === 'presets' && (
           <PresetsSection
             presets={presets}

@@ -6,6 +6,7 @@ import { reconcileWorktrees } from './services/workspace.service'
 import { registerAgentIpc } from './ipc/agent.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { registerPresetsIpc } from './ipc/presets.ipc'
+import { registerIntegrationsIpc } from './ipc/integrations.ipc'
 import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
 import { registerLayoutIpc } from './ipc/layout.ipc'
 import { registerGitIpc } from './ipc/git.ipc'
@@ -76,6 +77,7 @@ app.whenReady().then(async () => {
   registerAgentIpc()
   registerSettingsIpc()
   registerPresetsIpc()
+  registerIntegrationsIpc()
   registerWindowIpc()
   registerLayoutIpc()
   registerGitIpc()

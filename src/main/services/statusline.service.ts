@@ -25,9 +25,50 @@ function shellSingleQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
+function slugFor(configDir: string): string {
+  return createHash('sha1').update(configDir).digest('hex').slice(0, 12)
+}
+
 function wrapperPath(configDir: string): string {
-  const slug = createHash('sha1').update(configDir).digest('hex').slice(0, 12)
-  return path.join(statusDir(), `statusline-${slug}.sh`)
+  return path.join(statusDir(), `statusline-${slugFor(configDir)}.sh`)
+}
+
+/**
+ * Where we persist a config dir's genuine original statusLine before taking it
+ * over. This is the source of truth for restoring it when tracking is disabled —
+ * independent of the wrapper file, so a deleted wrapper can't strand the user
+ * with our command and no way back.
+ */
+function backupPath(configDir: string): string {
+  return path.join(statusDir(), `statusline-backup-${slugFor(configDir)}.json`)
+}
+
+interface StatuslineBackup {
+  configDir: string
+  /** The original statusLine object, or null when the user had none. */
+  statusLine: ClaudeSettings['statusLine'] | null
+}
+
+/** Persist a config dir's original statusLine so disabling can restore it. */
+function writeBackup(configDir: string, original: ClaudeSettings['statusLine'] | undefined): void {
+  try {
+    fs.mkdirSync(statusDir(), { recursive: true })
+    const data: StatuslineBackup = { configDir, statusLine: original ?? null }
+    fs.writeFileSync(backupPath(configDir), `${JSON.stringify(data, null, 2)}\n`, 'utf-8')
+  } catch {
+    // Best-effort: without a backup we fall back to the wrapper's baked PREV.
+  }
+}
+
+/** Read a persisted backup, or null if it's missing/unreadable. */
+function readBackup(file: string): StatuslineBackup | null {
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf-8')) as Partial<StatuslineBackup>
+    if (typeof data.configDir !== 'string') return null
+    return { configDir: data.configDir, statusLine: data.statusLine ?? null }
+  } catch {
+    return null
+  }
 }
 
 function wrapperScript(prevCommand: string): string {
@@ -99,6 +140,9 @@ export function ensureClaudeStatusline(command: string): boolean {
     }
 
     if (!alreadyOurs) {
+      // Capture the genuine original (settings.statusLine is still theirs here)
+      // before we overwrite it, so disabling tracking can put it back verbatim.
+      writeBackup(configDir, settings.statusLine)
       settings.statusLine = {
         type: 'command',
         command: wrapper,
@@ -135,5 +179,75 @@ function readBakedPrev(wrapper: string): string {
     return m[1].replace(/'\\''/g, `'`)
   } catch {
     return ''
+  }
+}
+
+/**
+ * Undo {@link ensureClaudeStatusline} for one config dir: if its settings still
+ * point at our wrapper, put the original statusLine back (from the persisted
+ * backup, falling back to the command baked into the wrapper), then remove our
+ * wrapper + backup. Idempotent; a no-op when the dir was never taken over.
+ */
+function restoreStatusline(configDir: string): void {
+  const wrapper = wrapperPath(configDir)
+  const backup = backupPath(configDir)
+  const settingsFile = path.join(configDir, 'settings.json')
+
+  try {
+    const settings = readSettings(settingsFile)
+    // Only rewrite settings we can parse and that still reference our wrapper —
+    // never clobber a status line the user has since set to something else.
+    if (settings && settings.statusLine?.command === wrapper) {
+      const saved = readBackup(backup)
+      let restored: ClaudeSettings['statusLine'] | null
+      if (saved) {
+        restored = saved.statusLine
+      } else {
+        const prev = readBakedPrev(wrapper)
+        restored = prev ? { type: 'command', command: prev } : null
+      }
+      if (restored) settings.statusLine = restored
+      else delete settings.statusLine
+      const tmp = `${settingsFile}.superior.tmp`
+      fs.writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, 'utf-8')
+      fs.renameSync(tmp, settingsFile)
+    }
+  } catch {
+    // Leave settings as-is; we still clear our artifacts below.
+  }
+
+  // Best-effort cleanup of our own files now that nothing references them.
+  try {
+    fs.rmSync(wrapper, { force: true })
+    fs.rmSync(backup, { force: true })
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Public: undo the wrapper for the config dir backing `command`. */
+export function removeClaudeStatusline(command: string): void {
+  if (isWindows) return
+  const configDir = resolveClaudeConfigDir(command)
+  if (configDir) restoreStatusline(configDir)
+}
+
+/**
+ * Restore every config dir we ever took over, discovered from the backup files
+ * in the status dir. Used when usage tracking is switched off so the takeover is
+ * fully reversible regardless of which sessions are currently running.
+ */
+export function restoreAllClaudeStatuslines(): void {
+  if (isWindows) return
+  let names: string[]
+  try {
+    names = fs.readdirSync(statusDir())
+  } catch {
+    return // no status dir → nothing was ever installed
+  }
+  for (const name of names) {
+    if (!name.startsWith('statusline-backup-') || !name.endsWith('.json')) continue
+    const saved = readBackup(path.join(statusDir(), name))
+    if (saved) restoreStatusline(saved.configDir)
   }
 }

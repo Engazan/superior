@@ -4,7 +4,8 @@ import type {
   ShortcutAction,
   ShortcutMap,
   ThemeMode,
-  UiState
+  UiState,
+  UsagePrimary
 } from '@shared/types'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
@@ -54,10 +55,12 @@ const DEFAULTS: AppSettings = {
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ui: { ...DEFAULT_UI },
   attentionColor: DEFAULT_ATTENTION_COLOR,
-  usageTracking: false
+  usageTracking: false,
+  usagePrimary: 'remaining'
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
+const USAGE_PRIMARIES: UsagePrimary[] = ['remaining', 'sevenDay', 'cost', 'tokens', 'context']
 
 /** Merge stored shortcuts over the defaults, dropping unknown actions and non-string chords. */
 function normalizeShortcuts(raw: unknown): ShortcutMap {
@@ -105,7 +108,10 @@ export function getSettings(): AppSettings {
     ui: normalizeUi(parsed.ui),
     attentionColor: normalizeColor(parsed.attentionColor),
     usageTracking:
-      typeof parsed.usageTracking === 'boolean' ? parsed.usageTracking : DEFAULTS.usageTracking
+      typeof parsed.usageTracking === 'boolean' ? parsed.usageTracking : DEFAULTS.usageTracking,
+    usagePrimary: USAGE_PRIMARIES.includes(parsed.usagePrimary as UsagePrimary)
+      ? (parsed.usagePrimary as UsagePrimary)
+      : DEFAULTS.usagePrimary
   }
 }
 
@@ -168,6 +174,16 @@ export function setUsageTracking(enabled: boolean): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     usageTracking: Boolean(enabled)
+  }
+  save(next)
+  return next
+}
+
+/** Persist which figure the usage badge leads with and return the updated settings. */
+export function setUsagePrimary(primary: UsagePrimary): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    usagePrimary: USAGE_PRIMARIES.includes(primary) ? primary : DEFAULTS.usagePrimary
   }
   save(next)
   return next

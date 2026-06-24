@@ -5,6 +5,7 @@ import { ThemeProvider } from './theme'
 import { I18nProvider } from './i18n'
 import { ShortcutsProvider } from './shortcuts'
 import { AttentionColorProvider } from './attentionColor'
+import { UsagePrimaryProvider } from './usagePrimary'
 import './index.css'
 
 const SPLASH_DURATION_MS = 1000
@@ -56,7 +57,9 @@ createRoot(container).render(
     <ThemeProvider>
       <ShortcutsProvider>
         <AttentionColorProvider>
-          <StartupScreen />
+          <UsagePrimaryProvider>
+            <StartupScreen />
+          </UsagePrimaryProvider>
         </AttentionColorProvider>
       </ShortcutsProvider>
     </ThemeProvider>

@@ -11,6 +11,13 @@ import {
   type CliToolFixResult,
   type CliToolId,
   type CliToolStatus,
+  type CloneArgs,
+  type CloneResult,
+  type Integration,
+  type IntegrationDraft,
+  type IntegrationsState,
+  type IntegrationTestResult,
+  type RepoListResult,
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
   type CustomMemoryProvider,
@@ -29,6 +36,7 @@ import {
   type TerminalPreset,
   type ThemeMode,
   type UiState,
+  type UsagePrimary,
   type UpdateInfo,
   type UpdateProgress,
   type WorkspaceLayout,
@@ -183,6 +191,11 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_USAGE_TRACKING, enabled)
   },
 
+  /** Choose which usage figure the topbar badge leads with. */
+  setUsagePrimary(primary: UsagePrimary): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_USAGE_PRIMARY, primary)
+  },
+
   checkForUpdates(): Promise<UpdateInfo> {
     return ipcRenderer.invoke(IPC.UPDATE_CHECK)
   },
@@ -206,6 +219,35 @@ const api = {
     const listener = (_e: unknown, payload: UpdateProgress): void => cb(payload)
     ipcRenderer.on(IPC.UPDATE_STATUS, listener)
     return () => ipcRenderer.removeListener(IPC.UPDATE_STATUS, listener)
+  },
+
+  /** Saved git-forge integrations (GitHub / GitLab / Gitea connections). */
+  listIntegrations(): Promise<IntegrationsState> {
+    return ipcRenderer.invoke(IPC.INTEGRATIONS_LIST)
+  },
+
+  /** Upsert an integration by id (a blank id creates a new one). */
+  saveIntegration(integration: Integration): Promise<IntegrationsState> {
+    return ipcRenderer.invoke(IPC.INTEGRATIONS_SAVE, integration)
+  },
+
+  deleteIntegration(id: string): Promise<IntegrationsState> {
+    return ipcRenderer.invoke(IPC.INTEGRATIONS_DELETE, id)
+  },
+
+  /** Probe a (possibly unsaved) connection against the forge's API. */
+  testIntegration(draft: IntegrationDraft): Promise<IntegrationTestResult> {
+    return ipcRenderer.invoke(IPC.INTEGRATIONS_TEST, draft)
+  },
+
+  /** List repositories the integration's token can access. */
+  listRepos(integrationId: string): Promise<RepoListResult> {
+    return ipcRenderer.invoke(IPC.INTEGRATIONS_LIST_REPOS, integrationId)
+  },
+
+  /** Pick a destination dir, clone the repo there, and register it as a folder. */
+  cloneRepository(args: CloneArgs): Promise<CloneResult> {
+    return ipcRenderer.invoke(IPC.INTEGRATIONS_CLONE, args)
   },
 
   listPresets(): Promise<PresetsState> {

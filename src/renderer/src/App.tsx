@@ -7,6 +7,8 @@ import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
 import { ProfileManager } from './components/ProfileManager'
+import { CloneModal } from './components/CloneModal'
+import type { Integration } from './types'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
@@ -34,6 +36,17 @@ export default function App(): JSX.Element {
   const [launcherOpen, setLauncherOpen] = useState(false)
   // "Manage profiles" modal, opened from the title-bar profile switcher.
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
+  // "Clone project" modal, opened from the sidebar when integrations exist.
+  const [cloneOpen, setCloneOpen] = useState(false)
+
+  // Saved git-forge integrations — drives the sidebar clone affordance + modal.
+  const [integrations, setIntegrations] = useState<Integration[]>([])
+  const reloadIntegrations = useCallback(() => {
+    window.api.listIntegrations().then((s) => setIntegrations(s.integrations))
+  }, [])
+  useEffect(() => {
+    reloadIntegrations()
+  }, [reloadIntegrations])
 
   const presetsApi = usePresets()
   const { presets } = presetsApi
@@ -232,6 +245,7 @@ export default function App(): JSX.Element {
           <SettingsView
             initialSection={settingsSection}
             onBack={() => setView('main')}
+            onIntegrationsChanged={reloadIntegrations}
             presets={presets}
             onSavePreset={presetsApi.savePreset}
             onDeletePreset={presetsApi.deletePreset}
@@ -255,6 +269,8 @@ export default function App(): JSX.Element {
               attentionColor={attentionColor}
               update={update}
               collapsed={sidebarCollapsed}
+              canClone={integrations.length > 0}
+              onCloneProject={() => setCloneOpen(true)}
               onAddFolder={ws.addFolder}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
@@ -346,6 +362,14 @@ export default function App(): JSX.Element {
           presets={presets.filter((p) => p.active)}
           onSelect={ws.launchAgent}
           onClose={() => setLauncherOpen(false)}
+        />
+      )}
+
+      {cloneOpen && integrations.length > 0 && (
+        <CloneModal
+          integrations={integrations}
+          onClone={ws.cloneRepository}
+          onClose={() => setCloneOpen(false)}
         />
       )}
 

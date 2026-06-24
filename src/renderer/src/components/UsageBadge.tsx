@@ -1,6 +1,7 @@
 import { useUsage } from '../usageStore'
 import { useI18n } from '../i18n'
-import type { AgentUsage } from '../types'
+import { useUsagePrimary } from '../usagePrimary'
+import type { AgentUsage, UsagePrimary } from '../types'
 
 /** Compact "1.2k" / "3.4M" token formatting. */
 function formatTokens(n: number): string {
@@ -88,44 +89,74 @@ function tooltip(u: AgentUsage, t: ReturnType<typeof useI18n>['t']): string {
   return lines.join('\n')
 }
 
+interface Readout {
+  /** Small dimmed label before the value, e.g. "5h"; null when self-evident. */
+  label: string | null
+  value: string
+  /** Donut fill as % remaining, or null for figures without a ceiling. */
+  donut: number | null
+}
+
 /**
- * Live Claude subscription-usage for a session, in the terminal topbar. Shows how
- * much of the rolling 5-hour limit remains (the figure that actually runs out),
- * with cost as the fallback before the rate-limit reading is available. Renders
- * nothing until usage arrives — i.e. only for sessions running a Claude CLI.
+ * Resolve the single figure to lead with. Falls back to remaining 5h → cost →
+ * tokens whenever the chosen one isn't available yet (e.g. cost picked but the
+ * rate-limit reading hasn't arrived).
+ */
+function primaryReadout(
+  u: AgentUsage,
+  mode: UsagePrimary,
+  t: ReturnType<typeof useI18n>['t']
+): Readout {
+  const cost = u.costUsd !== null ? formatCost(u.costUsd) : null
+  const fiveRemain = u.fiveHourPct !== null ? Math.max(0, Math.round(100 - u.fiveHourPct)) : null
+  const sevenRemain = u.sevenDayPct !== null ? Math.max(0, Math.round(100 - u.sevenDayPct)) : null
+  const ctxPct = Math.round((u.contextTokens / u.contextLimit) * 100)
+  const tokens = formatTokens(u.totalTokens)
+
+  switch (mode) {
+    case 'cost':
+      if (cost) return { label: null, value: cost, donut: null }
+      break
+    case 'sevenDay':
+      if (sevenRemain !== null)
+        return { label: t('usage.sevenDayShort'), value: `${sevenRemain}%`, donut: sevenRemain }
+      break
+    case 'tokens':
+      return { label: null, value: `${tokens} ${t('usage.tokens')}`, donut: null }
+    case 'context':
+      return { label: t('usage.contextShort'), value: `${ctxPct}%`, donut: 100 - ctxPct }
+    case 'remaining':
+      break
+  }
+  // Default, and the fallback when the chosen figure isn't available yet.
+  if (fiveRemain !== null)
+    return { label: t('usage.fiveHourShort'), value: `${fiveRemain}%`, donut: fiveRemain }
+  if (cost) return { label: null, value: cost, donut: null }
+  return { label: null, value: `${tokens} ${t('usage.tokens')}`, donut: null }
+}
+
+/**
+ * Live Claude subscription-usage for a session, in the terminal topbar. Leads
+ * with the figure chosen in Settings (remaining 5h/7d limit, cost, tokens, or
+ * context) and reveals the full breakdown on hover. Renders nothing until usage
+ * arrives — i.e. only for sessions running a Claude CLI.
  */
 export function UsageBadge({ sessionId }: { sessionId: string }): JSX.Element | null {
   const usage = useUsage(sessionId)
   const { t } = useI18n()
+  const { usagePrimary } = useUsagePrimary()
   if (!usage) return null
 
-  const hasLimit = usage.fiveHourPct !== null
-  const remaining = hasLimit ? Math.max(0, Math.round(100 - (usage.fiveHourPct as number))) : 0
-  const cost = usage.costUsd !== null ? formatCost(usage.costUsd) : null
-
-  // Primary readout: remaining 5h limit when known, else cost, else tokens.
-  let primary: string
-  if (hasLimit) primary = `${remaining}%`
-  else if (cost) primary = cost
-  else primary = formatTokens(usage.totalTokens)
-
-  // Secondary readout next to it (avoid repeating the primary).
-  const secondary = hasLimit ? cost ?? formatTokens(usage.totalTokens) : null
+  const { label, value, donut } = primaryReadout(usage, usagePrimary, t)
 
   return (
     <span
       className="flex shrink-0 items-center gap-1 rounded border border-edge bg-panel/50 px-1.5 py-0.5 font-mono text-[10px] text-fgmuted"
       title={tooltip(usage, t)}
     >
-      {hasLimit && <Donut remaining={remaining} />}
-      {hasLimit && <span className="text-fgdim">{t('usage.fiveHourShort')}</span>}
-      <span>{primary}</span>
-      {secondary && (
-        <>
-          <span className="text-fgdim">·</span>
-          <span>{secondary}</span>
-        </>
-      )}
+      {donut !== null && <Donut remaining={donut} />}
+      {label && <span className="text-fgdim">{label}</span>}
+      <span>{value}</span>
     </span>
   )
 }

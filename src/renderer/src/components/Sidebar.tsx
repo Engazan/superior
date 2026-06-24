@@ -18,6 +18,10 @@ interface Props {
   /** update notification + in-app download/install controller */
   update: UpdateController
   collapsed: boolean
+  /** True when at least one git-forge integration is configured (enables clone). */
+  canClone: boolean
+  /** Open the "clone project from an integration" modal. */
+  onCloneProject: () => void
   onAddFolder: () => void
   onRemoveFolder: (path: string) => void
   /** Persist a new folder order after a drag-to-reorder in the sidebar. */
@@ -184,6 +188,28 @@ function UpdateGlyph({ className }: { className?: string }): JSX.Element {
       <path d="M12 3v12" />
       <path d="M7 10l5 5 5-5" />
       <path d="M5 21h14" />
+    </svg>
+  )
+}
+
+/** Git-branch glyph used for the "clone project from an integration" action. */
+function CloneGlyph({ className }: { className?: string }): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`shrink-0 ${className ?? 'h-4 w-4'}`}
+      aria-hidden
+    >
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="6" cy="18" r="2.5" />
+      <circle cx="18" cy="8" r="2.5" />
+      <path d="M6 8.5v7" />
+      <path d="M18 10.5c0 3-3 3.5-6 3.5" />
     </svg>
   )
 }
@@ -1014,6 +1040,8 @@ export function Sidebar({
   attentionColor,
   update,
   collapsed,
+  canClone,
+  onCloneProject,
   onAddFolder,
   onRemoveFolder,
   onReorderFolders,
@@ -1121,7 +1149,7 @@ export function Sidebar({
     return (
       <aside className="flex w-14 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
         {folderOverlays}
-        <div className="flex flex-col items-center border-b border-edge p-2">
+        <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
           <button
             onClick={onAddFolder}
             title={t('sidebar.openFolder')}
@@ -1130,6 +1158,16 @@ export function Sidebar({
           >
             +
           </button>
+          {canClone && (
+            <button
+              onClick={onCloneProject}
+              title={t('sidebar.cloneProject')}
+              aria-label={t('sidebar.cloneProject')}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <CloneGlyph />
+            </button>
+          )}
         </div>
 
         <nav className="min-h-0 flex-1 overflow-y-auto py-2">
@@ -1258,6 +1296,17 @@ export function Sidebar({
           </span>
           {t('sidebar.openFolder')}
         </button>
+        {canClone && (
+          <button
+            onClick={onCloneProject}
+            className="mt-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <span className="flex h-5 w-5 items-center justify-center text-accent">
+              <CloneGlyph />
+            </span>
+            {t('sidebar.cloneProject')}
+          </button>
+        )}
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2">

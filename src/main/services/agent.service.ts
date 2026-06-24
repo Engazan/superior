@@ -3,7 +3,7 @@ import { type AgentSession, type StartAgentArgs, type StartAgentResult } from '@
 import { daemonClient } from './daemonClient'
 import { isValidWorkspaceDir } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
-import { ensureClaudeStatusline } from './statusline.service'
+import { ensureClaudeStatusline, restoreAllClaudeStatuslines } from './statusline.service'
 import { getSettings } from './settings.service'
 
 /**
@@ -114,14 +114,16 @@ export function killAgent(id: string): void {
 
 /**
  * React to the usage-tracking toggle without needing an app restart. When turned
- * off, drop every tracker (badges clear). When turned on, install the status-line
- * wrapper for and begin tracking each already-running Claude session — transcript
- * cost/tokens appear at once; rate limits follow on the session's next launch,
- * since Claude only reads settings.json at startup.
+ * off, drop every tracker (badges clear) and restore every Claude statusLine we
+ * took over, so disabling fully reverses the install. When turned on, install the
+ * status-line wrapper for and begin tracking each already-running Claude session —
+ * transcript cost/tokens appear at once; rate limits follow on the session's next
+ * launch, since Claude only reads settings.json at startup.
  */
 export async function syncUsageTracking(enabled: boolean): Promise<void> {
   if (!enabled) {
     stopAllUsageTracking()
+    restoreAllClaudeStatuslines()
     return
   }
   const list = await daemonClient.list()

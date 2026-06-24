@@ -240,6 +240,16 @@ export async function addFolder(): Promise<WorkspaceState | null> {
     throw new Error('The selected path is not a valid folder.')
   }
 
+  return addFolderByPath(dir)
+}
+
+/**
+ * Register `dir` as a folder (seeding a default workspace) and activate it,
+ * re-activating an existing entry instead of duplicating it. Shared by the
+ * folder picker ({@link addFolder}) and the integration clone flow. Assumes
+ * `dir` is an existing directory. Returns the updated, persisted state.
+ */
+export function addFolderByPath(dir: string): WorkspaceState {
   const state = readState()
   const existing = state.folders.find((f) => f.path === dir)
   if (!existing) {

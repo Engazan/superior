@@ -5,7 +5,8 @@ import {
   type Language,
   type ShortcutMap,
   type ThemeMode,
-  type UiState
+  type UiState,
+  type UsagePrimary
 } from '@shared/types'
 import {
   getSettings,
@@ -14,6 +15,7 @@ import {
   setShortcuts,
   setTheme,
   setUi,
+  setUsagePrimary,
   setUsageTracking
 } from '../services/settings.service'
 import { syncUsageTracking } from '../services/agent.service'
@@ -44,5 +46,9 @@ export function registerSettingsIpc(): void {
       await syncUsageTracking(settings.usageTracking)
       return settings
     }
+  )
+
+  ipcMain.handle(IPC.SETTINGS_SET_USAGE_PRIMARY, (_event, primary: UsagePrimary): AppSettings =>
+    setUsagePrimary(primary)
   )
 }
