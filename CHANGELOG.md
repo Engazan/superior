@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-06-26
+
+### Added
+
+- **Profile accent colors.** Each profile can carry its own color, set from the
+  profile manager via a swatch popover next to the profile's delete button
+  (presets, a custom picker, or none). The active profile's color tints the app
+  title bar and the sidebar, so the profile you've switched to is recognizable
+  at a glance.
+
+### Changed
+
+- **Terminal colors stay on the terminal.** A terminal preset's color now tints
+  only that terminal's own topbar/tab instead of the whole app title bar,
+  keeping the app chrome reserved for the active profile's color.
+
 ## [0.9.0] - 2026-06-24
 
 ### Added
