@@ -17,6 +17,7 @@ export const hu: Record<MessageKey, string> = {
     'A profilok külön mappakészleteket tartanak. Válts közöttük az eszköztárból.',
   'profile.name': 'Profil neve',
   'profile.active': 'Aktív',
+  'profile.color': 'Szín',
   'profile.add': 'Profil hozzáadása',
   'profile.addPlaceholder': 'Új profil neve…',
   'profile.delete': 'Profil törlése',

@@ -17,6 +17,7 @@ export const cs: Record<MessageKey, string> = {
     'Profily uchovávají samostatné sady složek. Přepínejte mezi nimi v panelu nástrojů.',
   'profile.name': 'Název profilu',
   'profile.active': 'Aktivní',
+  'profile.color': 'Barva',
   'profile.add': 'Přidat profil',
   'profile.addPlaceholder': 'Název nového profilu…',
   'profile.delete': 'Odstranit profil',

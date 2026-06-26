@@ -174,7 +174,19 @@ export interface Profile {
    * the previous selection instead of jumping to another folder.
    */
   lastWorkspaceId?: string
+  /**
+   * Hex color (e.g. '#3B82F6') tinting the app title bar and the sidebar while
+   * this profile is active, so the switched-to profile is recognizable at a
+   * glance. Distinct from a terminal preset's color, which tints only that
+   * terminal's own topbar.
+   */
+  color?: string
   createdAt: number
+}
+
+/** Patch for {@link Profile} visuals; a null field clears the stored value. */
+export interface ProfileUpdate {
+  color?: string | null
 }
 
 /** A project folder (cwd for its workspaces' terminals). */
@@ -607,6 +619,7 @@ export const IPC = {
   WORKSPACE_LIST: 'workspace:list',
   PROFILE_ADD: 'profile:add',
   PROFILE_RENAME: 'profile:rename',
+  PROFILE_UPDATE: 'profile:update',
   PROFILE_REMOVE: 'profile:remove',
   PROFILE_SET_ACTIVE: 'profile:set-active',
   FOLDER_ADD: 'folder:add',

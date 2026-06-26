@@ -6,6 +6,7 @@ import type {
   Folder,
   FolderUpdate,
   Profile,
+  ProfileUpdate,
   Workspace,
   WorkspaceState,
   WorktreeAddArgs
@@ -292,6 +293,22 @@ export function renameProfile(id: string, name: string): WorkspaceState {
   const state = readState()
   const profile = state.profiles.find((p) => p.id === id)
   if (profile) profile.name = name.trim() || profile.name
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/**
+ * Update a profile's visuals (its accent color). A field set to null clears the
+ * stored value; undefined leaves it untouched.
+ */
+export function updateProfile(id: string, patch: ProfileUpdate): WorkspaceState {
+  const state = readState()
+  const profile = state.profiles.find((p) => p.id === id)
+  if (profile && patch.color !== undefined) {
+    if (patch.color) profile.color = patch.color
+    else delete profile.color
+  }
   const next = normalize(state)
   saveState(next)
   return next

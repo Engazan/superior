@@ -15,6 +15,7 @@ export const en = {
     'Profiles keep separate sets of folders. Switch between them from the toolbar.',
   'profile.name': 'Profile name',
   'profile.active': 'Active',
+  'profile.color': 'Color',
   'profile.add': 'Add profile',
   'profile.addPlaceholder': 'New profile name…',
   'profile.delete': 'Delete profile',

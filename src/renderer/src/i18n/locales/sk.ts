@@ -17,6 +17,7 @@ export const sk: Record<MessageKey, string> = {
     'Profily uchovávajú samostatné sady priečinkov. Prepínajte medzi nimi v paneli s nástrojmi.',
   'profile.name': 'Názov profilu',
   'profile.active': 'Aktívny',
+  'profile.color': 'Farba',
   'profile.add': 'Pridať profil',
   'profile.addPlaceholder': 'Názov nového profilu…',
   'profile.delete': 'Odstrániť profil',

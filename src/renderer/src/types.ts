@@ -34,6 +34,7 @@ export type {
   FileReadResult,
   Folder,
   FolderUpdate,
+  ProfileUpdate,
   FsEntry,
   FsListResult,
   GitDiff,

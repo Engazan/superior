@@ -7,9 +7,14 @@ interface Props {
   activeProfileId: string | null
   onAdd: (name: string) => void
   onRename: (id: string, name: string) => void
+  /** Set a profile's accent color (null clears it). Tints the title bar + sidebar. */
+  onUpdateColor: (id: string, color: string | null) => void
   onRemove: (id: string) => void
   onClose: () => void
 }
+
+// Same palette the folder editor offers, so profile + folder accents stay coherent.
+const PROFILE_COLOR_SWATCHES = ['#D97757', '#10A37F', '#3B82F6', '#A855F7', '#EAB308', '#EF4444']
 
 function ProfileGlyph(): JSX.Element {
   return (
@@ -46,6 +51,27 @@ function CloseGlyph(): JSX.Element {
   )
 }
 
+function PaletteGlyph(): JSX.Element {
+  return (
+    <svg
+      className="h-4 w-4 text-fgmuted"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.012 17.5 2 12 2Z" />
+    </svg>
+  )
+}
+
 function TrashGlyph(): JSX.Element {
   return (
     <svg
@@ -73,6 +99,7 @@ export function ProfileManager({
   activeProfileId,
   onAdd,
   onRename,
+  onUpdateColor,
   onRemove,
   onClose
 }: Props): JSX.Element {
@@ -80,16 +107,22 @@ export function ProfileManager({
   const [newName, setNewName] = useState('')
   // Local draft of each profile's name, keyed by id, so typing stays responsive.
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  // The open color popover: which profile and where to anchor it (the swatch
+  // button's bottom-right, in viewport coords, since the list scrolls/clips).
+  const [colorPicker, setColorPicker] = useState<{ id: string; x: number; y: number } | null>(null)
   const titleId = useId()
   const descriptionId = useId()
 
+  // Escape closes the color popover first, then the whole modal.
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      if (colorPicker) setColorPicker(null)
+      else onClose()
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
+  }, [onClose, colorPicker])
 
   const draftFor = (p: Profile): string => drafts[p.id] ?? p.name
 
@@ -176,6 +209,32 @@ export function ProfileManager({
                   {t('profile.active')}
                 </span>
               )}
+
+              {/* Color swatch — click to open the palette popover (next to delete). */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect()
+                  setColorPicker((cur) =>
+                    cur?.id === p.id ? null : { id: p.id, x: r.right, y: r.bottom + 6 }
+                  )
+                }}
+                title={t('profile.color')}
+                aria-label={t('profile.color')}
+                aria-haspopup="menu"
+                aria-expanded={colorPicker?.id === p.id}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-edge transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {p.color ? (
+                  <span
+                    className="h-4 w-4 rounded-full ring-1 ring-inset ring-black/20"
+                    style={{ backgroundColor: p.color }}
+                  />
+                ) : (
+                  <PaletteGlyph />
+                )}
+              </button>
+
               <button
                 type="button"
                 onClick={() => remove(p)}
@@ -214,6 +273,70 @@ export function ProfileManager({
             {t('profile.add')}
           </button>
         </div>
+
+        {/* Color palette popover, anchored to the clicked swatch (viewport coords
+            so the scrolling/clipping list never cuts it off). */}
+        {colorPicker &&
+          (() => {
+            const p = profiles.find((x) => x.id === colorPicker.id)
+            if (!p) return null
+            return (
+              <>
+                <div className="fixed inset-0 z-50" onClick={() => setColorPicker(null)} />
+                <div
+                  role="menu"
+                  style={{ top: colorPicker.y, left: colorPicker.x }}
+                  className="fixed z-50 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {PROFILE_COLOR_SWATCHES.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          onUpdateColor(p.id, c)
+                          setColorPicker(null)
+                        }}
+                        title={c}
+                        aria-label={c}
+                        className={`h-7 w-7 rounded-md border ${
+                          p.color?.toLowerCase() === c.toLowerCase()
+                            ? 'border-accent ring-1 ring-accent'
+                            : 'border-edge'
+                        }`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                    <label
+                      title={t('form.colorCustom')}
+                      className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-edge"
+                      style={{ backgroundColor: p.color ?? 'transparent' }}
+                    >
+                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-fgdim">
+                        +
+                      </span>
+                      <input
+                        type="color"
+                        value={p.color ?? '#888888'}
+                        onChange={(e) => onUpdateColor(p.id, e.target.value)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateColor(p.id, null)
+                      setColorPicker(null)
+                    }}
+                    className="mt-2 w-full rounded-md border border-edge px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
+                  >
+                    {t('form.colorNone')}
+                  </button>
+                </div>
+              </>
+            )
+          })()}
       </div>
     </div>
   )

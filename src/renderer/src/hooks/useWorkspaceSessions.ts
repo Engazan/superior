@@ -10,6 +10,7 @@ import {
   type Folder,
   type FolderUpdate,
   type Profile,
+  type ProfileUpdate,
   type TerminalPreset,
   type Workspace,
   type WorkspaceState,
@@ -230,6 +231,12 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
 
   const renameProfile = useCallback(async (id: string, name: string) => {
     const state = await window.api.renameProfile(id, name)
+    setProfiles(state.profiles)
+  }, [])
+
+  // Edit a profile's accent color (tints the title bar + sidebar when active).
+  const updateProfile = useCallback(async (id: string, patch: ProfileUpdate) => {
+    const state = await window.api.updateProfile(id, patch)
     setProfiles(state.profiles)
   }, [])
 
@@ -554,6 +561,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     counts,
     addProfile,
     renameProfile,
+    updateProfile,
     removeProfile,
     selectProfile,
     addFolder,

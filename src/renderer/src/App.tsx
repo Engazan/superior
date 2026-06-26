@@ -80,9 +80,11 @@ export default function App(): JSX.Element {
     window.api.setUiState({ sidebarCollapsed, rightSidebarOpen })
   }, [sidebarCollapsed, rightSidebarOpen])
 
-  // Tint the top bar with the active session's preset color.
-  const activeSessionColor =
-    ws.sessions.find((s) => s.id === ws.activeSessionId)?.color ?? null
+  // Tint the title bar + sidebar with the active profile's color, so the
+  // switched-to profile is recognizable at a glance. (Terminal preset colors
+  // tint each terminal's own topbar, not the app chrome.)
+  const activeProfileColor =
+    ws.profiles.find((p) => p.id === ws.activeProfileId)?.color ?? null
 
   // Live terminal signals: `busy` drives the "working" spinner, `attention`
   // pulses the tab of a workspace whose terminal finished while unfocused.
@@ -237,7 +239,7 @@ export default function App(): JSX.Element {
         activeProfileId={ws.activeProfileId}
         onSelectProfile={ws.selectProfile}
         onManageProfiles={() => setProfileManagerOpen(true)}
-        activeColor={activeSessionColor}
+        tintColor={activeProfileColor}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -260,6 +262,7 @@ export default function App(): JSX.Element {
         ) : (
           <>
             <Sidebar
+              tintColor={activeProfileColor}
               folders={ws.visibleFolders}
               workspaces={ws.workspaces}
               activeWorkspaceId={ws.activeWorkspaceId}
@@ -379,6 +382,7 @@ export default function App(): JSX.Element {
           activeProfileId={ws.activeProfileId}
           onAdd={ws.addProfile}
           onRename={ws.renameProfile}
+          onUpdateColor={(id, color) => ws.updateProfile(id, { color })}
           onRemove={ws.removeProfile}
           onClose={() => setProfileManagerOpen(false)}
         />

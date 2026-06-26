@@ -24,6 +24,7 @@ import {
   type FileReadOptions,
   type FileReadResult,
   type FolderUpdate,
+  type ProfileUpdate,
   type FsListResult,
   type GitDiff,
   type GitStatus,
@@ -62,6 +63,11 @@ const api = {
 
   renameProfile(id: string, name: string): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.PROFILE_RENAME, { id, name })
+  },
+
+  /** Update a profile's accent color (tints the title bar + sidebar when active). */
+  updateProfile(id: string, patch: ProfileUpdate): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.PROFILE_UPDATE, { id, patch })
   },
 
   /** Delete a profile and all of its folders/workspaces (never the last one). */

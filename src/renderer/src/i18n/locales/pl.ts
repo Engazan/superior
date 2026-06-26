@@ -17,6 +17,7 @@ export const pl: Record<MessageKey, string> = {
     'Profile przechowują oddzielne zestawy folderów. Przełączaj się między nimi z paska narzędzi.',
   'profile.name': 'Nazwa profilu',
   'profile.active': 'Aktywny',
+  'profile.color': 'Kolor',
   'profile.add': 'Dodaj profil',
   'profile.addPlaceholder': 'Nazwa nowego profilu…',
   'profile.delete': 'Usuń profil',

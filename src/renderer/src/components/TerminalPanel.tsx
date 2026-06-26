@@ -5,6 +5,7 @@ import { UsageBadge } from './UsageBadge'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
 import { useI18n } from '../i18n'
+import { barTint } from '../tint'
 import {
   gridRects,
   gridDividers,
@@ -148,6 +149,7 @@ export function TerminalPanel({
                 <div
                   key={s.id}
                   onClick={() => onSelect(s.id)}
+                  style={barTint(s.color, active)}
                   className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs ${
                     active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
                   }`}

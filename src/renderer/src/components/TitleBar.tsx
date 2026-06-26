@@ -1,10 +1,10 @@
-import type { CSSProperties } from 'react'
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { BranchSwitcher } from './BranchSwitcher'
 import { useI18n } from '../i18n'
 import { useShortcutTitle } from '../shortcuts'
+import { barTint } from '../tint'
 import type { GitStatus, Profile } from '../types'
 
 const isMac = window.api.platform === 'darwin'
@@ -33,28 +33,8 @@ interface Props {
   onSelectProfile: (id: string) => void
   /** Open the "Manage profiles" modal. */
   onManageProfiles: () => void
-  /** Hex tint of the active session's preset; tints the strip when set. */
-  activeColor?: string | null
-}
-
-/** Parse a 3/6-digit hex (with or without '#') into an `r, g, b` triplet, or null. */
-function hexToRgb(hex: string): [number, number, number] | null {
-  let h = hex.trim().replace(/^#/, '')
-  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
-  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return null
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]
-}
-
-/** Build the tinted strip style (subtle fill + a saturated bottom border) for a color. */
-function tintStyle(color: string | null | undefined): CSSProperties | undefined {
-  if (!color) return undefined
-  const rgb = hexToRgb(color)
-  if (!rgb) return undefined
-  const [r, g, b] = rgb
-  return {
-    backgroundColor: `rgba(${r}, ${g}, ${b}, 0.18)`,
-    borderBottomColor: `rgba(${r}, ${g}, ${b}, 0.7)`
-  }
+  /** Hex tint of the active profile; tints the strip when set. */
+  tintColor?: string | null
 }
 
 function BranchIcon(): JSX.Element {
@@ -98,13 +78,13 @@ export function TitleBar({
   activeProfileId,
   onSelectProfile,
   onManageProfiles,
-  activeColor
+  tintColor
 }: Props): JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
   const showGit = showToggle && (gitLoading || gitStatus !== null)
-  // Tint only on the main view; settings has no active session.
-  const tint = showToggle ? tintStyle(activeColor) : undefined
+  // Tint only on the main view; settings has no active profile chrome.
+  const tint = showToggle ? barTint(tintColor) : undefined
   const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header

@@ -7,6 +7,7 @@ import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
 import { UsageBadge } from './UsageBadge'
+import { barTint } from '../tint'
 import type { Rect } from '../gridLayout'
 import type { AgentSession } from '../types'
 
@@ -309,6 +310,7 @@ export function TerminalView({
         {showBar && (
           <div
             onClick={() => onSelect(session.id)}
+            style={barTint(session.color, active)}
             className={`flex shrink-0 cursor-pointer items-center gap-2 border-b border-edge px-2 py-1 text-xs ${
               active ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
             }`}

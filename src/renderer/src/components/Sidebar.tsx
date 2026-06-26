@@ -1,9 +1,12 @@
 import { useEffect, useId, useState, type CSSProperties } from 'react'
 import { useI18n, type TFunction } from '../i18n'
+import { panelTint } from '../tint'
 import type { UpdateController } from '../hooks/useUpdateCheck'
 import type { BranchInfo, Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
+  /** Hex tint of the active profile; washes the whole rail when set. */
+  tintColor?: string | null
   folders: Folder[]
   workspaces: Workspace[]
   activeWorkspaceId: string | null
@@ -1031,6 +1034,7 @@ function FolderEditForm({
 }
 
 export function Sidebar({
+  tintColor,
   folders,
   workspaces,
   activeWorkspaceId,
@@ -1147,7 +1151,10 @@ export function Sidebar({
   // Collapsed: a narrow rail with workspace initials + a running-count dot.
   if (collapsed) {
     return (
-      <aside className="flex w-14 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
+      <aside
+        style={panelTint(tintColor)}
+        className="flex w-14 shrink-0 flex-col items-stretch overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out"
+      >
         {folderOverlays}
         <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
           <button
@@ -1284,7 +1291,10 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out">
+    <aside
+      style={panelTint(tintColor)}
+      className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out"
+    >
       {folderOverlays}
       <div className="border-b border-edge px-2 py-2">
         <button
