@@ -8,6 +8,7 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.newWorkspacePlaceholder': 'Nazwa workspace…',
   'sidebar.renameWorkspace': 'Kliknij dwukrotnie, aby zmienić nazwę',
   'sidebar.removeWorkspace': 'Usuń workspace',
+  'sidebar.removeWorkspaceConfirm': 'Usunąć workspace „{name}”? Uruchomione terminale zostaną zamknięte.',
   'sidebar.removeFolder': 'Usuń folder',
   'profile.label': 'Profil',
   'profile.switch': 'Przełącz profil',

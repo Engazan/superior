@@ -355,6 +355,9 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
           if (!window.confirm(message)) return
           force = true
         }
+      } else if (!window.confirm(t('sidebar.removeWorkspaceConfirm', { name: ws?.name ?? '' }))) {
+        // Plain workspace: confirm before discarding it (and any open terminals).
+        return
       }
 
       sessions.filter((s) => s.workspaceId === id).forEach((s) => window.api.killAgent(s.id))

@@ -8,6 +8,7 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.newWorkspacePlaceholder': 'Munkaterület neve…',
   'sidebar.renameWorkspace': 'Dupla kattintás az átnevezéshez',
   'sidebar.removeWorkspace': 'Munkaterület eltávolítása',
+  'sidebar.removeWorkspaceConfirm': 'Eltávolítod a(z) „{name}” munkaterületet? A futó terminálok leállnak.',
   'sidebar.removeFolder': 'Mappa eltávolítása',
   'profile.label': 'Profil',
   'profile.switch': 'Profil váltása',

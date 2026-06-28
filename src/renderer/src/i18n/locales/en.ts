@@ -6,6 +6,7 @@ export const en = {
   'sidebar.newWorkspacePlaceholder': 'Workspace name…',
   'sidebar.renameWorkspace': 'Double-click to rename',
   'sidebar.removeWorkspace': 'Remove workspace',
+  'sidebar.removeWorkspaceConfirm': 'Remove workspace “{name}”? Any running terminals will be stopped.',
   'sidebar.removeFolder': 'Remove folder',
   'profile.label': 'Profile',
   'profile.switch': 'Switch profile',

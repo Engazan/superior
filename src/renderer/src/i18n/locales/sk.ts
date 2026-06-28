@@ -8,6 +8,7 @@ export const sk: Record<MessageKey, string> = {
   'sidebar.newWorkspacePlaceholder': 'Názov workspacu…',
   'sidebar.renameWorkspace': 'Dvojklikom premenujete',
   'sidebar.removeWorkspace': 'Odstrániť workspace',
+  'sidebar.removeWorkspaceConfirm': 'Odstrániť workspace „{name}“? Spustené terminály sa zatvoria.',
   'sidebar.removeFolder': 'Odstrániť priečinok',
   'profile.label': 'Profil',
   'profile.switch': 'Prepnúť profil',
