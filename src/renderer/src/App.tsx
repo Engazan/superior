@@ -13,6 +13,7 @@ import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
 import { useGitStatus } from './hooks/useGitStatus'
+import { useWorkspaceGitStats } from './hooks/useWorkspaceGitStats'
 import { usePresets } from './hooks/usePresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
@@ -57,6 +58,8 @@ export default function App(): JSX.Element {
     ws.activeFolder?.path ?? null,
     setError
   )
+  // Per-workspace +/- line counts shown beside each name in the sidebar.
+  const workspaceGitStats = useWorkspaceGitStats(ws.workspaces)
 
   // Initialize the terminal data/exit bus once on mount.
   useEffect(() => {
@@ -267,6 +270,7 @@ export default function App(): JSX.Element {
               workspaces={ws.workspaces}
               activeWorkspaceId={ws.activeWorkspaceId}
               counts={ws.counts}
+              gitStats={workspaceGitStats}
               busyWorkspaceIds={busyWorkspaceIds}
               attentionWorkspaceIds={attentionWorkspaceIds}
               attentionColor={attentionColor}

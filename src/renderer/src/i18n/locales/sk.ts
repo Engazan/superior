@@ -35,6 +35,7 @@ export const sk: Record<MessageKey, string> = {
   'folder.saveAction': 'Uložiť zmeny',
   'sidebar.reorderFolder': 'Potiahnutím zmeníte poradie',
   'sidebar.runningTerminals': 'Bežiace terminály',
+  'sidebar.diffStat': 'Necommitnuté zmeny (pridané / odobrané riadky)',
   'sidebar.workingTerminals': 'Pracuje…',
   'update.available': 'Dostupná verzia {version}',
   'update.action': 'Aktualizovať',

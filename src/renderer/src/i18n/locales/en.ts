@@ -33,6 +33,7 @@ export const en = {
   'folder.saveAction': 'Save changes',
   'sidebar.reorderFolder': 'Drag to reorder',
   'sidebar.runningTerminals': 'Running terminals',
+  'sidebar.diffStat': 'Uncommitted changes (lines added / removed)',
   'sidebar.workingTerminals': 'Working…',
   'update.available': 'Version {version} available',
   'update.action': 'Update',

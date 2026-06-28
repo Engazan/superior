@@ -35,6 +35,7 @@ export const pl: Record<MessageKey, string> = {
   'folder.saveAction': 'Zapisz zmiany',
   'sidebar.reorderFolder': 'Przeciągnij, aby zmienić kolejność',
   'sidebar.runningTerminals': 'Działające terminale',
+  'sidebar.diffStat': 'Niezatwierdzone zmiany (dodane / usunięte linie)',
   'sidebar.workingTerminals': 'Pracuje…',
   'update.available': 'Dostępna wersja {version}',
   'update.action': 'Aktualizuj',

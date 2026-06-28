@@ -35,6 +35,7 @@ export const cs: Record<MessageKey, string> = {
   'folder.saveAction': 'Uložit změny',
   'sidebar.reorderFolder': 'Přetažením změníte pořadí',
   'sidebar.runningTerminals': 'Běžící terminály',
+  'sidebar.diffStat': 'Necommitnuté změny (přidané / odebrané řádky)',
   'sidebar.workingTerminals': 'Pracuje…',
   'update.available': 'Dostupná verze {version}',
   'update.action': 'Aktualizovat',

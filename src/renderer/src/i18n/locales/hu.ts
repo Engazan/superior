@@ -35,6 +35,7 @@ export const hu: Record<MessageKey, string> = {
   'folder.saveAction': 'Módosítások mentése',
   'sidebar.reorderFolder': 'Húzással átrendezhető',
   'sidebar.runningTerminals': 'Futó terminálok',
+  'sidebar.diffStat': 'Nem véglegesített változások (hozzáadott / törölt sorok)',
   'sidebar.workingTerminals': 'Dolgozik…',
   'update.available': 'Elérhető a(z) {version} verzió',
   'update.action': 'Frissítés',

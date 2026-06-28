@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type CSSProperties } from 'react'
 import { useI18n, type TFunction } from '../i18n'
 import { panelTint } from '../tint'
 import type { UpdateController } from '../hooks/useUpdateCheck'
+import type { WorkspaceGitStat } from '../hooks/useWorkspaceGitStats'
 import type { BranchInfo, Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   activeWorkspaceId: string | null
   /** running-terminal count per workspace id */
   counts: Record<string, number>
+  /** git +/- line totals per workspace id, for the diff badge next to each name */
+  gitStats: Record<string, WorkspaceGitStat>
   /** workspace ids with a terminal actively producing output */
   busyWorkspaceIds: Set<string>
   /** workspace ids whose terminal finished while unfocused (tab pulses) */
@@ -171,6 +174,24 @@ function RunningBadge({ count, title }: { count: number; title: string }): JSX.E
       className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-statusBg px-1.5 text-[10px] font-bold leading-none text-status ring-1 ring-inset ring-statusBorder"
     >
       {count}
+    </span>
+  )
+}
+
+/**
+ * Compact +added / −removed line counts from git, shown beside a workspace
+ * name. Renders nothing when the tree is clean so unchanged workspaces stay
+ * uncluttered. Only the non-zero side(s) appear.
+ */
+function DiffStat({ stat, title }: { stat: WorkspaceGitStat; title: string }): JSX.Element | null {
+  if (!stat.isRepository || (stat.additions === 0 && stat.deletions === 0)) return null
+  return (
+    <span
+      title={title}
+      className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold leading-none tabular-nums"
+    >
+      {stat.additions > 0 && <span className="text-emerald-500 dark:text-emerald-400">+{stat.additions}</span>}
+      {stat.deletions > 0 && <span className="text-red-500 dark:text-red-400">−{stat.deletions}</span>}
     </span>
   )
 }
@@ -1039,6 +1060,7 @@ export function Sidebar({
   workspaces,
   activeWorkspaceId,
   counts,
+  gitStats,
   busyWorkspaceIds,
   attentionWorkspaceIds,
   attentionColor,
@@ -1319,7 +1341,7 @@ export function Sidebar({
         )}
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto py-2">
         {folders.length === 0 ? (
           <p className="px-3 py-8 text-center text-xs leading-5 text-fgmuted">
             {t('sidebar.noWorkspaces')}
@@ -1368,7 +1390,7 @@ export function Sidebar({
                       setDragOverFolder(null)
                     }}
                     title={folder.path}
-                    className={`group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-fgdim transition hover:bg-hover ${
+                    className={`group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover ${
                       draggingFolder === folder.path ? 'opacity-40' : ''
                     } ${
                       dragOverFolder === folder.path && draggingFolder !== folder.path
@@ -1424,17 +1446,16 @@ export function Sidebar({
 
                   {/* Workspaces — indented under a tree guide line */}
                   {open && (
-                    <ul className="ml-[13px] mt-0.5 space-y-0.5 border-l border-edge pl-2">
+                    <ul className="mt-0.5 space-y-0.5 border-l border-edge">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
-                        const n = counts[ws.id] ?? 0
                         const attn = attentionWorkspaceIds.has(ws.id)
                         return (
                           <li key={ws.id}>
                             <div
                               onClick={() => onSelectWorkspace(ws.id)}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 rounded-md px-2 py-1 transition ${
+                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-4 pr-2 transition ${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : attn
@@ -1449,7 +1470,7 @@ export function Sidebar({
                                 }`}
                               />
                               {active && (
-                                <span className="absolute -left-[9px] top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
+                                <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
                               )}
                               {editingId === ws.id ? (
                                 <input
@@ -1487,8 +1508,8 @@ export function Sidebar({
                               {editingId !== ws.id && busyWorkspaceIds.has(ws.id) && (
                                 <WorkingSpinner title={t('sidebar.workingTerminals')} />
                               )}
-                              {n > 0 && editingId !== ws.id && (
-                                <RunningBadge count={n} title={t('sidebar.runningTerminals')} />
+                              {editingId !== ws.id && gitStats[ws.id] && (
+                                <DiffStat stat={gitStats[ws.id]} title={t('sidebar.diffStat')} />
                               )}
 
                               {ws.worktreePath && (
@@ -1556,7 +1577,7 @@ export function Sidebar({
                         ) : (
                           <button
                             onClick={() => startAdd(folder.path)}
-                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
+                            className="flex w-full items-center gap-2 py-1.5 pl-4 pr-2 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
                           >
                             <span className="text-sm leading-none text-accent">+</span>
                             {t('sidebar.addWorkspace')}
