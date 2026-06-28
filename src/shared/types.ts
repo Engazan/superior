@@ -11,6 +11,7 @@ export type ShortcutAction =
   | 'toggleRightPanel'
   | 'closeFocusedCell'
   | 'closePreview'
+  | 'saveFile'
   | 'prevTerminal'
   | 'nextTerminal'
   | 'openFolder'
@@ -444,6 +445,15 @@ export interface FileReadResult {
   error?: string
 }
 
+/** Outcome of writing edited preview content back to disk. */
+export interface FileWriteResult {
+  ok: boolean
+  /** New size on disk after the write, in bytes (present on success). */
+  size?: number
+  /** User-facing error when the write failed; absent on success. */
+  error?: string
+}
+
 /** Aggregate working-tree diff for the active folder, plus per-file detail. */
 export interface GitDiff {
   isRepository: boolean
@@ -645,6 +655,7 @@ export const IPC = {
   FS_LIST_DIR: 'fs:list-dir',
   FS_SEARCH: 'fs:search',
   FS_READ_FILE: 'fs:read-file',
+  FS_WRITE_FILE: 'fs:write-file',
   SHELL_OPEN_PATH: 'shell:open-path',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',

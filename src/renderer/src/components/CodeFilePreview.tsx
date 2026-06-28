@@ -1,7 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { EditorState, type Extension } from '@codemirror/state'
-import { EditorView, keymap, lineNumbers, highlightSpecialChars } from '@codemirror/view'
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightSpecialChars,
+  highlightActiveLine,
+  highlightActiveLineGutter
+} from '@codemirror/view'
+import { history, defaultKeymap, historyKeymap } from '@codemirror/commands'
+import { bracketMatching, defaultHighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language'
 import {
   search,
   searchKeymap,
@@ -15,6 +23,10 @@ interface Props {
   language: Extension | null
   /** Soft-wrap long lines (used for prose-ish content). */
   wrap?: boolean
+  /** Allow editing the document. When false (default) the view is read-only. */
+  editable?: boolean
+  /** Called with the full document text on every edit (only while `editable`). */
+  onChange?: (value: string) => void
 }
 
 // Chrome only — colours come from the app's CSS variables so it tracks the theme.
@@ -30,9 +42,6 @@ const baseTheme = EditorView.theme({
     color: 'var(--c-fgmuted)',
     border: 'none'
   },
-  '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'transparent' },
-  '.cm-cursor': { display: 'none' },
-  '.cm-content': { caretColor: 'transparent' },
   // Find panel (Cmd/Ctrl+F) — themed to match the app.
   '.cm-panels': { backgroundColor: 'var(--c-bar)', color: 'var(--c-fg)' },
   '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--c-edge)' },
@@ -51,8 +60,21 @@ const baseTheme = EditorView.theme({
   '.cm-searchMatch-selected': { backgroundColor: 'rgba(250, 204, 21, 0.6)' }
 })
 
-/** Read-only source viewer with in-file find (Cmd/Ctrl+F). Never edits the file. */
-export function CodeFilePreview({ content, language, wrap }: Props): JSX.Element {
+// A preview is a passive viewer: hide the caret and don't highlight the line.
+const readOnlyChrome = EditorView.theme({
+  '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'transparent' },
+  '.cm-cursor': { display: 'none' },
+  '.cm-content': { caretColor: 'transparent' }
+})
+
+/**
+ * Source viewer with in-file find (Cmd/Ctrl+F). Read-only by default; pass
+ * `editable` to turn it into a lightweight editor (history, indent, active-line)
+ * that reports every change through `onChange`. The document is uncontrolled —
+ * the parent seeds it via `content` and reads edits back through `onChange`, so
+ * a re-render with the same `content` never tears the editor down mid-edit.
+ */
+export function CodeFilePreview({ content, language, wrap, editable, onChange }: Props): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -67,10 +89,22 @@ export function CodeFilePreview({ content, language, wrap }: Props): JSX.Element
       highlightSelectionMatches(),
       search({ top: true }),
       keymap.of(searchKeymap),
-      baseTheme,
-      EditorState.readOnly.of(true),
-      EditorView.editable.of(false)
+      baseTheme
     ]
+    if (editable) {
+      extensions.push(
+        history(),
+        indentOnInput(),
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        keymap.of([...defaultKeymap, ...historyKeymap]),
+        EditorView.updateListener.of((u) => {
+          if (u.docChanged) onChange?.(u.state.doc.toString())
+        })
+      )
+    } else {
+      extensions.push(readOnlyChrome, EditorState.readOnly.of(true), EditorView.editable.of(false))
+    }
     if (wrap) extensions.push(EditorView.lineWrapping)
     if (language) extensions.push(language)
 
@@ -95,7 +129,7 @@ export function CodeFilePreview({ content, language, wrap }: Props): JSX.Element
       window.removeEventListener('keydown', onKey, true)
       view.destroy()
     }
-  }, [content, language, wrap])
+  }, [content, language, wrap, editable, onChange])
 
   return <div ref={hostRef} className="h-full overflow-hidden" />
 }

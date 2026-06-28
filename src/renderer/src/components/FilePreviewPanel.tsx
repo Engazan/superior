@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { json as jsonLang } from '@codemirror/lang-json'
 import { CodeFilePreview } from './CodeFilePreview'
 import { MarkdownFilePreview } from './MarkdownFilePreview'
 import { ImageFilePreview } from './ImageFilePreview'
 import { UnsupportedFilePreview } from './UnsupportedFilePreview'
 import { useI18n } from '../i18n'
-import { useShortcutTitle } from '../shortcuts'
+import { eventToChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import {
   IMAGE_MAX_BYTES,
   TEXT_MAX_BYTES,
@@ -57,6 +57,7 @@ function IconButton({
 export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
+  const { shortcuts } = useShortcuts()
   const type = useMemo(() => getFilePreviewType(file), [file])
   // Build the CodeMirror language once per file — a new Extension identity would
   // tear down and recreate the whole editor (losing scroll/find) on every render.
@@ -68,6 +69,16 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const [data, setData] = useState<FileReadResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // The content currently in the editor (kept in a ref so per-keystroke edits
+  // don't re-render the panel and feed a new `content` prop back into CodeMirror,
+  // which would tear the editor down). `baseline` is what's on disk — comparing
+  // the two drives the dirty indicator and gates saving.
+  const liveContentRef = useRef('')
+  const baselineRef = useRef('')
 
   const openRaw = (): void => void window.api.openPath(file.path)
   const copyPath = (): void => {
@@ -86,6 +97,8 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
     let active = true
     setLoading(true)
     setData(null)
+    setDirty(false)
+    setSaveError(null)
     const isImage = type === 'image'
     const needsContent = type !== 'pdf' && type !== 'unsupported'
     window.api
@@ -104,6 +117,69 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
     }
   }, [file.path, type])
 
+  // A file with a text-ish extension that's actually binary → fall back.
+  const effectiveType =
+    data && (type === 'code' || type === 'json' || type === 'markdown') && data.isBinary
+      ? 'unsupported'
+      : type
+
+  // The exact text shown in the editor (raw code, or pretty-printed JSON). This
+  // is the save unit and the dirty baseline; null when the file isn't editable.
+  const editorText = useMemo(() => {
+    if (!data || data.error) return null
+    if (effectiveType === 'json') return prettyJson(data.content)
+    if (effectiveType === 'code') return data.content
+    return null
+  }, [data, effectiveType])
+
+  // Editing is only safe on a fully-loaded text file — never a truncated one,
+  // since saving would write back just the partial content we loaded.
+  const editable = editorText != null && !!data && !data.truncated
+
+  // Seed the baseline whenever a new file's content loads.
+  useEffect(() => {
+    baselineRef.current = editorText ?? ''
+    liveContentRef.current = editorText ?? ''
+    setDirty(false)
+  }, [editorText])
+
+  const handleChange = useCallback((value: string) => {
+    liveContentRef.current = value
+    setDirty(value !== baselineRef.current)
+    setSaveError(null)
+  }, [])
+
+  const save = useCallback(async () => {
+    if (!editable || saving || liveContentRef.current === baselineRef.current) return
+    setSaving(true)
+    setSaveError(null)
+    const next = liveContentRef.current
+    const res = await window.api.writeFile(file.path, next)
+    setSaving(false)
+    if (res.ok) {
+      baselineRef.current = next
+      setDirty(liveContentRef.current !== next)
+    } else {
+      setSaveError(res.error ?? t('preview.saveFailed'))
+    }
+  }, [editable, saving, file.path, t])
+
+  // Save on the configured shortcut (⌘/Ctrl+S by default), even when focus is
+  // inside the editor. Capture so it beats CodeMirror and the browser's own save.
+  useEffect(() => {
+    if (!editable) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.repeat) return
+      if (eventToChord(e) === shortcuts.saveFile) {
+        e.preventDefault()
+        e.stopPropagation()
+        void save()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [editable, shortcuts.saveFile, save])
+
   const renderBody = (): JSX.Element => {
     if (loading || !data) {
       return <div className="grid h-full place-items-center text-xs text-fgmuted">{t('preview.loading')}</div>
@@ -111,9 +187,6 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
     if (data.error) {
       return <div className="grid h-full place-items-center px-6 text-center text-xs text-rose-400">{data.error}</div>
     }
-
-    // A file with a text-ish extension that's actually binary → fall back.
-    const effectiveType = (type === 'code' || type === 'json' || type === 'markdown') && data.isBinary ? 'unsupported' : type
 
     switch (effectiveType) {
       case 'image':
@@ -136,20 +209,17 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
           </div>
         )
       case 'json':
-        return (
-          <div className="flex h-full min-h-0 flex-col">
-            {data.truncated && <TruncatedWarning onOpenRaw={openRaw} />}
-            <div className="min-h-0 flex-1">
-              <CodeFilePreview content={prettyJson(data.content)} language={language} />
-            </div>
-          </div>
-        )
       case 'code':
         return (
           <div className="flex h-full min-h-0 flex-col">
             {data.truncated && <TruncatedWarning onOpenRaw={openRaw} />}
             <div className="min-h-0 flex-1">
-              <CodeFilePreview content={data.content} language={language} />
+              <CodeFilePreview
+                content={editorText ?? data.content}
+                language={language}
+                editable={editable}
+                onChange={handleChange}
+              />
             </div>
           </div>
         )
@@ -164,14 +234,41 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
     <div className="flex h-full min-h-0 w-full flex-col bg-panel">
       <div className="flex shrink-0 items-center gap-2 border-b border-edge bg-bar px-3 py-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-fg" title={file.name}>
-            {file.name}
+          <div className="flex items-center gap-1.5">
+            <div className="truncate text-sm font-medium text-fg" title={file.name}>
+              {file.name}
+            </div>
+            {dirty && (
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400"
+                title={t('preview.unsaved')}
+                aria-label={t('preview.unsaved')}
+              />
+            )}
           </div>
-          <div className="truncate text-[11px] text-fgmuted" title={file.path}>
-            {file.path}
-            {data && !loading && !data.error && ` · ${formatBytes(data.size)}`}
+          <div
+            className={`truncate text-[11px] ${saveError ? 'text-rose-400' : 'text-fgmuted'}`}
+            title={saveError ?? file.path}
+          >
+            {saveError ?? (
+              <>
+                {file.path}
+                {data && !loading && !data.error && ` · ${formatBytes(data.size)}`}
+              </>
+            )}
           </div>
         </div>
+
+        {editable && (
+          <button
+            onClick={() => void save()}
+            disabled={!dirty || saving}
+            title={shortcutTitle(t('common.save'), 'saveFile')}
+            className="shrink-0 rounded border border-edge px-2 py-1 text-xs font-medium text-fg transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            {t('common.save')}
+          </button>
+        )}
 
         <IconButton label={copied ? t('preview.copied') : t('preview.copyPath')} onClick={copyPath}>
           {copied ? (

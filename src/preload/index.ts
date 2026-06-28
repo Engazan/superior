@@ -23,6 +23,7 @@ import {
   type CustomMemoryProvider,
   type FileReadOptions,
   type FileReadResult,
+  type FileWriteResult,
   type FolderUpdate,
   type ProfileUpdate,
   type FsListResult,
@@ -181,6 +182,11 @@ const api = {
 
   readFile(filePath: string, opts: FileReadOptions): Promise<FileReadResult> {
     return ipcRenderer.invoke(IPC.FS_READ_FILE, filePath, opts)
+  },
+
+  /** Overwrite a previewed text file with edited content. */
+  writeFile(filePath: string, content: string): Promise<FileWriteResult> {
+    return ipcRenderer.invoke(IPC.FS_WRITE_FILE, filePath, content)
   },
 
   openPath(filePath: string): Promise<string> {

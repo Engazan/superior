@@ -10,6 +10,7 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   toggleRightPanel: 'mod+j',
   closeFocusedCell: 'mod+w',
   closePreview: 'mod+shift+w',
+  saveFile: 'mod+s',
   prevTerminal: 'ctrl+arrowleft',
   nextTerminal: 'ctrl+arrowright',
   openFolder: 'mod+o',

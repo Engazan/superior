@@ -11,6 +11,7 @@ const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
   { id: 'toggleRightPanel', labelKey: 'keyboard.toggleRightPanel' },
   { id: 'closeFocusedCell', labelKey: 'keyboard.closeFocusedCell' },
   { id: 'closePreview', labelKey: 'keyboard.closePreview' },
+  { id: 'saveFile', labelKey: 'keyboard.saveFile' },
   { id: 'prevTerminal', labelKey: 'keyboard.prevTerminal' },
   { id: 'nextTerminal', labelKey: 'keyboard.nextTerminal' },
   { id: 'openFolder', labelKey: 'keyboard.openFolder' },

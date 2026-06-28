@@ -1,6 +1,12 @@
-import { open, readdir, stat } from 'fs/promises'
+import { open, readdir, stat, writeFile } from 'fs/promises'
 import { join, sep } from 'path'
-import type { FileReadOptions, FileReadResult, FsEntry, FsListResult } from '@shared/types'
+import type {
+  FileReadOptions,
+  FileReadResult,
+  FileWriteResult,
+  FsEntry,
+  FsListResult
+} from '@shared/types'
 import { isWithinWorkspaceFolder } from './workspace.service'
 
 // Hidden plumbing the file tree should never surface.
@@ -167,5 +173,31 @@ export async function readFilePreview(
     }
   } catch (err) {
     return { ...EMPTY_READ, size, error: (err as Error).message }
+  }
+}
+
+/**
+ * Overwrite an existing file with edited preview content (UTF-8). Refuses paths
+ * outside the workspace and anything that isn't a regular file, so the preview
+ * editor can never create or clobber arbitrary locations. The renderer only
+ * enables editing for non-truncated text files, so a full overwrite is safe.
+ */
+export async function writeFilePreview(
+  filePath: string,
+  content: string
+): Promise<FileWriteResult> {
+  if (!isWithinWorkspaceFolder(filePath)) return { ok: false, error: OUTSIDE_WORKSPACE }
+  try {
+    const info = await stat(filePath)
+    if (!info.isFile()) return { ok: false, error: 'Not a file.' }
+  } catch (err) {
+    return { ok: false, error: (err as Error).message }
+  }
+  try {
+    await writeFile(filePath, content, 'utf8')
+    const info = await stat(filePath)
+    return { ok: true, size: info.size }
+  } catch (err) {
+    return { ok: false, error: (err as Error).message }
   }
 }
