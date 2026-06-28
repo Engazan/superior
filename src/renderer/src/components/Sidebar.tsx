@@ -1539,6 +1539,31 @@ export function Sidebar({
                                 </button>
                               )}
 
+                              {editingId !== ws.id && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    startRename(ws)
+                                  }}
+                                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus:opacity-100 group-hover:opacity-100"
+                                  aria-label={t('sidebar.renameWorkspaceAction')}
+                                  title={t('sidebar.renameWorkspaceAction')}
+                                >
+                                  <svg
+                                    className="h-3.5 w-3.5"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden
+                                  >
+                                    <path d="M11.5 2.5a1.41 1.41 0 0 1 2 2l-8.5 8.5-2.5.5.5-2.5z" />
+                                  </svg>
+                                </button>
+                              )}
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
