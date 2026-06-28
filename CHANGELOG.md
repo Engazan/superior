@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-06-28
+
+### Added
+
+- **Edit files in the preview pane.** The right-sidebar file preview is now an
+  editor for text and JSON files: an unsaved-changes dot next to the file name,
+  a **Save** button, and a configurable Save shortcut (⌘/Ctrl+S by default).
+  Very large (truncated) files stay read-only so a save can't drop the part that
+  wasn't loaded.
+- **Per-workspace git stats.** Each workspace row in the sidebar shows its
+  uncommitted +/- line counts instead of the running-terminal count.
+- **Restart an exited terminal in place.** When a preset command exits (e.g.
+  Ctrl+C) the dead terminal can re-run its original command in the same slot —
+  press Enter in it, or use the new restart button in the cell bar / tab strip.
+
+### Changed
+
+- **Full-width sidebar rows.** Folder and workspace hover highlights now span
+  the full width of the sidebar.
+- **Rename workspaces from a button.** A pencil button on each workspace row
+  opens the inline rename (double-clicking the name still works).
+- **Confirm before removing a workspace.** Removing a plain workspace now asks
+  for confirmation, matching the prompt already shown for worktree-backed ones.
+
 ## [0.10.0] - 2026-06-26
 
 ### Added
