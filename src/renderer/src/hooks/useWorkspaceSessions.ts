@@ -449,6 +449,41 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
   }, [])
 
+  // Re-run an exited session's original preset command in place. The dead daemon
+  // session is already gone (it deletes itself on exit), so we spawn a fresh one
+  // and swap it into the same slot — preserving grid/tab position and focus — so
+  // the terminal that showed "[process exited]" comes back to life running the
+  // same command.
+  const restartSession = useCallback(
+    async (id: string) => {
+      setError(null)
+      const prev = sessions.find((s) => s.id === id)
+      if (!prev) return
+      if (!effectiveDir) {
+        setError(t('error.noWorkspace'))
+        return
+      }
+      const res = await window.api.startAgent({
+        command: prev.command,
+        label: prev.label,
+        iconType: prev.iconType,
+        icon: prev.icon,
+        color: prev.color,
+        cwd: effectiveDir,
+        workspaceId: prev.workspaceId,
+        cols: prev.cols,
+        rows: prev.rows
+      })
+      if ('error' in res) {
+        setError(res.error)
+        return
+      }
+      setSessions((curr) => curr.map((s) => (s.id === id ? res.session : s)))
+      setActiveSessionId((curr) => (curr === id ? res.session.id : curr))
+    },
+    [sessions, effectiveDir, t, setError]
+  )
+
   const closeSession = useCallback((id: string) => {
     window.api.killAgent(id)
     setSessions((prev) => {
@@ -581,6 +616,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     startLayout,
     setGridLayout,
     updateSession,
+    restartSession,
     closeSession,
     toggleMaximize,
     toggleMaximizeFocused,

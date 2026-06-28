@@ -48,6 +48,8 @@ interface Props {
   /** the user picked this session (clicked its body or bar) */
   onSelect: (id: string) => void
   onClose: (id: string) => void
+  /** re-run the session's original preset command in place */
+  onRestart: (id: string) => void
   onToggleMaximize: (id: string) => void
   onExit: (id: string, exitCode: number) => void
 }
@@ -113,6 +115,7 @@ export function TerminalView({
   animate,
   onSelect,
   onClose,
+  onRestart,
   onToggleMaximize,
   onExit
 }: Props): JSX.Element {
@@ -130,6 +133,20 @@ export function TerminalView({
   // Keep the latest onSelect without re-running the creation effect.
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+
+  // Same for onRestart, since the keystroke handler is wired once per session id.
+  const onRestartRef = useRef(onRestart)
+  onRestartRef.current = onRestart
+
+  // True once the pty has exited: keystrokes then drive "press Enter to restart"
+  // instead of being fed to a dead pty. Seeded from the mount-time status so a
+  // session restored already-dead (app relaunch) still restarts on Enter.
+  const exitedRef = useRef(session.status !== 'running')
+
+  // Localized "press Enter to restart" hint, read at exit time so a language
+  // switch before the process dies is reflected.
+  const restartHintRef = useRef('')
+  restartHintRef.current = t('terminal.restartHint')
 
   // Read current visibility from inside the once-registered ResizeObserver.
   const visibleRef = useRef(visible)
@@ -183,6 +200,15 @@ export function TerminalView({
       // make xterm generate terminal responses. Never feed those responses
       // back into the live shell while restoring scrollback.
       if (replayWritesRef.current > 0) return
+      // After exit the pty is gone; Enter re-runs the original command instead of
+      // sending dead input. Any other key is swallowed so the corpse stays quiet.
+      if (exitedRef.current) {
+        if (data.includes('\r')) {
+          exitedRef.current = false
+          onRestartRef.current(session.id)
+        }
+        return
+      }
       window.api.sendInput(session.id, data)
     })
 
@@ -209,7 +235,8 @@ export function TerminalView({
         const dim = '\x1b[2m'
         const reset = '\x1b[0m'
         const note = e.message ? `${e.message}` : `process exited with code ${e.exitCode}`
-        term.write(`\r\n${dim}[${note}]${reset}\r\n`)
+        exitedRef.current = true
+        term.write(`\r\n${dim}[${note}]${reset}\r\n${dim}[${restartHintRef.current}]${reset}\r\n`)
         onExit(session.id, e.exitCode)
       }
     })
@@ -334,6 +361,29 @@ export function TerminalView({
               >
                 {formatChord(`ctrl+${shortcutNumber}`)}
               </span>
+            )}
+            {session.status !== 'running' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRestart(session.id)
+                }}
+                className="shrink-0 text-fgmuted transition hover:text-fg"
+                aria-label={t('terminal.restart')}
+                title={t('terminal.restart')}
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M13 8a5 5 0 1 1-1.46-3.54M13 2v3h-3" />
+                </svg>
+              </button>
             )}
             <button
               onClick={(e) => {

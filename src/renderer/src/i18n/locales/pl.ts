@@ -216,6 +216,8 @@ export const pl: Record<MessageKey, string> = {
   'terminal.closeSession': 'Zamknij sesję',
   'terminal.maximize': 'Maksymalizuj',
   'terminal.restore': 'Przywróć',
+  'terminal.restart': 'Uruchom polecenie ponownie',
+  'terminal.restartHint': 'naciśnij Enter, aby uruchomić ponownie',
   'usage.context': 'Kontekst',
   'usage.total': 'Razem',
   'usage.tokens': 'tokenów',

@@ -316,6 +316,7 @@ export default function App(): JSX.Element {
                     onSelect={ws.setActiveSessionId}
                     onToggleMaximize={ws.toggleMaximize}
                     onClose={ws.closeSession}
+                    onRestart={ws.restartSession}
                     onSessionUpdate={ws.updateSession}
                     onStart={ws.startLayout}
                     onLaunch={ws.launchAgent}

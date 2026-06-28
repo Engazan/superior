@@ -217,6 +217,8 @@ export const sk: Record<MessageKey, string> = {
   'terminal.closeSession': 'Zatvoriť reláciu',
   'terminal.maximize': 'Maximalizovať',
   'terminal.restore': 'Obnoviť',
+  'terminal.restart': 'Znova spustiť príkaz',
+  'terminal.restartHint': 'stlač Enter pre opätovné spustenie',
   'usage.context': 'Kontext',
   'usage.total': 'Spolu',
   'usage.tokens': 'tokenov',

@@ -216,6 +216,8 @@ export const cs: Record<MessageKey, string> = {
   'terminal.closeSession': 'Zavřít relaci',
   'terminal.maximize': 'Maximalizovat',
   'terminal.restore': 'Obnovit',
+  'terminal.restart': 'Spustit příkaz znovu',
+  'terminal.restartHint': 'stiskněte Enter pro opětovné spuštění',
   'usage.context': 'Kontext',
   'usage.total': 'Celkem',
   'usage.tokens': 'tokenů',

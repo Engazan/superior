@@ -216,6 +216,8 @@ export const hu: Record<MessageKey, string> = {
   'terminal.closeSession': 'Munkamenet bezárása',
   'terminal.maximize': 'Teljes méret',
   'terminal.restore': 'Visszaállítás',
+  'terminal.restart': 'Parancs újraindítása',
+  'terminal.restartHint': 'nyomd meg az Entert az újraindításhoz',
   'usage.context': 'Kontextus',
   'usage.total': 'Összesen',
   'usage.tokens': 'token',

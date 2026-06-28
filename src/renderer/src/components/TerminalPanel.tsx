@@ -38,6 +38,8 @@ interface Props {
   /** toggle a grid cell's maximized state */
   onToggleMaximize: (id: string) => void
   onClose: (id: string) => void
+  /** re-run an exited session's original preset command in place */
+  onRestart: (id: string) => void
   onSessionUpdate: (id: string, patch: Partial<AgentSession>) => void
   /** launch wizard result — start a fresh tabs/grid layout */
   onStart: (config: LaunchConfig) => void
@@ -71,6 +73,7 @@ export function TerminalPanel({
   onSelect,
   onToggleMaximize,
   onClose,
+  onRestart,
   onSessionUpdate,
   onStart,
   onLaunch,
@@ -158,6 +161,29 @@ export function TerminalPanel({
                   <PresetIcon iconType={s.iconType} icon={s.icon} className="h-4 w-4 text-sm" />
                   <span className="whitespace-nowrap">{s.label}</span>
                   <UsageBadge sessionId={s.id} />
+                  {s.status !== 'running' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onRestart(s.id)
+                      }}
+                      className="text-fgmuted transition hover:text-fg"
+                      aria-label={t('terminal.restart')}
+                      title={t('terminal.restart')}
+                    >
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M13 8a5 5 0 1 1-1.46-3.54M13 2v3h-3" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -208,6 +234,7 @@ export function TerminalPanel({
               animate={!resizing}
               onSelect={onSelect}
               onClose={onClose}
+              onRestart={onRestart}
               onToggleMaximize={onToggleMaximize}
               onExit={(id, exitCode) =>
                 onSessionUpdate(id, {

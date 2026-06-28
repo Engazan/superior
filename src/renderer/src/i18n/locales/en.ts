@@ -213,6 +213,8 @@ export const en = {
   'terminal.closeSession': 'Close session',
   'terminal.maximize': 'Maximize',
   'terminal.restore': 'Restore',
+  'terminal.restart': 'Restart command',
+  'terminal.restartHint': 'press Enter to restart',
   'usage.context': 'Context',
   'usage.total': 'Total',
   'usage.tokens': 'tokens',
