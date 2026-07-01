@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-07-01
+
+### Added
+
+- **Tabs hold their own terminal grid.** Each tab is now a container for an
+  independent terminal grid, so you can keep a different arrangement of
+  terminals per tab and switch between whole layouts within one workspace.
+
+### Changed
+
+- **Open or clone a project from one place.** The sidebar's separate "Open from
+  folder" and "Clone project" buttons are replaced by a single **Open / Clone
+  project** entry that opens a modal offering two sources — a local folder from
+  this computer, or a repository from a connected git integration. The git
+  browser is always visible; when no integration is configured it links straight
+  to the settings to add one.
+- **Themed hover tooltips.** Native OS `title` bubbles are replaced app-wide by a
+  custom tooltip that matches the app theme, with a short open delay, smart
+  above/below placement, an arrow, and viewport clamping so it never spills
+  off-screen.
+- **Grouped branch switcher.** The branch switcher now separates local and remote
+  branches into their own sections.
+
 ## [0.11.0] - 2026-06-28
 
 ### Added
