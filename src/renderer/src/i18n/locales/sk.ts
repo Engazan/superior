@@ -1,7 +1,7 @@
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
-  'sidebar.openFolder': 'Otvoriť z priečinka',
+  'sidebar.openProject': 'Otvoriť / klonovať projekt',
   'sidebar.noWorkspaces': 'Zatiaľ žiadne priečinky — otvorte jeden.',
   'sidebar.removeFromList': 'Odstrániť zo zoznamu',
   'sidebar.addWorkspace': 'Pridať workspace',
@@ -353,12 +353,17 @@ export const sk: Record<MessageKey, string> = {
   'integrations.errDestExists': 'Cieľový priečinok už existuje a nie je prázdny.',
   'integrations.errGitMissing': 'Git nie je nainštalovaný alebo nie je v PATH.',
   'integrations.errHttp': 'Server vrátil chybu (HTTP {status}).',
-  'sidebar.cloneProject': 'Klonovať projekt',
-  'clone.title': 'Klonovať projekt',
   'clone.integration': 'Integrácia',
   'clone.search': 'Hľadať repozitáre…',
   'clone.loading': 'Načítavam repozitáre…',
   'clone.noRepos': 'Nenašli sa žiadne repozitáre.',
   'clone.private': 'Súkromný',
-  'clone.cloning': 'Klonujem…'
+  'clone.cloning': 'Klonujem…',
+  'openProject.title': 'Otvoriť / klonovať projekt',
+  'openProject.thisPc': 'Tento počítač',
+  'openProject.fromGit': 'Z Gitu',
+  'openProject.thisPcHint': 'Otvorte existujúci priečinok projektu z tohto počítača.',
+  'openProject.chooseFolder': 'Vybrať priečinok…',
+  'openProject.noIntegrations': 'Zatiaľ žiadne git integrácie. Pridajte jednu na klonovanie repozitárov.',
+  'openProject.addIntegration': 'Pridať integráciu'
 }

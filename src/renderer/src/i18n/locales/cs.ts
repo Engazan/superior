@@ -1,7 +1,7 @@
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
-  'sidebar.openFolder': 'Otevřít ze složky',
+  'sidebar.openProject': 'Otevřít / klonovat projekt',
   'sidebar.noWorkspaces': 'Zatím žádné složky — otevřete jednu.',
   'sidebar.removeFromList': 'Odebrat ze seznamu',
   'sidebar.addWorkspace': 'Přidat workspace',
@@ -352,12 +352,17 @@ export const cs: Record<MessageKey, string> = {
   'integrations.errDestExists': 'Cílová složka už existuje a není prázdná.',
   'integrations.errGitMissing': 'Git není nainstalován nebo není v PATH.',
   'integrations.errHttp': 'Server vrátil chybu (HTTP {status}).',
-  'sidebar.cloneProject': 'Klonovat projekt',
-  'clone.title': 'Klonovat projekt',
   'clone.integration': 'Integrace',
   'clone.search': 'Hledat repozitáře…',
   'clone.loading': 'Načítám repozitáře…',
   'clone.noRepos': 'Nenalezeny žádné repozitáře.',
   'clone.private': 'Soukromý',
-  'clone.cloning': 'Klonuji…'
+  'clone.cloning': 'Klonuji…',
+  'openProject.title': 'Otevřít / klonovat projekt',
+  'openProject.thisPc': 'Tento počítač',
+  'openProject.fromGit': 'Z Gitu',
+  'openProject.thisPcHint': 'Otevřete existující složku projektu z tohoto počítače.',
+  'openProject.chooseFolder': 'Vybrat složku…',
+  'openProject.noIntegrations': 'Zatím žádné git integrace. Přidejte jednu pro klonování repozitářů.',
+  'openProject.addIntegration': 'Přidat integraci'
 }

@@ -1,7 +1,7 @@
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
-  'sidebar.openFolder': 'Megnyitás mappából',
+  'sidebar.openProject': 'Projekt megnyitása / klónozása',
   'sidebar.noWorkspaces': 'Még nincs mappa — nyiss meg egyet.',
   'sidebar.removeFromList': 'Eltávolítás a listából',
   'sidebar.addWorkspace': 'Munkaterület hozzáadása',
@@ -352,12 +352,17 @@ export const hu: Record<MessageKey, string> = {
   'integrations.errDestExists': 'A célmappa már létezik és nem üres.',
   'integrations.errGitMissing': 'A Git nincs telepítve vagy nincs a PATH-ban.',
   'integrations.errHttp': 'A szerver hibát adott vissza (HTTP {status}).',
-  'sidebar.cloneProject': 'Projekt klónozása',
-  'clone.title': 'Projekt klónozása',
   'clone.integration': 'Integráció',
   'clone.search': 'Tárolók keresése…',
   'clone.loading': 'Tárolók betöltése…',
   'clone.noRepos': 'Nem található tároló.',
   'clone.private': 'Privát',
-  'clone.cloning': 'Klónozás…'
+  'clone.cloning': 'Klónozás…',
+  'openProject.title': 'Projekt megnyitása / klónozása',
+  'openProject.thisPc': 'Ez a gép',
+  'openProject.fromGit': 'Gitből',
+  'openProject.thisPcHint': 'Nyisson meg egy meglévő projektmappát a számítógépéről.',
+  'openProject.chooseFolder': 'Mappa kiválasztása…',
+  'openProject.noIntegrations': 'Még nincs git integráció. Adjon hozzá egyet a tárolók klónozásához.',
+  'openProject.addIntegration': 'Integráció hozzáadása'
 }

@@ -1,5 +1,5 @@
 export const en = {
-  'sidebar.openFolder': 'Open from folder',
+  'sidebar.openProject': 'Open / Clone project',
   'sidebar.noWorkspaces': 'No folders yet — open one.',
   'sidebar.removeFromList': 'Remove from list',
   'sidebar.addWorkspace': 'Add workspace',
@@ -348,14 +348,19 @@ export const en = {
   'integrations.errDestExists': 'The target folder already exists and is not empty.',
   'integrations.errGitMissing': 'Git is not installed or not on PATH.',
   'integrations.errHttp': 'Server returned an error (HTTP {status}).',
-  'sidebar.cloneProject': 'Clone project',
-  'clone.title': 'Clone project',
   'clone.integration': 'Integration',
   'clone.search': 'Search repositories…',
   'clone.loading': 'Loading repositories…',
   'clone.noRepos': 'No repositories found.',
   'clone.private': 'Private',
-  'clone.cloning': 'Cloning…'
+  'clone.cloning': 'Cloning…',
+  'openProject.title': 'Open / Clone project',
+  'openProject.thisPc': 'This PC',
+  'openProject.fromGit': 'From Git',
+  'openProject.thisPcHint': 'Open an existing project folder from your computer.',
+  'openProject.chooseFolder': 'Choose folder…',
+  'openProject.noIntegrations': 'No git integrations yet. Add one to clone repositories.',
+  'openProject.addIntegration': 'Add integration'
 }
 
 export type MessageKey = keyof typeof en

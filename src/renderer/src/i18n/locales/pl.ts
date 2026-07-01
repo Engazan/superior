@@ -1,7 +1,7 @@
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
-  'sidebar.openFolder': 'Otwórz z folderu',
+  'sidebar.openProject': 'Otwórz / sklonuj projekt',
   'sidebar.noWorkspaces': 'Brak folderów — otwórz jeden.',
   'sidebar.removeFromList': 'Usuń z listy',
   'sidebar.addWorkspace': 'Dodaj workspace',
@@ -352,12 +352,17 @@ export const pl: Record<MessageKey, string> = {
   'integrations.errDestExists': 'Folder docelowy już istnieje i nie jest pusty.',
   'integrations.errGitMissing': 'Git nie jest zainstalowany lub nie ma go w PATH.',
   'integrations.errHttp': 'Serwer zwrócił błąd (HTTP {status}).',
-  'sidebar.cloneProject': 'Klonuj projekt',
-  'clone.title': 'Klonuj projekt',
   'clone.integration': 'Integracja',
   'clone.search': 'Szukaj repozytoriów…',
   'clone.loading': 'Ładowanie repozytoriów…',
   'clone.noRepos': 'Nie znaleziono repozytoriów.',
   'clone.private': 'Prywatne',
-  'clone.cloning': 'Klonowanie…'
+  'clone.cloning': 'Klonowanie…',
+  'openProject.title': 'Otwórz / sklonuj projekt',
+  'openProject.thisPc': 'Ten komputer',
+  'openProject.fromGit': 'Z Gita',
+  'openProject.thisPcHint': 'Otwórz istniejący folder projektu z tego komputera.',
+  'openProject.chooseFolder': 'Wybierz folder…',
+  'openProject.noIntegrations': 'Brak integracji git. Dodaj jedną, aby klonować repozytoria.',
+  'openProject.addIntegration': 'Dodaj integrację'
 }

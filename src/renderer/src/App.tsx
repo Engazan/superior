@@ -7,7 +7,7 @@ import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
 import { ProfileManager } from './components/ProfileManager'
-import { CloneModal } from './components/CloneModal'
+import { OpenProjectModal } from './components/OpenProjectModal'
 import type { Integration } from './types'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
@@ -37,10 +37,10 @@ export default function App(): JSX.Element {
   const [launcherOpen, setLauncherOpen] = useState(false)
   // "Manage profiles" modal, opened from the title-bar profile switcher.
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
-  // "Clone project" modal, opened from the sidebar when integrations exist.
-  const [cloneOpen, setCloneOpen] = useState(false)
+  // "Open / clone project" modal, opened from the sidebar.
+  const [projectModalOpen, setProjectModalOpen] = useState(false)
 
-  // Saved git-forge integrations — drives the sidebar clone affordance + modal.
+  // Saved git-forge integrations — drives the clone tab of the project modal.
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const reloadIntegrations = useCallback(() => {
     window.api.listIntegrations().then((s) => setIntegrations(s.integrations))
@@ -279,9 +279,7 @@ export default function App(): JSX.Element {
               attentionColor={attentionColor}
               update={update}
               collapsed={sidebarCollapsed}
-              canClone={integrations.length > 0}
-              onCloneProject={() => setCloneOpen(true)}
-              onAddFolder={ws.addFolder}
+              onOpenProject={() => setProjectModalOpen(true)}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
               onUpdateFolder={ws.updateFolder}
@@ -383,11 +381,17 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {cloneOpen && integrations.length > 0 && (
-        <CloneModal
+      {projectModalOpen && (
+        <OpenProjectModal
           integrations={integrations}
+          onOpenFolder={ws.addFolder}
           onClone={ws.cloneRepository}
-          onClose={() => setCloneOpen(false)}
+          onAddIntegration={() => {
+            setProjectModalOpen(false)
+            setSettingsSection('integrations')
+            setView('settings')
+          }}
+          onClose={() => setProjectModalOpen(false)}
         />
       )}
 
