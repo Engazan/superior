@@ -48,9 +48,36 @@ function Caret(): JSX.Element {
   )
 }
 
+function GroupCaret({ open }: { open: boolean }): JSX.Element {
+  return (
+    <svg
+      className={`block h-2.5 w-2.5 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+/**
+ * The name to check out for a branch row. Local branches use their name as-is;
+ * a remote branch like `origin/feature` checks out its short name `feature`, so
+ * git's DWIM creates a local branch tracking the remote.
+ */
+function checkoutName(b: BranchInfo): string {
+  if (!b.isRemote) return b.name
+  return b.remote && b.name.startsWith(`${b.remote}/`) ? b.name.slice(b.remote.length + 1) : b.name
+}
+
 /**
  * Title-bar branch switcher: click the branch to open a searchable list of local
- * branches and check one out. Uncommitted changes are handled without ever
+ * and remote branches and check one out. Uncommitted changes are handled without ever
  * discarding work — see {@link import('../../../main/services/git.service').switchBranch}:
  * a plain checkout carries non-conflicting edits over; a conflict surfaces a
  * "Stash & switch" choice (recoverable via `git stash pop`); branches already
@@ -96,17 +123,41 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
     void window.api.listBranches(gitDir).then(setBranches)
   }, [open, gitDir])
 
+  // Collapsed group keys ('local' or a remote name). A group not present is expanded.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const toggleGroup = (key: string): void =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = branches ?? []
     return q ? list.filter((b) => b.name.toLowerCase().includes(q)) : list
   }, [branches, query])
 
+  // Split into the local group and one group per remote, preserving list order.
+  const groups = useMemo(() => {
+    const local = filtered.filter((b) => !b.isRemote)
+    const remotes = new Map<string, BranchInfo[]>()
+    for (const b of filtered) {
+      if (!b.isRemote) continue
+      const key = b.remote || 'remote'
+      const arr = remotes.get(key)
+      if (arr) arr.push(b)
+      else remotes.set(key, [b])
+    }
+    return { local, remotes: [...remotes.entries()] }
+  }, [filtered])
+
   // Offer to create the typed name as a new branch (from the current HEAD) when
-  // it isn't already an existing branch.
+  // it isn't already an existing branch (local, or the short name of a remote one).
   const newName = query.trim()
   const canCreate =
-    branches !== null && newName.length > 0 && !branches.some((b) => b.name === newName)
+    branches !== null && newName.length > 0 && !branches.some((b) => checkoutName(b) === newName)
 
   const doSwitch = async (branch: string, stash: boolean): Promise<void> => {
     setBusy(branch)
@@ -155,6 +206,52 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
     }
   }
 
+  const renderRow = (b: BranchInfo): JSX.Element => {
+    const target = checkoutName(b)
+    const blockedElsewhere = b.isCheckedOut && !b.isCurrent
+    const disabled = b.isCurrent || blockedElsewhere || busy !== null
+    return (
+      <button
+        key={b.name}
+        disabled={disabled}
+        onClick={() => void doSwitch(target, false)}
+        className={`flex w-full items-center gap-2 py-1.5 pl-7 pr-3 text-left text-xs transition ${
+          disabled ? 'cursor-default text-fgmuted' : 'text-fg hover:bg-hover'
+        }`}
+      >
+        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
+          {b.isCurrent ? '✓' : ''}
+        </span>
+        <span className="truncate">{b.isRemote ? target : b.name}</span>
+        {b.isCurrent && <span className="ml-auto shrink-0 text-fgmuted">{t('branch.current')}</span>}
+        {blockedElsewhere && (
+          <span className="ml-auto shrink-0 text-amber-400/80">{t('branch.inUse')}</span>
+        )}
+        {busy === target && (
+          <span className="ml-auto shrink-0 text-fgmuted">{t('branch.switching')}</span>
+        )}
+      </button>
+    )
+  }
+
+  const renderGroup = (key: string, label: string, items: BranchInfo[]): JSX.Element => {
+    // While searching, keep every group open so matches are never hidden.
+    const isOpen = !collapsed.has(key) || query.trim().length > 0
+    return (
+      <div key={key}>
+        <button
+          onClick={() => toggleGroup(key)}
+          className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] font-medium uppercase tracking-wide text-fgmuted transition hover:text-fgdim"
+        >
+          <GroupCaret open={isOpen} />
+          <span className="truncate">{label}</span>
+          <span className="ml-auto shrink-0 tabular-nums">{items.length}</span>
+        </button>
+        {isOpen && items.map(renderRow)}
+      </div>
+    )
+  }
+
   return (
     <div ref={ref} className="app-no-drag relative flex items-center">
       <button
@@ -188,33 +285,15 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
               <div className="px-3 py-2 text-xs text-fgmuted">{t('branch.loading')}</div>
             ) : filtered.length === 0 ? (
               <div className="px-3 py-2 text-xs text-fgmuted">{t('branch.none')}</div>
+            ) : groups.remotes.length === 0 ? (
+              // No remotes: keep the flat list, no group chrome.
+              groups.local.map(renderRow)
             ) : (
-              filtered.map((b) => {
-                const blockedElsewhere = b.isCheckedOut && !b.isCurrent
-                const disabled = b.isCurrent || blockedElsewhere || busy !== null
-                return (
-                  <button
-                    key={b.name}
-                    disabled={disabled}
-                    onClick={() => void doSwitch(b.name, false)}
-                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition ${
-                      disabled ? 'cursor-default text-fgmuted' : 'text-fg hover:bg-hover'
-                    }`}
-                  >
-                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
-                      {b.isCurrent ? '✓' : ''}
-                    </span>
-                    <span className="truncate">{b.name}</span>
-                    {b.isCurrent && <span className="ml-auto shrink-0 text-fgmuted">{t('branch.current')}</span>}
-                    {blockedElsewhere && (
-                      <span className="ml-auto shrink-0 text-amber-400/80">{t('branch.inUse')}</span>
-                    )}
-                    {busy === b.name && (
-                      <span className="ml-auto shrink-0 text-fgmuted">{t('branch.switching')}</span>
-                    )}
-                  </button>
-                )
-              })
+              <>
+                {groups.local.length > 0 &&
+                  renderGroup('local', t('branch.localGroup'), groups.local)}
+                {groups.remotes.map(([remote, items]) => renderGroup(remote, remote, items))}
+              </>
             )}
           </div>
 

@@ -308,6 +308,7 @@ export const cs: Record<MessageKey, string> = {
     'Tento workspace má běžící terminály. Zastavit je a odstranit?',
   'worktree.revealInFinder': 'Zobrazit worktree ve správci souborů',
   'branch.switch': 'Přepnout větev',
+  'branch.localGroup': 'Lokální',
   'branch.search': 'Hledat větve…',
   'branch.current': 'aktuální',
   'branch.inUse': 'používá se',

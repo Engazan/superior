@@ -308,6 +308,7 @@ export const hu: Record<MessageKey, string> = {
     'Ennek a munkaterületnek futó termináljai vannak. Leállítod és eltávolítod?',
   'worktree.revealInFinder': 'Worktree megjelenítése a fájlkezelőben',
   'branch.switch': 'Ág váltása',
+  'branch.localGroup': 'Helyi',
   'branch.search': 'Ágak keresése…',
   'branch.current': 'jelenlegi',
   'branch.inUse': 'használatban',

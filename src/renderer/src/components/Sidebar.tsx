@@ -586,7 +586,7 @@ function WorktreeCreateForm({
       .then((list) => {
         if (!active) return
         setBranches(list)
-        setPicked(list.find((b) => !b.isCheckedOut)?.name ?? '')
+        setPicked(list.find((b) => !b.isCheckedOut && !b.isRemote)?.name ?? '')
       })
       .catch(() => {
         if (active) setBranchLoadFailed(true)
@@ -599,7 +599,8 @@ function WorktreeCreateForm({
     }
   }, [folderPath])
 
-  const available = branches.filter((b) => !b.isCheckedOut)
+  // Only local branches can back a worktree; remote-tracking refs are excluded.
+  const available = branches.filter((b) => !b.isCheckedOut && !b.isRemote)
   const branch = mode === 'new' ? newBranch.trim() : picked
   const canSubmit = !!branch && !busy
 

@@ -309,6 +309,7 @@ export const sk: Record<MessageKey, string> = {
     'Tento workspace má bežiace terminály. Zastaviť ich a odstrániť?',
   'worktree.revealInFinder': 'Zobraziť worktree v správcovi súborov',
   'branch.switch': 'Prepnúť vetvu',
+  'branch.localGroup': 'Lokálne',
   'branch.search': 'Hľadať vetvy…',
   'branch.current': 'aktuálna',
   'branch.inUse': 'používa sa',

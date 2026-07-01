@@ -240,13 +240,18 @@ export interface Workspace {
   branch?: string
 }
 
-/** A local branch, for the worktree-create picker. */
+/** A branch (local or remote-tracking), for the branch/worktree pickers. */
 export interface BranchInfo {
+  /** Full short ref: `feature` for a local branch, `origin/feature` for a remote one. */
   name: string
   /** the repo's current HEAD branch */
   isCurrent: boolean
   /** already checked out in some worktree (can't be checked out again) */
   isCheckedOut: boolean
+  /** true for a remote-tracking branch (from `refs/remotes`) */
+  isRemote: boolean
+  /** the remote name (e.g. `origin`) when {@link isRemote}; undefined for local branches */
+  remote?: string
 }
 
 /** Payload to create a worktree-backed workspace. */

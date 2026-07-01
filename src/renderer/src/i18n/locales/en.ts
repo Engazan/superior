@@ -304,6 +304,7 @@ export const en = {
     'This branch workspace has running terminals. Stop them and remove it?',
   'worktree.revealInFinder': 'Reveal worktree in file manager',
   'branch.switch': 'Switch branch',
+  'branch.localGroup': 'Local',
   'branch.search': 'Search branches…',
   'branch.current': 'current',
   'branch.inUse': 'in use',

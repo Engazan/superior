@@ -308,6 +308,7 @@ export const pl: Record<MessageKey, string> = {
     'Ten workspace ma działające terminale. Zatrzymać je i usunąć?',
   'worktree.revealInFinder': 'Pokaż worktree w menedżerze plików',
   'branch.switch': 'Przełącz gałąź',
+  'branch.localGroup': 'Lokalne',
   'branch.search': 'Szukaj gałęzi…',
   'branch.current': 'bieżąca',
   'branch.inUse': 'w użyciu',

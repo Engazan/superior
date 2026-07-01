@@ -70,25 +70,51 @@ async function listWorktrees(folderPath: string): Promise<WorktreeEntry[]> {
   return parseWorktreeList(raw)
 }
 
-/** Local branches, marking the current HEAD and any already checked out in a worktree. */
+/**
+ * Local branches plus remote-tracking branches, marking the current HEAD and any
+ * already checked out in a worktree. Remote branches that already have a local
+ * counterpart are omitted (the local branch is the one you'd act on). The
+ * `origin/HEAD` symbolic ref is skipped.
+ */
 export async function listBranches(folderPath: string): Promise<BranchInfo[]> {
   if (!(await isGitRepo(folderPath))) return []
-  const [refs, worktrees] = await Promise.all([
-    runGitRaw(folderPath, [
-      'for-each-ref',
-      '--format=%(refname:short)%09%(HEAD)',
-      'refs/heads'
-    ]),
+  const [localRefs, remoteRefs, worktrees] = await Promise.all([
+    runGitRaw(folderPath, ['for-each-ref', '--format=%(refname:short)%09%(HEAD)', 'refs/heads']),
+    runGitRaw(folderPath, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes']),
     listWorktrees(folderPath)
   ])
   const checkedOut = new Set(worktrees.map((w) => w.branch).filter(Boolean) as string[])
-  return refs
+
+  const local: BranchInfo[] = localRefs
     .split('\n')
     .filter(Boolean)
     .map((line) => {
       const [name, head] = line.split('\t')
-      return { name, isCurrent: head === '*', isCheckedOut: checkedOut.has(name) }
+      return { name, isCurrent: head === '*', isCheckedOut: checkedOut.has(name), isRemote: false }
     })
+  const localNames = new Set(local.map((b) => b.name))
+
+  const remote: BranchInfo[] = remoteRefs
+    .split('\n')
+    .filter(Boolean)
+    .filter((name) => !name.endsWith('/HEAD')) // skip the origin/HEAD -> origin/main pointer
+    .map((name) => {
+      const slash = name.indexOf('/')
+      const remoteName = slash === -1 ? '' : name.slice(0, slash)
+      const short = slash === -1 ? name : name.slice(slash + 1)
+      return { name, remoteName, short }
+    })
+    // Hide remote branches that already exist locally — the local ref is actionable.
+    .filter(({ short }) => !localNames.has(short))
+    .map(({ name, remoteName }) => ({
+      name,
+      isCurrent: false,
+      isCheckedOut: false,
+      isRemote: true,
+      remote: remoteName
+    }))
+
+  return [...local, ...remote]
 }
 
 export interface CreateWorktreeResult {
