@@ -107,10 +107,7 @@ export function TitleBar({
                 {gitLoading && !gitStatus ? (
                   <span className="flex h-full items-center px-1 text-xs text-fgmuted">Git…</span>
                 ) : gitStatus?.isRepository ? (
-                  <div
-                    className="flex h-full min-w-0 max-w-72 items-center gap-1.5 px-1 text-xs font-medium text-fgdim"
-                    title={gitStatus.branch ?? 'HEAD'}
-                  >
+                  <div className="flex h-full min-w-0 max-w-72 items-center gap-1.5 px-1 text-xs font-medium text-fgdim">
                     {branchSwitchable && gitDir ? (
                       <BranchSwitcher
                         gitDir={gitDir}
@@ -120,7 +117,9 @@ export function TitleBar({
                     ) : (
                       <>
                         <BranchIcon />
-                        <span className="truncate">{gitStatus.branch ?? 'HEAD'}</span>
+                        <span className="truncate" title={gitStatus.branch ?? 'HEAD'}>
+                          {gitStatus.branch ?? 'HEAD'}
+                        </span>
                       </>
                     )}
                     {!!gitStatus.additions && (
