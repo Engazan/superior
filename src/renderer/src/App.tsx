@@ -8,6 +8,7 @@ import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
 import { ProfileManager } from './components/ProfileManager'
 import { OpenProjectModal } from './components/OpenProjectModal'
+import { TooltipLayer } from './components/TooltipLayer'
 import type { Integration } from './types'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
@@ -406,6 +407,8 @@ export default function App(): JSX.Element {
           onClose={() => setProfileManagerOpen(false)}
         />
       )}
+
+      <TooltipLayer />
     </div>
   )
 }
