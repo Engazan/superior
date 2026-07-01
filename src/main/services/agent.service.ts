@@ -11,7 +11,7 @@ import { getSettings } from './settings.service'
  * pty and streams output/exit back to the renderer via daemonClient's relay.
  */
 export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult> {
-  const { command, label, cwd, workspaceId } = args
+  const { command, label, cwd, workspaceId, tabId } = args
 
   if (!cwd) {
     return { error: 'No workspace selected. Open a folder first.' }
@@ -47,6 +47,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
         command,
         cwd,
         workspaceId,
+        tabId,
         createdAt
       }
     })
@@ -62,6 +63,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       icon: args.icon,
       color: args.color,
       workspaceId,
+      tabId,
       status: 'running',
       pid,
       cols,
@@ -100,6 +102,8 @@ export async function restoreSessions(): Promise<AgentSession[]> {
     icon: s.meta.icon,
     color: s.meta.color,
     workspaceId: s.meta.workspaceId,
+    // Absent on sessions from an older build; the renderer reassigns these to the workspace's active tab.
+    tabId: s.meta.tabId ?? '',
     status: s.status,
     pid: s.pid,
     cols: s.cols,

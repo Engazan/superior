@@ -53,6 +53,9 @@ export default function App(): JSX.Element {
   const { presets } = presetsApi
   const preview = usePreviewPane()
   const ws = useWorkspaceSessions({ setError, t, presets })
+  // The active workspace's tabs + its active tab (drives the terminal grid).
+  const activeTabs = ws.activeWorkspaceId ? ws.tabsByWs[ws.activeWorkspaceId] : undefined
+  const activeTab = activeTabs?.tabs.find((tb) => tb.id === activeTabs.activeTabId)
   const { gitStatus, gitLoading, initializeGit, refresh: refreshGitStatus } = useGitStatus(
     ws.effectiveDir,
     ws.activeFolder?.path ?? null,
@@ -310,8 +313,9 @@ export default function App(): JSX.Element {
                     activeWorkspaceId={ws.activeWorkspaceId}
                     activeSessionId={ws.activeSessionId}
                     maximizedId={ws.maximizedId}
-                    layoutMode={ws.activeWorkspaceId ? ws.layouts[ws.activeWorkspaceId] : undefined}
-                    gridLayout={ws.activeWorkspaceId ? ws.gridLayouts[ws.activeWorkspaceId] : undefined}
+                    tabs={activeTabs?.tabs ?? []}
+                    activeTabId={activeTabs?.activeTabId}
+                    gridLayout={activeTab?.gridLayout}
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
                     onToggleMaximize={ws.toggleMaximize}
@@ -322,6 +326,12 @@ export default function App(): JSX.Element {
                     onLaunch={ws.launchAgent}
                     onManagePresets={openPresets}
                     onGridLayoutChange={ws.setGridLayout}
+                    onSelectTab={(id) => ws.activeWorkspaceId && ws.selectTab(ws.activeWorkspaceId, id)}
+                    onAddTab={() => ws.activeWorkspaceId && ws.addTab(ws.activeWorkspaceId)}
+                    onCloseTab={(id) => ws.activeWorkspaceId && ws.closeTab(ws.activeWorkspaceId, id)}
+                    onRenameTab={(id, name) =>
+                      ws.activeWorkspaceId && ws.renameTab(ws.activeWorkspaceId, id, name)
+                    }
                   />
                 </div>
 

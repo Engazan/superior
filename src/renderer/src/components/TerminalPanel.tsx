@@ -1,11 +1,8 @@
 import { useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
-import { PresetIcon } from './PresetIcon'
-import { UsageBadge } from './UsageBadge'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
 import { useI18n } from '../i18n'
-import { barTint } from '../tint'
 import {
   gridRects,
   gridDividers,
@@ -18,9 +15,7 @@ import {
   type GridLayout,
   type Divider
 } from '../gridLayout'
-import type { AgentSession, TerminalPreset } from '../types'
-
-export type LayoutMode = 'tabs' | 'grid'
+import type { AgentSession, TerminalPreset, WorkspaceTab } from '../types'
 
 interface Props {
   /** All sessions across every workspace — kept mounted so buffers survive workspace switches. */
@@ -29,9 +24,11 @@ interface Props {
   activeSessionId: string | null
   /** the grid cell blown up to fill the whole panel, or null (owned by App so shortcuts can drive it) */
   maximizedId: string | null
-  /** layout mode for the active workspace (undefined defaults to tabs) */
-  layoutMode: LayoutMode | undefined
-  /** saved cell sizing for the active workspace's grid (undefined → uniform) */
+  /** the active workspace's tabs (each tab is a grid of terminals) */
+  tabs: WorkspaceTab[]
+  /** the active tab within the active workspace */
+  activeTabId: string | undefined
+  /** saved cell sizing for the active tab's grid (undefined → uniform) */
   gridLayout: GridLayout | undefined
   presets: TerminalPreset[]
   onSelect: (id: string) => void
@@ -41,19 +38,21 @@ interface Props {
   /** re-run an exited session's original preset command in place */
   onRestart: (id: string) => void
   onSessionUpdate: (id: string, patch: Partial<AgentSession>) => void
-  /** launch wizard result — start a fresh tabs/grid layout */
+  /** launch wizard result — fill the active tab's grid */
   onStart: (config: LaunchConfig) => void
-  /** add a single terminal (a tab, or another grid cell) */
+  /** add a single terminal (another grid cell) to the active tab */
   onLaunch: (preset: TerminalPreset) => void
   onManagePresets: () => void
   /** persist a grid sizing change */
   onGridLayoutChange: (layout: GridLayout) => void
-}
-
-const STATUS_DOT: Record<AgentSession['status'], string> = {
-  running: 'bg-emerald-400',
-  exited: 'bg-zinc-500',
-  error: 'bg-red-500'
+  /** switch the active tab */
+  onSelectTab: (id: string) => void
+  /** add a new (empty) tab */
+  onAddTab: () => void
+  /** close a tab (kills its terminals) */
+  onCloseTab: (id: string) => void
+  /** rename a tab */
+  onRenameTab: (id: string, name: string) => void
 }
 
 interface Layout {
@@ -67,7 +66,8 @@ export function TerminalPanel({
   activeWorkspaceId,
   activeSessionId,
   maximizedId,
-  layoutMode,
+  tabs,
+  activeTabId,
   gridLayout,
   presets,
   onSelect,
@@ -78,18 +78,25 @@ export function TerminalPanel({
   onStart,
   onLaunch,
   onManagePresets,
-  onGridLayoutChange
+  onGridLayoutChange,
+  onSelectTab,
+  onAddTab,
+  onCloseTab,
+  onRenameTab
 }: Props): JSX.Element {
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
+  // Inline tab rename: the tab being edited and its draft name.
+  const [editingTab, setEditingTab] = useState<{ id: string; name: string } | null>(null)
 
-  // Sessions of the active workspace, in creation order.
-  const workspaceSessions = sessions.filter((s) => s.workspaceId === activeWorkspaceId)
-  const isGrid = layoutMode === 'grid'
+  // Terminals of the active tab (active workspace + active tab), in creation order.
+  const tabSessions = sessions.filter(
+    (s) => s.workspaceId === activeWorkspaceId && s.tabId === activeTabId
+  )
 
   // Grid: map the first MAX_GRID sessions to their slot rectangles.
-  const gridCells = workspaceSessions.slice(0, MAX_GRID)
+  const gridCells = tabSessions.slice(0, MAX_GRID)
   const dist = distribute(gridCells.length)
   const layout = matchesDist(gridLayout, dist) ? (gridLayout as GridLayout) : uniformLayout(dist)
   const rects = gridRects(dist, layout)
@@ -100,19 +107,17 @@ export function TerminalPanel({
   const maxId = gridCells.some((s) => s.id === maximizedId) ? maximizedId : null
 
   const layoutFor = (s: AgentSession): Layout => {
-    if (s.workspaceId !== activeWorkspaceId) return { visible: false, focused: false }
-    if (isGrid) {
-      const i = gridIndex.get(s.id)
-      if (i === undefined) return { visible: false, focused: false }
-      if (maxId) {
-        // The maximized cell fills the panel (rect undefined → no highlight ring); others hide.
-        if (s.id !== maxId) return { visible: false, focused: false }
-        return { visible: true, focused: true }
-      }
-      return { rect: rects[i], visible: true, focused: s.id === activeSessionId }
+    if (s.workspaceId !== activeWorkspaceId || s.tabId !== activeTabId) {
+      return { visible: false, focused: false }
     }
-    const active = s.id === activeSessionId
-    return { visible: active, focused: active }
+    const i = gridIndex.get(s.id)
+    if (i === undefined) return { visible: false, focused: false }
+    if (maxId) {
+      // The maximized cell fills the panel (rect undefined → no highlight ring); others hide.
+      if (s.id !== maxId) return { visible: false, focused: false }
+      return { visible: true, focused: true }
+    }
+    return { rect: rects[i], visible: true, focused: s.id === activeSessionId }
   }
 
   // Drag a divider: convert the pointer position to a fraction of the panel and
@@ -140,75 +145,95 @@ export function TerminalPanel({
     window.addEventListener('pointerup', up)
   }
 
+  const commitRename = (): void => {
+    if (!editingTab) return
+    const name = editingTab.name.trim()
+    if (name) onRenameTab(editingTab.id, name)
+    setEditingTab(null)
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-panel">
-      {/* Tab strip — only in tabs mode with at least one session. */}
-      {!isGrid && workspaceSessions.length > 0 && (
+      {/* Tab strip — one chip per grid tab. Hidden until the workspace has its first tab. */}
+      {activeWorkspaceId && tabs.length > 0 && (
         <div className="flex items-stretch border-b border-edge bg-bar">
           <div className="flex min-w-0 items-stretch gap-px overflow-x-auto">
-            {workspaceSessions.map((s) => {
-              const active = s.id === activeSessionId
+            {tabs.map((tab) => {
+              const active = tab.id === activeTabId
+              const editing = editingTab?.id === tab.id
+              // Aggregate activity dot: green while any terminal in the tab runs,
+              // grey once they've all exited, nothing for an empty tab.
+              const tabCells = sessions.filter(
+                (s) => s.workspaceId === activeWorkspaceId && s.tabId === tab.id
+              )
+              const running = tabCells.some((s) => s.status === 'running')
               return (
                 <div
-                  key={s.id}
-                  onClick={() => onSelect(s.id)}
-                  style={barTint(s.color, active)}
+                  key={tab.id}
+                  onClick={() => onSelectTab(tab.id)}
+                  onDoubleClick={() => setEditingTab({ id: tab.id, name: tab.name })}
                   className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs ${
                     active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
                   }`}
                 >
-                  <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s.status]}`} />
-                  <PresetIcon iconType={s.iconType} icon={s.icon} className="h-4 w-4 text-sm" />
-                  <span className="whitespace-nowrap">{s.label}</span>
-                  <UsageBadge sessionId={s.id} />
-                  {s.status !== 'running' && (
+                  {tabCells.length > 0 && (
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        running ? 'bg-emerald-400' : 'bg-zinc-500'
+                      }`}
+                    />
+                  )}
+                  {editing ? (
+                    <input
+                      autoFocus
+                      value={editingTab.name}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setEditingTab({ id: tab.id, name: e.target.value })}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitRename()
+                        else if (e.key === 'Escape') setEditingTab(null)
+                      }}
+                      className="w-24 min-w-0 rounded border border-edge bg-panel px-1 py-0.5 text-xs text-fg focus:border-fgdim focus:outline-none"
+                    />
+                  ) : (
+                    <span className="whitespace-nowrap" title={t('tab.rename')}>
+                      {tab.name}
+                    </span>
+                  )}
+                  {!editing && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        onRestart(s.id)
+                        onCloseTab(tab.id)
                       }}
-                      className="text-fgmuted transition hover:text-fg"
-                      aria-label={t('terminal.restart')}
-                      title={t('terminal.restart')}
+                      className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
+                      aria-label={t('tab.close')}
+                      title={t('tab.close')}
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M13 8a5 5 0 1 1-1.46-3.54M13 2v3h-3" />
-                      </svg>
+                      ✕
                     </button>
                   )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onClose(s.id)
-                    }}
-                    className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
-                    aria-label={t('terminal.closeSession')}
-                    title={t('terminal.stopClose')}
-                  >
-                    ✕
-                  </button>
                 </div>
               )
             })}
           </div>
-          {/* Kept outside the scroll container so its dropdown isn't clipped. */}
-          <div className="flex shrink-0 items-center px-2">
-            <PresetMenu presets={presets} onSelect={onLaunch} onManage={onManagePresets} />
+          <div className="flex shrink-0 items-center px-1">
+            <button
+              onClick={onAddTab}
+              className="rounded px-2 py-1 text-sm text-fgdim transition hover:bg-hover hover:text-fg"
+              aria-label={t('tab.new')}
+              title={t('tab.new')}
+            >
+              +
+            </button>
           </div>
         </div>
       )}
 
       {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
       <div ref={containerRef} className="relative min-h-0 flex-1">
-        {workspaceSessions.length === 0 &&
+        {tabSessions.length === 0 &&
           (activeWorkspaceId ? (
             <AgentLauncher presets={presets} onStart={onStart} />
           ) : (
@@ -219,7 +244,7 @@ export function TerminalPanel({
 
         {sessions.map((s) => {
           const l = layoutFor(s)
-          const isGridCell = isGrid && s.workspaceId === activeWorkspaceId && gridIndex.has(s.id)
+          const isGridCell = s.workspaceId === activeWorkspaceId && s.tabId === activeTabId && gridIndex.has(s.id)
           return (
             <TerminalView
               key={s.id}
@@ -247,8 +272,7 @@ export function TerminalPanel({
         })}
 
         {/* Grid: draggable dividers double as the visible cell boundaries. */}
-        {isGrid &&
-          !maxId &&
+        {!maxId &&
           dividers.map((d, i) => {
             const vertical = d.axis === 'v'
             const hot = resizing === d.axis
@@ -295,7 +319,7 @@ export function TerminalPanel({
           />
         )}
 
-        {isGrid && (
+        {activeWorkspaceId && tabSessions.length > 0 && (
           <div className="absolute bottom-3 right-3 z-50 rounded-md border border-edge bg-bar shadow-lg">
             <PresetMenu
               presets={presets}

@@ -30,7 +30,7 @@ import {
   type GitDiff,
   type GitStatus,
   type Language,
-  type LayoutsState,
+  type TabsState,
   type PresetsState,
   type ShellCommandInstallResult,
   type ShellCommandStatus,
@@ -43,7 +43,7 @@ import {
   type UsagePrimary,
   type UpdateInfo,
   type UpdateProgress,
-  type WorkspaceLayout,
+  type WorkspaceTabs,
   type WorkspaceState,
   type WorktreeAddArgs,
   type WorktreeAddResult
@@ -376,12 +376,12 @@ const api = {
     ipcRenderer.send(IPC.AGENT_DETACH, id)
   },
 
-  getLayouts(): Promise<LayoutsState> {
-    return ipcRenderer.invoke(IPC.LAYOUT_GET)
+  getTabs(): Promise<TabsState> {
+    return ipcRenderer.invoke(IPC.TABS_GET)
   },
 
-  setLayout(workspaceId: string, layout: WorkspaceLayout): Promise<LayoutsState> {
-    return ipcRenderer.invoke(IPC.LAYOUT_SET, { workspaceId, layout })
+  setTabs(workspaceId: string, tabs: WorkspaceTabs): Promise<TabsState> {
+    return ipcRenderer.invoke(IPC.TABS_SET, { workspaceId, tabs })
   },
 
   sendInput(id: string, data: string): void {

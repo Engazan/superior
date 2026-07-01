@@ -1,13 +1,13 @@
 import { ipcMain } from 'electron'
-import { IPC, type LayoutsState, type WorkspaceLayout } from '@shared/types'
-import { getLayouts, setLayout } from '../services/layout.service'
+import { IPC, type TabsState, type WorkspaceTabs } from '@shared/types'
+import { getTabs, setTabs } from '../services/layout.service'
 
 export function registerLayoutIpc(): void {
-  ipcMain.handle(IPC.LAYOUT_GET, (): LayoutsState => getLayouts())
+  ipcMain.handle(IPC.TABS_GET, (): TabsState => getTabs())
 
   ipcMain.handle(
-    IPC.LAYOUT_SET,
-    (_event, args: { workspaceId: string; layout: WorkspaceLayout }): LayoutsState =>
-      setLayout(args.workspaceId, args.layout)
+    IPC.TABS_SET,
+    (_event, args: { workspaceId: string; tabs: WorkspaceTabs }): TabsState =>
+      setTabs(args.workspaceId, args.tabs)
   )
 }

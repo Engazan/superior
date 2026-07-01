@@ -60,6 +60,8 @@ export type {
   UsagePrimary,
   Workspace,
   WorkspaceState,
+  WorkspaceTab,
+  WorkspaceTabs,
   WorktreeAddArgs,
   WorktreeAddResult,
   WorktreeErrorCode

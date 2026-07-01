@@ -296,6 +296,8 @@ export interface AgentSession {
   color?: string
   /** the workspace this session belongs to */
   workspaceId: string
+  /** the tab (a grid within the workspace) this session belongs to */
+  tabId: string
   status: AgentStatus
   pid?: number
   exitCode?: number | null
@@ -307,22 +309,29 @@ export interface AgentSession {
   createdAt: number
 }
 
-export type LayoutMode = 'tabs' | 'grid'
-
 /** Grid cell sizing — row heights + per-row column widths as fractions. */
 export interface GridLayoutData {
   rows: number[]
   cols: number[][]
 }
 
-/** A workspace's persisted layout (tab strip vs grid + grid sizing). */
-export interface WorkspaceLayout {
-  mode: LayoutMode
+/** A single tab within a workspace: a named grid of terminals. */
+export interface WorkspaceTab {
+  id: string
+  name: string
+  /** saved cell sizing for this tab's grid (undefined → uniform) */
   gridLayout?: GridLayoutData
 }
 
-/** Persisted per-workspace layouts, keyed by workspace id. */
-export type LayoutsState = Record<string, WorkspaceLayout>
+/** A workspace's ordered tabs plus the active one. May be empty after the last
+ * tab is closed, in which case the workspace falls back to the launch wizard. */
+export interface WorkspaceTabs {
+  tabs: WorkspaceTab[]
+  activeTabId: string
+}
+
+/** Persisted per-workspace tabs, keyed by workspace id. */
+export type TabsState = Record<string, WorkspaceTabs>
 
 /** Payload for starting an agent session from a preset. */
 export interface StartAgentArgs {
@@ -335,6 +344,8 @@ export interface StartAgentArgs {
   cwd: string
   /** the workspace this session belongs to */
   workspaceId: string
+  /** the tab (a grid within the workspace) this session belongs to */
+  tabId: string
   cols?: number
   rows?: number
 }
@@ -704,8 +715,8 @@ export const IPC = {
   AGENT_RESTORE: 'agent:restore',
   AGENT_ATTACH: 'agent:attach',
   AGENT_DETACH: 'agent:detach',
-  LAYOUT_GET: 'layout:get',
-  LAYOUT_SET: 'layout:set',
+  TABS_GET: 'tabs:get',
+  TABS_SET: 'tabs:set',
   UPDATE_CHECK: 'update:check',
   UPDATE_OPEN: 'update:open',
   UPDATE_DOWNLOAD: 'update:download',

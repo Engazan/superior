@@ -10,6 +10,8 @@ export interface DaemonSessionMeta {
   /** Working directory the session launched in; used to locate its Claude transcript. */
   cwd: string
   workspaceId: string
+  /** The tab (a grid within the workspace) this session belongs to. Absent on sessions spawned by an older build. */
+  tabId?: string
   createdAt: number
 }
 
