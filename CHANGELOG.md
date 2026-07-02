@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-07-02
+
+### Changed
+
+- **Much faster terminal output.** Terminal data from the daemon is now
+  coalesced into a few large frames per tick and carried in a binary format
+  instead of JSON, and a fast producer (e.g. `cat` of a huge file) is paused
+  while the UI catches up — throughput is higher and memory stays flat under
+  heavy output.
+- **Snappier app under load.** Streaming terminal output no longer re-renders
+  the whole window — only the sidebar activity indicators update, and terminals,
+  the sidebar, and grid resizing are cheaper to redraw. Dragging grid dividers
+  is smoother.
+- **Lighter git polling.** Branch/diff badges are refreshed with far fewer git
+  processes (one shared status call instead of several per panel), polling
+  pauses while the window is hidden, and unchanged results no longer trigger
+  UI updates.
+- **Faster startup and settings.** The window appears without waiting for the
+  worktree check, the CLI tools health check no longer freezes the app while
+  probing login shells (it runs in the background and caches its result), and
+  settings are kept in memory instead of re-read from disk.
+- **Large markdown files open without stalling.** Syntax highlighting in the
+  markdown preview is skipped for very large documents.
+
+### Fixed
+
+- **No stray branch tooltip over the open branch switcher.**
+
 ## [0.12.0] - 2026-07-01
 
 ### Added
