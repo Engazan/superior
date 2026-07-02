@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import * as pty from 'node-pty'
 import {
   FrameDecoder,
+  encodeDataFrame,
   encodeFrame,
   type ClientMessage,
   type DaemonSession,
@@ -21,6 +22,11 @@ const LOG_CAP_BYTES = 1_000_000
 // Max chunk size when forwarding input to a pty; a larger paste is split into
 // chunks of this size rather than handed over — or dropped — in one frame.
 const MAX_INPUT_BYTES = 1_000_000
+// node-pty emits many small reads per frame; coalesce them so a fast producer
+// (`cat` of a big file) becomes a few large frames per tick instead of
+// thousands of tiny socket writes + IPC messages.
+const FLUSH_MS = 8
+const FLUSH_THRESHOLD_BYTES = 65_536
 
 function log(msg: string): void {
   if (!logPath) return
@@ -46,12 +52,17 @@ interface Session {
   cols: number
   rows: number
   attached: Set<Conn>
+  /** Output accumulated since the last flush (also already in `buffer`). */
+  pending: string
+  flushTimer: NodeJS.Timeout | null
 }
 
 interface Conn {
   socket: net.Socket
   decoder: FrameDecoder<ClientMessage>
   attached: Set<string>
+  /** Sessions paused because this conn's socket buffer backed up. */
+  pausedSessions: Set<Session>
 }
 
 const sessions = new Map<string, Session>()
@@ -68,6 +79,50 @@ function send(conn: Conn, msg: ServerMessage): void {
 
 function broadcast(session: Session, msg: ServerMessage): void {
   for (const conn of session.attached) send(conn, msg)
+}
+
+/**
+ * Write a data frame with backpressure: when the socket can't drain as fast as
+ * the pty produces, pause the pty until the socket's 'drain' — otherwise a
+ * `cat` of a huge file grows the kernel/renderer buffers without bound.
+ */
+function sendData(conn: Conn, session: Session, frame: Buffer): void {
+  try {
+    if (!conn.socket.write(frame) && !conn.pausedSessions.has(session)) {
+      conn.pausedSessions.add(session)
+      try {
+        session.proc.pause()
+      } catch {
+        /* pty may have just exited */
+      }
+    }
+  } catch {
+    /* socket may have closed mid-write */
+  }
+}
+
+/** Resume a session unless another conn still has it backpressured. */
+function maybeResume(session: Session): void {
+  for (const conn of session.attached) {
+    if (conn.pausedSessions.has(session)) return
+  }
+  try {
+    session.proc.resume()
+  } catch {
+    /* pty may have just exited */
+  }
+}
+
+/** Flush a session's coalesced output to every attached client as one frame. */
+function flush(session: Session): void {
+  if (session.flushTimer) {
+    clearTimeout(session.flushTimer)
+    session.flushTimer = null
+  }
+  if (!session.pending) return
+  const frame = encodeDataFrame(session.id, session.pending)
+  session.pending = ''
+  for (const conn of session.attached) sendData(conn, session, frame)
 }
 
 /** Clean env for spawned ptys — never leak Electron-as-Node flags to children. */
@@ -134,15 +189,23 @@ function spawnSession(
     meta,
     cols: cols || 80,
     rows: rows || 24,
-    attached: new Set()
+    attached: new Set(),
+    pending: '',
+    flushTimer: null
   }
   sessions.set(id, session)
 
   proc.onData((data) => {
     session.buffer.push(data)
-    broadcast(session, { t: 'data', id, data })
+    session.pending += data
+    if (session.pending.length >= FLUSH_THRESHOLD_BYTES) {
+      flush(session)
+    } else if (!session.flushTimer) {
+      session.flushTimer = setTimeout(() => flush(session), FLUSH_MS)
+    }
   })
   proc.onExit(({ exitCode, signal }) => {
+    flush(session) // the last output must land before the exit notice
     broadcast(session, { t: 'exit', id, exitCode, signal })
     sessions.delete(id)
     scheduleShutdownCheck()
@@ -183,8 +246,15 @@ function handle(conn: Conn, msg: ClientMessage): void {
       }
       // Idempotent: only replay scrollback on the first attach for this conn.
       if (!conn.attached.has(msg.id)) {
+        flush(s) // pending bytes are already in the snapshot; don't send them twice
         const snap = s.buffer.snapshot()
-        if (snap) send(conn, { t: 'data', id: msg.id, data: snap, replay: true })
+        if (snap) {
+          try {
+            conn.socket.write(encodeDataFrame(msg.id, snap, true))
+          } catch {
+            /* socket may have closed mid-write */
+          }
+        }
         conn.attached.add(msg.id)
         s.attached.add(conn)
       }
@@ -192,7 +262,10 @@ function handle(conn: Conn, msg: ClientMessage): void {
     }
     case 'detach': {
       const s = sessions.get(msg.id)
-      if (s) s.attached.delete(conn)
+      if (s) {
+        s.attached.delete(conn)
+        if (conn.pausedSessions.delete(s)) maybeResume(s)
+      }
       conn.attached.delete(msg.id)
       break
     }
@@ -243,7 +316,12 @@ function handle(conn: Conn, msg: ClientMessage): void {
 
 function onConnection(socket: net.Socket): void {
   cancelShutdown()
-  const conn: Conn = { socket, decoder: new FrameDecoder<ClientMessage>(), attached: new Set() }
+  const conn: Conn = {
+    socket,
+    decoder: new FrameDecoder<ClientMessage>(),
+    attached: new Set(),
+    pausedSessions: new Set()
+  }
   clients.add(conn)
 
   socket.on('data', (chunk) => {
@@ -253,8 +331,16 @@ function onConnection(socket: net.Socket): void {
       log(`handler error: ${(err as Error).stack ?? err}`)
     }
   })
+  socket.on('drain', () => {
+    const paused = [...conn.pausedSessions]
+    conn.pausedSessions.clear()
+    for (const s of paused) maybeResume(s)
+  })
   const cleanup = (): void => {
     for (const id of conn.attached) sessions.get(id)?.attached.delete(conn)
+    const paused = [...conn.pausedSessions]
+    conn.pausedSessions.clear()
+    for (const s of paused) maybeResume(s)
     clients.delete(conn)
     scheduleShutdownCheck()
   }

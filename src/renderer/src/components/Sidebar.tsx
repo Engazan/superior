@@ -1,6 +1,8 @@
-import { useEffect, useId, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useId, useState, type CSSProperties } from 'react'
 import { useI18n, type TFunction } from '../i18n'
 import { panelTint } from '../tint'
+import { useAttentionColor } from '../attentionColor'
+import { useBusyWorkspaces, useAttentionWorkspaces } from '../activityStore'
 import type { UpdateController } from '../hooks/useUpdateCheck'
 import type { WorkspaceGitStat } from '../hooks/useWorkspaceGitStats'
 import type { BranchInfo, Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
@@ -15,12 +17,6 @@ interface Props {
   counts: Record<string, number>
   /** git +/- line totals per workspace id, for the diff badge next to each name */
   gitStats: Record<string, WorkspaceGitStat>
-  /** workspace ids with a terminal actively producing output */
-  busyWorkspaceIds: Set<string>
-  /** workspace ids whose terminal finished while unfocused (tab pulses) */
-  attentionWorkspaceIds: Set<string>
-  /** hex color used for the attention pulse */
-  attentionColor: string
   /** update notification + in-app download/install controller */
   update: UpdateController
   collapsed: boolean
@@ -1030,16 +1026,13 @@ function FolderEditForm({
   )
 }
 
-export function Sidebar({
+export const Sidebar = memo(function Sidebar({
   tintColor,
   folders,
   workspaces,
   activeWorkspaceId,
   counts,
   gitStats,
-  busyWorkspaceIds,
-  attentionWorkspaceIds,
-  attentionColor,
   update,
   collapsed,
   onOpenProject,
@@ -1053,6 +1046,11 @@ export function Sidebar({
   onSelectWorkspace
 }: Props): JSX.Element {
   const { t } = useI18n()
+  // Live activity signals, subscribed here (not in App) so per-chunk terminal
+  // output only ever re-renders the sidebar — and only on real transitions.
+  const busyWorkspaceIds = useBusyWorkspaces()
+  const attentionWorkspaceIds = useAttentionWorkspaces()
+  const { attentionColor } = useAttentionColor()
   // Editors: which workspace is being renamed and which folder is creating a workspace.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [addingFor, setAddingFor] = useState<string | null>(null)
@@ -1623,4 +1621,4 @@ export function Sidebar({
       )}
     </aside>
   )
-}
+})

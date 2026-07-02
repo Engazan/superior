@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { RightPanel } from './components/RightPanel'
@@ -18,9 +18,8 @@ import { useWorkspaceGitStats } from './hooks/useWorkspaceGitStats'
 import { usePresets } from './hooks/usePresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
-import { useTerminalActivity } from './hooks/useTerminalActivity'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
-import { useAttentionColor } from './attentionColor'
+import { setActivitySessions, setActivityActiveWorkspace } from './activityStore'
 
 type View = 'main' | 'settings'
 
@@ -93,26 +92,42 @@ export default function App(): JSX.Element {
   const activeProfileColor =
     ws.profiles.find((p) => p.id === ws.activeProfileId)?.color ?? null
 
-  // Live terminal signals: `busy` drives the "working" spinner, `attention`
-  // pulses the tab of a workspace whose terminal finished while unfocused.
-  const { busy: busySessions, attention: attentionWorkspaceIds } = useTerminalActivity(
-    ws.sessions,
-    ws.activeWorkspaceId
-  )
-  const { attentionColor } = useAttentionColor()
+  // Live terminal signals (busy spinner, attention pulse) live in an external
+  // store the sidebar subscribes to, so per-chunk activity never re-renders the
+  // whole app. We only feed it the current session/workspace mapping.
+  useEffect(() => {
+    setActivitySessions(ws.sessions)
+  }, [ws.sessions])
+  useEffect(() => {
+    setActivityActiveWorkspace(ws.activeWorkspaceId)
+  }, [ws.activeWorkspaceId])
   const update = useUpdateCheck()
-  const busyWorkspaceIds = useMemo(() => {
-    const set = new Set<string>()
-    for (const s of ws.sessions) {
-      if (s.status === 'running' && busySessions.has(s.id)) set.add(s.workspaceId)
-    }
-    return set
-  }, [ws.sessions, busySessions])
 
   const openPresets = useCallback(() => {
     setSettingsSection('presets')
     setView('settings')
   }, [])
+
+  const openProjectModal = useCallback(() => setProjectModalOpen(true), [])
+
+  // Stable tab handlers for the terminal panel (they close over the active workspace).
+  const { activeWorkspaceId, selectTab, addTab, closeTab, renameTab } = ws
+  const onSelectTab = useCallback(
+    (id: string) => activeWorkspaceId && selectTab(activeWorkspaceId, id),
+    [activeWorkspaceId, selectTab]
+  )
+  const onAddTab = useCallback(
+    () => activeWorkspaceId && addTab(activeWorkspaceId),
+    [activeWorkspaceId, addTab]
+  )
+  const onCloseTab = useCallback(
+    (id: string) => activeWorkspaceId && closeTab(activeWorkspaceId, id),
+    [activeWorkspaceId, closeTab]
+  )
+  const onRenameTab = useCallback(
+    (id: string, name: string) => activeWorkspaceId && renameTab(activeWorkspaceId, id, name),
+    [activeWorkspaceId, renameTab]
+  )
 
   // Global keyboard shortcuts. Capture phase so they win over a focused terminal;
   // suppressed while a binding is being recorded in settings.
@@ -275,12 +290,9 @@ export default function App(): JSX.Element {
               activeWorkspaceId={ws.activeWorkspaceId}
               counts={ws.counts}
               gitStats={workspaceGitStats}
-              busyWorkspaceIds={busyWorkspaceIds}
-              attentionWorkspaceIds={attentionWorkspaceIds}
-              attentionColor={attentionColor}
               update={update}
               collapsed={sidebarCollapsed}
-              onOpenProject={() => setProjectModalOpen(true)}
+              onOpenProject={openProjectModal}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
               onUpdateFolder={ws.updateFolder}
@@ -325,12 +337,10 @@ export default function App(): JSX.Element {
                     onLaunch={ws.launchAgent}
                     onManagePresets={openPresets}
                     onGridLayoutChange={ws.setGridLayout}
-                    onSelectTab={(id) => ws.activeWorkspaceId && ws.selectTab(ws.activeWorkspaceId, id)}
-                    onAddTab={() => ws.activeWorkspaceId && ws.addTab(ws.activeWorkspaceId)}
-                    onCloseTab={(id) => ws.activeWorkspaceId && ws.closeTab(ws.activeWorkspaceId, id)}
-                    onRenameTab={(id, name) =>
-                      ws.activeWorkspaceId && ws.renameTab(ws.activeWorkspaceId, id, name)
-                    }
+                    onSelectTab={onSelectTab}
+                    onAddTab={onAddTab}
+                    onCloseTab={onCloseTab}
+                    onRenameTab={onRenameTab}
                   />
                 </div>
 

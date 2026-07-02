@@ -110,28 +110,6 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
     applicationVersion: app.getVersion()
   })
 
-  registerWorkspaceIpc()
-  registerWorktreeIpc()
-  registerAgentIpc()
-  registerSettingsIpc()
-  registerPresetsIpc()
-  registerIntegrationsIpc()
-  registerWindowIpc()
-  registerLayoutIpc()
-  registerGitIpc()
-  registerFsIpc()
-  registerUpdateIpc()
-  registerCliLauncherIpc()
-
-  // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
-  daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))
-
-  // Reconcile worktree-backed workspaces before the renderer reads state, so a
-  // vanished worktree never leaves an agent launching in a stale cwd.
-  await reconcileWorktrees()
-    .then((warnings) => warnings.forEach((w) => console.warn('[worktree]', w)))
-    .catch((err) => console.error('[worktree] reconcile failed:', err))
-
   // A folder passed on the command line (`superior /some/dir`). Persist it before
   // the window loads so the renderer's initial state read already includes it and
   // opens it active. Restrict cold-start parsing to the explicit `--path` flag in
@@ -146,6 +124,29 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
       console.error('[cli] failed to open startup folder:', err)
     }
   }
+
+  // Reconcile worktree-backed workspaces concurrently with window creation —
+  // the renderer's initial state read awaits this (see registerWorkspaceIpc),
+  // so the window isn't delayed but never sees pre-reconcile state.
+  const reconciled = reconcileWorktrees()
+    .then((warnings) => warnings.forEach((w) => console.warn('[worktree]', w)))
+    .catch((err) => console.error('[worktree] reconcile failed:', err))
+
+  registerWorkspaceIpc(reconciled)
+  registerWorktreeIpc()
+  registerAgentIpc()
+  registerSettingsIpc()
+  registerPresetsIpc()
+  registerIntegrationsIpc()
+  registerWindowIpc()
+  registerLayoutIpc()
+  registerGitIpc()
+  registerFsIpc()
+  registerUpdateIpc()
+  registerCliLauncherIpc()
+
+  // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
+  daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))
 
   mainWindow = createWindow()
 

@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { spawnSync } from 'child_process'
+import { execFile } from 'child_process'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
@@ -50,32 +50,30 @@ function probeEnv(): NodeJS.ProcessEnv {
   return env
 }
 
+/** Promisified execFile that resolves with stdout on exit 0, null otherwise. */
+function run(file: string, args: string[]): Promise<string | null> {
+  return new Promise((resolve) => {
+    execFile(file, args, { encoding: 'utf-8', timeout: 5000, env: probeEnv() }, (err, stdout) => {
+      resolve(err ? null : stdout)
+    })
+  })
+}
+
 /**
  * Run `command -v <exe>` in the user's shell and return its raw output (a path,
  * or an alias/function definition), or null when the command isn't resolvable.
  * `interactive` adds `-i` so interactive-only rc files (~/.zshrc) are sourced —
  * used to discover a CLI the app's own (non-interactive) shell can't see.
  */
-function resolveInShell(exe: string, interactive: boolean): string | null {
+async function resolveInShell(exe: string, interactive: boolean): Promise<string | null> {
   if (isWindows) {
     const shell = process.env.COMSPEC || 'cmd.exe'
-    const res = spawnSync(shell, ['/d', '/s', '/c', `where ${exe}`], {
-      encoding: 'utf-8',
-      timeout: 5000,
-      env: probeEnv()
-    })
-    const out = (res.stdout || '').trim()
-    return res.status === 0 && out ? out.split(/\r?\n/)[0].trim() : null
+    const out = (await run(shell, ['/d', '/s', '/c', `where ${exe}`]))?.trim()
+    return out ? out.split(/\r?\n/)[0].trim() : null
   }
   const shell = process.env.SHELL || '/bin/bash'
   const flags = interactive ? ['-l', '-i', '-c'] : ['-l', '-c']
-  const res = spawnSync(shell, [...flags, `command -v ${exe} 2>/dev/null`], {
-    encoding: 'utf-8',
-    timeout: 5000,
-    env: probeEnv()
-  })
-  if (res.status !== 0) return null
-  const out = (res.stdout || '').trim()
+  const out = (await run(shell, [...flags, `command -v ${exe} 2>/dev/null`]))?.trim()
   return out || null
 }
 
@@ -104,8 +102,18 @@ function firstExecutablePath(output: string | null): string | null {
   return null
 }
 
+/** npm's global prefix, resolved once — a shell spawn we don't want per check. */
+let npmPrefixPromise: Promise<string | null> | null = null
+
+function npmGlobalPrefix(): Promise<string | null> {
+  if (!npmPrefixPromise) {
+    npmPrefixPromise = run('npm', ['prefix', '-g']).then((out) => (out || '').trim() || null)
+  }
+  return npmPrefixPromise
+}
+
 /** Common locations a CLI may live in even when it isn't on the app shell's PATH. */
-function candidatePaths(spec: ToolSpec): string[] {
+async function candidatePaths(spec: ToolSpec): Promise<string[]> {
   const home = homeDir()
   const dirs = [
     ...spec.extraDirs(home),
@@ -119,27 +127,22 @@ function candidatePaths(spec: ToolSpec): string[] {
     path.join(home, '.deno', 'bin')
   ]
   // npm's global bin, wherever it actually is.
-  try {
-    const res = spawnSync('npm', ['prefix', '-g'], { encoding: 'utf-8', timeout: 5000, env: probeEnv() })
-    const prefix = (res.stdout || '').trim()
-    if (prefix) dirs.push(isWindows ? prefix : path.join(prefix, 'bin'))
-  } catch {
-    /* npm not present — fine */
-  }
+  const prefix = await npmGlobalPrefix()
+  if (prefix) dirs.push(isWindows ? prefix : path.join(prefix, 'bin'))
   const names = isWindows ? [`${spec.executable}.cmd`, `${spec.executable}.exe`] : [spec.executable]
   return dirs.flatMap((dir) => names.map((name) => path.join(dir, name)))
 }
 
-function checkOne(spec: ToolSpec): CliToolStatus {
+async function checkOne(spec: ToolSpec): Promise<CliToolStatus> {
   // The authoritative question: does the app's own login shell resolve it?
-  const inAppShell = resolveInShell(spec.executable, false)
+  const inAppShell = await resolveInShell(spec.executable, false)
   const availableInShell = inAppShell !== null
 
   // Best-effort absolute path: the app shell's resolution, else known dirs, else
   // the user's interactive shell (which sources ~/.zshrc etc.).
   let installedPath = firstExecutablePath(inAppShell)
-  if (!installedPath) installedPath = candidatePaths(spec).find(isExecutableFile) ?? null
-  if (!installedPath) installedPath = firstExecutablePath(resolveInShell(spec.executable, true))
+  if (!installedPath) installedPath = (await candidatePaths(spec)).find(isExecutableFile) ?? null
+  if (!installedPath) installedPath = firstExecutablePath(await resolveInShell(spec.executable, true))
 
   const installed = availableInShell || installedPath !== null
   const fixable = !isWindows && installed && !availableInShell && installedPath !== null
@@ -155,8 +158,15 @@ function checkOne(spec: ToolSpec): CliToolStatus {
   }
 }
 
-export function checkCliTools(): CliToolStatus[] {
-  return TOOLS.map(checkOne)
+const CHECK_CACHE_MS = 30_000
+let cachedCheck: { at: number; promise: Promise<CliToolStatus[]> } | null = null
+
+export function checkCliTools(force = false): Promise<CliToolStatus[]> {
+  const now = Date.now()
+  if (!force && cachedCheck && now - cachedCheck.at < CHECK_CACHE_MS) return cachedCheck.promise
+  const promise = Promise.all(TOOLS.map(checkOne))
+  cachedCheck = { at: now, promise }
+  return promise
 }
 
 /**
@@ -196,11 +206,11 @@ function appendLine(file: string, line: string): void {
  * directory holding its binary to PATH in the shell env file. Idempotent, and a
  * no-op when the tool is already available or can't be located.
  */
-export function fixCliTool(id: CliToolId): CliToolFixResult {
+export async function fixCliTool(id: CliToolId): Promise<CliToolFixResult> {
   const spec = TOOLS.find((t) => t.id === id)
-  if (!spec) return { status: checkCliTools()[0], error: 'not-installed' }
+  if (!spec) return { status: (await checkCliTools())[0], error: 'not-installed' }
 
-  const status = checkOne(spec)
+  const status = await checkOne(spec)
   if (status.availableInShell) return { status, error: 'already-available' }
   if (isWindows) return { status, error: 'unsupported' }
   if (!status.installedPath) return { status, error: 'not-installed' }
@@ -212,5 +222,6 @@ export function fixCliTool(id: CliToolId): CliToolFixResult {
     appendLine(file, `${pathLine}  # added by Superior to expose ${spec.executable}`)
   }
 
-  return { status: checkOne(spec), fixedFile: path.basename(file) }
+  cachedCheck = null // PATH just changed; the next check must re-probe
+  return { status: await checkOne(spec), fixedFile: path.basename(file) }
 }

@@ -50,7 +50,9 @@ export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Pro
     setDiff(null)
     if (!folderPath || !active) return
     void fetchDiff(true)
-    const id = window.setInterval(() => void fetchDiff(false), 3000)
+    const id = window.setInterval(() => {
+      if (!document.hidden) void fetchDiff(false)
+    }, 3000)
     return () => window.clearInterval(id)
   }, [folderPath, fetchDiff, active])
 

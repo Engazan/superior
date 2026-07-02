@@ -15,8 +15,8 @@ export function CliToolsHealth(): JSX.Element {
   const [busyId, setBusyId] = useState<CliToolId | null>(null)
   const [note, setNote] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    setTools(await window.api.checkCliTools())
+  const refresh = useCallback(async (force = false) => {
+    setTools(await window.api.checkCliTools(force))
   }, [])
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function CliToolsHealth(): JSX.Element {
       <div className="mb-1 flex items-center justify-between">
         <h3 className="text-base font-semibold text-fg">{t('cli.title')}</h3>
         <button
-          onClick={() => void refresh()}
+          onClick={() => void refresh(true)}
           className="rounded-md px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
         >
           {t('cli.recheck')}

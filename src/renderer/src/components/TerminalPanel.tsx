@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
@@ -87,6 +87,12 @@ export function TerminalPanel({
   const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
+  // Stable identity so memoized TerminalViews don't re-render on every panel render.
+  const handleExit = useCallback(
+    (id: string, exitCode: number) =>
+      onSessionUpdate(id, { status: exitCode === 0 ? 'exited' : 'error', exitCode }),
+    [onSessionUpdate]
+  )
   // Inline tab rename: the tab being edited and its draft name.
   const [editingTab, setEditingTab] = useState<{ id: string; name: string } | null>(null)
 
@@ -261,12 +267,7 @@ export function TerminalPanel({
               onClose={onClose}
               onRestart={onRestart}
               onToggleMaximize={onToggleMaximize}
-              onExit={(id, exitCode) =>
-                onSessionUpdate(id, {
-                  status: exitCode === 0 ? 'exited' : 'error',
-                  exitCode
-                })
-              }
+              onExit={handleExit}
             />
           )
         })}

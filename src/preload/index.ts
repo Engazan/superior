@@ -327,8 +327,8 @@ const api = {
   },
 
   /** Whether claude/codex are installed and resolvable in the app's terminal. */
-  checkCliTools(): Promise<CliToolStatus[]> {
-    return ipcRenderer.invoke(IPC.CLI_TOOLS_CHECK)
+  checkCliTools(force?: boolean): Promise<CliToolStatus[]> {
+    return ipcRenderer.invoke(IPC.CLI_TOOLS_CHECK, force)
   },
 
   /** Auto-fix a CLI that's installed but not on the app shell's PATH. */

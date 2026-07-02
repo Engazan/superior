@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { UpdateInfo, UpdateProgress } from '../types'
 
 /** Re-check GitHub releases periodically while the app stays open. */
@@ -55,5 +55,9 @@ export function useUpdateCheck(): UpdateController {
     window.api.installUpdate()
   }, [])
 
-  return { info, progress, startDownload, installAndRestart }
+  // Stable object so memoized consumers (Sidebar) don't re-render per App render.
+  return useMemo(
+    () => ({ info, progress, startDownload, installAndRestart }),
+    [info, progress, startDownload, installAndRestart]
+  )
 }

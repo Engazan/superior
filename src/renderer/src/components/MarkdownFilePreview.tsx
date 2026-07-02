@@ -27,14 +27,22 @@ const schema = {
 // array identity (and forced to re-process) on every parent render.
 type MarkdownProps = ComponentProps<typeof ReactMarkdown>
 
+// highlight.js runs synchronously on the UI thread while the document parses;
+// past this size the open-jank costs more than colored code blocks are worth.
+const HIGHLIGHT_MAX_BYTES = 200 * 1024
+
 export function MarkdownFilePreview({ content }: Props): JSX.Element {
   const { t } = useI18n()
   const [raw, setRaw] = useState(false)
 
+  const highlight = content.length <= HIGHLIGHT_MAX_BYTES
   const remarkPlugins = useMemo<MarkdownProps['remarkPlugins']>(() => [remarkGfm], [])
   const rehypePlugins = useMemo<MarkdownProps['rehypePlugins']>(
-    () => [rehypeRaw, rehypeHighlight, [rehypeSanitize, schema]],
-    []
+    () =>
+      highlight
+        ? [rehypeRaw, rehypeHighlight, [rehypeSanitize, schema]]
+        : [rehypeRaw, [rehypeSanitize, schema]],
+    [highlight]
   )
   const mdLanguage = useMemo(() => markdown(), [])
 

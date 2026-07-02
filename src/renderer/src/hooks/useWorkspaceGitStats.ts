@@ -45,28 +45,36 @@ export function useWorkspaceGitStats(workspaces: Workspace[]): Record<string, Wo
       )
       if (!active) return
       const byDir = new Map(entries)
-      setStats(
-        Object.fromEntries(
-          wsRef.current.map((ws) => {
-            const status = byDir.get(gitDirOf(ws))
-            return [
-              ws.id,
-              {
-                isRepository: !!status?.isRepository,
-                additions: status?.additions ?? 0,
-                deletions: status?.deletions ?? 0
-              }
-            ]
-          })
-        )
+      const next = Object.fromEntries(
+        wsRef.current.map((ws) => {
+          const status = byDir.get(gitDirOf(ws))
+          return [
+            ws.id,
+            {
+              isRepository: !!status?.isRepository,
+              additions: status?.additions ?? 0,
+              deletions: status?.deletions ?? 0
+            }
+          ]
+        })
       )
+      // Keep the previous object when nothing changed so App doesn't re-render
+      // the whole tree every poll tick.
+      setStats((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
     }
 
     void refresh()
-    const id = window.setInterval(() => void refresh(), 3000)
+    const id = window.setInterval(() => {
+      if (!document.hidden) void refresh()
+    }, 3000)
+    const onVisible = (): void => {
+      if (!document.hidden) void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       active = false
       window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])

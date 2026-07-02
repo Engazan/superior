@@ -63,6 +63,13 @@ export function daemonSocketPath(userData: string): string {
   return `${userData}/daemon.sock`
 }
 
+// A frame payload is either JSON (control messages — always starts with '{')
+// or a binary `data` frame marked by this first byte. Terminal output is full
+// of control bytes that JSON would escape 6× larger and re-scan char by char,
+// so the hot path skips JSON entirely.
+const DATA_FRAME_KIND = 0x01
+const FLAG_REPLAY = 0x01
+
 /** Encode a message as a length-prefixed (4-byte BE) JSON frame. */
 export function encodeFrame(msg: ClientMessage | ServerMessage): Buffer {
   const json = Buffer.from(JSON.stringify(msg), 'utf8')
@@ -71,23 +78,73 @@ export function encodeFrame(msg: ClientMessage | ServerMessage): Buffer {
   return Buffer.concat([head, json])
 }
 
+/**
+ * Encode a `data` server message as a binary frame:
+ * [kind:1][flags:1][idLen:1][id][raw utf8 bytes]. Falls back to JSON for an
+ * id that doesn't fit the 1-byte length (never the case for our session ids).
+ */
+export function encodeDataFrame(id: string, data: string, replay = false): Buffer {
+  const idBuf = Buffer.from(id, 'utf8')
+  if (idBuf.length > 255) {
+    return encodeFrame(replay ? { t: 'data', id, data, replay } : { t: 'data', id, data })
+  }
+  const dataBytes = Buffer.byteLength(data)
+  const payloadLen = 3 + idBuf.length + dataBytes
+  const buf = Buffer.allocUnsafe(4 + payloadLen)
+  buf.writeUInt32BE(payloadLen, 0)
+  buf[4] = DATA_FRAME_KIND
+  buf[5] = replay ? FLAG_REPLAY : 0
+  buf[6] = idBuf.length
+  idBuf.copy(buf, 7)
+  buf.write(data, 7 + idBuf.length, 'utf8')
+  return buf
+}
+
 /** Accumulates socket chunks and yields complete decoded frames. */
 export class FrameDecoder<T extends ClientMessage | ServerMessage> {
-  private buf: Buffer = Buffer.alloc(0)
+  // Chunks are only merged once a whole frame (or the split 4-byte header) is
+  // buffered, so a large frame arriving in many segments copies each byte a
+  // bounded number of times instead of re-concatenating the backlog per segment.
+  private chunks: Buffer[] = []
+  private size = 0
+
+  private compact(): void {
+    if (this.chunks.length > 1) this.chunks = [Buffer.concat(this.chunks)]
+  }
+
+  private decode(payload: Buffer): T | null {
+    if (payload.length >= 3 && payload[0] === DATA_FRAME_KIND) {
+      const flags = payload[1]
+      const idLen = payload[2]
+      const id = payload.subarray(3, 3 + idLen).toString('utf8')
+      const data = payload.subarray(3 + idLen).toString('utf8')
+      const msg: ServerMessage =
+        flags & FLAG_REPLAY ? { t: 'data', id, data, replay: true } : { t: 'data', id, data }
+      return msg as T
+    }
+    try {
+      return JSON.parse(payload.toString('utf8')) as T
+    } catch {
+      return null /* skip malformed frame */
+    }
+  }
 
   push(chunk: Buffer): T[] {
-    this.buf = this.buf.length ? Buffer.concat([this.buf, chunk]) : chunk
+    this.chunks.push(chunk)
+    this.size += chunk.length
     const out: T[] = []
-    while (this.buf.length >= 4) {
-      const len = this.buf.readUInt32BE(0)
-      if (this.buf.length < 4 + len) break
-      const json = this.buf.subarray(4, 4 + len).toString('utf8')
-      this.buf = this.buf.subarray(4 + len)
-      try {
-        out.push(JSON.parse(json) as T)
-      } catch {
-        /* skip malformed frame */
-      }
+    while (this.size >= 4) {
+      if (this.chunks[0].length < 4) this.compact()
+      const len = this.chunks[0].readUInt32BE(0)
+      if (this.size < 4 + len) break
+      if (this.chunks[0].length < 4 + len) this.compact()
+      const first = this.chunks[0]
+      const payload = first.subarray(4, 4 + len)
+      if (first.length === 4 + len) this.chunks.shift()
+      else this.chunks[0] = first.subarray(4 + len)
+      this.size -= 4 + len
+      const msg = this.decode(payload)
+      if (msg) out.push(msg)
     }
     return out
   }

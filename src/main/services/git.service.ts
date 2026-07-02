@@ -45,16 +45,57 @@ export function gitErrorMessage(err: unknown): string {
   return e.stderr?.trim() || e.message || 'Git command failed.'
 }
 
-async function currentBranch(folderPath: string): Promise<string> {
+/**
+ * Everything the status/diff paths need from a single `git status` spawn:
+ * repo-ness (a non-repo makes the command fail), branch, whether HEAD has a
+ * commit yet, and the untracked file list — replacing the former
+ * rev-parse + symbolic-ref + rev-parse HEAD + ls-files quartet.
+ */
+interface RepoState {
+  isRepository: boolean
+  branch: string | null
+  hasCommits: boolean
+  untracked: string[]
+  error?: string
+}
+
+async function readRepoState(folderPath: string): Promise<RepoState> {
   try {
-    return await git(folderPath, ['symbolic-ref', '--quiet', '--short', 'HEAD'])
-  } catch {
-    try {
-      const commit = await git(folderPath, ['rev-parse', '--short', 'HEAD'])
-      return `detached@${commit}`
-    } catch {
-      return 'HEAD'
+    // -z: NUL-terminated entries so untracked paths with any characters survive.
+    // -uall: individual files (not collapsed dirs), matching ls-files --others.
+    const raw = await gitRaw(folderPath, ['status', '--porcelain=v2', '--branch', '-uall', '-z'])
+    let oid = ''
+    let head = ''
+    const untracked: string[] = []
+    const tokens = raw.split('\0')
+    for (let i = 0; i < tokens.length; i++) {
+      const tok = tokens[i]
+      if (!tok) continue
+      if (tok.startsWith('# branch.oid ')) oid = tok.slice(13)
+      else if (tok.startsWith('# branch.head ')) head = tok.slice(14)
+      else if (tok.startsWith('? ')) untracked.push(tok.slice(2))
+      else if (tok.startsWith('2 ')) i++ // rename entry: its origin path is the next token
     }
+    const hasCommits = oid !== '' && oid !== '(initial)'
+    const branch =
+      head && head !== '(detached)'
+        ? head
+        : hasCommits
+          ? `detached@${oid.slice(0, 7)}`
+          : 'HEAD'
+    return { isRepository: true, branch, hasCommits, untracked }
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException
+    if (e.code === 'ENOENT') {
+      return {
+        isRepository: false,
+        branch: null,
+        hasCommits: false,
+        untracked: [],
+        error: gitErrorMessage(err)
+      }
+    }
+    return { isRepository: false, branch: null, hasCommits: false, untracked: [] }
   }
 }
 
@@ -65,13 +106,14 @@ async function currentBranch(folderPath: string): Promise<string> {
  * totals without the cost of building diff hunks. Bounded so polling stays light.
  */
 async function getDiffStats(
-  folderPath: string
+  folderPath: string,
+  repo: RepoState
 ): Promise<{ changedFiles: number; additions: number; deletions: number }> {
   let changedFiles = 0
   let additions = 0
   let deletions = 0
 
-  const base = (await hasCommits(folderPath)) ? ['diff', 'HEAD'] : ['diff', '--cached']
+  const base = repo.hasCommits ? ['diff', 'HEAD'] : ['diff', '--cached']
   const numstat = await gitRaw(folderPath, [...base, '--numstat', '--no-ext-diff', '-M'])
   for (const line of numstat.split('\n')) {
     if (!line.trim()) continue
@@ -82,7 +124,7 @@ async function getDiffStats(
     if (del !== '-') deletions += Number(del) || 0
   }
 
-  for (const rel of await listUntracked(folderPath)) {
+  for (const rel of repo.untracked) {
     changedFiles++
     additions += await countUntrackedLines(folderPath, rel)
   }
@@ -103,24 +145,38 @@ async function countUntrackedLines(folderPath: string, rel: string): Promise<num
   }
 }
 
-export async function getGitStatus(folderPath: string): Promise<GitStatus> {
+async function computeGitStatus(folderPath: string): Promise<GitStatus> {
   if (!isWithinWorkspaceFolder(folderPath)) {
     return { isRepository: false, branch: null, error: 'Workspace folder is invalid.' }
   }
 
+  const repo = await readRepoState(folderPath)
+  if (!repo.isRepository) return { isRepository: false, branch: null, error: repo.error }
   try {
-    const inside = await git(folderPath, ['rev-parse', '--is-inside-work-tree'])
-    if (inside !== 'true') return { isRepository: false, branch: null }
-    const branch = await currentBranch(folderPath)
-    const stats = await getDiffStats(folderPath)
-    return { isRepository: true, branch, ...stats }
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException
-    if (e.code === 'ENOENT') {
-      return { isRepository: false, branch: null, error: gitErrorMessage(err) }
-    }
+    const stats = await getDiffStats(folderPath, repo)
+    return { isRepository: true, branch: repo.branch, ...stats }
+  } catch {
     return { isRepository: false, branch: null }
   }
+}
+
+// Several renderer pollers (title bar, sidebar badges) ask for the same dir on
+// the same 3s cadence; a short-lived cache turns those into one git run.
+const STATUS_CACHE_MS = 1500
+const statusCache = new Map<string, { at: number; promise: Promise<GitStatus> }>()
+
+/** Drop the cached status for a dir after a mutation (checkout, init, …). */
+function invalidateGitStatus(folderPath: string): void {
+  statusCache.delete(folderPath)
+}
+
+export function getGitStatus(folderPath: string): Promise<GitStatus> {
+  const now = Date.now()
+  const hit = statusCache.get(folderPath)
+  if (hit && now - hit.at < STATUS_CACHE_MS) return hit.promise
+  const promise = computeGitStatus(folderPath)
+  statusCache.set(folderPath, { at: now, promise })
+  return promise
 }
 
 /**
@@ -168,12 +224,14 @@ export async function switchBranch(
       }
     }
     await git(folderPath, ['checkout', branch])
+    invalidateGitStatus(folderPath)
     return { status: await getGitStatus(folderPath), stashed }
   } catch (err) {
     const message = gitErrorMessage(err)
     // git's wording when local changes would be lost by the checkout.
     const dirtyConflict =
       /would be overwritten|commit your changes or stash/i.test(message)
+    invalidateGitStatus(folderPath) // the attempted stash may have changed the tree
     const status = await getGitStatus(folderPath).catch(() => null)
     return { status, error: message, dirtyConflict }
   }
@@ -199,6 +257,7 @@ export async function createBranch(folderPath: string, branch: string): Promise<
   }
   try {
     await git(folderPath, ['checkout', '-b', name])
+    invalidateGitStatus(folderPath)
     return { status: await getGitStatus(folderPath) }
   } catch (err) {
     const status = await getGitStatus(folderPath).catch(() => null)
@@ -213,6 +272,7 @@ export async function initGit(folderPath: string): Promise<GitStatus> {
 
   try {
     await git(folderPath, ['init'])
+    invalidateGitStatus(folderPath)
     return getGitStatus(folderPath)
   } catch (err) {
     return { isRepository: false, branch: null, error: gitErrorMessage(err) }
@@ -224,20 +284,6 @@ export async function initGit(folderPath: string): Promise<GitStatus> {
 const MAX_UNTRACKED_BYTES = 512 * 1024
 
 const emptyTotals = { files: 0, additions: 0, deletions: 0 }
-
-async function hasCommits(folderPath: string): Promise<boolean> {
-  try {
-    await git(folderPath, ['rev-parse', '--verify', '--quiet', 'HEAD'])
-    return true
-  } catch {
-    return false
-  }
-}
-
-async function listUntracked(folderPath: string): Promise<string[]> {
-  const out = await gitRaw(folderPath, ['ls-files', '--others', '--exclude-standard', '-z'])
-  return out.split('\0').filter(Boolean)
-}
 
 /** Build an all-additions entry for an untracked file by reading its content. */
 async function untrackedEntry(folderPath: string, rel: string): Promise<GitDiffFile> {
@@ -276,19 +322,28 @@ async function untrackedEntry(folderPath: string, rel: string): Promise<GitDiffF
 }
 
 export async function getGitDiff(folderPath: string): Promise<GitDiff> {
-  const status = await getGitStatus(folderPath)
-  if (!status.isRepository) {
-    return { isRepository: false, branch: null, files: [], totals: emptyTotals, error: status.error }
+  if (!isWithinWorkspaceFolder(folderPath)) {
+    return {
+      isRepository: false,
+      branch: null,
+      files: [],
+      totals: emptyTotals,
+      error: 'Workspace folder is invalid.'
+    }
+  }
+  const repo = await readRepoState(folderPath)
+  if (!repo.isRepository) {
+    return { isRepository: false, branch: null, files: [], totals: emptyTotals, error: repo.error }
   }
 
   try {
     // Compare the working tree against HEAD once there's a commit; before the
     // first commit, fall back to the index so staged files still show up.
-    const base = (await hasCommits(folderPath)) ? ['diff', 'HEAD'] : ['diff', '--cached']
+    const base = repo.hasCommits ? ['diff', 'HEAD'] : ['diff', '--cached']
     const raw = await gitRaw(folderPath, [...base, '--no-color', '--no-ext-diff', '-M'])
     const files = parseUnifiedDiff(raw)
 
-    for (const rel of await listUntracked(folderPath)) {
+    for (const rel of repo.untracked) {
       files.push(await untrackedEntry(folderPath, rel))
     }
 
@@ -300,11 +355,11 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
       }),
       { ...emptyTotals }
     )
-    return { isRepository: true, branch: status.branch, files, totals }
+    return { isRepository: true, branch: repo.branch, files, totals }
   } catch (err) {
     return {
       isRepository: true,
-      branch: status.branch,
+      branch: repo.branch,
       files: [],
       totals: emptyTotals,
       error: gitErrorMessage(err)

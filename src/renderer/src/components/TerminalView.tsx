@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
@@ -103,7 +103,35 @@ const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
   }
 }
 
-export function TerminalView({
+// Memoized with rects compared by value (the grid rebuilds them each render):
+// every terminal stays mounted across workspace/tab switches, so without this
+// each App render re-runs the render of every terminal in every workspace.
+function rectEqual(a?: Rect, b?: Rect): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height
+}
+
+function propsEqual(prev: Props, next: Props): boolean {
+  return (
+    prev.session === next.session &&
+    rectEqual(prev.rect, next.rect) &&
+    prev.visible === next.visible &&
+    prev.focused === next.focused &&
+    prev.showBar === next.showBar &&
+    prev.shortcutNumber === next.shortcutNumber &&
+    prev.active === next.active &&
+    prev.maximized === next.maximized &&
+    prev.animate === next.animate &&
+    prev.onSelect === next.onSelect &&
+    prev.onClose === next.onClose &&
+    prev.onRestart === next.onRestart &&
+    prev.onToggleMaximize === next.onToggleMaximize &&
+    prev.onExit === next.onExit
+  )
+}
+
+export const TerminalView = memo(function TerminalView({
   session,
   rect,
   visible,
@@ -247,7 +275,16 @@ export function TerminalView({
     // tell the pty our real size (no-op while hidden; synced on first show)
     syncSize()
 
-    const ro = new ResizeObserver(() => syncSize())
+    // Coalesce resize bursts (window resize, divider drag) to one fit per frame —
+    // fit() measures the DOM and reflows xterm, too heavy to run per observation.
+    let raf: number | null = null
+    const ro = new ResizeObserver(() => {
+      if (raf !== null) return
+      raf = requestAnimationFrame(() => {
+        raf = null
+        syncSize()
+      })
+    })
     ro.observe(host)
 
     // Clicking into the terminal body focuses xterm's textarea; report it up so
@@ -258,6 +295,7 @@ export function TerminalView({
     return () => {
       window.api.detach(session.id)
       ro.disconnect()
+      if (raf !== null) cancelAnimationFrame(raf)
       host.removeEventListener('focusin', onFocusIn)
       unsubscribe()
       dataDisposable.dispose()
@@ -440,4 +478,4 @@ export function TerminalView({
       </div>
     </div>
   )
-}
+}, propsEqual)

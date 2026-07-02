@@ -70,7 +70,11 @@ export function registerPresetsIpc(): void {
       addCustomMemoryTerminalPreset(directoryName)
   )
 
-  ipcMain.handle(IPC.CLI_TOOLS_CHECK, (): CliToolStatus[] => checkCliTools())
+  ipcMain.handle(IPC.CLI_TOOLS_CHECK, (_e, force?: boolean): Promise<CliToolStatus[]> =>
+    checkCliTools(force === true)
+  )
 
-  ipcMain.handle(IPC.CLI_TOOL_FIX, (_e, id: CliToolId): CliToolFixResult => fixCliTool(id))
+  ipcMain.handle(IPC.CLI_TOOL_FIX, (_e, id: CliToolId): Promise<CliToolFixResult> =>
+    fixCliTool(id)
+  )
 }

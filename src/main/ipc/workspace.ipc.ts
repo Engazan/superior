@@ -17,8 +17,14 @@ import {
   updateProfile
 } from '../services/workspace.service'
 
-export function registerWorkspaceIpc(): void {
-  ipcMain.handle(IPC.WORKSPACE_LIST, (): WorkspaceState => listWorkspaces())
+export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
+  // The initial state read waits for the startup worktree reconcile, so a
+  // vanished worktree never leaves an agent launching in a stale cwd — while
+  // the window itself gets created and loads in parallel.
+  ipcMain.handle(IPC.WORKSPACE_LIST, async (): Promise<WorkspaceState> => {
+    await startupReady
+    return listWorkspaces()
+  })
 
   ipcMain.handle(IPC.PROFILE_ADD, (_e, name: string): WorkspaceState => addProfile(name))
 

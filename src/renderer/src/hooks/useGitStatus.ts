@@ -37,16 +37,27 @@ export function useGitStatus(
       if (showLoading) setGitLoading(true)
       const status = await window.api.getGitStatus(gitDir)
       if (!active) return
-      setGitStatus(status)
+      // Keep the previous object when nothing changed so App doesn't re-render
+      // the whole tree every poll tick.
+      setGitStatus((prev) =>
+        prev && JSON.stringify(prev) === JSON.stringify(status) ? prev : status
+      )
       setGitLoading(false)
     }
 
     setGitStatus(null)
     void refresh(true)
-    const id = window.setInterval(() => void refresh(), 3000)
+    const id = window.setInterval(() => {
+      if (!document.hidden) void refresh()
+    }, 3000)
+    const onVisible = (): void => {
+      if (!document.hidden) void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       active = false
       window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [gitDir])
 

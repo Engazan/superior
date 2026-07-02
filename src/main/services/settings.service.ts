@@ -98,10 +98,16 @@ function storeFile(): string {
   return userDataFile('settings.json')
 }
 
+// Settings are only ever written through this module, so the parsed value can
+// live in memory — getSettings is called from pollers and every setter, and
+// re-reading the file each time was a sync fs hit on the main thread.
+let cached: AppSettings | null = null
+
 /** Read persisted settings, falling back to defaults for any missing/invalid field. */
 export function getSettings(): AppSettings {
+  if (cached) return cached
   const parsed = readJsonFile<Partial<AppSettings>>(storeFile(), {})
-  return {
+  cached = {
     theme: THEMES.includes(parsed.theme as ThemeMode) ? (parsed.theme as ThemeMode) : DEFAULTS.theme,
     language: LANGUAGES.includes(parsed.language as Language)
       ? (parsed.language as Language)
@@ -115,9 +121,11 @@ export function getSettings(): AppSettings {
       ? (parsed.usagePrimary as UsagePrimary)
       : DEFAULTS.usagePrimary
   }
+  return cached
 }
 
 function save(settings: AppSettings): void {
+  cached = settings
   writeJsonFile(storeFile(), settings, 'settings')
 }
 
