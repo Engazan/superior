@@ -11,6 +11,11 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.removeWorkspace': 'Odebrat workspace',
   'sidebar.removeWorkspaceConfirm': 'Odebrat workspace „{name}“? Spuštěné terminály se zavřou.',
   'sidebar.removeFolder': 'Odebrat složku',
+  'sidebar.removeFolderConfirm':
+    'Odebrat „{name}“ ze seznamu? Jeho workspaces se zavřou a běžící terminály zastaví. Soubory na disku zůstanou nedotčené.',
+  'menu.folderActions': 'Akce složky',
+  'menu.workspaceActions': 'Akce workspace',
+  'grid.dividerHint': 'Tažením změníte velikost · s Alt volně',
   'profile.label': 'Profil',
   'profile.switch': 'Přepnout profil',
   'profile.manage': 'Spravovat profily…',

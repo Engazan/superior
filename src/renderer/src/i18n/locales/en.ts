@@ -9,6 +9,11 @@ export const en = {
   'sidebar.removeWorkspace': 'Remove workspace',
   'sidebar.removeWorkspaceConfirm': 'Remove workspace “{name}”? Any running terminals will be stopped.',
   'sidebar.removeFolder': 'Remove folder',
+  'sidebar.removeFolderConfirm':
+    'Remove “{name}” from the list? Its workspaces close and running terminals stop. Files on disk are untouched.',
+  'menu.folderActions': 'Folder actions',
+  'menu.workspaceActions': 'Workspace actions',
+  'grid.dividerHint': 'Drag to resize · hold Alt to resize freely',
   'profile.label': 'Profile',
   'profile.switch': 'Switch profile',
   'profile.manage': 'Manage profiles…',

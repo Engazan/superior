@@ -24,6 +24,8 @@ interface Props {
   onBranchSwitched: () => void
   /** Open the settings view. The gear sits at the far right of the strip. */
   onOpenSettings: () => void
+  /** Open the quick-launch preset picker (also reachable via its shortcut). */
+  onOpenLauncher: () => void
   /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
   onToggleRight: () => void
   /** Profiles for the center switcher (each owns its own folders). */
@@ -73,6 +75,7 @@ export function TitleBar({
   branchSwitchable,
   onBranchSwitched,
   onOpenSettings,
+  onOpenLauncher,
   onToggleRight,
   profiles,
   activeProfileId,
@@ -162,6 +165,31 @@ export function TitleBar({
       {/* RIGHT — settings + right-panel toggles + window controls. flex-1 to mirror
           the left column; its content is right-aligned. */}
       <div className="flex h-full min-w-0 flex-1 items-center justify-end" onDoubleClick={onMaximize}>
+        {/* Visible entry point for the quick-launch picker, so the feature is
+            discoverable without knowing its shortcut. */}
+        {showToggle && (
+          <button
+            onClick={onOpenLauncher}
+            title={shortcutTitle(t('terminal.addTerminal'), 'openLauncher')}
+            aria-label={t('terminal.addTerminal')}
+            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          >
+            <svg
+              className="block h-[16px] w-[16px]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="m7 9 3 3-3 3M12 15h5" />
+            </svg>
+          </button>
+        )}
+
         {showToggle && (
           <button
             onClick={onOpenSettings}

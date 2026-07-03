@@ -1,6 +1,7 @@
 export { Button } from './Button'
 export { IconButton } from './IconButton'
 export { Modal } from './Modal'
+export { Menu, type MenuItem } from './Menu'
 export { ConfirmProvider, useConfirm } from './ConfirmDialog'
 export { ToastProvider, useToast } from './toast'
 export { Input } from './Input'

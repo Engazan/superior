@@ -11,6 +11,11 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.removeWorkspace': 'Munkaterület eltávolítása',
   'sidebar.removeWorkspaceConfirm': 'Eltávolítod a(z) „{name}” munkaterületet? A futó terminálok leállnak.',
   'sidebar.removeFolder': 'Mappa eltávolítása',
+  'sidebar.removeFolderConfirm':
+    'Eltávolítod „{name}” mappát a listáról? A workspace-ei bezárulnak, a futó terminálok leállnak. A lemezen lévő fájlok érintetlenek maradnak.',
+  'menu.folderActions': 'Mappaműveletek',
+  'menu.workspaceActions': 'Workspace-műveletek',
+  'grid.dividerHint': 'Húzd a méretezéshez · Alt-tal szabadon',
   'profile.label': 'Profil',
   'profile.switch': 'Profil váltása',
   'profile.manage': 'Profilok kezelése…',

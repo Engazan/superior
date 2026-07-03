@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
+import { CloseIcon, Menu, PencilIcon } from './ui'
 import { useI18n } from '../i18n'
 import {
   gridRects,
@@ -110,6 +111,10 @@ export function TerminalPanel({
   )
   // Inline tab rename: the tab being edited and its draft name.
   const [editingTab, setEditingTab] = useState<{ id: string; name: string } | null>(null)
+  // Right-click context menu on a tab chip (Rename / Close).
+  const [tabMenu, setTabMenu] = useState<{ id: string; name: string; x: number; y: number } | null>(
+    null
+  )
 
   // Terminals of the active tab (active workspace + active tab), in creation order.
   const tabSessions = sessions.filter(
@@ -193,6 +198,10 @@ export function TerminalPanel({
                   key={tab.id}
                   onClick={() => onSelectTab(tab.id)}
                   onDoubleClick={() => setEditingTab({ id: tab.id, name: tab.name })}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    setTabMenu({ id: tab.id, name: tab.name, x: e.clientX, y: e.clientY })
+                  }}
                   className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs ${
                     active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
                   }`}
@@ -200,7 +209,7 @@ export function TerminalPanel({
                   {tabCells.length > 0 && (
                     <span
                       className={`h-2 w-2 shrink-0 rounded-full ${
-                        running ? 'bg-emerald-400' : 'bg-zinc-500'
+                        running ? 'bg-status' : 'bg-fgmuted'
                       }`}
                     />
                   )}
@@ -223,41 +232,17 @@ export function TerminalPanel({
                     </span>
                   )}
                   {!editing && (
-                    <>
-                      {/* Pencil appears on hover; opens the inline rename (double-click also works). */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditingTab({ id: tab.id, name: tab.name })
-                        }}
-                        className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
-                        aria-label={t('tab.renameAction')}
-                        title={t('tab.renameAction')}
-                      >
-                        <svg
-                          viewBox="0 0 16 16"
-                          className="h-3 w-3"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onCloseTab(tab.id)
-                        }}
-                        className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
-                        aria-label={t('tab.close')}
-                        title={t('tab.close')}
-                      >
-                        ✕
-                      </button>
-                    </>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onCloseTab(tab.id)
+                      }}
+                      className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg focus-visible:opacity-100"
+                      aria-label={t('tab.close')}
+                      title={t('tab.close')}
+                    >
+                      <CloseIcon size={11} />
+                    </button>
                   )}
                 </div>
               )
@@ -274,6 +259,30 @@ export function TerminalPanel({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Tab context menu — same actions as double-click rename + hover close. */}
+      {tabMenu && (
+        <Menu
+          anchor={{ x: tabMenu.x, y: tabMenu.y }}
+          onClose={() => setTabMenu(null)}
+          items={[
+            {
+              id: 'rename',
+              label: t('tab.renameAction'),
+              icon: <PencilIcon size={13} />,
+              onSelect: () => setEditingTab({ id: tabMenu.id, name: tabMenu.name })
+            },
+            'separator',
+            {
+              id: 'close',
+              label: t('tab.close'),
+              icon: <CloseIcon size={13} />,
+              tone: 'danger',
+              onSelect: () => onCloseTab(tabMenu.id)
+            }
+          ]}
+        />
       )}
 
       {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
@@ -328,6 +337,7 @@ export function TerminalPanel({
               <div
                 key={`div-${i}`}
                 onPointerDown={startDrag(d)}
+                title={t('grid.dividerHint')}
                 className={`group absolute z-20 flex ${
                   vertical ? 'cursor-col-resize justify-center' : 'cursor-row-resize items-center'
                 }`}

@@ -120,6 +120,8 @@ export default function App(): JSX.Element {
   }, [])
 
   const openProjectModal = useCallback(() => setProjectModalOpen(true), [])
+  // Stable reference — Sidebar is memoized, an inline arrow would defeat it.
+  const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
 
   // Stable tab handlers for the terminal panel (they close over the active workspace).
   const { activeWorkspaceId, selectTab, addTab, closeTab, renameTab } = ws
@@ -267,6 +269,7 @@ export default function App(): JSX.Element {
           setSettingsSection('appearance')
           setView('settings')
         }}
+        onOpenLauncher={() => setLauncherOpen(true)}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
         profiles={ws.profiles}
         activeProfileId={ws.activeProfileId}
@@ -303,6 +306,7 @@ export default function App(): JSX.Element {
               gitStats={workspaceGitStats}
               update={update}
               collapsed={sidebarCollapsed}
+              onExpand={expandSidebar}
               onOpenProject={openProjectModal}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}

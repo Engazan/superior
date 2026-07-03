@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type LaunchConfig } from '../components/AgentLauncher'
+import { useConfirm } from '../components/ui'
 import { type GridLayout } from '../gridLayout'
 import { type TFunction } from '../i18n'
 import {
@@ -30,6 +31,7 @@ interface Deps {
  * the UI-state hooks and wires the handlers to the layout.
  */
 export function useWorkspaceSessions({ setError, t, presets }: Deps) {
+  const confirm = useConfirm()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
   const [folders, setFolders] = useState<Folder[]>([])
@@ -208,12 +210,23 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const removeFolder = useCallback(
     async (folderPath: string) => {
       setError(null)
+      // Removing a folder drops all its workspaces and kills their terminals — confirm.
+      const folder = folders.find((f) => f.path === folderPath)
+      const ok = await confirm({
+        title: t('sidebar.removeFolder'),
+        message: t('sidebar.removeFolderConfirm', {
+          name: folder?.displayName?.trim() || folder?.name || folderPath
+        }),
+        confirmLabel: t('sidebar.removeFolder'),
+        tone: 'danger'
+      })
+      if (!ok) return
       const ids = new Set(workspaces.filter((w) => w.folderPath === folderPath).map((w) => w.id))
       sessions.filter((s) => ids.has(s.workspaceId)).forEach((s) => window.api.killAgent(s.id))
       setSessions((prev) => prev.filter((s) => !ids.has(s.workspaceId)))
       applyState(await window.api.removeFolder(folderPath))
     },
-    [workspaces, sessions, applyState, setError]
+    [folders, workspaces, sessions, applyState, setError, t, confirm]
   )
 
   // Drag-to-reorder in the sidebar: apply the new order optimistically, then
@@ -384,12 +397,24 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         const dirty = await window.api.isWorktreeDirty(ws.worktreePath)
         if (dirty || running) {
           const message = dirty ? t('worktree.removeDirtyBody') : t('worktree.removeRunningBody')
-          if (!window.confirm(message)) return
+          const ok = await confirm({
+            title: t('sidebar.removeWorkspace'),
+            message,
+            confirmLabel: t('sidebar.removeWorkspace'),
+            tone: 'danger'
+          })
+          if (!ok) return
           force = true
         }
-      } else if (!window.confirm(t('sidebar.removeWorkspaceConfirm', { name: ws?.name ?? '' }))) {
+      } else {
         // Plain workspace: confirm before discarding it (and any open terminals).
-        return
+        const ok = await confirm({
+          title: t('sidebar.removeWorkspace'),
+          message: t('sidebar.removeWorkspaceConfirm', { name: ws?.name ?? '' }),
+          confirmLabel: t('sidebar.removeWorkspace'),
+          tone: 'danger'
+        })
+        if (!ok) return
       }
 
       sessions.filter((s) => s.workspaceId === id).forEach((s) => window.api.killAgent(s.id))
@@ -400,7 +425,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setError(worktreeErrorMessage((err as Error).message))
       }
     },
-    [workspaces, counts, sessions, applyState, setError, t, worktreeErrorMessage]
+    [workspaces, counts, sessions, applyState, setError, t, worktreeErrorMessage, confirm]
   )
 
   // Ensure a workspace has an active tab and return its id, seeding + persisting
