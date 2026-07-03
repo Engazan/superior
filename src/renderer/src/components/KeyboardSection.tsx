@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n, type MessageKey } from '../i18n'
+import { SectionHeader } from './ui'
 import { useShortcuts, eventToChord, formatChord, setRecording } from '../shortcuts'
 import type { ShortcutAction } from '../types'
 
@@ -53,11 +54,10 @@ export function KeyboardSection(): JSX.Element {
   }, [recordingFor, setShortcut])
 
   return (
-    <>
-      <h2 className="mb-1.5 text-lg font-semibold text-fg">{t('settings.keyboard')}</h2>
-      <p className="mb-4 max-w-xl text-xs text-fgdim">{t('keyboard.desc')}</p>
+    <div className="max-w-2xl">
+      <SectionHeader title={t('settings.keyboard')} description={t('keyboard.desc')} />
 
-      <div className="max-w-md overflow-hidden rounded-lg border border-edge">
+      <div className="overflow-hidden rounded-lg border border-edge">
         <div className="flex items-center gap-3 border-b border-edge bg-bar px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
           <span className="min-w-0 flex-1">{t('keyboard.colAction')}</span>
           <span className="shrink-0">{t('keyboard.colShortcut')}</span>
@@ -97,6 +97,6 @@ export function KeyboardSection(): JSX.Element {
           })}
         </ul>
       </div>
-    </>
+    </div>
   )
 }

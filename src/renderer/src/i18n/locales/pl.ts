@@ -143,6 +143,7 @@ export const pl: Record<MessageKey, string> = {
   'daemons.colWorkspace': 'Workspace',
   'daemons.colPid': 'PID',
   'daemons.orphan': 'Bez workspace',
+  'appearance.desc': 'Motyw, język i sposób sygnalizowania aktywności przez aplikację.',
   'appearance.theme': 'Motyw',
   'appearance.themeDesc':
     'Wybierz wygląd aplikacji. System podąża za ustawieniem systemu operacyjnego.',
@@ -192,6 +193,7 @@ export const pl: Record<MessageKey, string> = {
   'cli.fixed': 'Dodano do {file}. Otwórz nowy terminal, aby użyć.',
   'cli.fixFailed': 'Nie udało się naprawić automatycznie. Sprawdź instalację ręcznie.',
   'cli.recheck': 'Sprawdź ponownie',
+  'shell.status': 'Status',
   'shell.title': 'Otwórz folder z terminala',
   'shell.description':
     'Instaluje polecenie `superior`, które otwiera dowolny folder w aplikacji bezpośrednio z terminala. Jeśli aplikacja już działa, folder otworzy się w bieżącym oknie.',

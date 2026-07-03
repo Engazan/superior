@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../../i18n'
-import { BranchIcon, Button, Input, Modal } from '../ui'
+import { BranchIcon, Button, Input, Modal, Select } from '../ui'
 import { FolderGlyph, WorkspaceGlyph, folderLabel } from './parts'
 import type { BranchInfo, Folder, WorktreeAddArgs } from '../../types'
 
@@ -145,9 +145,6 @@ export function WorkspaceCreateModal({
     else onCancel()
   }
 
-  const selectCls =
-    'w-full rounded-md border border-edge bg-bar px-2.5 py-2 font-mono text-sm text-fg outline-none transition focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-60'
-
   return (
     <Modal
       size="lg"
@@ -246,12 +243,12 @@ export function WorkspaceCreateModal({
                 />
               ) : (
                 <>
-                  <select
+                  <Select
                     id="worktree-branch"
                     value={picked}
                     onChange={(event) => setPicked(event.target.value)}
                     disabled={loadingBranches || branchLoadFailed || available.length === 0}
-                    className={selectCls}
+                    className="font-mono"
                   >
                     {loadingBranches && <option value="">{t('worktree.loadingBranches')}</option>}
                     {!loadingBranches && available.length === 0 && (
@@ -263,7 +260,7 @@ export function WorkspaceCreateModal({
                         {item.isCheckedOut ? ` — ${t('worktree.branchInUse')}` : ''}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {branchLoadFailed && (
                     <p className="mt-1.5 text-xs text-danger">{t('worktree.branchLoadFailed')}</p>
                   )}

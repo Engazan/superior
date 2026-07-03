@@ -6,12 +6,18 @@ import {
   providerLabel,
   providerLogo
 } from '../integrations'
-import { Button, EmptyState, Input, useConfirm, useToast } from './ui'
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  Input,
+  SectionHeader,
+  Select,
+  TrashIcon,
+  useConfirm,
+  useToast
+} from './ui'
 import type { Integration, IntegrationProvider, IntegrationTestResult } from '../types'
-
-/** Shared look for the provider <select>; text inputs use the ui/Input primitive. */
-const SELECT_CLASS =
-  'w-full rounded-md border border-edge bg-bar px-2.5 py-2 text-sm text-fg outline-none transition focus-visible:ring-2 focus-visible:ring-accent/50'
 
 /** A blank draft for the "add integration" form. */
 function emptyDraft(): Integration {
@@ -78,7 +84,7 @@ function IntegrationForm({
   }
 
   return (
-    <div className="rounded-xl border border-edge bg-bar p-4">
+    <div className="rounded-lg border border-edge bg-bar p-4">
       <div className="grid gap-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-fg">
@@ -86,17 +92,16 @@ function IntegrationForm({
           </label>
           <div className="flex items-center gap-3">
             <ProviderLogo provider={draft.provider} />
-            <select
+            <Select
               value={draft.provider}
               onChange={(e) => patch({ provider: e.target.value as IntegrationProvider })}
-              className={SELECT_CLASS}
             >
               {INTEGRATION_PROVIDERS.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -229,24 +234,27 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
   }
 
   return (
-    <>
-      <h2 className="mb-1.5 text-lg font-semibold text-fg">{t('settings.integrations')}</h2>
-      <p className="mb-6 max-w-xl text-xs text-fgdim">{t('integrations.desc')}</p>
+    <div className="max-w-2xl">
+      <SectionHeader
+        title={t('settings.integrations')}
+        description={t('integrations.desc')}
+        actions={
+          !editing && (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(emptyDraft())}>
+              <span className="text-base leading-none text-accent">+</span>
+              {t('integrations.add')}
+            </Button>
+          )
+        }
+      />
 
-      <div className="max-w-xl">
-        {integrations.length === 0 && !editing && (
-          <div className="mb-4">
-            <EmptyState title={t('integrations.empty')} />
-          </div>
-        )}
+      {integrations.length === 0 && !editing && <EmptyState title={t('integrations.empty')} />}
 
-        <ul className="space-y-2">
+      {integrations.length > 0 && (
+        <ul className="divide-y divide-edge overflow-hidden rounded-lg border border-edge">
           {integrations.map((it) => (
-            <li
-              key={it.id}
-              className="flex items-center gap-3 rounded-xl border border-edge bg-bar px-4 py-3"
-            >
-              <ProviderLogo provider={it.provider} className="h-10 w-10" />
+            <li key={it.id} className="flex items-center gap-3 px-3 py-2.5">
+              <ProviderLogo provider={it.provider} className="h-9 w-9" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium text-fg">{it.name}</span>
@@ -261,32 +269,29 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
               <Button variant="ghost" size="sm" onClick={() => setEditing(it)}>
                 {t('integrations.edit')}
               </Button>
-              <button
+              <IconButton
+                size="sm"
+                variant="danger-ghost"
+                label={t('integrations.remove')}
                 onClick={() => void remove(it)}
-                className="rounded-md px-2 py-1 text-xs font-medium text-danger/80 transition hover:bg-dangerBg hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
               >
-                {t('integrations.remove')}
-              </button>
+                <TrashIcon size={13} />
+              </IconButton>
             </li>
           ))}
         </ul>
+      )}
 
-        {editing ? (
-          <div className="mt-3">
-            <IntegrationForm
-              key={editing.id || 'new'}
-              initial={editing}
-              onSave={save}
-              onCancel={() => setEditing(null)}
-            />
-          </div>
-        ) : (
-          <Button variant="secondary" className="mt-3" onClick={() => setEditing(emptyDraft())}>
-            <span className="text-base leading-none text-accent">+</span>
-            {t('integrations.add')}
-          </Button>
-        )}
-      </div>
-    </>
+      {editing && (
+        <div className="mt-3">
+          <IntegrationForm
+            key={editing.id || 'new'}
+            initial={editing}
+            onSave={save}
+            onCancel={() => setEditing(null)}
+          />
+        </div>
+      )}
+    </div>
   )
 }

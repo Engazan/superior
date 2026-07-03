@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
-import { Button, StatusPill } from './ui'
+import { Button, SectionHeader, SettingRow, SettingsCard, StatusPill } from './ui'
 import type { ShellCommandStatus } from '../types'
 
 /**
@@ -43,22 +43,20 @@ export function ShellCommandSection(): JSX.Element {
   const installed = status?.resolvable === true
 
   return (
-    <>
-      <h2 className="mb-6 text-lg font-semibold text-fg">{t('settings.shellCommand')}</h2>
+    <div className="max-w-2xl">
+      <SectionHeader title={t('settings.shellCommand')} description={t('shell.description')} />
 
-      <section className="max-w-xl">
-        <div className="mb-1.5 text-sm font-medium text-fg">{t('shell.title')}</div>
-        <p className="mb-3 text-xs text-fgdim">{t('shell.description')}</p>
+      <SettingsCard>
+        <SettingRow title={t('shell.title')} description={t('shell.example')}>
+          <code className="rounded-md border border-edge bg-bar px-2 py-1 font-mono text-sm text-fg">
+            superior .
+          </code>
+        </SettingRow>
 
-        <div className="mb-4 rounded-lg border border-edge bg-bar px-3 py-2.5">
-          <div className="font-mono text-sm text-fg">superior .</div>
-          <p className="mt-1 text-[11px] text-fgmuted">{t('shell.example')}</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button loading={busy} onClick={() => void install()}>
-            {busy ? t('shell.installing') : installed ? t('shell.reinstall') : t('shell.install')}
-          </Button>
+        <SettingRow
+          title={t('shell.status')}
+          description={status?.path ?? undefined}
+        >
           {installed ? (
             <StatusPill tone="success" dot>
               {t('shell.available')}
@@ -72,15 +70,13 @@ export function ShellCommandSection(): JSX.Element {
               {t('shell.notInstalled')}
             </StatusPill>
           )}
-        </div>
+          <Button size="sm" loading={busy} onClick={() => void install()}>
+            {busy ? t('shell.installing') : installed ? t('shell.reinstall') : t('shell.install')}
+          </Button>
+        </SettingRow>
+      </SettingsCard>
 
-        {status?.path && (
-          <div className="mt-3 truncate font-mono text-[11px] text-fgmuted" title={status.path}>
-            {status.path}
-          </div>
-        )}
-        {note && <p className="mt-3 text-xs text-fgdim">{note}</p>}
-      </section>
-    </>
+      {note && <p className="mt-3 text-xs text-fgdim">{note}</p>}
+    </div>
   )
 }

@@ -1,5 +1,8 @@
 export { Button } from './Button'
 export { IconButton } from './IconButton'
+export { Select } from './Select'
+export { SectionHeader } from './SectionHeader'
+export { SettingsCard, SettingRow } from './SettingRow'
 export { Modal } from './Modal'
 export { Menu, type MenuItem } from './Menu'
 export { ConfirmProvider, useConfirm } from './ConfirmDialog'

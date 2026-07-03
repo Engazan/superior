@@ -143,6 +143,7 @@ export const cs: Record<MessageKey, string> = {
   'daemons.colWorkspace': 'Workspace',
   'daemons.colPid': 'PID',
   'daemons.orphan': 'Bez workspacu',
+  'appearance.desc': 'Téma, jazyk a způsob, jakým aplikace signalizuje aktivitu.',
   'appearance.theme': 'Motiv',
   'appearance.themeDesc':
     'Vyberte, jak má aplikace vypadat. Systém se řídí nastavením operačního systému.',
@@ -192,6 +193,7 @@ export const cs: Record<MessageKey, string> = {
   'cli.fixed': 'Přidáno do {file}. Otevřete nový terminál pro použití.',
   'cli.fixFailed': 'Nepodařilo se opravit automaticky. Zkontrolujte instalaci ručně.',
   'cli.recheck': 'Zkontrolovat znovu',
+  'shell.status': 'Stav',
   'shell.title': 'Otevřít složku z terminálu',
   'shell.description':
     'Nainstaluje příkaz `superior`, kterým otevřete libovolnou složku v aplikaci přímo z terminálu. Pokud aplikace již běží, složka se otevře v aktuálním okně.',

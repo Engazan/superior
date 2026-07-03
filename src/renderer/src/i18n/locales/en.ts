@@ -140,6 +140,7 @@ export const en = {
   'daemons.colWorkspace': 'Workspace',
   'daemons.colPid': 'PID',
   'daemons.orphan': 'No workspace',
+  'appearance.desc': 'Theme, language, and how the app signals activity.',
   'appearance.theme': 'Theme',
   'appearance.themeDesc': 'Choose how the app looks. System follows your operating system setting.',
   'appearance.attentionColor': 'Attention color',
@@ -189,6 +190,7 @@ export const en = {
   'cli.fixed': 'Added to {file}. Open a new terminal to use it.',
   'cli.fixFailed': 'Could not fix automatically. Check the install manually.',
   'cli.recheck': 'Re-check',
+  'shell.status': 'Status',
   'shell.title': 'Open a folder from the terminal',
   'shell.description':
     'Installs a `superior` command so you can open any folder in the app straight from your terminal. If the app is already running, the folder opens in the current window.',

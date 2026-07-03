@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
-import { Button, EmptyState, useConfirm, useToast } from './ui'
+import { Button, EmptyState, SectionHeader, useConfirm, useToast } from './ui'
 import type { AgentSession, Folder, Workspace } from '../types'
 
 interface Props {
@@ -67,20 +67,22 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
 
   return (
     <>
-      <div className="mb-1.5 flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-fg">{t('settings.daemons')}</h2>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={refresh}>
-            {t('daemons.refresh')}
-          </Button>
-          {list.length > 0 && (
-            <Button variant="danger" size="sm" onClick={() => void killAll()}>
-              {t('daemons.killAll')}
+      <SectionHeader
+        title={t('settings.daemons')}
+        description={t('daemons.desc')}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={refresh}>
+              {t('daemons.refresh')}
             </Button>
-          )}
-        </div>
-      </div>
-      <p className="mb-4 max-w-xl text-xs text-fgdim">{t('daemons.desc')}</p>
+            {list.length > 0 && (
+              <Button variant="danger" size="sm" onClick={() => void killAll()}>
+                {t('daemons.killAll')}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {list.length === 0 ? (
         <EmptyState title={loading ? '…' : t('daemons.empty')} />

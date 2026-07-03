@@ -143,6 +143,7 @@ export const hu: Record<MessageKey, string> = {
   'daemons.colWorkspace': 'Munkaterület',
   'daemons.colPid': 'PID',
   'daemons.orphan': 'Nincs munkaterület',
+  'appearance.desc': 'Téma, nyelv és az alkalmazás aktivitásjelzései.',
   'appearance.theme': 'Téma',
   'appearance.themeDesc':
     'Válaszd ki az alkalmazás megjelenését. A rendszer az operációs rendszer beállítását követi.',
@@ -192,6 +193,7 @@ export const hu: Record<MessageKey, string> = {
   'cli.fixed': 'Hozzáadva ehhez: {file}. Nyiss új terminált a használathoz.',
   'cli.fixFailed': 'Az automatikus javítás nem sikerült. Ellenőrizd a telepítést kézzel.',
   'cli.recheck': 'Újraellenőrzés',
+  'shell.status': 'Állapot',
   'shell.title': 'Mappa megnyitása a terminálból',
   'shell.description':
     'Telepíti a `superior` parancsot, amellyel bármelyik mappát megnyithatod az alkalmazásban közvetlenül a terminálból. Ha az alkalmazás már fut, a mappa az aktuális ablakban nyílik meg.',

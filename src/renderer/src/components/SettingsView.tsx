@@ -9,7 +9,7 @@ import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
 import { clearUsageStore, primeUsageStore } from '../usageStore'
 import { useUsagePrimary } from '../usagePrimary'
 import { useI18n, LANGUAGES } from '../i18n'
-import { SegmentedControl, Toggle } from './ui'
+import { Button, SectionHeader, SegmentedControl, Select, SettingRow, SettingsCard, Toggle } from './ui'
 import type {
   Folder,
   PresetsState,
@@ -91,35 +91,40 @@ function AppearanceSection(): JSX.Element {
   }
 
   return (
-    <>
-      <h2 className="mb-6 text-lg font-semibold text-fg">{t('settings.appearance')}</h2>
+    <div className="max-w-2xl">
+      <SectionHeader title={t('settings.appearance')} description={t('appearance.desc')} />
 
-      <section className="mb-8 max-w-md">
-        <div className="mb-1.5 text-sm font-medium text-fg">{t('appearance.theme')}</div>
-        <p className="mb-3 text-xs text-fgdim">{t('appearance.themeDesc')}</p>
-        <SegmentedControl
-          aria-label={t('appearance.theme')}
-          options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
-          value={mode}
-          onChange={setMode}
-        />
-      </section>
+      <SettingsCard>
+        <SettingRow title={t('appearance.theme')} description={t('appearance.themeDesc')}>
+          <SegmentedControl
+            aria-label={t('appearance.theme')}
+            size="sm"
+            options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
+            value={mode}
+            onChange={setMode}
+          />
+        </SettingRow>
 
-      <section className="mb-8 max-w-md">
-        <div className="mb-1.5 text-sm font-medium text-fg">{t('settings.language')}</div>
-        <p className="mb-3 text-xs text-fgdim">{t('language.desc')}</p>
-        <SegmentedControl
-          aria-label={t('settings.language')}
-          options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
-          value={lang}
-          onChange={setLang}
-        />
-      </section>
+        <SettingRow title={t('settings.language')} description={t('language.desc')}>
+          <SegmentedControl
+            aria-label={t('settings.language')}
+            size="sm"
+            options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
+            value={lang}
+            onChange={setLang}
+          />
+        </SettingRow>
 
-      <section className="max-w-md">
-        <div className="mb-1.5 text-sm font-medium text-fg">{t('appearance.attentionColor')}</div>
-        <p className="mb-3 text-xs text-fgdim">{t('appearance.attentionColorDesc')}</p>
-        <div className="flex items-center gap-3">
+        <SettingRow
+          title={t('appearance.attentionColor')}
+          description={t('appearance.attentionColorDesc')}
+        >
+          {!isDefaultAttention && (
+            <Button variant="ghost" size="sm" onClick={resetAttentionColor}>
+              {t('appearance.resetColor')}
+            </Button>
+          )}
+          <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
           <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge">
             <span
               className="attention-pulse-dot h-5 w-5 rounded-full"
@@ -133,49 +138,35 @@ function AppearanceSection(): JSX.Element {
               aria-label={t('appearance.attentionColor')}
             />
           </label>
-          <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
-          {!isDefaultAttention && (
-            <button
-              onClick={resetAttentionColor}
-              className="rounded-md px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
-            >
-              {t('appearance.resetColor')}
-            </button>
-          )}
-        </div>
-      </section>
+        </SettingRow>
 
-      <section className="mt-8 max-w-md">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="mb-1.5 text-sm font-medium text-fg">{t('usage.tracking')}</div>
-            <p className="text-xs text-fgdim">{t('usage.trackingDesc')}</p>
-          </div>
+        <SettingRow title={t('usage.tracking')} description={t('usage.trackingDesc')}>
           <Toggle
             checked={usageTracking === true}
             onChange={toggleUsageTracking}
             label={t('usage.tracking')}
           />
-        </div>
+        </SettingRow>
+
         {usageTracking === true && (
-          <div className="mt-4">
-            <div className="mb-1.5 text-sm font-medium text-fg">{t('usage.primary')}</div>
-            <p className="mb-3 text-xs text-fgdim">{t('usage.primaryDesc')}</p>
-            <select
-              value={usagePrimary}
-              onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
-              className="w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:ring-2 focus:ring-accentBorder"
-            >
-              {USAGE_PRIMARY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SettingRow title={t('usage.primary')} description={t('usage.primaryDesc')}>
+            {/* Fixed-width wrapper — the Select itself is w-full by design. */}
+            <div className="w-56">
+              <Select
+                value={usagePrimary}
+                onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
+              >
+                {USAGE_PRIMARY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {t(opt.labelKey)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </SettingRow>
         )}
-      </section>
-    </>
+      </SettingsCard>
+    </div>
   )
 }
 

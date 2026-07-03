@@ -6,6 +6,7 @@ import {
   GripIcon,
   IconButton,
   PencilIcon,
+  SectionHeader,
   Toggle,
   TrashIcon,
   useConfirm,
@@ -107,10 +108,10 @@ export function PresetsSection({
 
   return (
     <div className="relative h-full">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-fg">{t('settings.terminalPresets')}</h2>
-        <Button onClick={() => setEditing('new')}>{t('presets.add')}</Button>
-      </div>
+      <SectionHeader
+        title={t('settings.terminalPresets')}
+        actions={<Button onClick={() => setEditing('new')}>{t('presets.add')}</Button>}
+      />
 
       <div className="overflow-hidden rounded-lg border border-edge">
         <table className="w-full text-sm">
