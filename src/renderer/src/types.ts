@@ -51,6 +51,8 @@ export type {
   PresetIconType,
   PresetsState,
   Profile,
+  Prompt,
+  PromptsState,
   ShortcutAction,
   ShellCommandInstallResult,
   ShellCommandStatus,

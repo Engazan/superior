@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
-import { CloseIcon, Menu, PencilIcon } from './ui'
+import { PromptPicker } from './PromptPicker'
+import { BroadcastIcon, CheckIcon, CloseIcon, IconButton, Menu, PencilIcon, PromptIcon } from './ui'
 import { useI18n } from '../i18n'
 import {
   gridRects,
@@ -115,6 +116,11 @@ export function TerminalPanel({
   const [tabMenu, setTabMenu] = useState<{ id: string; name: string; x: number; y: number } | null>(
     null
   )
+  // Saved-prompt picker overlay (inserts into the active terminal).
+  const [promptPickerOpen, setPromptPickerOpen] = useState(false)
+  // Broadcast mode: one input bar typing into every targeted grid cell at once.
+  const [broadcastMode, setBroadcastMode] = useState(false)
+  const [broadcastTargets, setBroadcastTargets] = useState<Set<string>>(new Set())
 
   // Terminals of the active tab (active workspace + active tab), in creation order.
   const tabSessions = sessions.filter(
@@ -177,6 +183,51 @@ export function TerminalPanel({
     if (name) onRenameTab(editingTab.id, name)
     setEditingTab(null)
   }
+
+  // Multi-line text goes through bracketed paste so TUI agents (Claude/Codex)
+  // receive it as one paste instead of executing line by line.
+  const wrapForPty = (text: string): string =>
+    text.includes('\n') ? `\x1b[200~${text}\x1b[201~` : text
+
+  const insertPrompt = (text: string, submit: boolean): void => {
+    if (!activeSessionId) return
+    window.api.sendInput(activeSessionId, wrapForPty(text) + (submit ? '\r' : ''))
+  }
+
+  // Entering broadcast mode targets every running cell of the current grid.
+  const toggleBroadcast = (): void => {
+    setBroadcastMode((on) => {
+      if (on) return false
+      setBroadcastTargets(
+        new Set(gridCells.filter((s) => s.status === 'running').map((s) => s.id))
+      )
+      return true
+    })
+  }
+
+  const toggleTarget = (id: string): void => {
+    setBroadcastTargets((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const sendBroadcast = (text: string): void => {
+    const payload = wrapForPty(text) + '\r'
+    for (const id of broadcastTargets) {
+      // Only cells still present and running receive input.
+      const s = gridCells.find((x) => x.id === id)
+      if (s && s.status === 'running') window.api.sendInput(id, payload)
+    }
+  }
+
+  // Switching tab/workspace invalidates the targeted cells — drop the mode.
+  useEffect(() => {
+    setBroadcastMode(false)
+    setBroadcastTargets(new Set())
+  }, [activeTabId, activeWorkspaceId])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-panel">
@@ -258,7 +309,62 @@ export function TerminalPanel({
               +
             </button>
           </div>
+
+          {/* Right-side tools: insert a saved prompt / broadcast to all cells. */}
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 px-1">
+            <IconButton
+              size="sm"
+              label={t('prompts.insert')}
+              disabled={!activeSessionId}
+              onClick={() => setPromptPickerOpen(true)}
+            >
+              <PromptIcon size={14} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              label={t('broadcast.toggle')}
+              disabled={gridCells.length === 0}
+              className={broadcastMode ? '!text-warn' : ''}
+              onClick={toggleBroadcast}
+            >
+              <BroadcastIcon size={14} />
+            </IconButton>
+          </div>
         </div>
+      )}
+
+      {/* Broadcast bar — one line of input sent to every targeted cell. */}
+      {broadcastMode && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-warnBorder bg-warnBg/40 px-2 py-1.5">
+          <BroadcastIcon size={13} className="shrink-0 text-warn" />
+          <input
+            autoFocus
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === 'Enter') {
+                const value = e.currentTarget.value
+                if (value.trim()) {
+                  sendBroadcast(value)
+                  e.currentTarget.value = ''
+                }
+              } else if (e.key === 'Escape') {
+                setBroadcastMode(false)
+              }
+            }}
+            placeholder={t('broadcast.placeholder', { n: broadcastTargets.size })}
+            className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warn/50"
+          />
+          <IconButton size="sm" label={t('broadcast.exit')} onClick={() => setBroadcastMode(false)}>
+            <CloseIcon size={12} />
+          </IconButton>
+        </div>
+      )}
+
+      {promptPickerOpen && (
+        <PromptPicker
+          onPick={(p, submit) => insertPrompt(p.text, submit)}
+          onClose={() => setPromptPickerOpen(false)}
+        />
       )}
 
       {/* Tab context menu — same actions as double-click rename + hover close. */}
@@ -327,6 +433,44 @@ export function TerminalPanel({
             />
           )
         })}
+
+        {/* Broadcast targeting: a ring over each targeted cell plus a corner
+            toggle — drawn from the grid rects, so TerminalView stays untouched. */}
+        {broadcastMode &&
+          !maxId &&
+          gridCells.map((s, i) => {
+            const r = rects[i]
+            if (!r || s.status !== 'running') return null
+            const targeted = broadcastTargets.has(s.id)
+            return (
+              <div
+                key={`bc-${s.id}`}
+                className="pointer-events-none absolute z-30"
+                style={{
+                  top: `${r.top}%`,
+                  left: `${r.left}%`,
+                  width: `${r.width}%`,
+                  height: `${r.height}%`
+                }}
+              >
+                {targeted && (
+                  <div className="absolute inset-0 ring-2 ring-inset ring-warn/70" />
+                )}
+                <button
+                  onClick={() => toggleTarget(s.id)}
+                  title={t('broadcast.target')}
+                  aria-pressed={targeted}
+                  className={`pointer-events-auto absolute right-2 top-9 grid h-5 w-5 place-items-center rounded-full border transition ${
+                    targeted
+                      ? 'border-warn bg-warn text-bar'
+                      : 'border-edge bg-panel text-fgmuted hover:text-fg'
+                  }`}
+                >
+                  <CheckIcon size={11} />
+                </button>
+              </div>
+            )
+          })}
 
         {/* Grid: draggable dividers double as the visible cell boundaries. */}
         {!maxId &&

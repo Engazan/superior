@@ -168,6 +168,23 @@ export function GearIcon(props: IconProps): JSX.Element {
   )
 }
 
+export function PromptIcon(props: IconProps): JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <path d="M4 6h16M4 12h10M4 18h7" />
+    </svg>
+  )
+}
+
+export function BroadcastIcon(props: IconProps): JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5" />
+    </svg>
+  )
+}
+
 export function RestartIcon(props: IconProps): JSX.Element {
   return (
     <svg

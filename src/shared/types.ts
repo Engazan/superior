@@ -132,6 +132,18 @@ export interface LayoutPresetsState {
   layouts: LayoutPreset[]
 }
 
+/** A saved prompt/snippet, insertable into the active terminal. */
+export interface Prompt {
+  id: string
+  name: string
+  text: string
+  createdAt: number
+}
+
+export interface PromptsState {
+  prompts: Prompt[]
+}
+
 export type CustomMemoryProvider = 'claude' | 'codex'
 
 /** A provider-specific config directory discovered in the user's home folder. */
@@ -770,6 +782,9 @@ export const IPC = {
   LAYOUT_PRESETS_LIST: 'layout-presets:list',
   LAYOUT_PRESETS_SAVE: 'layout-presets:save',
   LAYOUT_PRESETS_DELETE: 'layout-presets:delete',
+  PROMPTS_LIST: 'prompts:list',
+  PROMPTS_SAVE: 'prompts:save',
+  PROMPTS_DELETE: 'prompts:delete',
   CUSTOM_MEMORY_LIST: 'custom-memory:list',
   CUSTOM_MEMORY_CREATE: 'custom-memory:create',
   CUSTOM_MEMORY_ADD_ALIAS: 'custom-memory:add-alias',

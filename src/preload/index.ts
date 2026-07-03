@@ -37,6 +37,8 @@ import {
   type PresetsState,
   type LayoutPreset,
   type LayoutPresetsState,
+  type Prompt,
+  type PromptsState,
   type ShellCommandInstallResult,
   type ShellCommandStatus,
   type ShortcutMap,
@@ -377,6 +379,18 @@ const api = {
 
   deleteLayoutPreset(id: string): Promise<LayoutPresetsState> {
     return ipcRenderer.invoke(IPC.LAYOUT_PRESETS_DELETE, id)
+  },
+
+  listPrompts(): Promise<PromptsState> {
+    return ipcRenderer.invoke(IPC.PROMPTS_LIST)
+  },
+
+  savePrompt(prompt: Prompt): Promise<PromptsState> {
+    return ipcRenderer.invoke(IPC.PROMPTS_SAVE, prompt)
+  },
+
+  deletePrompt(id: string): Promise<PromptsState> {
+    return ipcRenderer.invoke(IPC.PROMPTS_DELETE, id)
   },
 
   listCustomMemoryPresets(): Promise<CustomMemoryPreset[]> {

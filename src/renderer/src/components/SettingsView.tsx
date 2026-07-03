@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PresetsSection } from './PresetsSection'
+import { PromptsSection } from './PromptsSection'
 import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { IntegrationsSection } from './IntegrationsSection'
@@ -23,6 +24,7 @@ export type SettingsSection =
   | 'appearance'
   | 'integrations'
   | 'presets'
+  | 'prompts'
   | 'daemons'
   | 'keyboard'
   | 'shell'
@@ -246,6 +248,7 @@ export function SettingsView({
       items: [
         { id: 'integrations', label: t('settings.integrations') },
         { id: 'presets', label: t('settings.terminalPresets') },
+        { id: 'prompts', label: t('settings.prompts') },
         { id: 'daemons', label: t('settings.daemons'), badge: daemonCount },
         { id: 'keyboard', label: t('settings.keyboard') },
         { id: 'shell', label: t('settings.shellCommand') }
@@ -318,6 +321,7 @@ export function SettingsView({
             onPresetsChanged={onPresetsChanged}
           />
         )}
+        {section === 'prompts' && <PromptsSection />}
         {section === 'daemons' && (
           <DaemonsSection workspaces={workspaces} folders={folders} onKill={onKillSession} />
         )}
