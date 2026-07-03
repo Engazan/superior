@@ -154,6 +154,7 @@ export const pl: Record<MessageKey, string> = {
   'theme.light': 'Jasny',
   'theme.dark': 'Ciemny',
   'theme.system': 'Systemowy',
+  'theme.transparent': 'Przezroczysty',
   'language.desc': 'Wybierz język interfejsu.',
   'presets.add': 'Dodaj preset',
   'presets.colIcon': 'Ikona',

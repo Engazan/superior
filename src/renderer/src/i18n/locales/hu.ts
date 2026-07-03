@@ -154,6 +154,7 @@ export const hu: Record<MessageKey, string> = {
   'theme.light': 'Világos',
   'theme.dark': 'Sötét',
   'theme.system': 'Rendszer',
+  'theme.transparent': 'Áttetsző',
   'language.desc': 'Válaszd ki a felület nyelvét.',
   'presets.add': 'Sablon hozzáadása',
   'presets.colIcon': 'Ikon',

@@ -150,6 +150,7 @@ export const en = {
   'theme.light': 'Light',
   'theme.dark': 'Dark',
   'theme.system': 'System',
+  'theme.transparent': 'Transparent',
   'language.desc': 'Choose the interface language.',
   'presets.add': 'Add preset',
   'presets.colIcon': 'Icon',

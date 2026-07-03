@@ -1,4 +1,5 @@
-export type ThemeMode = 'light' | 'dark' | 'system'
+/** 'transparent' = macOS vibrancy (blur-behind); resolves light/dark from the OS. */
+export type ThemeMode = 'light' | 'dark' | 'system' | 'transparent'
 
 export type Language = 'en' | 'sk' | 'cs' | 'pl' | 'hu'
 
@@ -735,6 +736,7 @@ export const IPC = {
   WINDOW_CLOSE: 'window:close',
   WINDOW_IS_MAXIMIZED: 'window:is-maximized',
   WINDOW_MAXIMIZED_CHANGED: 'window:maximized-changed',
+  WINDOW_SET_VIBRANCY: 'window:set-vibrancy',
   AGENT_START: 'agent:start',
   AGENT_INPUT: 'agent:input',
   AGENT_RESIZE: 'agent:resize',

@@ -24,6 +24,17 @@ export function registerWindowIpc(): void {
   ipcMain.handle(IPC.WINDOW_IS_MAXIMIZED, (event): boolean => {
     return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
   })
+
+  // Toggle the macOS blur-behind (vibrancy) for the "transparent" theme.
+  // No-op on other platforms.
+  ipcMain.on(IPC.WINDOW_SET_VIBRANCY, (event, enabled: boolean) => {
+    if (process.platform !== 'darwin') return
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    win.setVibrancy(enabled ? 'fullscreen-ui' : null)
+    // An opaque window background would paint over the blur.
+    win.setBackgroundColor(enabled ? '#00000000' : '#181825')
+  })
 }
 
 /** Forward maximize/unmaximize state to a specific window's renderer. */

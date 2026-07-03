@@ -154,6 +154,7 @@ export const sk: Record<MessageKey, string> = {
   'theme.light': 'Svetlá',
   'theme.dark': 'Tmavá',
   'theme.system': 'Systém',
+  'theme.transparent': 'Priesvitná',
   'language.desc': 'Vyberte jazyk rozhrania.',
   'presets.add': 'Pridať predvoľbu',
   'presets.colIcon': 'Ikona',

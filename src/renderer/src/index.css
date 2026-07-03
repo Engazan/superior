@@ -65,6 +65,25 @@ body,
   margin: 0;
 }
 
+/*
+ * Transparent theme (macOS vibrancy): the window paints no opaque background,
+ * so the compositor's blur shows through. Chrome surfaces keep a translucent
+ * wash of their theme color for readability; terminal cells stay opaque (xterm
+ * paints its own solid background) so text contrast never suffers.
+ */
+.transparent,
+.transparent body {
+  background: transparent;
+}
+.transparent.dark {
+  --c-bar: rgba(24, 24, 37, 0.55);
+  --c-panel: rgba(30, 30, 46, 0.6);
+}
+.transparent.light {
+  --c-bar: rgba(242, 243, 245, 0.55);
+  --c-panel: rgba(255, 255, 255, 0.6);
+}
+
 /* Frameless-window drag regions. */
 .app-drag {
   -webkit-app-region: drag;

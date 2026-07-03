@@ -60,7 +60,7 @@ const DEFAULTS: AppSettings = {
   usageTracking: false,
   usagePrimary: 'remaining'
 }
-const THEMES: ThemeMode[] = ['light', 'dark', 'system']
+const THEMES: ThemeMode[] = ['light', 'dark', 'system', 'transparent']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
 const USAGE_PRIMARIES: UsagePrimary[] = ['remaining', 'sevenDay', 'cost', 'tokens', 'context']
 

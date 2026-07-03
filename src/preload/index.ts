@@ -366,6 +366,11 @@ const api = {
     return ipcRenderer.invoke(IPC.WINDOW_IS_MAXIMIZED)
   },
 
+  /** Enable/disable the macOS blur-behind (vibrancy); no-op elsewhere. */
+  setWindowVibrancy(enabled: boolean): void {
+    ipcRenderer.send(IPC.WINDOW_SET_VIBRANCY, enabled)
+  },
+
   /** Subscribe to maximize/restore changes. Returns an unsubscribe function. */
   onWindowMaximizedChange(cb: (maximized: boolean) => void): () => void {
     const listener = (_e: unknown, maximized: boolean): void => cb(maximized)

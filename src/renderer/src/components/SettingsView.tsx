@@ -47,12 +47,18 @@ interface Props {
   onKillSession: (id: string) => void
 }
 
-const THEME_OPTIONS: { value: ThemeMode; labelKey: 'theme.light' | 'theme.dark' | 'theme.system' }[] =
-  [
-    { value: 'light', labelKey: 'theme.light' },
-    { value: 'dark', labelKey: 'theme.dark' },
-    { value: 'system', labelKey: 'theme.system' }
-  ]
+const THEME_OPTIONS: {
+  value: ThemeMode
+  labelKey: 'theme.light' | 'theme.dark' | 'theme.system' | 'theme.transparent'
+}[] = [
+  { value: 'light', labelKey: 'theme.light' },
+  { value: 'dark', labelKey: 'theme.dark' },
+  { value: 'system', labelKey: 'theme.system' },
+  // Vibrancy (blur-behind) exists only on macOS.
+  ...(window.api.platform === 'darwin'
+    ? ([{ value: 'transparent', labelKey: 'theme.transparent' }] as const)
+    : [])
+]
 
 const USAGE_PRIMARY_OPTIONS: {
   value: UsagePrimary

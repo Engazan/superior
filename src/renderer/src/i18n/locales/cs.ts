@@ -154,6 +154,7 @@ export const cs: Record<MessageKey, string> = {
   'theme.light': 'Světlý',
   'theme.dark': 'Tmavý',
   'theme.system': 'Systém',
+  'theme.transparent': 'Průsvitná',
   'language.desc': 'Vyberte jazyk rozhraní.',
   'presets.add': 'Přidat předvolbu',
   'presets.colIcon': 'Ikona',

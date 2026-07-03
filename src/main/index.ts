@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { IPC } from '@shared/types'
 import { addFolderByPath } from './services/workspace.service'
+import { getSettings } from './services/settings.service'
 import { extractFolderArg } from './services/cli-launcher.service'
 import { registerCliLauncherIpc } from './ipc/cli-launcher.ipc'
 import { registerWorkspaceIpc } from './ipc/workspace.ipc'
@@ -58,13 +59,18 @@ function focusMainWindow(): void {
 }
 
 function createWindow(): BrowserWindow {
+  // Transparent (vibrancy) theme: the window must be created without an opaque
+  // background for the macOS blur-behind to show through the renderer's
+  // translucent chrome. Runtime toggles go through IPC.WINDOW_SET_VIBRANCY.
+  const vibrant = isMac && getSettings().theme === 'transparent'
   const win = new BrowserWindow({
     width: 1100,
     height: 720,
     minWidth: 760,
     minHeight: 480,
     show: false,
-    backgroundColor: '#181825',
+    backgroundColor: vibrant ? '#00000000' : '#181825',
+    ...(vibrant ? { vibrancy: 'fullscreen-ui' as const } : {}),
     title: 'Superior',
     // macOS: keep the native traffic lights (inset) with a custom draggable bar.
     // Other platforms: fully frameless with our own window controls.

@@ -4,12 +4,14 @@ import type { ThemeMode } from './types'
 type ResolvedTheme = 'light' | 'dark'
 
 interface ThemeContextValue {
-  /** The user's choice: light, dark, or system. */
+  /** The user's choice: light, dark, system, or transparent (macOS vibrancy). */
   mode: ThemeMode
   /** The concrete theme actually applied (system resolved against the OS). */
   resolved: ResolvedTheme
   setMode: (mode: ThemeMode) => void
 }
+
+const isMac = window.api.platform === 'darwin'
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
@@ -26,18 +28,24 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
     window.api.getSettings().then((s) => setModeState(s.theme))
   }, [])
 
-  // Resolve the mode to a concrete theme and apply it to <html>.
+  // Resolve the mode to a concrete theme and apply it to <html>. Transparent
+  // mode follows the OS light/dark (like 'system') and additionally flips the
+  // window into macOS vibrancy + translucent chrome via the .transparent class.
   useEffect(() => {
+    // Vibrancy only exists on macOS; elsewhere the mode degrades to 'system'.
+    const transparent = mode === 'transparent' && isMac
     const apply = (): void => {
-      const next = mode === 'system' ? systemTheme() : mode
+      const next = mode === 'light' || mode === 'dark' ? mode : systemTheme()
       setResolved(next)
       const el = document.documentElement
       el.classList.remove('light', 'dark')
       el.classList.add(next)
+      el.classList.toggle('transparent', transparent)
     }
     apply()
+    window.api.setWindowVibrancy(transparent)
 
-    if (mode !== 'system') return
+    if (mode === 'light' || mode === 'dark') return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
