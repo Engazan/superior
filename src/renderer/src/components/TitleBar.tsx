@@ -126,10 +126,10 @@ export function TitleBar({
                       </>
                     )}
                     {!!gitStatus.additions && (
-                      <span className="shrink-0 text-emerald-500">+{gitStatus.additions}</span>
+                      <span className="shrink-0 text-status">+{gitStatus.additions}</span>
                     )}
                     {!!gitStatus.deletions && (
-                      <span className="shrink-0 text-rose-500">−{gitStatus.deletions}</span>
+                      <span className="shrink-0 text-danger">−{gitStatus.deletions}</span>
                     )}
                   </div>
                 ) : (

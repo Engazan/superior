@@ -253,6 +253,7 @@ export const hu: Record<MessageKey, string> = {
   'terminal.restore': 'Visszaállítás',
   'terminal.restart': 'Parancs újraindítása',
   'terminal.setNickname': 'Becenév beállítása',
+  'terminal.focusHint': 'Fókusz',
   'terminal.nicknamePlaceholder': 'Becenév',
   'terminal.restartHint': 'nyomd meg az Entert az újraindításhoz',
   'usage.context': 'Kontextus',

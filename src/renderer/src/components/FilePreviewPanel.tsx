@@ -155,7 +155,7 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
       return <div className="grid h-full place-items-center text-xs text-fgmuted">{t('preview.loading')}</div>
     }
     if (data.error) {
-      return <div className="grid h-full place-items-center px-6 text-center text-xs text-rose-400">{data.error}</div>
+      return <div className="grid h-full place-items-center px-6 text-center text-xs text-danger">{data.error}</div>
     }
 
     switch (effectiveType) {
@@ -210,14 +210,14 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
             </div>
             {dirty && (
               <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
                 title={t('preview.unsaved')}
                 aria-label={t('preview.unsaved')}
               />
             )}
           </div>
           <div
-            className={`truncate text-[11px] ${saveError ? 'text-rose-400' : 'text-fgmuted'}`}
+            className={`truncate text-[11px] ${saveError ? 'text-danger' : 'text-fgmuted'}`}
             title={saveError ?? file.path}
           >
             {saveError ?? (
@@ -274,7 +274,7 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
 function TruncatedWarning({ onOpenRaw }: { onOpenRaw: () => void }): JSX.Element {
   const { t } = useI18n()
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-500">
+    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-warnBorder bg-warnBg/60 px-3 py-1.5 text-[11px] text-warn">
       <span>{t('preview.truncated')}</span>
       <button onClick={onOpenRaw} className="shrink-0 font-medium underline-offset-2 hover:underline">
         {t('preview.openRaw')}

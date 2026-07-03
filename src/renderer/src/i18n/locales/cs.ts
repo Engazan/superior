@@ -253,6 +253,7 @@ export const cs: Record<MessageKey, string> = {
   'terminal.restore': 'Obnovit',
   'terminal.restart': 'Spustit příkaz znovu',
   'terminal.setNickname': 'Nastavit přezdívku',
+  'terminal.focusHint': 'Zaměřit',
   'terminal.nicknamePlaceholder': 'Přezdívka',
   'terminal.restartHint': 'stiskněte Enter pro opětovné spuštění',
   'usage.context': 'Kontext',

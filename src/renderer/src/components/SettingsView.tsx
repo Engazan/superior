@@ -29,6 +29,8 @@ export type SettingsSection =
 
 interface Props {
   initialSection: SettingsSection
+  /** Reports section switches so the last section can be restored on reopen. */
+  onSectionChange?: (section: SettingsSection) => void
   onBack: () => void
   /** Called after the user adds/edits/removes an integration, so the sidebar's
    *  clone affordance can refresh. */
@@ -179,6 +181,7 @@ function AppearanceSection(): JSX.Element {
 
 export function SettingsView({
   initialSection,
+  onSectionChange,
   onBack,
   onIntegrationsChanged,
   presets,
@@ -193,7 +196,12 @@ export function SettingsView({
   onKillSession
 }: Props): JSX.Element {
   const { t } = useI18n()
-  const [section, setSection] = useState<SettingsSection>(initialSection)
+  const [section, setSectionState] = useState<SettingsSection>(initialSection)
+  // Report section changes up so the app can reopen settings where you left off.
+  const setSection = (next: SettingsSection): void => {
+    setSectionState(next)
+    onSectionChange?.(next)
+  }
   const [daemonCount, setDaemonCount] = useState(0)
 
   // Poll the live daemon sessions so the nav badge stays current.

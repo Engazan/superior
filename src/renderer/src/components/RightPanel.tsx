@@ -75,9 +75,9 @@ export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Pro
           {t('rightPanel.changes')}
           {totals && (totals.additions > 0 || totals.deletions > 0) && (
             <span className="font-mono text-[10px] tabular-nums">
-              {totals.additions > 0 && <span className="text-emerald-500">+{totals.additions}</span>}
+              {totals.additions > 0 && <span className="text-status">+{totals.additions}</span>}
               {totals.additions > 0 && totals.deletions > 0 && ' '}
-              {totals.deletions > 0 && <span className="text-rose-500">−{totals.deletions}</span>}
+              {totals.deletions > 0 && <span className="text-danger">−{totals.deletions}</span>}
             </span>
           )}
         </button>

@@ -30,11 +30,11 @@ function formatReset(raw: string | null): string | null {
   return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-/** Green when plenty remains, red when nearly spent. */
+/** Green when plenty remains, red when nearly spent — theme-aware via tokens. */
 function remainingColor(remaining: number): string {
-  if (remaining <= 15) return '#f38ba8' // red
-  if (remaining <= 40) return '#f9e2af' // amber
-  return '#a6e3a1' // green
+  if (remaining <= 15) return 'var(--c-danger)'
+  if (remaining <= 40) return 'var(--c-warn)'
+  return 'var(--c-status)'
 }
 
 /** A small donut depleting as the limit is used up (full ring = 100% remaining). */

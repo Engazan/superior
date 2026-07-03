@@ -253,6 +253,7 @@ export const pl: Record<MessageKey, string> = {
   'terminal.restore': 'Przywróć',
   'terminal.restart': 'Uruchom polecenie ponownie',
   'terminal.setNickname': 'Ustaw pseudonim',
+  'terminal.focusHint': 'Fokus',
   'terminal.nicknamePlaceholder': 'Pseudonim',
   'terminal.restartHint': 'naciśnij Enter, aby uruchomić ponownie',
   'usage.context': 'Kontekst',

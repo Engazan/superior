@@ -6,6 +6,7 @@ import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
+import { CloseIcon, IconButton, PencilIcon, RestartIcon } from './ui'
 import { UsageBadge } from './UsageBadge'
 import { barTint } from '../tint'
 import type { Rect } from '../gridLayout'
@@ -14,9 +15,9 @@ import type { AgentSession } from '../types'
 const FULL_RECT: Rect = { top: 0, left: 0, width: 100, height: 100 }
 
 const STATUS_DOT: Record<AgentSession['status'], string> = {
-  running: 'bg-emerald-400',
-  exited: 'bg-zinc-500',
-  error: 'bg-red-500'
+  running: 'bg-status',
+  exited: 'bg-fgmuted',
+  error: 'bg-dangerSolid'
 }
 
 // Older builds could accidentally feed xterm's OSC 10/11 color responses into
@@ -387,25 +388,32 @@ export const TerminalView = memo(function TerminalView({
       >
         {/* Active-cell highlight, drawn above the terminal content so it stays visible. */}
         {highlight && (
-          <div className="pointer-events-none absolute inset-0 z-10 ring-2 ring-inset ring-sky-500" />
+          <div className="pointer-events-none absolute inset-0 z-10 ring-2 ring-inset ring-accent" />
         )}
         {/* Always-visible topbar; the terminal sits below it, never behind it. */}
         {showBar && (
           <div
             onClick={() => onSelect(session.id)}
             style={barTint(session.color, active)}
-            className={`flex shrink-0 cursor-pointer items-center gap-2 border-b border-edge px-2 py-1 text-xs ${
+            // The Ctrl+N focus shortcut lives in the bar's tooltip instead of a
+            // chip, freeing space in small grid cells.
+            title={
+              shortcutNumber !== undefined && shortcutNumber <= 9
+                ? `${t('terminal.focusHint')}: ${formatChord(`ctrl+${shortcutNumber}`)}`
+                : undefined
+            }
+            className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-b border-edge px-2 py-1 text-xs ${
               active ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
             }`}
           >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[session.status]}`} />
-            <PresetIcon
-              iconType={session.iconType}
-              icon={session.icon}
-              className="h-4 w-4 text-sm"
-            />
-            {/* The terminal name always stays; only the nickname after it is edited. */}
-            <div className="group flex min-w-0 flex-1 items-center gap-1">
+            {/* Identity zone — status, icon, name, nickname. Truncates first. */}
+            <div className="group flex min-w-0 flex-1 items-center gap-1.5">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[session.status]}`} />
+              <PresetIcon
+                iconType={session.iconType}
+                icon={session.icon}
+                className="h-4 w-4 text-sm"
+              />
               <span className="shrink truncate">{session.label}</span>
               {editingNick ? (
                 <>
@@ -439,110 +447,83 @@ export const TerminalView = memo(function TerminalView({
                       e.stopPropagation()
                       openNickEditor()
                     }}
-                    className="shrink-0 text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
+                    className="shrink-0 text-fgmuted opacity-0 transition hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
                     aria-label={t('terminal.setNickname')}
                     title={t('terminal.setNickname')}
                   >
-                    <svg
-                      viewBox="0 0 16 16"
-                      className="h-3 w-3"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10z" />
-                    </svg>
+                    <PencilIcon size={12} />
                   </button>
                 </>
               )}
             </div>
+
+            {/* Meta zone — live usage readout. */}
             <UsageBadge sessionId={session.id} />
-            {shortcutNumber !== undefined && shortcutNumber <= 9 && (
-              <span
-                className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wide ${
-                  active
-                    ? 'border-accentBorder bg-accentBg text-accent'
-                    : 'border-edge bg-panel/50 text-fgmuted'
-                }`}
-                title={`Focus terminal ${shortcutNumber}`}
-              >
-                {formatChord(`ctrl+${shortcutNumber}`)}
-              </span>
-            )}
-            {session.status !== 'running' && (
-              <button
+
+            {/* Action zone — restart / maximize / close, right-aligned. */}
+            <div className="flex shrink-0 items-center">
+              {session.status !== 'running' && (
+                <IconButton
+                  size="sm"
+                  label={t('terminal.restart')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRestart(session.id)
+                  }}
+                >
+                  <RestartIcon size={14} />
+                </IconButton>
+              )}
+              <IconButton
+                size="sm"
+                label={maximized ? t('terminal.restore') : t('terminal.maximize')}
+                title={shortcutTitle(
+                  maximized ? t('terminal.restore') : t('terminal.maximize'),
+                  'maximizeFocusedCell'
+                )}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onRestart(session.id)
+                  onToggleMaximize(session.id)
                 }}
-                className="shrink-0 text-fgmuted transition hover:text-fg"
-                aria-label={t('terminal.restart')}
-                title={t('terminal.restart')}
               >
-                <svg
-                  viewBox="0 0 16 16"
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M13 8a5 5 0 1 1-1.46-3.54M13 2v3h-3" />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleMaximize(session.id)
-              }}
-              className="shrink-0 text-fgmuted transition hover:text-fg"
-              aria-label={maximized ? t('terminal.restore') : t('terminal.maximize')}
-              title={shortcutTitle(
-                maximized ? t('terminal.restore') : t('terminal.maximize'),
-                'maximizeFocusedCell'
-              )}
-            >
-              {maximized ? (
-                <svg
-                  viewBox="0 0 16 16"
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9.5 6.5h-3v3M6.5 6.5L10 10M6.5 9.5L3 13M13 3l-3.5 3.5" />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 16 16"
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5L9 7M2.5 13.5L7 9" />
-                </svg>
-              )}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onClose(session.id)
-              }}
-              className="shrink-0 text-fgmuted transition hover:text-fg"
-              aria-label={t('terminal.closeSession')}
-              title={shortcutTitle(t('terminal.stopClose'), 'closeFocusedCell')}
-            >
-              ✕
-            </button>
+                {maximized ? (
+                  <svg
+                    viewBox="0 0 16 16"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9.5 6.5h-3v3M6.5 6.5L10 10M6.5 9.5L3 13M13 3l-3.5 3.5" />
+                  </svg>
+                ) : (
+                  <svg
+                    viewBox="0 0 16 16"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5L9 7M2.5 13.5L7 9" />
+                  </svg>
+                )}
+              </IconButton>
+              <IconButton
+                size="sm"
+                label={t('terminal.closeSession')}
+                title={shortcutTitle(t('terminal.stopClose'), 'closeFocusedCell')}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose(session.id)
+                }}
+              >
+                <CloseIcon size={12} />
+              </IconButton>
+            </div>
           </div>
         )}
         <div ref={hostRef} className="min-h-0 w-full flex-1" />

@@ -90,7 +90,7 @@ export function WindowControls(): JSX.Element {
         {maximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
-        className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-300"
+        className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-dangerSolid hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-danger"
         onClick={() => window.api.windowClose()}
         aria-label={t('window.close')}
         title={t('window.close')}

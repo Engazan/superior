@@ -260,6 +260,13 @@ export function AgentLauncher({
                   <div
                     key={layout.id}
                     onClick={() => setSelectedLayoutId(layout.id)}
+                    // Double-click = select + launch in one gesture.
+                    onDoubleClick={() =>
+                      onStart({
+                        presetIds: layout.presetIds.filter(Boolean),
+                        nicknames: layout.nicknames
+                      })
+                    }
                     className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition ${
                       selectedLayoutId === layout.id
                         ? 'border-fgdim bg-hover'

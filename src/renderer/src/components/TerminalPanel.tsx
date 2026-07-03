@@ -362,7 +362,7 @@ export function TerminalPanel({
                 <span
                   className={`transition ${
                     vertical ? 'h-full w-px group-hover:w-0.5' : 'h-px w-full group-hover:h-0.5'
-                  } ${hot ? `bg-sky-500 ${vertical ? 'w-0.5' : 'h-0.5'}` : 'bg-edge group-hover:bg-sky-500'}`}
+                  } ${hot ? `bg-accent ${vertical ? 'w-0.5' : 'h-0.5'}` : 'bg-edge group-hover:bg-accent'}`}
                 />
               </div>
             )

@@ -212,7 +212,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
         <span className="truncate">{b.isRemote ? target : b.name}</span>
         {b.isCurrent && <span className="ml-auto shrink-0 text-fgmuted">{t('branch.current')}</span>}
         {blockedElsewhere && (
-          <span className="ml-auto shrink-0 text-amber-400/80">{t('branch.inUse')}</span>
+          <span className="ml-auto shrink-0 text-warn/80">{t('branch.inUse')}</span>
         )}
         {busy === target && (
           <span className="ml-auto shrink-0 text-fgmuted">{t('branch.switching')}</span>
@@ -300,8 +300,8 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
           )}
 
           {conflict && (
-            <div className="border-t border-edge bg-amber-500/10 p-2.5 text-xs">
-              <p className="mb-2 text-amber-200">{t('branch.dirtyBody', { branch: conflict })}</p>
+            <div className="border-t border-edge bg-warnBg/60 p-2.5 text-xs">
+              <p className="mb-2 text-warn">{t('branch.dirtyBody', { branch: conflict })}</p>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setConflict(null)}
@@ -312,7 +312,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
                 <button
                   onClick={() => void doSwitch(conflict, true)}
                   disabled={busy !== null}
-                  className="rounded bg-amber-600 px-2 py-1 font-medium text-white transition hover:bg-amber-500 disabled:opacity-50"
+                  className="rounded bg-warn px-2 py-1 font-medium text-bar transition hover:opacity-90 disabled:opacity-50"
                 >
                   {t('branch.stashAndSwitch')}
                 </button>
@@ -322,7 +322,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
 
           {note && <div className="border-t border-edge p-2.5 text-xs text-fgdim">{note}</div>}
           {error && (
-            <div className="border-t border-edge p-2.5 text-xs text-rose-400">
+            <div className="border-t border-edge p-2.5 text-xs text-danger">
               {t('branch.switchFailed', { message: error })}
             </div>
           )}

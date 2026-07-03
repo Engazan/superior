@@ -1,32 +1,46 @@
+/**
+ * Semantic tokens live as hex CSS vars in index.css (swapped by .light/.dark).
+ * Colors are registered as functions so Tailwind's `/NN` opacity modifier works
+ * with them: plain string values like 'var(--c-x)' silently DROP classes such
+ * as `bg-accentBg/70` (Tailwind can't inject alpha into an opaque var), which
+ * left several backgrounds missing. color-mix() keeps the vars themselves hex.
+ */
+const token = (name) => {
+  return ({ opacityValue }) =>
+    opacityValue === undefined || Number(opacityValue) === 1
+      ? `var(${name})`
+      : `color-mix(in srgb, var(${name}) calc(${opacityValue} * 100%), transparent)`
+}
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/renderer/index.html', './src/renderer/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        bar: 'var(--c-bar)',
-        panel: 'var(--c-panel)',
-        edge: 'var(--c-edge)',
-        hover: 'var(--c-hover)',
-        fg: 'var(--c-fg)',
-        fg2: 'var(--c-fg2)',
-        fgdim: 'var(--c-fgdim)',
-        fgmuted: 'var(--c-fgmuted)',
-        accent: 'var(--c-accent)',
-        accentBg: 'var(--c-accent-bg)',
-        accentBorder: 'var(--c-accent-border)',
-        accentSolid: 'var(--c-accent-solid)',
-        accentSolidHover: 'var(--c-accent-solid-hover)',
-        status: 'var(--c-status)',
-        statusBg: 'var(--c-status-bg)',
-        statusBorder: 'var(--c-status-border)',
-        danger: 'var(--c-danger)',
-        dangerSolid: 'var(--c-danger-solid)',
-        dangerBg: 'var(--c-danger-bg)',
-        dangerBorder: 'var(--c-danger-border)',
-        warn: 'var(--c-warn)',
-        warnBg: 'var(--c-warn-bg)',
-        warnBorder: 'var(--c-warn-border)'
+        bar: token('--c-bar'),
+        panel: token('--c-panel'),
+        edge: token('--c-edge'),
+        hover: token('--c-hover'),
+        fg: token('--c-fg'),
+        fg2: token('--c-fg2'),
+        fgdim: token('--c-fgdim'),
+        fgmuted: token('--c-fgmuted'),
+        accent: token('--c-accent'),
+        accentBg: token('--c-accent-bg'),
+        accentBorder: token('--c-accent-border'),
+        accentSolid: token('--c-accent-solid'),
+        accentSolidHover: token('--c-accent-solid-hover'),
+        status: token('--c-status'),
+        statusBg: token('--c-status-bg'),
+        statusBorder: token('--c-status-border'),
+        danger: token('--c-danger'),
+        dangerSolid: token('--c-danger-solid'),
+        dangerBg: token('--c-danger-bg'),
+        dangerBorder: token('--c-danger-border'),
+        warn: token('--c-warn'),
+        warnBg: token('--c-warn-bg'),
+        warnBorder: token('--c-warn-border')
       }
     }
   },

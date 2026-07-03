@@ -49,6 +49,9 @@ export default function App(): JSX.Element {
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
   // "Open / clone project" modal, opened from the sidebar.
   const [projectModalOpen, setProjectModalOpen] = useState(false)
+  // Set when "Add integration" was clicked inside the project modal, so leaving
+  // settings returns to the modal instead of abandoning the clone flow.
+  const [resumeProjectModal, setResumeProjectModal] = useState(false)
 
   // Saved git-forge integrations — drives the clone tab of the project modal.
   const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -170,7 +173,6 @@ export default function App(): JSX.Element {
       } else if (chord === shortcuts.openSettings) {
         e.preventDefault()
         e.stopPropagation()
-        setSettingsSection('appearance')
         setView('settings')
       } else if (chord === shortcuts.maximizeFocusedCell) {
         if (view !== 'main') return
@@ -265,10 +267,8 @@ export default function App(): JSX.Element {
           view === 'main' && !!gitStatus?.isRepository && !ws.activeWorkspace?.worktreePath
         }
         onBranchSwitched={refreshGitStatus}
-        onOpenSettings={() => {
-          setSettingsSection('appearance')
-          setView('settings')
-        }}
+        // Reopens on the last-visited section rather than resetting to Appearance.
+        onOpenSettings={() => setView('settings')}
         onOpenLauncher={() => setLauncherOpen(true)}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
         profiles={ws.profiles}
@@ -282,7 +282,15 @@ export default function App(): JSX.Element {
         {view === 'settings' ? (
           <SettingsView
             initialSection={settingsSection}
-            onBack={() => setView('main')}
+            onSectionChange={setSettingsSection}
+            onBack={() => {
+              setView('main')
+              // Resume the interrupted "clone from git" flow, if any.
+              if (resumeProjectModal) {
+                setResumeProjectModal(false)
+                setProjectModalOpen(true)
+              }
+            }}
             onIntegrationsChanged={reloadIntegrations}
             presets={presets}
             onSavePreset={presetsApi.savePreset}
@@ -357,7 +365,7 @@ export default function App(): JSX.Element {
                       onPointerDown={preview.startPreviewResize}
                       className="group flex w-1.5 shrink-0 cursor-col-resize items-stretch"
                     >
-                      <span className="w-full bg-edge transition group-hover:bg-sky-500" />
+                      <span className="w-full bg-edge transition group-hover:bg-accent" />
                     </div>
                     <div
                       className="flex min-h-0 min-w-[280px] shrink-0 flex-col"
@@ -406,6 +414,7 @@ export default function App(): JSX.Element {
           onClone={ws.cloneRepository}
           onAddIntegration={() => {
             setProjectModalOpen(false)
+            setResumeProjectModal(true)
             setSettingsSection('integrations')
             setView('settings')
           }}

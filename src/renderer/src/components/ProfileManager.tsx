@@ -172,7 +172,7 @@ export function ProfileManager({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
       >
         <div className="flex shrink-0 items-start gap-3 border-b border-edge px-5 py-4">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentBg text-accent ring-1 ring-inset ring-accentBorder">
@@ -250,7 +250,7 @@ export function ProfileManager({
                 disabled={profiles.length <= 1}
                 title={t('profile.delete')}
                 aria-label={t('profile.delete')}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-fgmuted transition hover:bg-hover hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fgmuted"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-fgmuted transition hover:bg-hover hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fgmuted"
               >
                 <TrashGlyph />
               </button>

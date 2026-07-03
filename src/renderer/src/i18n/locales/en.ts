@@ -250,6 +250,7 @@ export const en = {
   'terminal.restore': 'Restore',
   'terminal.restart': 'Restart command',
   'terminal.setNickname': 'Set nickname',
+  'terminal.focusHint': 'Focus',
   'terminal.nicknamePlaceholder': 'Nickname',
   'terminal.restartHint': 'press Enter to restart',
   'usage.context': 'Context',

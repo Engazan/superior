@@ -521,6 +521,8 @@ export const Sidebar = memo(function Sidebar({
                                   className="min-w-0 flex-1 rounded border border-edge bg-panel px-1.5 py-0.5 text-sm text-fg focus:border-accent focus:outline-none"
                                 />
                               ) : (
+                                // Two-line row: name on top; branch + diff stat on a
+                                // second, smaller line so nothing overlaps at 224px.
                                 <div className="flex min-w-0 flex-1 flex-col">
                                   <span
                                     onDoubleClick={(e) => {
@@ -534,17 +536,27 @@ export const Sidebar = memo(function Sidebar({
                                   >
                                     {ws.name}
                                   </span>
-                                  {ws.branch && (
-                                    <BranchBadge branch={ws.branch} title={t('sidebar.worktreeBadge')} />
+                                  {(ws.branch || gitStats[ws.id]) && (
+                                    <span className="flex min-w-0 items-center gap-2">
+                                      {ws.branch && (
+                                        <BranchBadge
+                                          branch={ws.branch}
+                                          title={t('sidebar.worktreeBadge')}
+                                        />
+                                      )}
+                                      {gitStats[ws.id] && (
+                                        <DiffStat
+                                          stat={gitStats[ws.id]}
+                                          title={t('sidebar.diffStat')}
+                                        />
+                                      )}
+                                    </span>
                                   )}
                                 </div>
                               )}
 
                               {editingId !== ws.id && busyWorkspaceIds.has(ws.id) && (
                                 <WorkingSpinner title={t('sidebar.workingTerminals')} />
-                              )}
-                              {editingId !== ws.id && gitStats[ws.id] && (
-                                <DiffStat stat={gitStats[ws.id]} title={t('sidebar.diffStat')} />
                               )}
 
                               {/* One kebab replaces the previous reveal/rename/remove trio;

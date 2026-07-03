@@ -13,11 +13,11 @@ interface Props {
 
 // Short status badge — letter + colour, mirroring common Git UIs.
 const STATUS_META: Record<GitFileStatus, { letter: string; className: string }> = {
-  added: { letter: 'A', className: 'text-emerald-500' },
-  modified: { letter: 'M', className: 'text-amber-500' },
-  deleted: { letter: 'D', className: 'text-rose-500' },
-  renamed: { letter: 'R', className: 'text-sky-500' },
-  untracked: { letter: 'U', className: 'text-emerald-500' }
+  added: { letter: 'A', className: 'text-status' },
+  modified: { letter: 'M', className: 'text-warn' },
+  deleted: { letter: 'D', className: 'text-danger' },
+  renamed: { letter: 'R', className: 'text-accent' },
+  untracked: { letter: 'U', className: 'text-status' }
 }
 
 function BranchIcon(): JSX.Element {
@@ -61,9 +61,9 @@ function DiffFile({ file }: { file: GitDiffFile }): JSX.Element {
           {dir && <span className="text-fgmuted"> {dir.replace(/\/$/, '')}</span>}
         </span>
         <span className="shrink-0 font-mono text-[11px] tabular-nums">
-          {file.additions > 0 && <span className="text-emerald-500">+{file.additions}</span>}
+          {file.additions > 0 && <span className="text-status">+{file.additions}</span>}
           {file.additions > 0 && file.deletions > 0 && ' '}
-          {file.deletions > 0 && <span className="text-rose-500">−{file.deletions}</span>}
+          {file.deletions > 0 && <span className="text-danger">−{file.deletions}</span>}
         </span>
       </button>
 
@@ -82,17 +82,17 @@ function DiffFile({ file }: { file: GitDiffFile }): JSX.Element {
                 {hunk.lines.map((line, li) => {
                   const bg =
                     line.type === 'add'
-                      ? 'bg-emerald-500/10'
+                      ? 'bg-status/10'
                       : line.type === 'del'
-                        ? 'bg-rose-500/10'
+                        ? 'bg-danger/10'
                         : ''
                   const marker =
                     line.type === 'add' ? '+' : line.type === 'del' ? '−' : ' '
                   const markerColor =
                     line.type === 'add'
-                      ? 'text-emerald-500'
+                      ? 'text-status'
                       : line.type === 'del'
-                        ? 'text-rose-500'
+                        ? 'text-danger'
                         : 'text-transparent'
                   return (
                     <div key={li} className={`flex ${bg}`}>
@@ -146,9 +146,9 @@ export function ChangesView({ diff, loading, onRefresh }: Props): JSX.Element {
           </span>
         )}
         <span className="ml-auto shrink-0 font-mono tabular-nums text-fgmuted">
-          {totals.additions > 0 && <span className="text-emerald-500">+{totals.additions}</span>}
+          {totals.additions > 0 && <span className="text-status">+{totals.additions}</span>}
           {totals.additions > 0 && totals.deletions > 0 && ' '}
-          {totals.deletions > 0 && <span className="text-rose-500">−{totals.deletions}</span>}
+          {totals.deletions > 0 && <span className="text-danger">−{totals.deletions}</span>}
         </span>
         <button
           onClick={onRefresh}

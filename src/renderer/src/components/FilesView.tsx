@@ -31,7 +31,7 @@ function Chevron({ open }: { open: boolean }): JSX.Element {
 function FolderIcon(): JSX.Element {
   return (
     <svg
-      className="block h-3.5 w-3.5 shrink-0 text-sky-500"
+      className="block h-3.5 w-3.5 shrink-0 text-accent"
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
