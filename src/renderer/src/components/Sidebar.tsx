@@ -10,6 +10,7 @@ import {
   KebabIcon,
   Menu,
   PencilIcon,
+  PlusIcon,
   TrashIcon,
   type MenuItem
 } from './ui'
@@ -531,6 +532,18 @@ export const Sidebar = memo(function Sidebar({
                     {!open && folderRunning > 0 && (
                       <RunningBadge count={folderRunning} title={t('sidebar.runningTerminals')} />
                     )}
+                    {/* Hover "+" — adds a workspace to this folder (also in the kebab menu). */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startAdd(folder.path)
+                      }}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                      aria-label={t('sidebar.addWorkspace')}
+                      title={t('sidebar.addWorkspace')}
+                    >
+                      <PlusIcon size={13} />
+                    </button>
                     {/* Drag handle — the drag itself runs on window listeners
                         (see beginFolderDrag), the list live-reorders under the pointer. */}
                     <span
@@ -669,16 +682,6 @@ export const Sidebar = memo(function Sidebar({
                         )
                       })}
 
-                      {/* One entry point for plain and branch-isolated workspaces. */}
-                      <li>
-                        <button
-                          onClick={() => startAdd(folder.path)}
-                          className="flex w-full items-center gap-2 py-1.5 pl-4 pr-2 text-xs text-fgmuted transition hover:bg-hover hover:text-fg"
-                        >
-                          <span className="text-sm leading-none text-accent">+</span>
-                          {t('sidebar.addWorkspace')}
-                        </button>
-                      </li>
                     </ul>
                   )}
                 </div>
