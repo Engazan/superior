@@ -9,6 +9,7 @@ import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
 import { clearUsageStore, primeUsageStore } from '../usageStore'
 import { useUsagePrimary } from '../usagePrimary'
 import { useI18n, LANGUAGES } from '../i18n'
+import { SegmentedControl, Toggle } from './ui'
 import type {
   Folder,
   PresetsState,
@@ -17,35 +18,6 @@ import type {
   UsagePrimary,
   Workspace
 } from '../types'
-
-/** A small on/off switch. */
-function Toggle({
-  checked,
-  onChange,
-  label
-}: {
-  checked: boolean
-  onChange: (next: boolean) => void
-  label: string
-}): JSX.Element {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition ${
-        checked ? 'bg-accent' : 'bg-edge'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
-          checked ? 'translate-x-4' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
-  )
-}
 
 export type SettingsSection =
   | 'appearance'
@@ -123,43 +95,23 @@ function AppearanceSection(): JSX.Element {
       <section className="mb-8 max-w-md">
         <div className="mb-1.5 text-sm font-medium text-fg">{t('appearance.theme')}</div>
         <p className="mb-3 text-xs text-fgdim">{t('appearance.themeDesc')}</p>
-        <div className="inline-flex rounded-lg border border-edge bg-bar p-1">
-          {THEME_OPTIONS.map((opt) => {
-            const active = mode === opt.value
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setMode(opt.value)}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                  active ? 'bg-edge text-fg shadow-sm' : 'text-fgdim hover:text-fg'
-                }`}
-              >
-                {t(opt.labelKey)}
-              </button>
-            )
-          })}
-        </div>
+        <SegmentedControl
+          aria-label={t('appearance.theme')}
+          options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
+          value={mode}
+          onChange={setMode}
+        />
       </section>
 
       <section className="mb-8 max-w-md">
         <div className="mb-1.5 text-sm font-medium text-fg">{t('settings.language')}</div>
         <p className="mb-3 text-xs text-fgdim">{t('language.desc')}</p>
-        <div className="inline-flex rounded-lg border border-edge bg-bar p-1">
-          {LANGUAGES.map((opt) => {
-            const active = lang === opt.value
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setLang(opt.value)}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                  active ? 'bg-edge text-fg shadow-sm' : 'text-fgdim hover:text-fg'
-                }`}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
+        <SegmentedControl
+          aria-label={t('settings.language')}
+          options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
+          value={lang}
+          onChange={setLang}
+        />
       </section>
 
       <section className="max-w-md">

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
+import { useDismiss } from './ui'
 import type { TerminalPreset } from '../types'
 
 interface Props {
@@ -21,21 +22,7 @@ export function PresetMenu({ presets, disabled, dropUp, onSelect, onManage }: Pr
   const active = presets.filter((p) => p.active)
 
   // Close on outside click or Escape.
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent): void => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('mousedown', onDown)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('mousedown', onDown)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [open])
+  useDismiss(ref, open, () => setOpen(false))
 
   return (
     <div ref={ref} className="relative">

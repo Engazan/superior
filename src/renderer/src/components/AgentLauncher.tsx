@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
+import { Button, CloseIcon, EmptyState, IconButton, Input, SegmentedControl } from './ui'
 import { MAX_GRID, distribute } from '../gridLayout'
 import type { LayoutPreset, TerminalPreset } from '../types'
 
@@ -226,35 +227,30 @@ export function AgentLauncher({
         )}
 
         {/* Mode switch: saved preset vs. one-off custom layout. */}
-        <div className="mb-5 flex gap-1 rounded-lg border border-edge p-0.5">
-          {(['preset', 'custom'] as Tab[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => chooseTab(k)}
-              className={`flex-1 rounded-md px-3 py-1.5 text-xs transition ${
-                tab === k ? 'bg-hover text-fg' : 'text-fgdim hover:text-fg'
-              }`}
-            >
-              {k === 'preset' ? t('launcher.tabPreset') : t('launcher.tabCustom')}
-            </button>
-          ))}
+        <div className="mb-5">
+          <SegmentedControl
+            aria-label={t('launcher.tabPreset')}
+            size="sm"
+            fill
+            options={[
+              { value: 'preset', label: t('launcher.tabPreset') },
+              { value: 'custom', label: t('launcher.tabCustom') }
+            ]}
+            value={tab}
+            onChange={(k) => chooseTab(k as Tab)}
+          />
         </div>
 
         {tab === 'preset' && !creating && (
           <>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs text-fgmuted">{t('launcher.savedPresets')}</span>
-              <button
-                onClick={openCreate}
-                className="rounded-md border border-edge px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
-              >
+              <Button variant="secondary" size="sm" onClick={openCreate}>
                 {t('launcher.newPreset')}
-              </button>
+              </Button>
             </div>
             {layoutPresets.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-edge px-3 py-6 text-center text-xs text-fgmuted">
-                {t('launcher.noLayouts')}
-              </div>
+              <EmptyState title={t('launcher.noLayouts')} />
             ) : (
               <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                 {layoutPresets.map((layout) => (
@@ -286,29 +282,24 @@ export function AgentLauncher({
                         </span>
                       </div>
                     </div>
-                    <button
+                    <IconButton
+                      size="sm"
+                      label={t('launcher.deletePreset')}
                       onClick={(e) => {
                         e.stopPropagation()
                         if (selectedLayoutId === layout.id) setSelectedLayoutId(null)
                         void onDeleteLayoutPreset(layout.id)
                       }}
-                      className="shrink-0 rounded px-1.5 py-0.5 text-fgmuted transition hover:bg-panel hover:text-fg"
-                      aria-label={t('launcher.deletePreset')}
-                      title={t('launcher.deletePreset')}
                     >
-                      ✕
-                    </button>
+                      <CloseIcon size={12} />
+                    </IconButton>
                   </div>
                 ))}
               </div>
             )}
-            <button
-              onClick={startSelectedLayout}
-              disabled={!selectedLayoutId}
-              className="mt-5 w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <Button className="mt-5 w-full" disabled={!selectedLayoutId} onClick={startSelectedLayout}>
               {t('launcher.start')}
-            </button>
+            </Button>
           </>
         )}
 
@@ -317,30 +308,27 @@ export function AgentLauncher({
             {builder}
 
             {creating && (
-              <input
+              <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('launcher.presetNamePlaceholder')}
-                className="mt-4 w-full rounded-md border border-edge bg-panel px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-none"
+                className="mt-4"
               />
             )}
 
             <div className="mt-5 flex gap-2">
               {creating && (
-                <button
-                  onClick={() => setCreating(false)}
-                  className="rounded-md border border-edge px-4 py-2 text-sm text-fgdim transition hover:bg-hover hover:text-fg"
-                >
+                <Button variant="secondary" onClick={() => setCreating(false)}>
                   {t('launcher.cancel')}
-                </button>
+                </Button>
               )}
-              <button
-                onClick={creating ? () => void saveAndStart() : startCustom}
+              <Button
+                className="flex-1"
                 disabled={slots.filter(Boolean).length === 0}
-                className="flex-1 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={creating ? () => void saveAndStart() : startCustom}
               >
                 {creating ? t('launcher.saveAndStart') : t('launcher.start')}
-              </button>
+              </Button>
             </div>
           </>
         )}

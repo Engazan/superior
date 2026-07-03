@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { useI18n } from '../i18n'
+import { COLOR_SWATCHES } from './ui'
 import type { Profile } from '../types'
 
 interface Props {
@@ -12,9 +13,6 @@ interface Props {
   onRemove: (id: string) => void
   onClose: () => void
 }
-
-// Same palette the folder editor offers, so profile + folder accents stay coherent.
-const PROFILE_COLOR_SWATCHES = ['#D97757', '#10A37F', '#3B82F6', '#A855F7', '#EAB308', '#EF4444']
 
 function ProfileGlyph(): JSX.Element {
   return (
@@ -289,7 +287,7 @@ export function ProfileManager({
                   className="fixed z-50 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {PROFILE_COLOR_SWATCHES.map((c) => (
+                    {COLOR_SWATCHES.map((c) => (
                       <button
                         key={c}
                         type="button"

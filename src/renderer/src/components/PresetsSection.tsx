@@ -1,7 +1,7 @@
 import { useEffect, useState, type DragEvent } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { PresetForm } from './PresetForm'
-import { Toggle } from './Toggle'
+import { Button, GripIcon, IconButton, PencilIcon, Toggle, TrashIcon } from './ui'
 import { CustomMemoryPresets } from './CustomMemoryPresets'
 import { CliToolsHealth } from './CliToolsHealth'
 import { useI18n } from '../i18n'
@@ -33,19 +33,6 @@ function reorder(ids: string[], fromId: string, toId: string, after: boolean): s
 const TRANSPARENT_DRAG_IMAGE = new Image()
 TRANSPARENT_DRAG_IMAGE.src =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-
-function GripIcon(): JSX.Element {
-  return (
-    <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden>
-      <circle cx="3" cy="4" r="1.2" />
-      <circle cx="7" cy="4" r="1.2" />
-      <circle cx="3" cy="8" r="1.2" />
-      <circle cx="7" cy="8" r="1.2" />
-      <circle cx="3" cy="12" r="1.2" />
-      <circle cx="7" cy="12" r="1.2" />
-    </svg>
-  )
-}
 
 export function PresetsSection({
   presets,
@@ -99,12 +86,7 @@ export function PresetsSection({
     <div className="relative h-full">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-fg">{t('settings.terminalPresets')}</h2>
-        <button
-          className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-500"
-          onClick={() => setEditing('new')}
-        >
-          {t('presets.add')}
-        </button>
+        <Button onClick={() => setEditing('new')}>{t('presets.add')}</Button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-edge">
@@ -165,28 +147,29 @@ export function PresetsSection({
                       <Toggle
                         checked={p.active}
                         onChange={(checked) => onToggleActive(p.id, checked)}
-                        aria-label={`Mark ${p.name} active`}
+                        label={`Mark ${p.name} active`}
                       />
                     </div>
                   </td>
                   <td className="px-2 py-2">
                     <div className="flex justify-end gap-1">
-                      <button
-                        className="rounded p-1 text-fgdim hover:bg-hover hover:text-fg"
+                      <IconButton
+                        size="sm"
+                        label={`${t('common.edit')} ${p.name}`}
                         title={t('common.edit')}
-                        aria-label={`${t('common.edit')} ${p.name}`}
                         onClick={() => setEditing(p)}
                       >
-                        ✎
-                      </button>
-                      <button
-                        className="rounded p-1 text-fgdim hover:bg-hover hover:text-red-400"
+                        <PencilIcon size={13} />
+                      </IconButton>
+                      <IconButton
+                        size="sm"
+                        variant="danger-ghost"
+                        label={`${t('common.delete')} ${p.name}`}
                         title={t('common.delete')}
-                        aria-label={`${t('common.delete')} ${p.name}`}
                         onClick={() => setConfirmDelete(p)}
                       >
-                        ✕
-                      </button>
+                        <TrashIcon size={13} />
+                      </IconButton>
                     </div>
                   </td>
                 </tr>
@@ -226,21 +209,18 @@ export function PresetsSection({
               {t('presets.deleteConfirm', { name: confirmDelete.name })}
             </p>
             <div className="flex justify-end gap-2">
-              <button
-                className="rounded-md px-3 py-1.5 text-sm text-fgdim hover:text-fg"
-                onClick={() => setConfirmDelete(null)}
-              >
+              <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
                 {t('common.cancel')}
-              </button>
-              <button
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-red-500"
+              </Button>
+              <Button
+                variant="danger"
                 onClick={() => {
                   onDelete(confirmDelete.id)
                   setConfirmDelete(null)
                 }}
               >
                 {t('common.delete')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

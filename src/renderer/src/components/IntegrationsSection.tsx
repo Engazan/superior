@@ -6,10 +6,12 @@ import {
   providerLabel,
   providerLogo
 } from '../integrations'
+import { Button, EmptyState, Input } from './ui'
 import type { Integration, IntegrationProvider, IntegrationTestResult } from '../types'
 
-const INPUT_CLASS =
-  'w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:ring-2 focus:ring-accentBorder'
+/** Shared look for the provider <select>; text inputs use the ui/Input primitive. */
+const SELECT_CLASS =
+  'w-full rounded-md border border-edge bg-bar px-2.5 py-2 text-sm text-fg outline-none transition focus-visible:ring-2 focus-visible:ring-accent/50'
 
 /** A blank draft for the "add integration" form. */
 function emptyDraft(): Integration {
@@ -87,7 +89,7 @@ function IntegrationForm({
             <select
               value={draft.provider}
               onChange={(e) => patch({ provider: e.target.value as IntegrationProvider })}
-              className={INPUT_CLASS}
+              className={SELECT_CLASS}
             >
               {INTEGRATION_PROVIDERS.map((p) => (
                 <option key={p.value} value={p.value}>
@@ -102,11 +104,10 @@ function IntegrationForm({
           <label className="mb-1.5 block text-sm font-medium text-fg">
             {t('integrations.name')}
           </label>
-          <input
+          <Input
             value={draft.name}
             onChange={(e) => patch({ name: e.target.value })}
             placeholder={t('integrations.namePlaceholder')}
-            className={INPUT_CLASS}
           />
         </div>
 
@@ -115,7 +116,7 @@ function IntegrationForm({
             {t('integrations.url')}
             {!urlRequired && <span className="ml-1 text-fgmuted">({t('integrations.optional')})</span>}
           </label>
-          <input
+          <Input
             value={draft.baseUrl}
             onChange={(e) => patch({ baseUrl: e.target.value })}
             placeholder={
@@ -125,7 +126,6 @@ function IntegrationForm({
                   ? 'https://gitlab.com'
                   : 'http://localhost:3000'
             }
-            className={INPUT_CLASS}
             spellCheck={false}
           />
         </div>
@@ -134,34 +134,34 @@ function IntegrationForm({
           <label className="mb-1.5 block text-sm font-medium text-fg">
             {t('integrations.token')}
           </label>
-          <input
+          <Input
             type="password"
             value={draft.token}
             onChange={(e) => patch({ token: e.target.value })}
             placeholder={t('integrations.tokenPlaceholder')}
-            className={INPUT_CLASS}
             spellCheck={false}
             autoComplete="off"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
+          <Button
+            variant="secondary"
+            loading={test.phase === 'testing'}
+            disabled={!draft.token.trim()}
             onClick={runTest}
-            disabled={!draft.token.trim() || test.phase === 'testing'}
-            className="rounded-lg border border-edge px-3 py-1.5 text-sm font-medium text-fg transition hover:bg-hover disabled:cursor-default disabled:opacity-50"
           >
             {test.phase === 'testing' ? t('integrations.testing') : t('integrations.test')}
-          </button>
+          </Button>
           {test.phase === 'done' && test.result.ok && (
-            <span className="text-sm text-emerald-400">
+            <span className="text-sm text-status">
               {test.result.username
                 ? t('integrations.testOk', { user: test.result.username })
                 : t('integrations.testOkNoUser')}
             </span>
           )}
           {test.phase === 'done' && !test.result.ok && (
-            <span className="text-sm text-red-400">
+            <span className="text-sm text-danger">
               {describeIntegrationError(test.result.error ?? 'network', t)}
             </span>
           )}
@@ -169,19 +169,22 @@ function IntegrationForm({
       </div>
 
       <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={onCancel}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg"
-        >
+        <Button variant="ghost" onClick={onCancel}>
           {t('integrations.cancel')}
-        </button>
-        <button
-          onClick={() => onSave({ ...draft, name: draft.name.trim(), baseUrl: draft.baseUrl.trim(), token: draft.token.trim() })}
+        </Button>
+        <Button
           disabled={!canSave}
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-default disabled:opacity-50"
+          onClick={() =>
+            onSave({
+              ...draft,
+              name: draft.name.trim(),
+              baseUrl: draft.baseUrl.trim(),
+              token: draft.token.trim()
+            })
+          }
         >
           {t('integrations.save')}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -220,9 +223,9 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
 
       <div className="max-w-xl">
         {integrations.length === 0 && !editing && (
-          <p className="mb-4 rounded-lg border border-dashed border-edge px-4 py-6 text-center text-sm text-fgmuted">
-            {t('integrations.empty')}
-          </p>
+          <div className="mb-4">
+            <EmptyState title={t('integrations.empty')} />
+          </div>
         )}
 
         <ul className="space-y-2">
@@ -243,15 +246,12 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
                   {it.baseUrl || 'https://api.github.com'}
                 </div>
               </div>
-              <button
-                onClick={() => setEditing(it)}
-                className="rounded-md px-2 py-1 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setEditing(it)}>
                 {t('integrations.edit')}
-              </button>
+              </Button>
               <button
                 onClick={() => remove(it.id)}
-                className="rounded-md px-2 py-1 text-xs font-medium text-red-400/80 transition hover:bg-hover hover:text-red-300"
+                className="rounded-md px-2 py-1 text-xs font-medium text-danger/80 transition hover:bg-dangerBg hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 {t('integrations.remove')}
               </button>
@@ -269,13 +269,10 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
             />
           </div>
         ) : (
-          <button
-            onClick={() => setEditing(emptyDraft())}
-            className="mt-3 flex items-center gap-2 rounded-lg border border-edge px-3 py-2 text-sm font-medium text-fg transition hover:bg-hover"
-          >
+          <Button variant="secondary" className="mt-3" onClick={() => setEditing(emptyDraft())}>
             <span className="text-base leading-none text-accent">+</span>
             {t('integrations.add')}
-          </button>
+          </Button>
         )}
       </div>
     </>

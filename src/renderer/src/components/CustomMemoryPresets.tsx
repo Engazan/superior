@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
+import { Button, Input } from './ui'
 import type {
   CustomMemoryPreset,
   CustomMemoryProvider,
@@ -11,9 +12,6 @@ import type {
 interface Props {
   onPresetsChanged: (state: PresetsState) => void
 }
-
-const inputCls =
-  'w-full rounded-md border border-edge bg-bar px-3 py-1.5 text-sm text-fg outline-none focus:border-accent'
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -100,19 +98,20 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
           <h3 className="text-base font-semibold text-fg">{t('memory.title')}</h3>
           <p className="mt-1 text-xs text-fgdim">{t('memory.description')}</p>
         </div>
-        <button
-          className="shrink-0 rounded-md border border-edge bg-bar px-3 py-1.5 text-sm font-medium text-fg transition hover:bg-hover"
+        <Button
+          variant="secondary"
+          className="shrink-0"
           onClick={() => {
             setError(null)
             setCreating(true)
           }}
         >
           {t('memory.add')}
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-500">
+        <div className="mb-3 rounded-md border border-dangerBorder bg-dangerBg px-3 py-2 text-xs text-danger">
           {error}
         </div>
       )}
@@ -157,13 +156,14 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                       })}
                     </span>
                   ) : (
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       disabled={busyId === item.id}
-                      className="rounded-md border border-edge px-2.5 py-1 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:opacity-50"
                       onClick={() => void addAlias(item)}
                     >
                       {t('memory.addAlias')}
-                    </button>
+                    </Button>
                   )}
 
                   {item.terminalPresetExists ? (
@@ -244,9 +244,8 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                 <label className="mb-1 block text-xs font-medium text-fgdim">
                   {t('memory.name')}
                 </label>
-                <input
+                <Input
                   autoFocus
-                  className={inputCls}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   onKeyDown={(event) => {
@@ -263,19 +262,16 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button
-                className="rounded-md px-3 py-1.5 text-sm text-fgdim hover:text-fg"
-                onClick={() => setCreating(false)}
-              >
+              <Button variant="ghost" onClick={() => setCreating(false)}>
                 {t('common.cancel')}
-              </button>
-              <button
-                disabled={!name.trim() || busyId === 'create'}
-                className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+              </Button>
+              <Button
+                disabled={!name.trim()}
+                loading={busyId === 'create'}
                 onClick={() => void create()}
               >
                 {busyId === 'create' ? t('memory.creating') : t('memory.create')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

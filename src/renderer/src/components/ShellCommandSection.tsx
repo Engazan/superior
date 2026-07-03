@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
+import { Button, StatusPill } from './ui'
 import type { ShellCommandStatus } from '../types'
 
 /**
@@ -55,25 +56,21 @@ export function ShellCommandSection(): JSX.Element {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => void install()}
-            disabled={busy}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-          >
+          <Button loading={busy} onClick={() => void install()}>
             {busy ? t('shell.installing') : installed ? t('shell.reinstall') : t('shell.install')}
-          </button>
+          </Button>
           {installed ? (
-            <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400">
+            <StatusPill tone="success" dot>
               {t('shell.available')}
-            </span>
+            </StatusPill>
           ) : status?.installed ? (
-            <span className="rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-400">
+            <StatusPill tone="warn" dot>
               {t('shell.notOnPath')}
-            </span>
+            </StatusPill>
           ) : (
-            <span className="rounded-md bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-400">
+            <StatusPill tone="danger" dot>
               {t('shell.notInstalled')}
-            </span>
+            </StatusPill>
           )}
         </div>
 

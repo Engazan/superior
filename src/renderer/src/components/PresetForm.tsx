@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { BUILTIN_ICONS } from '@shared/icons'
 import { useI18n } from '../i18n'
+import { Button, COLOR_SWATCHES, Input } from './ui'
 import type { PresetIconType, TerminalPreset } from '../types'
 
 interface Props {
@@ -11,12 +12,6 @@ interface Props {
   onCancel: () => void
   onPickImage: () => Promise<{ dataUrl: string } | null>
 }
-
-const inputCls =
-  'w-full rounded-md border border-edge bg-bar px-3 py-1.5 text-sm text-fg outline-none focus:border-sky-500'
-
-/** Quick-pick tints for the top bar; users can also choose any custom color. */
-const COLOR_SWATCHES = ['#D97757', '#10A37F', '#3B82F6', '#A855F7', '#EAB308', '#EF4444']
 
 export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JSX.Element {
   const { t } = useI18n()
@@ -93,7 +88,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
                     }}
                     title={bi.label}
                     className={`flex flex-col items-center gap-1 rounded-md border p-1.5 ${
-                      selected ? 'border-sky-500 bg-bar' : 'border-edge hover:bg-hover'
+                      selected ? 'border-accent bg-bar' : 'border-edge hover:bg-hover'
                     }`}
                   >
                     <img src={bi.dataUrl} alt="" className="h-6 w-6" />
@@ -115,12 +110,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
           {/* Name */}
           <div>
             <label className="mb-1 block text-xs font-medium text-fgdim">{t('form.name')}</label>
-            <input
-              className={inputCls}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Claude"
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Claude" />
           </div>
 
           {/* Nickname — optional; pre-fills the terminal's nickname on launch. */}
@@ -128,8 +118,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
             <label className="mb-1 block text-xs font-medium text-fgdim">
               {t('form.nickname')}
             </label>
-            <input
-              className={inputCls}
+            <Input
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder={t('form.nicknamePlaceholder')}
@@ -141,8 +130,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
             <label className="mb-1 block text-xs font-medium text-fgdim">
               {t('form.description')}
             </label>
-            <input
-              className={inputCls}
+            <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Anthropic Claude CLI"
@@ -154,8 +142,8 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
             <label className="mb-1 block text-xs font-medium text-fgdim">
               {t('form.command')}
             </label>
-            <input
-              className={`${inputCls} font-mono`}
+            <Input
+              className="font-mono"
               value={command}
               onChange={(e) => setCommand(e.target.value)}
               placeholder="claude"
@@ -171,7 +159,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
                 onClick={() => setColor(null)}
                 className={`rounded-md border px-2 py-1 text-xs ${
                   color === null
-                    ? 'border-sky-500 bg-bar text-fg'
+                    ? 'border-accent bg-bar text-fg'
                     : 'border-edge text-fgdim hover:bg-hover'
                 }`}
               >
@@ -185,7 +173,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
                   title={c}
                   className={`h-7 w-7 rounded-md border ${
                     color?.toLowerCase() === c.toLowerCase()
-                      ? 'border-sky-500 ring-1 ring-sky-500'
+                      ? 'border-accent ring-1 ring-accent'
                       : 'border-edge'
                   }`}
                   style={{ backgroundColor: c }}
@@ -211,19 +199,12 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-md px-3 py-1.5 text-sm text-fgdim hover:text-fg"
-            onClick={onCancel}
-          >
+          <Button variant="ghost" onClick={onCancel}>
             {t('common.cancel')}
-          </button>
-          <button
-            disabled={!canSave}
-            className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={submit}
-          >
+          </Button>
+          <Button disabled={!canSave} onClick={submit}>
             {t('common.save')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

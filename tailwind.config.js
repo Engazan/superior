@@ -15,9 +15,18 @@ module.exports = {
         accent: 'var(--c-accent)',
         accentBg: 'var(--c-accent-bg)',
         accentBorder: 'var(--c-accent-border)',
+        accentSolid: 'var(--c-accent-solid)',
+        accentSolidHover: 'var(--c-accent-solid-hover)',
         status: 'var(--c-status)',
         statusBg: 'var(--c-status-bg)',
-        statusBorder: 'var(--c-status-border)'
+        statusBorder: 'var(--c-status-border)',
+        danger: 'var(--c-danger)',
+        dangerSolid: 'var(--c-danger-solid)',
+        dangerBg: 'var(--c-danger-bg)',
+        dangerBorder: 'var(--c-danger-border)',
+        warn: 'var(--c-warn)',
+        warnBg: 'var(--c-warn-bg)',
+        warnBorder: 'var(--c-warn-border)'
       }
     }
   },

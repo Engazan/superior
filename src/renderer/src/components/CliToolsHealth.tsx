@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
+import { Button, StatusPill } from './ui'
 import type { CliToolId, CliToolStatus } from '../types'
 
 /**
@@ -43,12 +44,9 @@ export function CliToolsHealth(): JSX.Element {
     <div className="mt-8">
       <div className="mb-1 flex items-center justify-between">
         <h3 className="text-base font-semibold text-fg">{t('cli.title')}</h3>
-        <button
-          onClick={() => void refresh(true)}
-          className="rounded-md px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
-        >
+        <Button variant="ghost" size="sm" onClick={() => void refresh(true)}>
           {t('cli.recheck')}
-        </button>
+        </Button>
       </div>
       <p className="mb-3 max-w-xl text-xs text-fgdim">{t('cli.description')}</p>
 
@@ -75,28 +73,28 @@ export function CliToolsHealth(): JSX.Element {
                   </div>
 
                   {tool.availableInShell ? (
-                    <span className="shrink-0 rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400">
+                    <StatusPill tone="success" dot>
                       {t('cli.available')}
-                    </span>
+                    </StatusPill>
                   ) : tool.installed ? (
                     <>
-                      <span className="shrink-0 rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-400">
+                      <StatusPill tone="warn" dot>
                         {t('cli.notOnPath')}
-                      </span>
+                      </StatusPill>
                       {tool.fixable && (
-                        <button
+                        <Button
+                          size="sm"
+                          loading={busyId === tool.id}
                           onClick={() => void fix(tool.id)}
-                          disabled={busyId === tool.id}
-                          className="shrink-0 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
                         >
                           {busyId === tool.id ? t('cli.fixing') : t('cli.fix')}
-                        </button>
+                        </Button>
                       )}
                     </>
                   ) : (
-                    <span className="shrink-0 rounded-md bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-400">
+                    <StatusPill tone="danger" dot>
                       {t('cli.notFound')}
-                    </span>
+                    </StatusPill>
                   )}
                 </li>
               )

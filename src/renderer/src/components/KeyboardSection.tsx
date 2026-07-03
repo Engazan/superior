@@ -73,9 +73,9 @@ export function KeyboardSection(): JSX.Element {
                 <span className="min-w-0 flex-1 truncate text-fg">{t(labelKey)}</span>
                 <button
                   onClick={() => setRecordingFor(isRecording ? null : id)}
-                  className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition ${
+                  className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                     isRecording
-                      ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
+                      ? 'border-statusBorder bg-statusBg text-status'
                       : 'border-edge text-fg hover:bg-hover'
                   }`}
                 >
