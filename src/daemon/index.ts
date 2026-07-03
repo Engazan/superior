@@ -269,6 +269,12 @@ function handle(conn: Conn, msg: ClientMessage): void {
       conn.attached.delete(msg.id)
       break
     }
+    case 'update': {
+      // Patch persisted metadata (e.g. the user's nickname) so it survives restarts.
+      const s = sessions.get(msg.id)
+      if (s) s.meta = { ...s.meta, ...msg.meta }
+      break
+    }
     case 'input': {
       const s = sessions.get(msg.id)
       if (!s) break

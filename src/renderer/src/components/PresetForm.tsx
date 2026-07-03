@@ -21,6 +21,7 @@ const COLOR_SWATCHES = ['#D97757', '#10A37F', '#3B82F6', '#A855F7', '#EAB308', '
 export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState(preset?.name ?? '')
+  const [nickname, setNickname] = useState(preset?.nickname ?? '')
   const [description, setDescription] = useState(preset?.description ?? '')
   const [command, setCommand] = useState(preset?.command ?? '')
   const [iconType, setIconType] = useState<PresetIconType>(preset?.iconType ?? 'image')
@@ -43,6 +44,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
     onSave({
       id: preset?.id ?? crypto.randomUUID(),
       name: name.trim(),
+      nickname: nickname.trim() || undefined,
       description: description.trim(),
       command: command.trim(),
       iconType,
@@ -118,6 +120,19 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Claude"
+            />
+          </div>
+
+          {/* Nickname — optional; pre-fills the terminal's nickname on launch. */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-fgdim">
+              {t('form.nickname')}
+            </label>
+            <input
+              className={inputCls}
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder={t('form.nicknamePlaceholder')}
             />
           </div>
 

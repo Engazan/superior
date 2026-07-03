@@ -429,6 +429,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       const res = await window.api.startAgent({
         command: preset.command,
         label: preset.name,
+        nickname: preset.nickname,
         iconType: preset.iconType,
         icon: preset.icon,
         color: preset.color,
@@ -448,7 +449,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
 
   // Fill the active tab's grid from the launch wizard: spawn each chosen preset.
   const startLayout = useCallback(
-    async ({ presetIds }: LaunchConfig) => {
+    async ({ presetIds, nicknames }: LaunchConfig) => {
       setError(null)
       if (!activeWorkspace || !effectiveDir) {
         setError(t('error.noWorkspace'))
@@ -457,12 +458,14 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       const wsId = activeWorkspace.id
       const tabId = ensureActiveTab(wsId)
       const launched: AgentSession[] = []
-      for (const id of presetIds) {
-        const preset = presets.find((p) => p.id === id)
+      for (let i = 0; i < presetIds.length; i++) {
+        const preset = presets.find((p) => p.id === presetIds[i])
         if (!preset) continue
         const res = await window.api.startAgent({
           command: preset.command,
           label: preset.name,
+          // The slot's nickname wins; a blank slot falls back to the preset's own.
+          nickname: nicknames?.[i]?.trim() || preset.nickname,
           iconType: preset.iconType,
           icon: preset.icon,
           color: preset.color,
@@ -504,6 +507,16 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
   }, [])
 
+  // Rename a session (its user-set nickname). Updates local state and persists to
+  // the daemon so the nickname survives an app restart. An empty string clears it.
+  const setSessionNickname = useCallback((id: string, nickname: string) => {
+    const trimmed = nickname.trim()
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, nickname: trimmed || undefined } : s))
+    )
+    void window.api.updateSessionNickname(id, trimmed)
+  }, [])
+
   // Re-run an exited session's original preset command in place. The dead daemon
   // session is already gone (it deletes itself on exit), so we spawn a fresh one
   // and swap it into the same slot — preserving grid/tab position and focus — so
@@ -521,6 +534,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       const res = await window.api.startAgent({
         command: prev.command,
         label: prev.label,
+        // Carry the user's nickname onto the freshly spawned session (new id).
+        nickname: prev.nickname,
         iconType: prev.iconType,
         icon: prev.icon,
         color: prev.color,
@@ -755,6 +770,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     startLayout,
     setGridLayout,
     updateSession,
+    setSessionNickname,
     restartSession,
     closeSession,
     addTab,

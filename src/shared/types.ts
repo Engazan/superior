@@ -87,6 +87,8 @@ export type PresetIconType = 'emoji' | 'image'
 export interface TerminalPreset {
   id: string
   name: string
+  /** optional default nickname applied to terminals launched from this preset */
+  nickname?: string
   description: string
   command: string
   iconType: PresetIconType
@@ -114,6 +116,11 @@ export interface LayoutPreset {
   name: string
   /** ordered preset ids, one per grid slot; its length is the terminal count */
   presetIds: string[]
+  /**
+   * Optional per-slot nicknames, aligned with {@link presetIds} by index. A blank
+   * entry (or an absent array) means the slot uses its preset's own nickname.
+   */
+  nicknames?: string[]
   createdAt: number
 }
 
@@ -305,6 +312,8 @@ export interface AgentSession {
   id: string
   /** display label (the preset name) */
   label: string
+  /** user-set nickname shown after the label; absent until the user names it */
+  nickname?: string
   /** the command run in the workspace */
   command: string
   iconType?: PresetIconType
@@ -354,6 +363,8 @@ export type TabsState = Record<string, WorkspaceTabs>
 export interface StartAgentArgs {
   command: string
   label: string
+  /** optional initial nickname, shown after the label */
+  nickname?: string
   iconType?: PresetIconType
   icon?: string
   color?: string
@@ -733,6 +744,7 @@ export const IPC = {
   AGENT_USAGE: 'agent:usage',
   AGENT_USAGE_GET: 'agent:usage-get',
   AGENT_RESTORE: 'agent:restore',
+  AGENT_UPDATE_META: 'agent:update-meta',
   AGENT_ATTACH: 'agent:attach',
   AGENT_DETACH: 'agent:detach',
   TABS_GET: 'tabs:get',

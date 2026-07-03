@@ -12,6 +12,8 @@ import { getSettings } from './settings.service'
  */
 export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult> {
   const { command, label, cwd, workspaceId, tabId } = args
+  // Blank nicknames are stored as absent so the label shows alone.
+  const nickname = args.nickname?.trim() || undefined
 
   if (!cwd) {
     return { error: 'No workspace selected. Open a folder first.' }
@@ -41,6 +43,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       rows,
       meta: {
         label,
+        nickname,
         iconType: args.iconType,
         icon: args.icon,
         color: args.color,
@@ -58,6 +61,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
     const session: AgentSession = {
       id,
       label,
+      nickname,
       command,
       iconType: args.iconType,
       icon: args.icon,
@@ -97,6 +101,7 @@ export async function restoreSessions(): Promise<AgentSession[]> {
   return list.map((s) => ({
     id: s.id,
     label: s.meta.label,
+    nickname: s.meta.nickname,
     command: s.meta.command,
     iconType: s.meta.iconType,
     icon: s.meta.icon,
@@ -114,6 +119,11 @@ export async function restoreSessions(): Promise<AgentSession[]> {
 
 export function killAgent(id: string): void {
   daemonClient.kill(id)
+}
+
+/** Persist a session's nickname in the daemon so it survives an app restart. */
+export function updateSessionNickname(id: string, nickname: string): void {
+  daemonClient.updateMeta(id, { nickname })
 }
 
 /**

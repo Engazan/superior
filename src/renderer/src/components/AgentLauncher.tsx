@@ -6,6 +6,8 @@ import type { LayoutPreset, TerminalPreset } from '../types'
 
 export interface LaunchConfig {
   presetIds: string[]
+  /** per-slot nicknames aligned with presetIds by index; blank = use preset default */
+  nicknames?: string[]
 }
 
 interface Props {
@@ -65,6 +67,9 @@ export function AgentLauncher({
     const first = active[0]?.id ?? ''
     return first ? [first] : []
   })
+  // Per-slot nicknames, aligned with `slots` by index. Blank means "use the
+  // preset's own nickname" (resolved at launch time).
+  const [nicks, setNicks] = useState<string[]>(() => (active[0]?.id ? [''] : []))
 
   const defaultSlot = (i: number): string => (active[i] ?? active[0])?.id ?? ''
 
@@ -72,17 +77,35 @@ export function AgentLauncher({
   const resetBuilder = (): void => {
     setCount(1)
     setSlots(active[0]?.id ? [active[0].id] : [])
+    setNicks(active[0]?.id ? [''] : [])
     setName('')
   }
 
-  // Resize the slot list, keeping existing choices for slots that survive.
+  // Resize the slot + nickname lists, keeping existing choices for slots that survive.
   const chooseCount = (n: number): void => {
     setCount(n)
     setSlots((prev) => Array.from({ length: n }, (_, i) => prev[i] ?? defaultSlot(i)))
+    setNicks((prev) => Array.from({ length: n }, (_, i) => prev[i] ?? ''))
   }
 
   const setSlot = (i: number, id: string): void =>
     setSlots((prev) => prev.map((v, idx) => (idx === i ? id : v)))
+
+  const setNick = (i: number, v: string): void =>
+    setNicks((prev) => prev.map((x, idx) => (idx === i ? v : x)))
+
+  // Collapse the builder state into a launch config, dropping empty slots and
+  // keeping each surviving slot's nickname aligned by index.
+  const buildConfig = (): LaunchConfig => {
+    const presetIds: string[] = []
+    const nicknames: string[] = []
+    slots.forEach((id, i) => {
+      if (!id) return
+      presetIds.push(id)
+      nicknames.push((nicks[i] ?? '').trim())
+    })
+    return { presetIds, nicknames }
+  }
 
   const chooseTab = (next: Tab): void => {
     setTab(next)
@@ -95,25 +118,27 @@ export function AgentLauncher({
     setCreating(true)
   }
 
-  const startCustom = (): void => onStart({ presetIds: slots.filter(Boolean) })
+  const startCustom = (): void => onStart(buildConfig())
 
   // Save the built layout as a preset, then launch it.
   const saveAndStart = async (): Promise<void> => {
-    const presetIds = slots.filter(Boolean)
+    const { presetIds, nicknames } = buildConfig()
     if (presetIds.length === 0) return
     await onSaveLayoutPreset({
       id: crypto.randomUUID(),
       name: name.trim() || t('launcher.untitledPreset'),
       presetIds,
+      // Only persist nicknames when at least one slot has a custom one.
+      nicknames: nicknames?.some(Boolean) ? nicknames : undefined,
       createdAt: Date.now()
     })
     setCreating(false)
-    onStart({ presetIds })
+    onStart({ presetIds, nicknames })
   }
 
   const startSelectedLayout = (): void => {
     const layout = layoutPresets.find((l) => l.id === selectedLayoutId)
-    if (layout) onStart({ presetIds: layout.presetIds.filter(Boolean) })
+    if (layout) onStart({ presetIds: layout.presetIds.filter(Boolean), nicknames: layout.nicknames })
   }
 
   if (active.length === 0) {
@@ -148,30 +173,37 @@ export function AgentLauncher({
       </div>
 
       <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
-        {slots.map((id, i) => (
-          <label key={i} className="flex items-center gap-3">
-            <span className="w-20 shrink-0 text-xs text-fgmuted">
-              {t('launcher.terminalN', { n: i + 1 })}
-            </span>
-            <span className="shrink-0">
-              {(() => {
-                const p = active.find((x) => x.id === id)
-                return <PresetIcon iconType={p?.iconType} icon={p?.icon} className="h-4 w-4 text-base" />
-              })()}
-            </span>
-            <select
-              value={id}
-              onChange={(e) => setSlot(i, e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg focus:border-fgdim focus:outline-none"
-            >
-              {active.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
+        {slots.map((id, i) => {
+          const p = active.find((x) => x.id === id)
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-16 shrink-0 text-xs text-fgmuted">
+                {t('launcher.terminalN', { n: i + 1 })}
+              </span>
+              <span className="shrink-0">
+                <PresetIcon iconType={p?.iconType} icon={p?.icon} className="h-4 w-4 text-base" />
+              </span>
+              <select
+                value={id}
+                onChange={(e) => setSlot(i, e.target.value)}
+                className="min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg focus:border-fgdim focus:outline-none"
+              >
+                {active.map((pr) => (
+                  <option key={pr.id} value={pr.id}>
+                    {pr.name}
+                  </option>
+                ))}
+              </select>
+              {/* Optional per-slot nickname; placeholder hints the preset's own default. */}
+              <input
+                value={nicks[i] ?? ''}
+                onChange={(e) => setNick(i, e.target.value)}
+                placeholder={p?.nickname || t('launcher.nicknamePlaceholder')}
+                className="w-24 shrink-0 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-none"
+              />
+            </div>
+          )
+        })}
       </div>
     </>
   )

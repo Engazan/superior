@@ -6,7 +6,12 @@ import {
   type StartAgentArgs,
   type StartAgentResult
 } from '@shared/types'
-import { killAgent, restoreSessions, startAgent } from '../services/agent.service'
+import {
+  killAgent,
+  restoreSessions,
+  startAgent,
+  updateSessionNickname
+} from '../services/agent.service'
 import { daemonClient } from '../services/daemonClient'
 import { getUsageSnapshots } from '../services/usage.service'
 
@@ -22,6 +27,13 @@ export function registerAgentIpc(): void {
   ipcMain.handle(IPC.AGENT_KILL, (_event, id: string): void => {
     killAgent(id)
   })
+
+  ipcMain.handle(
+    IPC.AGENT_UPDATE_META,
+    (_event, payload: { id: string; nickname: string }): void => {
+      updateSessionNickname(payload.id, payload.nickname)
+    }
+  )
 
   ipcMain.on(IPC.AGENT_ATTACH, (_event, id: string) => {
     daemonClient.attach(id)

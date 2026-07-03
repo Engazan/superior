@@ -220,6 +220,9 @@ export const daemonClient = {
   detach(id: string): void {
     void send({ t: 'detach', id })
   },
+  updateMeta(id: string, meta: Partial<DaemonSessionMeta>): void {
+    void send({ t: 'update', id, meta })
+  },
   input(id: string, data: string): void {
     void send({ t: 'input', id, data })
   },

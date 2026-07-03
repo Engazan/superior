@@ -3,6 +3,8 @@ import type { AgentStatus, PresetIconType } from './types'
 /** Metadata the app needs to rebuild a session's UI after a restart. */
 export interface DaemonSessionMeta {
   label: string
+  /** user-set nickname shown after the label; absent until the user names it */
+  nickname?: string
   iconType?: PresetIconType
   icon?: string
   color?: string
@@ -41,6 +43,7 @@ export type ClientMessage =
     }
   | { t: 'attach'; id: string }
   | { t: 'detach'; id: string }
+  | { t: 'update'; id: string; meta: Partial<DaemonSessionMeta> }
   | { t: 'input'; id: string; data: string }
   | { t: 'resize'; id: string; cols: number; rows: number }
   | { t: 'kill'; id: string }

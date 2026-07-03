@@ -46,6 +46,8 @@ interface Props {
   /** re-run an exited session's original preset command in place */
   onRestart: (id: string) => void
   onSessionUpdate: (id: string, patch: Partial<AgentSession>) => void
+  /** set a terminal's user nickname (persisted); empty string clears it */
+  onSetNickname: (id: string, nickname: string) => void
   /** launch wizard result — fill the active tab's grid */
   onStart: (config: LaunchConfig) => void
   /** add a single terminal (another grid cell) to the active tab */
@@ -87,6 +89,7 @@ export function TerminalPanel({
   onClose,
   onRestart,
   onSessionUpdate,
+  onSetNickname,
   onStart,
   onLaunch,
   onManagePresets,
@@ -285,6 +288,7 @@ export function TerminalPanel({
               onSelect={onSelect}
               onClose={onClose}
               onRestart={onRestart}
+              onSetNickname={onSetNickname}
               onToggleMaximize={onToggleMaximize}
               onExit={handleExit}
             />

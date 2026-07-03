@@ -382,6 +382,11 @@ const api = {
     return ipcRenderer.invoke(IPC.AGENT_RESTORE)
   },
 
+  /** Persist a session's nickname in the daemon (survives restart). */
+  updateSessionNickname(id: string, nickname: string): Promise<void> {
+    return ipcRenderer.invoke(IPC.AGENT_UPDATE_META, { id, nickname })
+  },
+
   attach(id: string): void {
     ipcRenderer.send(IPC.AGENT_ATTACH, id)
   },

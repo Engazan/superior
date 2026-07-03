@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { subscribe } from '../terminalBus'
@@ -50,6 +50,8 @@ interface Props {
   onClose: (id: string) => void
   /** re-run the session's original preset command in place */
   onRestart: (id: string) => void
+  /** set this terminal's user nickname (persisted); empty string clears it */
+  onSetNickname: (id: string, nickname: string) => void
   onToggleMaximize: (id: string) => void
   onExit: (id: string, exitCode: number) => void
 }
@@ -126,6 +128,7 @@ function propsEqual(prev: Props, next: Props): boolean {
     prev.onSelect === next.onSelect &&
     prev.onClose === next.onClose &&
     prev.onRestart === next.onRestart &&
+    prev.onSetNickname === next.onSetNickname &&
     prev.onToggleMaximize === next.onToggleMaximize &&
     prev.onExit === next.onExit
   )
@@ -144,6 +147,7 @@ export const TerminalView = memo(function TerminalView({
   onSelect,
   onClose,
   onRestart,
+  onSetNickname,
   onToggleMaximize,
   onExit
 }: Props): JSX.Element {
@@ -337,6 +341,20 @@ export const TerminalView = memo(function TerminalView({
     return () => window.clearTimeout(t)
   }, [focused, session.id])
 
+  // Inline nickname editor: whether the name is being edited and its draft text.
+  const [editingNick, setEditingNick] = useState(false)
+  const [nickDraft, setNickDraft] = useState('')
+
+  const openNickEditor = (): void => {
+    setNickDraft(session.nickname ?? '')
+    setEditingNick(true)
+  }
+  const commitNick = (): void => {
+    setEditingNick(false)
+    const next = nickDraft.trim()
+    if (next !== (session.nickname ?? '')) onSetNickname(session.id, next)
+  }
+
   // highlight the focused cell only when a topbar is shown (grid mode);
   // in tabs mode a single terminal is always focused, so a border would be noise
   const highlight = focused && showBar
@@ -386,7 +404,60 @@ export const TerminalView = memo(function TerminalView({
               icon={session.icon}
               className="h-4 w-4 text-sm"
             />
-            <span className="min-w-0 flex-1 truncate">{session.label}</span>
+            {/* The terminal name always stays; only the nickname after it is edited. */}
+            <div className="group flex min-w-0 flex-1 items-center gap-1">
+              <span className="shrink truncate">{session.label}</span>
+              {editingNick ? (
+                <>
+                  <span className="shrink-0 text-fgmuted">·</span>
+                  <input
+                    autoFocus
+                    value={nickDraft}
+                    onChange={(e) => setNickDraft(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      e.stopPropagation()
+                      if (e.key === 'Enter') commitNick()
+                      else if (e.key === 'Escape') setEditingNick(false)
+                    }}
+                    onBlur={commitNick}
+                    placeholder={t('terminal.nicknamePlaceholder')}
+                    size={12}
+                    className="w-28 max-w-full shrink-0 rounded border border-edge bg-panel px-1 py-0.5 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-none"
+                  />
+                </>
+              ) : (
+                <>
+                  {session.nickname && (
+                    <span className="truncate text-fgmuted" title={session.nickname}>
+                      · {session.nickname}
+                    </span>
+                  )}
+                  {/* Pencil appears on hover; opens the inline nickname editor. */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openNickEditor()
+                    }}
+                    className="shrink-0 text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
+                    aria-label={t('terminal.setNickname')}
+                    title={t('terminal.setNickname')}
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      className="h-3 w-3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10z" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
             <UsageBadge sessionId={session.id} />
             {shortcutNumber !== undefined && shortcutNumber <= 9 && (
               <span

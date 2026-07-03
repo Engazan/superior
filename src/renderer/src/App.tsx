@@ -339,6 +339,7 @@ export default function App(): JSX.Element {
                     onClose={ws.closeSession}
                     onRestart={ws.restartSession}
                     onSessionUpdate={ws.updateSession}
+                    onSetNickname={ws.setSessionNickname}
                     onStart={ws.startLayout}
                     onLaunch={ws.launchAgent}
                     onManagePresets={openPresets}
