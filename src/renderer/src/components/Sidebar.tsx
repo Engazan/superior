@@ -1,4 +1,4 @@
-import { memo, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useI18n } from '../i18n'
 import { panelTint } from '../tint'
 import { useAttentionColor } from '../attentionColor'
@@ -100,23 +100,97 @@ export const Sidebar = memo(function Sidebar({
   const [wsMenu, setWsMenu] = useState<{ id: string; anchor: MenuAnchor } | null>(null)
   // The folder currently open in the edit dialog.
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
-  // Drag-to-reorder: the folder being dragged and the one currently hovered.
-  const [draggingFolder, setDraggingFolder] = useState<string | null>(null)
-  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
+  // Drag-to-reorder for folders, pointer-based (not HTML5 DnD): the list
+  // reorders live while dragging so the drop position is always visible, the
+  // pointer is captured by the grip so nothing can be "dragged outside" the
+  // sidebar (and there is no native drag ghost), and Escape cancels.
+  const navRef = useRef<HTMLElement | null>(null)
+  const dragStartY = useRef(0)
+  const [folderDrag, setFolderDrag] = useState<{
+    path: string
+    /** live working order of folder paths, applied to rendering while dragging */
+    order: string[]
+    /** false until the pointer moved past the click threshold */
+    active: boolean
+  } | null>(null)
 
-  // Move `dragged` to `target`'s slot and persist the resulting folder order.
-  const dropFolder = (dragged: string, target: string): void => {
-    setDragOverFolder(null)
-    setDraggingFolder(null)
-    if (dragged === target) return
-    const paths = folders.map((f) => f.path)
-    const from = paths.indexOf(dragged)
-    const to = paths.indexOf(target)
-    if (from === -1 || to === -1) return
-    paths.splice(from, 1)
-    paths.splice(to, 0, dragged)
-    onReorderFolders(paths)
+  const beginFolderDrag =
+    (path: string) =>
+    (e: React.PointerEvent<HTMLElement>): void => {
+      // Left button / primary touch only; keep the click from toggling collapse.
+      if (e.button !== 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      dragStartY.current = e.clientY
+      setFolderDrag({ path, order: folders.map((f) => f.path), active: false })
+    }
+
+  const moveFolderDrag = (e: React.PointerEvent<HTMLElement>): void => {
+    if (!folderDrag) return
+    // A few px of slack so a plain click on the grip never counts as a drag.
+    if (!folderDrag.active && Math.abs(e.clientY - dragStartY.current) < 4) return
+    const nav = navRef.current
+    if (!nav) return
+    // Keep long lists reachable: nudge the scroll when hugging an edge.
+    const box = nav.getBoundingClientRect()
+    if (e.clientY < box.top + 24) nav.scrollTop -= 8
+    else if (e.clientY > box.bottom - 24) nav.scrollTop += 8
+    // Insertion index = how many other folder blocks sit above the pointer
+    // (by their vertical midpoint), clamped to the list by construction.
+    const others = Array.from(nav.querySelectorAll<HTMLElement>('[data-folder-path]')).filter(
+      (el) => el.dataset.folderPath !== folderDrag.path
+    )
+    let index = 0
+    for (const el of others) {
+      const r = el.getBoundingClientRect()
+      if (e.clientY > r.top + r.height / 2) index++
+    }
+    const next = folderDrag.order.filter((p) => p !== folderDrag.path)
+    next.splice(index, 0, folderDrag.path)
+    if (folderDrag.active && next.join('\n') === folderDrag.order.join('\n')) return
+    setFolderDrag({ ...folderDrag, active: true, order: next })
   }
+
+  const endFolderDrag = (): void => {
+    if (!folderDrag) return
+    const current = folders.map((f) => f.path)
+    if (folderDrag.active && folderDrag.order.join('\n') !== current.join('\n')) {
+      onReorderFolders(folderDrag.order)
+    }
+    setFolderDrag(null)
+  }
+
+  // Escape aborts the drag, restoring the original order.
+  useEffect(() => {
+    if (!folderDrag?.active) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setFolderDrag(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [folderDrag?.active])
+
+  // While a drag is live, force the grabbing cursor and disable text selection
+  // everywhere (the pointer is captured, so the cursor must be set globally).
+  useEffect(() => {
+    if (!folderDrag?.active) return
+    const prevCursor = document.body.style.cursor
+    const prevSelect = document.body.style.userSelect
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
+    return () => {
+      document.body.style.cursor = prevCursor
+      document.body.style.userSelect = prevSelect
+    }
+  }, [folderDrag?.active])
+
+  // Folders in their live drag order while dragging, persisted order otherwise.
+  const displayFolders = folderDrag?.active
+    ? (folderDrag.order
+        .map((p) => folders.find((f) => f.path === p))
+        .filter(Boolean) as Folder[])
+    : folders
 
   // Persist the expand/collapse state on the folder so it survives a restart.
   const toggleFolder = (folder: Folder): void =>
@@ -383,62 +457,36 @@ export const Sidebar = memo(function Sidebar({
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto py-2">
+      <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto py-2">
         {folders.length === 0 ? (
           <p className="px-3 py-8 text-center text-xs leading-5 text-fgmuted">
             {t('sidebar.noWorkspaces')}
           </p>
         ) : (
           <div className="space-y-3">
-            {folders.map((folder) => {
+            {displayFolders.map((folder) => {
               const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
               const open = !folder.collapsed
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
+              const beingDragged = folderDrag?.active === true && folderDrag.path === folder.path
               return (
                 <div
                   key={folder.path}
+                  data-folder-path={folder.path}
                   style={folderTint(folder.color)}
-                  className={folder.color ? 'rounded-lg p-1' : undefined}
+                  className={`${folder.color ? 'rounded-lg p-1' : ''} ${
+                    beingDragged ? 'rounded-lg opacity-60 ring-1 ring-accentBorder' : ''
+                  } ${folderDrag?.active ? 'transition-transform' : ''}`}
                 >
-                  {/* Folder header — click to collapse / expand, drag to reorder */}
+                  {/* Folder header — click to collapse / expand; the grip drags to reorder */}
                   <div
-                    draggable
                     onClick={() => toggleFolder(folder)}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = 'move'
-                      e.dataTransfer.setData('text/plain', folder.path)
-                      setDraggingFolder(folder.path)
-                    }}
-                    onDragOver={(e) => {
-                      if (!draggingFolder || draggingFolder === folder.path) return
-                      e.preventDefault()
-                      e.dataTransfer.dropEffect = 'move'
-                      if (dragOverFolder !== folder.path) setDragOverFolder(folder.path)
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverFolder === folder.path) setDragOverFolder(null)
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      const dragged = e.dataTransfer.getData('text/plain') || draggingFolder
-                      if (dragged) dropFolder(dragged, folder.path)
-                    }}
-                    onDragEnd={() => {
-                      setDraggingFolder(null)
-                      setDragOverFolder(null)
-                    }}
                     title={folder.path}
-                    className={`group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover ${
-                      draggingFolder === folder.path ? 'opacity-40' : ''
-                    } ${
-                      dragOverFolder === folder.path && draggingFolder !== folder.path
-                        ? 'ring-1 ring-inset ring-accentBorder'
-                        : ''
-                    }`}
+                    className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover"
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
@@ -452,10 +500,20 @@ export const Sidebar = memo(function Sidebar({
                     {!open && folderRunning > 0 && (
                       <RunningBadge count={folderRunning} title={t('sidebar.runningTerminals')} />
                     )}
+                    {/* Drag handle — pointer capture keeps the drag inside the app,
+                        the list live-reorders under the pointer. */}
                     <span
                       title={t('sidebar.reorderFolder')}
-                      aria-hidden
-                      className="flex h-5 w-4 shrink-0 cursor-grab items-center justify-center text-fgmuted opacity-0 transition group-hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={beginFolderDrag(folder.path)}
+                      onPointerMove={moveFolderDrag}
+                      onPointerUp={endFolderDrag}
+                      onPointerCancel={() => setFolderDrag(null)}
+                      className={`flex h-5 w-4 shrink-0 touch-none items-center justify-center text-fgmuted transition ${
+                        beingDragged
+                          ? 'cursor-grabbing opacity-100'
+                          : 'cursor-grab opacity-0 group-hover:opacity-100'
+                      }`}
                     >
                       <GripIcon size={12} />
                     </span>
