@@ -6,6 +6,8 @@ import {
   type CliToolStatus,
   type CustomMemoryMutationResult,
   type CustomMemoryPreset,
+  type LayoutPreset,
+  type LayoutPresetsState,
   type PresetsState,
   type TerminalPreset
 } from '@shared/types'
@@ -17,6 +19,11 @@ import {
   savePreset,
   setPresetActive
 } from '../services/presets.service'
+import {
+  deleteLayoutPreset,
+  listLayoutPresets,
+  saveLayoutPreset
+} from '../services/layout-presets.service'
 import {
   addCustomMemoryAlias,
   addCustomMemoryTerminalPreset,
@@ -44,6 +51,18 @@ export function registerPresetsIpc(): void {
 
   ipcMain.handle(IPC.PRESETS_PICK_IMAGE, (): Promise<{ dataUrl: string } | null> =>
     pickPresetImage()
+  )
+
+  ipcMain.handle(IPC.LAYOUT_PRESETS_LIST, (): LayoutPresetsState => listLayoutPresets())
+
+  ipcMain.handle(
+    IPC.LAYOUT_PRESETS_SAVE,
+    (_e, layout: LayoutPreset): LayoutPresetsState => saveLayoutPreset(layout)
+  )
+
+  ipcMain.handle(
+    IPC.LAYOUT_PRESETS_DELETE,
+    (_e, id: string): LayoutPresetsState => deleteLayoutPreset(id)
   )
 
   ipcMain.handle(IPC.CUSTOM_MEMORY_LIST, (): CustomMemoryPreset[] =>

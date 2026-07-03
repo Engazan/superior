@@ -32,6 +32,8 @@ import {
   type Language,
   type TabsState,
   type PresetsState,
+  type LayoutPreset,
+  type LayoutPresetsState,
   type ShellCommandInstallResult,
   type ShellCommandStatus,
   type ShortcutMap,
@@ -303,6 +305,18 @@ const api = {
 
   pickPresetImage(): Promise<{ dataUrl: string } | null> {
     return ipcRenderer.invoke(IPC.PRESETS_PICK_IMAGE)
+  },
+
+  listLayoutPresets(): Promise<LayoutPresetsState> {
+    return ipcRenderer.invoke(IPC.LAYOUT_PRESETS_LIST)
+  },
+
+  saveLayoutPreset(layout: LayoutPreset): Promise<LayoutPresetsState> {
+    return ipcRenderer.invoke(IPC.LAYOUT_PRESETS_SAVE, layout)
+  },
+
+  deleteLayoutPreset(id: string): Promise<LayoutPresetsState> {
+    return ipcRenderer.invoke(IPC.LAYOUT_PRESETS_DELETE, id)
   },
 
   listCustomMemoryPresets(): Promise<CustomMemoryPreset[]> {

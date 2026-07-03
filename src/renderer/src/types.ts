@@ -44,6 +44,8 @@ export type {
   GitFileStatus,
   GitStatus,
   Language,
+  LayoutPreset,
+  LayoutPresetsState,
   PresetIconType,
   PresetsState,
   Profile,

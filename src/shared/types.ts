@@ -104,6 +104,23 @@ export interface PresetsState {
   presets: TerminalPreset[]
 }
 
+/**
+ * A saved launch layout: a grid of terminals where each slot is bound to a
+ * {@link TerminalPreset} by id. Selecting one in the launcher fills the grid and
+ * starts every terminal at once. Distinct from a TerminalPreset (a single command).
+ */
+export interface LayoutPreset {
+  id: string
+  name: string
+  /** ordered preset ids, one per grid slot; its length is the terminal count */
+  presetIds: string[]
+  createdAt: number
+}
+
+export interface LayoutPresetsState {
+  layouts: LayoutPreset[]
+}
+
 export type CustomMemoryProvider = 'claude' | 'codex'
 
 /** A provider-specific config directory discovered in the user's home folder. */
@@ -693,6 +710,9 @@ export const IPC = {
   PRESETS_REORDER: 'presets:reorder',
   PRESETS_SET_ACTIVE: 'presets:set-active',
   PRESETS_PICK_IMAGE: 'presets:pick-image',
+  LAYOUT_PRESETS_LIST: 'layout-presets:list',
+  LAYOUT_PRESETS_SAVE: 'layout-presets:save',
+  LAYOUT_PRESETS_DELETE: 'layout-presets:delete',
   CUSTOM_MEMORY_LIST: 'custom-memory:list',
   CUSTOM_MEMORY_CREATE: 'custom-memory:create',
   CUSTOM_MEMORY_ADD_ALIAS: 'custom-memory:add-alias',

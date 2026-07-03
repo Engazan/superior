@@ -15,12 +15,20 @@ import {
   type GridLayout,
   type Divider
 } from '../gridLayout'
-import type { AgentSession, TerminalPreset, WorkspaceTab } from '../types'
+import type { AgentSession, LayoutPreset, TerminalPreset, WorkspaceTab } from '../types'
 
 interface Props {
   /** All sessions across every workspace — kept mounted so buffers survive workspace switches. */
   sessions: AgentSession[]
   activeWorkspaceId: string | null
+  /** the active workspace's working directory (worktree or folder path), shown in the launcher */
+  workingDir: string | null
+  /** saved launch layouts shown in the launcher's Preset tab */
+  layoutPresets: LayoutPreset[]
+  /** persist a new/updated layout preset */
+  onSaveLayoutPreset: (layout: LayoutPreset) => Promise<void>
+  /** remove a saved layout preset */
+  onDeleteLayoutPreset: (id: string) => Promise<void>
   activeSessionId: string | null
   /** the grid cell blown up to fill the whole panel, or null (owned by App so shortcuts can drive it) */
   maximizedId: string | null
@@ -64,6 +72,10 @@ interface Layout {
 export function TerminalPanel({
   sessions,
   activeWorkspaceId,
+  workingDir,
+  layoutPresets,
+  onSaveLayoutPreset,
+  onDeleteLayoutPreset,
   activeSessionId,
   maximizedId,
   tabs,
@@ -241,7 +253,14 @@ export function TerminalPanel({
       <div ref={containerRef} className="relative min-h-0 flex-1">
         {tabSessions.length === 0 &&
           (activeWorkspaceId ? (
-            <AgentLauncher presets={presets} onStart={onStart} />
+            <AgentLauncher
+              presets={presets}
+              workingDir={workingDir}
+              layoutPresets={layoutPresets}
+              onSaveLayoutPreset={onSaveLayoutPreset}
+              onDeleteLayoutPreset={onDeleteLayoutPreset}
+              onStart={onStart}
+            />
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm text-fgmuted">
               {t('terminal.noWorkspace')}

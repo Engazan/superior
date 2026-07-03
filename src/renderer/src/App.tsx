@@ -16,6 +16,7 @@ import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
 import { useGitStatus } from './hooks/useGitStatus'
 import { useWorkspaceGitStats } from './hooks/useWorkspaceGitStats'
 import { usePresets } from './hooks/usePresets'
+import { useLayoutPresets } from './hooks/useLayoutPresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
@@ -51,6 +52,7 @@ export default function App(): JSX.Element {
 
   const presetsApi = usePresets()
   const { presets } = presetsApi
+  const layoutPresets = useLayoutPresets()
   const preview = usePreviewPane()
   const ws = useWorkspaceSessions({ setError, t, presets })
   // The active workspace's tabs + its active tab (drives the terminal grid).
@@ -322,6 +324,10 @@ export default function App(): JSX.Element {
                   <TerminalPanel
                     sessions={ws.sessions}
                     activeWorkspaceId={ws.activeWorkspaceId}
+                    workingDir={ws.effectiveDir}
+                    layoutPresets={layoutPresets.layouts}
+                    onSaveLayoutPreset={layoutPresets.saveLayout}
+                    onDeleteLayoutPreset={layoutPresets.deleteLayout}
                     activeSessionId={ws.activeSessionId}
                     maximizedId={ws.maximizedId}
                     tabs={activeTabs?.tabs ?? []}
