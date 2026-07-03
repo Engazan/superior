@@ -1,7 +1,8 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import {
   IPC,
   type AppSettings,
+  type GlobalHotkeyResult,
   type Language,
   type ShortcutMap,
   type ThemeMode,
@@ -11,6 +12,7 @@ import {
 import {
   getSettings,
   setAttentionColor,
+  setGlobalHotkey,
   setLanguage,
   setNotifications,
   setShortcuts,
@@ -19,6 +21,7 @@ import {
   setUsagePrimary,
   setUsageTracking
 } from '../services/settings.service'
+import { applyGlobalHotkey } from '../services/global-hotkey.service'
 import { syncUsageTracking } from '../services/agent.service'
 
 export function registerSettingsIpc(): void {
@@ -55,5 +58,20 @@ export function registerSettingsIpc(): void {
 
   ipcMain.handle(IPC.SETTINGS_SET_NOTIFICATIONS, (_event, enabled: boolean): AppSettings =>
     setNotifications(enabled)
+  )
+
+  // Try to register first; only persist a chord that actually took effect.
+  ipcMain.handle(
+    IPC.SETTINGS_SET_GLOBAL_HOTKEY,
+    (event, chord: string | null): GlobalHotkeyResult => {
+      const getWindow = (): BrowserWindow | null => BrowserWindow.fromWebContents(event.sender)
+      const error = applyGlobalHotkey(chord, getWindow)
+      if (error) {
+        // Fall back to the previously working registration (if any).
+        applyGlobalHotkey(getSettings().globalHotkey, getWindow)
+        return { settings: getSettings(), error }
+      }
+      return { settings: setGlobalHotkey(chord) }
+    }
   )
 }

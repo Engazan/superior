@@ -26,7 +26,8 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   prevProfile: 'mod+shift+arrowleft',
   nextProfile: 'mod+shift+arrowright',
   manageProfiles: 'mod+shift+p',
-  searchTerminal: 'mod+f'
+  searchTerminal: 'mod+f',
+  openPalette: 'mod+k'
 }
 const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'toggleSidebar',
@@ -45,7 +46,8 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'prevProfile',
   'nextProfile',
   'manageProfiles',
-  'searchTerminal'
+  'searchTerminal',
+  'openPalette'
 ]
 const DEFAULT_UI: UiState = {
   sidebarCollapsed: false,
@@ -61,7 +63,8 @@ const DEFAULTS: AppSettings = {
   attentionColor: DEFAULT_ATTENTION_COLOR,
   usageTracking: false,
   usagePrimary: 'remaining',
-  notifications: true
+  notifications: true,
+  globalHotkey: null
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system', 'transparent']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
@@ -124,7 +127,11 @@ export function getSettings(): AppSettings {
       ? (parsed.usagePrimary as UsagePrimary)
       : DEFAULTS.usagePrimary,
     notifications:
-      typeof parsed.notifications === 'boolean' ? parsed.notifications : DEFAULTS.notifications
+      typeof parsed.notifications === 'boolean' ? parsed.notifications : DEFAULTS.notifications,
+    globalHotkey:
+      typeof parsed.globalHotkey === 'string' && parsed.globalHotkey.trim()
+        ? parsed.globalHotkey
+        : null
   }
   return cached
 }
@@ -199,6 +206,16 @@ export function setNotifications(enabled: boolean): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     notifications: Boolean(enabled)
+  }
+  save(next)
+  return next
+}
+
+/** Persist the global show/hide hotkey chord (null = disabled). */
+export function setGlobalHotkey(chord: string | null): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    globalHotkey: typeof chord === 'string' && chord.trim() ? chord : null
   }
   save(next)
   return next

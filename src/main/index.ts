@@ -3,6 +3,7 @@ import { join } from 'path'
 import { IPC } from '@shared/types'
 import { addFolderByPath } from './services/workspace.service'
 import { getSettings } from './services/settings.service'
+import { applyGlobalHotkey, releaseGlobalHotkey } from './services/global-hotkey.service'
 import { extractFolderArg } from './services/cli-launcher.service'
 import { registerCliLauncherIpc } from './ipc/cli-launcher.ipc'
 import { registerWorkspaceIpc } from './ipc/workspace.ipc'
@@ -163,6 +164,9 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
 
   mainWindow = createWindow()
 
+  // Restore the persisted system-wide show/hide hotkey (no-op when unset).
+  applyGlobalHotkey(getSettings().globalHotkey, () => mainWindow)
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
   })
@@ -185,4 +189,8 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   // Detach from the daemon without killing sessions, so they persist.
   daemonClient.disconnect()
+})
+
+app.on('will-quit', () => {
+  releaseGlobalHotkey()
 })

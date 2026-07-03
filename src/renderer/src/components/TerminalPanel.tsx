@@ -3,6 +3,7 @@ import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
 import { PromptPicker } from './PromptPicker'
+import { insertIntoTerminal, wrapForPty } from '../terminalInput'
 import { BroadcastIcon, CheckIcon, CloseIcon, IconButton, Menu, PencilIcon, PromptIcon } from './ui'
 import { useI18n } from '../i18n'
 import {
@@ -184,14 +185,8 @@ export function TerminalPanel({
     setEditingTab(null)
   }
 
-  // Multi-line text goes through bracketed paste so TUI agents (Claude/Codex)
-  // receive it as one paste instead of executing line by line.
-  const wrapForPty = (text: string): string =>
-    text.includes('\n') ? `\x1b[200~${text}\x1b[201~` : text
-
   const insertPrompt = (text: string, submit: boolean): void => {
-    if (!activeSessionId) return
-    window.api.sendInput(activeSessionId, wrapForPty(text) + (submit ? '\r' : ''))
+    if (activeSessionId) insertIntoTerminal(activeSessionId, text, submit)
   }
 
   // Entering broadcast mode targets every running cell of the current grid.

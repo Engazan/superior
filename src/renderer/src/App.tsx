@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { RightPanel } from './components/RightPanel'
@@ -7,6 +7,10 @@ import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
 import { TerminalSearchOverlay } from './components/TerminalSearchOverlay'
+import { CommandPalette } from './components/CommandPalette'
+import { PromptPicker } from './components/PromptPicker'
+import { insertIntoTerminal } from './terminalInput'
+import type { Command } from './commands'
 import { ProfileManager } from './components/ProfileManager'
 import { OpenProjectModal } from './components/OpenProjectModal'
 import { TooltipLayer } from './components/TooltipLayer'
@@ -53,6 +57,9 @@ export default function App(): JSX.Element {
   const [launcherOpen, setLauncherOpen] = useState(false)
   // Find-in-terminal overlay (⌘F), targeting the active session.
   const [searchOpen, setSearchOpen] = useState(false)
+  // Command palette (⌘K) + the prompt picker it can spawn.
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [palettePromptsOpen, setPalettePromptsOpen] = useState(false)
   // "Manage profiles" modal, opened from the title-bar profile switcher.
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
   // "Open / clone project" modal, opened from the sidebar.
@@ -169,6 +176,152 @@ export default function App(): JSX.Element {
   // Stable reference — Sidebar is memoized, an inline arrow would defeat it.
   const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
 
+  // ⌘K command registry — every currently actionable thing, rebuilt from live
+  // state. Terminal/git-scoped entries appear only when their target exists.
+  const paletteCommands = useMemo<Command[]>(() => {
+    const cmds: Command[] = []
+    const folderName = (path: string): string =>
+      ws.folders.find((f) => f.path === path)?.displayName?.trim() ||
+      ws.folders.find((f) => f.path === path)?.name ||
+      ''
+
+    for (const w of ws.workspaces) {
+      cmds.push({
+        id: `ws:${w.id}`,
+        title: `${folderName(w.folderPath)} / ${w.name}`,
+        keywords: w.branch ?? '',
+        section: t('palette.sectionWorkspaces'),
+        run: () => ws.selectWorkspace(w.id)
+      })
+    }
+    for (const p of ws.profiles) {
+      if (p.id === ws.activeProfileId) continue
+      cmds.push({
+        id: `profile:${p.id}`,
+        title: `${t('profile.switch')}: ${p.name}`,
+        section: t('palette.sectionProfiles'),
+        run: () => ws.selectProfile(p.id)
+      })
+    }
+    if (ws.activeWorkspaceId) {
+      for (const p of presets.filter((x) => x.active)) {
+        cmds.push({
+          id: `preset:${p.id}`,
+          title: `${t('terminal.addTerminal')}: ${p.name}`,
+          keywords: p.command,
+          section: t('palette.sectionTerminals'),
+          run: () => void ws.launchAgent(p)
+        })
+      }
+      for (const layout of layoutPresets.layouts) {
+        cmds.push({
+          id: `layout:${layout.id}`,
+          title: `${t('launcher.start')}: ${layout.name}`,
+          section: t('palette.sectionTerminals'),
+          run: () =>
+            void ws.startLayout({
+              presetIds: layout.presetIds.filter(Boolean),
+              nicknames: layout.nicknames
+            })
+        })
+      }
+    }
+    if (ws.activeSessionId) {
+      cmds.push({
+        id: 'prompt:insert',
+        title: t('prompts.insert'),
+        section: t('palette.sectionTerminals'),
+        run: () => setPalettePromptsOpen(true)
+      })
+      cmds.push({
+        id: 'terminal:search',
+        title: t('keyboard.searchTerminal'),
+        section: t('palette.sectionTerminals'),
+        run: () => setSearchOpen(true)
+      })
+    }
+    if (ws.effectiveDir) {
+      const dir = ws.effectiveDir
+      cmds.push(
+        {
+          id: 'git:push',
+          title: t('changes.push'),
+          keywords: 'git push',
+          section: t('palette.sectionGit'),
+          run: () =>
+            void window.api.gitPush(dir).then((r) => {
+              if (r.error) toast.error(r.error)
+              else toast.success(t('changes.pushed'))
+            })
+        },
+        {
+          id: 'git:pull',
+          title: t('changes.pull'),
+          keywords: 'git pull',
+          section: t('palette.sectionGit'),
+          run: () =>
+            void window.api.gitPull(dir).then((r) => {
+              if (r.error) toast.error(r.error)
+              else toast.success(t('changes.pulled'))
+            })
+        }
+      )
+    }
+    cmds.push(
+      {
+        id: 'view:sidebar',
+        title: t('keyboard.toggleSidebar'),
+        section: t('palette.sectionView'),
+        run: () => setSidebarCollapsed((c) => !c)
+      },
+      {
+        id: 'view:right',
+        title: t('keyboard.toggleRightPanel'),
+        section: t('palette.sectionView'),
+        run: () => setRightSidebarOpen((o) => !o)
+      },
+      {
+        id: 'view:launcher',
+        title: t('keyboard.openLauncher'),
+        section: t('palette.sectionView'),
+        run: () => setLauncherOpen(true)
+      }
+    )
+    const sections: { id: SettingsSection; label: string }[] = [
+      { id: 'appearance', label: t('settings.appearance') },
+      { id: 'integrations', label: t('settings.integrations') },
+      { id: 'presets', label: t('settings.terminalPresets') },
+      { id: 'prompts', label: t('settings.prompts') },
+      { id: 'daemons', label: t('settings.daemons') },
+      { id: 'keyboard', label: t('settings.keyboard') },
+      { id: 'shell', label: t('settings.shellCommand') }
+    ]
+    for (const s of sections) {
+      cmds.push({
+        id: `settings:${s.id}`,
+        title: `${t('sidebar.settings')}: ${s.label}`,
+        section: t('palette.sectionSettings'),
+        run: () => {
+          setSettingsSection(s.id)
+          setView('settings')
+        }
+      })
+    }
+    return cmds
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    ws.workspaces,
+    ws.folders,
+    ws.profiles,
+    ws.activeProfileId,
+    ws.activeWorkspaceId,
+    ws.activeSessionId,
+    ws.effectiveDir,
+    presets,
+    layoutPresets.layouts,
+    t
+  ])
+
   // Stable tab handlers for the terminal panel (they close over the active workspace).
   const { activeWorkspaceId, selectTab, addTab, closeTab, renameTab } = ws
   const onSelectTab = useCallback(
@@ -281,6 +434,10 @@ export default function App(): JSX.Element {
         e.preventDefault()
         e.stopPropagation()
         setSearchOpen(true)
+      } else if (chord === shortcuts.openPalette) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPaletteOpen((o) => !o)
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
@@ -459,6 +616,19 @@ export default function App(): JSX.Element {
         <TerminalSearchOverlay
           sessionId={ws.activeSessionId}
           onClose={() => setSearchOpen(false)}
+        />
+      )}
+
+      {paletteOpen && (
+        <CommandPalette commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+      )}
+
+      {palettePromptsOpen && ws.activeSessionId && (
+        <PromptPicker
+          onPick={(p, submit) => {
+            if (ws.activeSessionId) insertIntoTerminal(ws.activeSessionId, p.text, submit)
+          }}
+          onClose={() => setPalettePromptsOpen(false)}
         />
       )}
 

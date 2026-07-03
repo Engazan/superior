@@ -44,6 +44,7 @@ export type {
   GitDiffLine,
   GitFileStatus,
   GitLogEntry,
+  GlobalHotkeyResult,
   GitStatus,
   Language,
   LayoutPreset,

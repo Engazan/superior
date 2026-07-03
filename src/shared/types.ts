@@ -22,6 +22,7 @@ export type ShortcutAction =
   | 'nextProfile'
   | 'manageProfiles'
   | 'searchTerminal'
+  | 'openPalette'
 
 /**
  * A chord stored in a platform-neutral, normalized form: lowercase tokens
@@ -80,6 +81,18 @@ export interface AppSettings {
   usagePrimary: UsagePrimary
   /** Native OS notification when an agent finishes while the app is unfocused. */
   notifications: boolean
+  /**
+   * System-wide show/hide chord (app chord format, e.g. 'mod+shift+space'),
+   * or null when disabled. Registered via Electron globalShortcut.
+   */
+  globalHotkey: string | null
+}
+
+/** Result of persisting + registering the global hotkey. */
+export interface GlobalHotkeyResult {
+  settings: AppSettings
+  /** Registration failure (taken by another app / unmappable chord). */
+  error?: string
 }
 
 /** The single usage figure shown front-and-center in the topbar badge. */
@@ -763,6 +776,7 @@ export const IPC = {
   SETTINGS_SET_ATTENTION_COLOR: 'settings:set-attention-color',
   SETTINGS_SET_USAGE_TRACKING: 'settings:set-usage-tracking',
   SETTINGS_SET_NOTIFICATIONS: 'settings:set-notifications',
+  SETTINGS_SET_GLOBAL_HOTKEY: 'settings:set-global-hotkey',
   NOTIFY_FINISHED: 'notify:finished',
   NOTIFY_ACTIVATED: 'notify:activated',
   APP_SET_BADGE: 'app:set-badge',

@@ -25,6 +25,7 @@ import {
   type FileReadResult,
   type FileWriteResult,
   type FolderUpdate,
+  type GlobalHotkeyResult,
   type ProfileUpdate,
   type FsListResult,
   type GitActionResult,
@@ -267,6 +268,11 @@ const api = {
 
   setNotifications(enabled: boolean): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_NOTIFICATIONS, enabled)
+  },
+
+  /** Persist + register the system-wide show/hide hotkey (null disables). */
+  setGlobalHotkey(chord: string | null): Promise<GlobalHotkeyResult> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_GLOBAL_HOTKEY, chord)
   },
 
   /** Show a native "agent finished" notification (clicking focuses the workspace). */
