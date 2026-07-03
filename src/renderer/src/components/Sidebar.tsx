@@ -101,17 +101,17 @@ export const Sidebar = memo(function Sidebar({
   // The folder currently open in the edit dialog.
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
   // Drag-to-reorder for folders, pointer-based (not HTML5 DnD): the list
-  // reorders live while dragging so the drop position is always visible, the
-  // pointer is captured by the grip so nothing can be "dragged outside" the
-  // sidebar (and there is no native drag ghost), and Escape cancels.
+  // reorders live while dragging so the drop position is always visible, and
+  // Escape cancels. All tracking runs on window listeners registered at drag
+  // start — never on the grip element itself, whose DOM node React MOVES on
+  // every live reorder, which would silently kill its pointer capture (and
+  // with it the whole drag). The pointer is captured by the <nav> (a node
+  // that never moves) so events keep flowing even outside the sidebar.
   const navRef = useRef<HTMLElement | null>(null)
-  const dragStartY = useRef(0)
   const [folderDrag, setFolderDrag] = useState<{
     path: string
     /** live working order of folder paths, applied to rendering while dragging */
     order: string[]
-    /** false until the pointer moved past the click threshold */
-    active: boolean
   } | null>(null)
 
   const beginFolderDrag =
@@ -121,60 +121,91 @@ export const Sidebar = memo(function Sidebar({
       if (e.button !== 0) return
       e.preventDefault()
       e.stopPropagation()
-      e.currentTarget.setPointerCapture(e.pointerId)
-      dragStartY.current = e.clientY
-      setFolderDrag({ path, order: folders.map((f) => f.path), active: false })
-    }
+      const nav = navRef.current
+      const pointerId = e.pointerId
+      const startY = e.clientY
+      // Capture on the nav (it never remounts/moves), so moves outside the
+      // window still arrive and the drag can't be silently dropped.
+      try {
+        nav?.setPointerCapture(pointerId)
+      } catch {
+        /* capture is an enhancement — the window listeners work without it */
+      }
 
-  const moveFolderDrag = (e: React.PointerEvent<HTMLElement>): void => {
-    if (!folderDrag) return
-    // A few px of slack so a plain click on the grip never counts as a drag.
-    if (!folderDrag.active && Math.abs(e.clientY - dragStartY.current) < 4) return
-    const nav = navRef.current
-    if (!nav) return
-    // Keep long lists reachable: nudge the scroll when hugging an edge.
-    const box = nav.getBoundingClientRect()
-    if (e.clientY < box.top + 24) nav.scrollTop -= 8
-    else if (e.clientY > box.bottom - 24) nav.scrollTop += 8
-    // Insertion index = how many other folder blocks sit above the pointer
-    // (by their vertical midpoint), clamped to the list by construction.
-    const others = Array.from(nav.querySelectorAll<HTMLElement>('[data-folder-path]')).filter(
-      (el) => el.dataset.folderPath !== folderDrag.path
-    )
-    let index = 0
-    for (const el of others) {
-      const r = el.getBoundingClientRect()
-      if (e.clientY > r.top + r.height / 2) index++
-    }
-    const next = folderDrag.order.filter((p) => p !== folderDrag.path)
-    next.splice(index, 0, folderDrag.path)
-    if (folderDrag.active && next.join('\n') === folderDrag.order.join('\n')) return
-    setFolderDrag({ ...folderDrag, active: true, order: next })
-  }
+      // Mutable drag bookkeeping lives in this closure; state only drives paint.
+      let order = folders.map((f) => f.path)
+      let active = false
 
-  const endFolderDrag = (): void => {
-    if (!folderDrag) return
-    const current = folders.map((f) => f.path)
-    if (folderDrag.active && folderDrag.order.join('\n') !== current.join('\n')) {
-      onReorderFolders(folderDrag.order)
-    }
-    setFolderDrag(null)
-  }
+      const move = (ev: PointerEvent): void => {
+        if (ev.pointerId !== pointerId) return
+        // A few px of slack so a plain click on the grip never counts as a drag.
+        if (!active && Math.abs(ev.clientY - startY) < 4) return
+        if (!nav) return
+        // Keep long lists reachable: nudge the scroll when hugging an edge.
+        const box = nav.getBoundingClientRect()
+        if (ev.clientY < box.top + 24) nav.scrollTop -= 8
+        else if (ev.clientY > box.bottom - 24) nav.scrollTop += 8
+        // Insertion index = how many other folder blocks sit above the pointer
+        // (by their vertical midpoint), clamped to the list by construction.
+        const others = Array.from(nav.querySelectorAll<HTMLElement>('[data-folder-path]')).filter(
+          (el) => el.dataset.folderPath !== path
+        )
+        let index = 0
+        for (const el of others) {
+          const r = el.getBoundingClientRect()
+          if (ev.clientY > r.top + r.height / 2) index++
+        }
+        const next = order.filter((p) => p !== path)
+        next.splice(index, 0, path)
+        const changed = next.join('\n') !== order.join('\n')
+        if (active && !changed) return
+        active = true
+        order = next
+        setFolderDrag({ path, order: next })
+      }
 
-  // Escape aborts the drag, restoring the original order.
-  useEffect(() => {
-    if (!folderDrag?.active) return
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setFolderDrag(null)
+      const teardown = (): void => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', up)
+        window.removeEventListener('pointercancel', cancel)
+        window.removeEventListener('keydown', key, true)
+        try {
+          nav?.releasePointerCapture(pointerId)
+        } catch {
+          /* already released */
+        }
+        setFolderDrag(null)
+      }
+
+      const up = (ev: PointerEvent): void => {
+        if (ev.pointerId !== pointerId) return
+        const changed = active && order.join('\n') !== folders.map((f) => f.path).join('\n')
+        teardown()
+        if (changed) onReorderFolders(order)
+      }
+
+      // Cancelled gesture / Escape: restore the original order.
+      const cancel = (ev: PointerEvent): void => {
+        if (ev.pointerId === pointerId) teardown()
+      }
+      const key = (ev: KeyboardEvent): void => {
+        if (ev.key === 'Escape') {
+          ev.stopPropagation()
+          teardown()
+        }
+      }
+
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', up)
+      window.addEventListener('pointercancel', cancel)
+      window.addEventListener('keydown', key, true)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [folderDrag?.active])
 
   // While a drag is live, force the grabbing cursor and disable text selection
   // everywhere (the pointer is captured, so the cursor must be set globally).
+  const isDraggingFolder = folderDrag !== null
   useEffect(() => {
-    if (!folderDrag?.active) return
+    if (!isDraggingFolder) return
     const prevCursor = document.body.style.cursor
     const prevSelect = document.body.style.userSelect
     document.body.style.cursor = 'grabbing'
@@ -183,10 +214,10 @@ export const Sidebar = memo(function Sidebar({
       document.body.style.cursor = prevCursor
       document.body.style.userSelect = prevSelect
     }
-  }, [folderDrag?.active])
+  }, [isDraggingFolder])
 
   // Folders in their live drag order while dragging, persisted order otherwise.
-  const displayFolders = folderDrag?.active
+  const displayFolders = folderDrag
     ? (folderDrag.order
         .map((p) => folders.find((f) => f.path === p))
         .filter(Boolean) as Folder[])
@@ -468,7 +499,7 @@ export const Sidebar = memo(function Sidebar({
               const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
               const open = !folder.collapsed
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
-              const beingDragged = folderDrag?.active === true && folderDrag.path === folder.path
+              const beingDragged = folderDrag?.path === folder.path
               return (
                 <div
                   key={folder.path}
@@ -476,7 +507,7 @@ export const Sidebar = memo(function Sidebar({
                   style={folderTint(folder.color)}
                   className={`${folder.color ? 'rounded-lg p-1' : ''} ${
                     beingDragged ? 'rounded-lg opacity-60 ring-1 ring-accentBorder' : ''
-                  } ${folderDrag?.active ? 'transition-transform' : ''}`}
+                  }`}
                 >
                   {/* Folder header — click to collapse / expand; the grip drags to reorder */}
                   <div
@@ -500,15 +531,12 @@ export const Sidebar = memo(function Sidebar({
                     {!open && folderRunning > 0 && (
                       <RunningBadge count={folderRunning} title={t('sidebar.runningTerminals')} />
                     )}
-                    {/* Drag handle — pointer capture keeps the drag inside the app,
-                        the list live-reorders under the pointer. */}
+                    {/* Drag handle — the drag itself runs on window listeners
+                        (see beginFolderDrag), the list live-reorders under the pointer. */}
                     <span
                       title={t('sidebar.reorderFolder')}
                       onClick={(e) => e.stopPropagation()}
                       onPointerDown={beginFolderDrag(folder.path)}
-                      onPointerMove={moveFolderDrag}
-                      onPointerUp={endFolderDrag}
-                      onPointerCancel={() => setFolderDrag(null)}
                       className={`flex h-5 w-4 shrink-0 touch-none items-center justify-center text-fgmuted transition ${
                         beingDragged
                           ? 'cursor-grabbing opacity-100'
