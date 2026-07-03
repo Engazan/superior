@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { BUILTIN_ICONS } from '@shared/icons'
 import { useI18n } from '../i18n'
-import { Button, COLOR_SWATCHES, Input } from './ui'
+import { Button, COLOR_SWATCHES, Input, Modal } from './ui'
 import type { PresetIconType, TerminalPreset } from '../types'
 
 interface Props {
@@ -50,19 +50,22 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
-      onClick={onCancel}
+    <Modal
+      title={preset ? t('form.editTitle') : t('form.addTitle')}
+      onClose={onCancel}
+      closeLabel={t('common.cancel')}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button disabled={!canSave} onClick={submit}>
+            {t('common.save')}
+          </Button>
+        </>
+      }
     >
-      <div
-        className="w-full max-w-md rounded-xl border border-edge bg-panel p-5 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="mb-4 text-base font-semibold text-fg">
-          {preset ? t('form.editTitle') : t('form.addTitle')}
-        </h3>
-
-        <div className="space-y-3">
+      <div className="space-y-3">
           {/* Icon */}
           <div>
             <div className="mb-1 flex items-center justify-between">
@@ -197,16 +200,6 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
             </div>
           </div>
         </div>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel}>
-            {t('common.cancel')}
-          </Button>
-          <Button disabled={!canSave} onClick={submit}>
-            {t('common.save')}
-          </Button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

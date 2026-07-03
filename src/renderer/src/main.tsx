@@ -6,6 +6,7 @@ import { I18nProvider } from './i18n'
 import { ShortcutsProvider } from './shortcuts'
 import { AttentionColorProvider } from './attentionColor'
 import { UsagePrimaryProvider } from './usagePrimary'
+import { ConfirmProvider, ToastProvider } from './components/ui'
 import './index.css'
 
 const SPLASH_DURATION_MS = 1000
@@ -58,7 +59,11 @@ createRoot(container).render(
       <ShortcutsProvider>
         <AttentionColorProvider>
           <UsagePrimaryProvider>
-            <StartupScreen />
+            <ToastProvider>
+              <ConfirmProvider>
+                <StartupScreen />
+              </ConfirmProvider>
+            </ToastProvider>
           </UsagePrimaryProvider>
         </AttentionColorProvider>
       </ShortcutsProvider>

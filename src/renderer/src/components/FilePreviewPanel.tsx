@@ -5,6 +5,7 @@ import { MarkdownFilePreview } from './MarkdownFilePreview'
 import { ImageFilePreview } from './ImageFilePreview'
 import { UnsupportedFilePreview } from './UnsupportedFilePreview'
 import { useI18n } from '../i18n'
+import { IconButton, useToast } from './ui'
 import { eventToChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import {
   IMAGE_MAX_BYTES,
@@ -30,30 +31,6 @@ function prettyJson(text: string): string {
   }
 }
 
-function IconButton({
-  label,
-  title,
-  onClick,
-  children
-}: {
-  label: string
-  /** Tooltip text; falls back to `label` when omitted (e.g. to append a shortcut hint). */
-  title?: string
-  onClick: () => void
-  children: JSX.Element
-}): JSX.Element {
-  return (
-    <button
-      onClick={onClick}
-      title={title ?? label}
-      aria-label={label}
-      className="grid h-7 w-7 shrink-0 place-items-center rounded text-fgmuted transition hover:bg-hover hover:text-fg"
-    >
-      {children}
-    </button>
-  )
-}
-
 export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
@@ -66,9 +43,9 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
     if (type === 'code') return getCodeMirrorLanguage(file)
     return null
   }, [type, file])
+  const toast = useToast()
   const [data, setData] = useState<FileReadResult | null>(null)
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -83,15 +60,8 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   const openRaw = (): void => void window.api.openPath(file.path)
   const copyPath = (): void => {
     void navigator.clipboard.writeText(file.path)
-    setCopied(true)
+    toast.success(t('preview.copied'))
   }
-
-  // Reset the "Copied" affordance after a moment; cancel if we unmount first.
-  useEffect(() => {
-    if (!copied) return
-    const id = window.setTimeout(() => setCopied(false), 1200)
-    return () => window.clearTimeout(id)
-  }, [copied])
 
   useEffect(() => {
     let active = true
@@ -270,17 +240,11 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
           </button>
         )}
 
-        <IconButton label={copied ? t('preview.copied') : t('preview.copyPath')} onClick={copyPath}>
-          {copied ? (
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M3 8.5 6.5 12 13 4.5" />
-            </svg>
-          ) : (
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
-              <path d="M3.5 10.5h-.5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v.5" />
-            </svg>
-          )}
+        <IconButton label={t('preview.copyPath')} onClick={copyPath}>
+          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+            <path d="M3.5 10.5h-.5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v.5" />
+          </svg>
         </IconButton>
 
         <IconButton label={t('preview.openRaw')} onClick={openRaw}>

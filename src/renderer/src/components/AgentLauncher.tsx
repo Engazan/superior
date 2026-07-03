@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
-import { Button, CloseIcon, EmptyState, IconButton, Input, SegmentedControl } from './ui'
+import { Button, CloseIcon, EmptyState, IconButton, Input, SegmentedControl, useToast } from './ui'
 import { MAX_GRID, distribute } from '../gridLayout'
 import type { LayoutPreset, TerminalPreset } from '../types'
 
@@ -56,6 +56,7 @@ export function AgentLauncher({
   onStart
 }: Props): JSX.Element {
   const { t } = useI18n()
+  const toast = useToast()
   const active = presets.filter((p) => p.active)
   const [tab, setTab] = useState<Tab>('preset')
   // In the Preset tab, whether the inline builder ("+ New") is open.
@@ -125,15 +126,17 @@ export function AgentLauncher({
   const saveAndStart = async (): Promise<void> => {
     const { presetIds, nicknames } = buildConfig()
     if (presetIds.length === 0) return
+    const layoutName = name.trim() || t('launcher.untitledPreset')
     await onSaveLayoutPreset({
       id: crypto.randomUUID(),
-      name: name.trim() || t('launcher.untitledPreset'),
+      name: layoutName,
       presetIds,
       // Only persist nicknames when at least one slot has a custom one.
       nicknames: nicknames?.some(Boolean) ? nicknames : undefined,
       createdAt: Date.now()
     })
     setCreating(false)
+    toast.success(t('toast.layoutSaved', { name: layoutName }))
     onStart({ presetIds, nicknames })
   }
 

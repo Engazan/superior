@@ -9,6 +9,7 @@ import { QuickLaunch } from './components/QuickLaunch'
 import { ProfileManager } from './components/ProfileManager'
 import { OpenProjectModal } from './components/OpenProjectModal'
 import { TooltipLayer } from './components/TooltipLayer'
+import { useToast } from './components/ui'
 import type { Integration } from './types'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
@@ -27,8 +28,16 @@ type View = 'main' | 'settings'
 export default function App(): JSX.Element {
   const { t } = useI18n()
   const { shortcuts } = useShortcuts()
+  const toast = useToast()
 
   const [error, setError] = useState<string | null>(null)
+  // Errors reported by hooks/components surface as a sticky toast rather than
+  // an inline banner, so they never shift the terminal layout.
+  useEffect(() => {
+    if (!error) return
+    toast.error(error)
+    setError(null)
+  }, [error, toast])
   const [view, setView] = useState<View>('main')
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -306,19 +315,6 @@ export default function App(): JSX.Element {
             />
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              {error && (
-                <div className="flex items-start justify-between gap-4 border-b border-red-900/60 bg-red-950/40 px-4 py-2 text-sm text-red-200">
-                  <span>{error}</span>
-                  <button
-                    className="shrink-0 text-red-300/80 hover:text-red-100"
-                    onClick={() => setError(null)}
-                    aria-label={t('window.close')}
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
               <div ref={preview.previewRowRef} className="flex min-h-0 min-w-0 flex-1">
                 <div className="flex min-h-0 min-w-0 flex-1">
                   <TerminalPanel

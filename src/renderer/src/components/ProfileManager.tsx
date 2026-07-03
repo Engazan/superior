@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { useI18n } from '../i18n'
-import { COLOR_SWATCHES } from './ui'
+import { COLOR_SWATCHES, useConfirm, useToast } from './ui'
 import type { Profile } from '../types'
 
 interface Props {
@@ -102,6 +102,8 @@ export function ProfileManager({
   onClose
 }: Props): JSX.Element {
   const { t } = useI18n()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [newName, setNewName] = useState('')
   // Local draft of each profile's name, keyed by id, so typing stays responsive.
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -141,9 +143,18 @@ export function ProfileManager({
     setNewName('')
   }
 
-  const remove = (p: Profile): void => {
+  const remove = async (p: Profile): Promise<void> => {
     if (profiles.length <= 1) return
-    if (window.confirm(t('profile.deleteConfirm', { name: p.name }))) onRemove(p.id)
+    const ok = await confirm({
+      title: t('profile.deleteTitle'),
+      message: t('profile.deleteConfirm', { name: p.name }),
+      confirmLabel: t('common.delete'),
+      tone: 'danger'
+    })
+    if (ok) {
+      onRemove(p.id)
+      toast.success(t('toast.profileDeleted', { name: p.name }))
+    }
   }
 
   const field =
@@ -235,7 +246,7 @@ export function ProfileManager({
 
               <button
                 type="button"
-                onClick={() => remove(p)}
+                onClick={() => void remove(p)}
                 disabled={profiles.length <= 1}
                 title={t('profile.delete')}
                 aria-label={t('profile.delete')}

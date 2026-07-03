@@ -1,5 +1,8 @@
 export { Button } from './Button'
 export { IconButton } from './IconButton'
+export { Modal } from './Modal'
+export { ConfirmProvider, useConfirm } from './ConfirmDialog'
+export { ToastProvider, useToast } from './toast'
 export { Input } from './Input'
 export { Toggle } from './Toggle'
 export { SegmentedControl } from './SegmentedControl'

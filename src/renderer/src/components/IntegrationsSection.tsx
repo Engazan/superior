@@ -6,7 +6,7 @@ import {
   providerLabel,
   providerLogo
 } from '../integrations'
-import { Button, EmptyState, Input } from './ui'
+import { Button, EmptyState, Input, useConfirm, useToast } from './ui'
 import type { Integration, IntegrationProvider, IntegrationTestResult } from '../types'
 
 /** Shared look for the provider <select>; text inputs use the ui/Input primitive. */
@@ -192,6 +192,8 @@ function IntegrationForm({
 
 export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): JSX.Element {
   const { t } = useI18n()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [editing, setEditing] = useState<Integration | null>(null)
 
@@ -208,12 +210,22 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
     const state = await window.api.saveIntegration(integration)
     apply(state.integrations)
     setEditing(null)
+    toast.success(t('toast.integrationSaved', { name: integration.name }))
   }
 
-  const remove = async (id: string): Promise<void> => {
-    const state = await window.api.deleteIntegration(id)
+  const remove = async (it: Integration): Promise<void> => {
+    // One click used to delete the forge + token permanently — confirm first.
+    const ok = await confirm({
+      title: t('confirm.integrationRemoveTitle'),
+      message: t('confirm.integrationRemoveMessage', { name: it.name }),
+      confirmLabel: t('integrations.remove'),
+      tone: 'danger'
+    })
+    if (!ok) return
+    const state = await window.api.deleteIntegration(it.id)
     apply(state.integrations)
-    if (editing?.id === id) setEditing(null)
+    if (editing?.id === it.id) setEditing(null)
+    toast.success(t('toast.integrationRemoved', { name: it.name }))
   }
 
   return (
@@ -250,7 +262,7 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
                 {t('integrations.edit')}
               </Button>
               <button
-                onClick={() => remove(it.id)}
+                onClick={() => void remove(it)}
                 className="rounded-md px-2 py-1 text-xs font-medium text-danger/80 transition hover:bg-dangerBg hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 {t('integrations.remove')}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
-import { Button, Input } from './ui'
+import { Button, Input, Modal } from './ui'
 import type {
   CustomMemoryPreset,
   CustomMemoryProvider,
@@ -185,15 +185,25 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
       </div>
 
       {creating && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
-          onClick={() => setCreating(false)}
+        <Modal
+          title={t('memory.createTitle')}
+          onClose={() => setCreating(false)}
+          closeLabel={t('common.cancel')}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setCreating(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                disabled={!name.trim()}
+                loading={busyId === 'create'}
+                onClick={() => void create()}
+              >
+                {busyId === 'create' ? t('memory.creating') : t('memory.create')}
+              </Button>
+            </>
+          }
         >
-          <div
-            className="w-full max-w-md rounded-xl border border-edge bg-panel p-5 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="mb-4 text-base font-semibold text-fg">{t('memory.createTitle')}</h3>
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-fgdim">
@@ -261,20 +271,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                 </p>
               </div>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setCreating(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                disabled={!name.trim()}
-                loading={busyId === 'create'}
-                onClick={() => void create()}
-              >
-                {busyId === 'create' ? t('memory.creating') : t('memory.create')}
-              </Button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </section>
   )

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
-import { Button, EmptyState } from './ui'
+import { Button, EmptyState, useConfirm, useToast } from './ui'
 import type { AgentSession, Folder, Workspace } from '../types'
 
 interface Props {
@@ -13,6 +13,8 @@ interface Props {
 /** Lists the live PTY sessions owned by the background daemon, with kill controls. */
 export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Element {
   const { t } = useI18n()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [list, setList] = useState<AgentSession[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -36,13 +38,31 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
     return folder ? `${folder.name} / ${ws.name}` : ws.name
   }
 
-  const kill = (id: string): void => {
-    onKill(id)
-    setList((prev) => prev.filter((s) => s.id !== id))
+  // Killing terminates a live process — always confirm first.
+  const kill = async (s: AgentSession): Promise<void> => {
+    const ok = await confirm({
+      title: t('confirm.daemonKillTitle'),
+      message: t('confirm.daemonKillMessage', { label: s.label }),
+      confirmLabel: t('daemons.kill'),
+      tone: 'danger'
+    })
+    if (!ok) return
+    onKill(s.id)
+    setList((prev) => prev.filter((x) => x.id !== s.id))
+    toast.success(t('toast.daemonKilled', { label: s.label }))
   }
-  const killAll = (): void => {
+  const killAll = async (): Promise<void> => {
+    const n = list.length
+    const ok = await confirm({
+      title: t('confirm.daemonKillAllTitle'),
+      message: t('confirm.daemonKillAllMessage', { n }),
+      confirmLabel: t('daemons.killAll'),
+      tone: 'danger'
+    })
+    if (!ok) return
     list.forEach((s) => onKill(s.id))
     setList([])
+    toast.success(t('toast.daemonsKilled', { n }))
   }
 
   return (
@@ -54,7 +74,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
             {t('daemons.refresh')}
           </Button>
           {list.length > 0 && (
-            <Button variant="danger" size="sm" onClick={killAll}>
+            <Button variant="danger" size="sm" onClick={() => void killAll()}>
               {t('daemons.killAll')}
             </Button>
           )}
@@ -96,7 +116,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
                 </span>
                 <span className="w-16 shrink-0 text-right">
                   <button
-                    onClick={() => kill(s.id)}
+                    onClick={() => void kill(s)}
                     className="rounded-md px-2 py-0.5 text-xs text-danger transition hover:bg-dangerBg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                   >
                     {t('daemons.kill')}

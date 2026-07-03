@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { describeIntegrationError, providerLabel } from '../integrations'
+import { Button, CloseIcon, IconButton, Input } from './ui'
 import type { CloneArgs, Integration, RemoteRepo } from '../types'
 
 interface Props {
@@ -100,19 +101,19 @@ export function OpenProjectModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-edge px-5 py-3">
           <h2 id={titleId} className="text-sm font-semibold text-fg">
             {t('openProject.title')}
           </h2>
-          <button
+          <IconButton
+            size="sm"
+            label={t('integrations.cancel')}
             onClick={() => !cloningId && onClose()}
-            aria-label={t('integrations.cancel')}
-            className="rounded-md p-1 text-fgdim transition hover:bg-hover hover:text-fg"
           >
-            ✕
-          </button>
+            <CloseIcon size={14} />
+          </IconButton>
         </div>
 
         <div className="flex gap-1 border-b border-edge px-5 py-3">
@@ -127,22 +128,14 @@ export function OpenProjectModal({
         {source === 'local' ? (
           <div className="flex flex-col items-start gap-3 px-5 py-6">
             <p className="text-sm text-fgmuted">{t('openProject.thisPcHint')}</p>
-            <button
-              onClick={openFolder}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-bar transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              {t('openProject.chooseFolder')}
-            </button>
+            <Button onClick={openFolder}>{t('openProject.chooseFolder')}</Button>
           </div>
         ) : !hasIntegrations ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
             <p className="text-sm text-fgmuted">{t('openProject.noIntegrations')}</p>
-            <button
-              onClick={onAddIntegration}
-              className="rounded-lg border border-edge bg-bar px-4 py-2 text-sm font-medium text-fg transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
+            <Button variant="secondary" onClick={onAddIntegration}>
               {t('openProject.addIntegration')}
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -162,11 +155,11 @@ export function OpenProjectModal({
                   </option>
                 ))}
               </select>
-              <input
+              <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('clone.search')}
-                className="mt-2 w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition placeholder:text-fgmuted focus:border-accent focus:ring-2 focus:ring-accentBorder"
+                className="mt-2"
                 spellCheck={false}
               />
             </div>
@@ -176,7 +169,7 @@ export function OpenProjectModal({
                 <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.loading')}</p>
               )}
               {!loading && listError && (
-                <p className="px-3 py-6 text-center text-sm text-red-400">
+                <p className="px-3 py-6 text-center text-sm text-danger">
                   {describeIntegrationError(listError, t)}
                 </p>
               )}
@@ -213,7 +206,7 @@ export function OpenProjectModal({
             </div>
 
             {cloneError && (
-              <div className="border-t border-edge px-5 py-2 text-sm text-red-400">
+              <div className="border-t border-edge px-5 py-2 text-sm text-danger">
                 {describeIntegrationError(cloneError, t)}
               </div>
             )}

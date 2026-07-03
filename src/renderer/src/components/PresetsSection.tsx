@@ -1,7 +1,16 @@
 import { useEffect, useState, type DragEvent } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { PresetForm } from './PresetForm'
-import { Button, GripIcon, IconButton, PencilIcon, Toggle, TrashIcon } from './ui'
+import {
+  Button,
+  GripIcon,
+  IconButton,
+  PencilIcon,
+  Toggle,
+  TrashIcon,
+  useConfirm,
+  useToast
+} from './ui'
 import { CustomMemoryPresets } from './CustomMemoryPresets'
 import { CliToolsHealth } from './CliToolsHealth'
 import { useI18n } from '../i18n'
@@ -44,8 +53,9 @@ export function PresetsSection({
   onPresetsChanged
 }: Props): JSX.Element {
   const { t } = useI18n()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [editing, setEditing] = useState<TerminalPreset | 'new' | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<TerminalPreset | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
   // A working order applied live while dragging; cleared once the prop catches up.
   const [order, setOrder] = useState<string[] | null>(null)
@@ -80,6 +90,19 @@ export function PresetsSection({
     const changed = order.join(',') !== presets.map((p) => p.id).join(',')
     if (changed) onReorder(order)
     else setOrder(null)
+  }
+
+  const removePreset = async (p: TerminalPreset): Promise<void> => {
+    const ok = await confirm({
+      title: t('presets.deleteTitle'),
+      message: t('presets.deleteConfirm', { name: p.name }),
+      confirmLabel: t('common.delete'),
+      tone: 'danger'
+    })
+    if (ok) {
+      onDelete(p.id)
+      toast.success(t('toast.presetDeleted', { name: p.name }))
+    }
   }
 
   return (
@@ -166,7 +189,7 @@ export function PresetsSection({
                         variant="danger-ghost"
                         label={`${t('common.delete')} ${p.name}`}
                         title={t('common.delete')}
-                        onClick={() => setConfirmDelete(p)}
+                        onClick={() => void removePreset(p)}
                       >
                         <TrashIcon size={13} />
                       </IconButton>
@@ -191,39 +214,9 @@ export function PresetsSection({
           onSave={(preset) => {
             onSave(preset)
             setEditing(null)
+            toast.success(t('toast.presetSaved', { name: preset.name }))
           }}
         />
-      )}
-
-      {confirmDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
-          onClick={() => setConfirmDelete(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl border border-edge bg-panel p-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-2 text-base font-semibold text-fg">{t('presets.deleteTitle')}</h3>
-            <p className="mb-5 text-sm text-fgdim">
-              {t('presets.deleteConfirm', { name: confirmDelete.name })}
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  onDelete(confirmDelete.id)
-                  setConfirmDelete(null)
-                }}
-              >
-                {t('common.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )
