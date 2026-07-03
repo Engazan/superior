@@ -159,6 +159,36 @@ export default function App(): JSX.Element {
     return () => setActivityNotifier(null)
   }, [])
 
+  // Auto-launch a workspace's startup layout when it opens with no terminals.
+  // Once per workspace per app run; surviving daemon sessions suppress it, so
+  // an app restart never spawns duplicates next to restored terminals.
+  const autoLaunchedRef = useRef(new Set<string>())
+  useEffect(() => {
+    if (!ws.sessionsRestored || view !== 'main') return
+    const wsId = ws.activeWorkspaceId
+    if (!wsId || autoLaunchedRef.current.has(wsId)) return
+    const layoutId = ws.workspaces.find((w) => w.id === wsId)?.startupLayoutId
+    if (!layoutId) return
+    // Layouts may still be loading — retry on the next effect run; a deleted
+    // layout id simply never matches and is ignored.
+    const layout = layoutPresets.layouts.find((l) => l.id === layoutId)
+    if (!layout) return
+    if (ws.sessions.some((s) => s.workspaceId === wsId)) return
+    autoLaunchedRef.current.add(wsId) // before the await — no double launch
+    void ws.startLayout({
+      presetIds: layout.presetIds.filter(Boolean),
+      nicknames: layout.nicknames
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    ws.sessionsRestored,
+    ws.activeWorkspaceId,
+    ws.workspaces,
+    ws.sessions,
+    layoutPresets.layouts,
+    view
+  ])
+
   // Clicking the notification selects the workspace the agent finished in.
   const selectWorkspaceRef = useRef(ws.selectWorkspace)
   selectWorkspaceRef.current = ws.selectWorkspace
@@ -539,6 +569,10 @@ export default function App(): JSX.Element {
                     activeWorkspaceId={ws.activeWorkspaceId}
                     workingDir={ws.effectiveDir}
                     layoutPresets={layoutPresets.layouts}
+                    startupLayoutId={ws.activeWorkspace?.startupLayoutId}
+                    onSetStartupLayout={(layoutId) => {
+                      if (ws.activeWorkspaceId) void ws.setStartupLayout(ws.activeWorkspaceId, layoutId)
+                    }}
                     onSaveLayoutPreset={layoutPresets.saveLayout}
                     onDeleteLayoutPreset={layoutPresets.deleteLayout}
                     activeSessionId={ws.activeSessionId}

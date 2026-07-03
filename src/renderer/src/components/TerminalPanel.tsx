@@ -28,6 +28,10 @@ interface Props {
   workingDir: string | null
   /** saved launch layouts shown in the launcher's Preset tab */
   layoutPresets: LayoutPreset[]
+  /** the active workspace's auto-launch layout, if any */
+  startupLayoutId?: string
+  /** set (or clear) the active workspace's auto-launch layout */
+  onSetStartupLayout: (layoutId: string | null) => void
   /** persist a new/updated layout preset */
   onSaveLayoutPreset: (layout: LayoutPreset) => Promise<void>
   /** remove a saved layout preset */
@@ -79,6 +83,8 @@ export function TerminalPanel({
   activeWorkspaceId,
   workingDir,
   layoutPresets,
+  startupLayoutId,
+  onSetStartupLayout,
   onSaveLayoutPreset,
   onDeleteLayoutPreset,
   activeSessionId,
@@ -394,6 +400,8 @@ export function TerminalPanel({
               presets={presets}
               workingDir={workingDir}
               layoutPresets={layoutPresets}
+              startupLayoutId={startupLayoutId}
+              onSetStartupLayout={onSetStartupLayout}
               onSaveLayoutPreset={onSaveLayoutPreset}
               onDeleteLayoutPreset={onDeleteLayoutPreset}
               onStart={onStart}

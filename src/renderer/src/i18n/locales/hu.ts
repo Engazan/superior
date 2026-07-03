@@ -300,6 +300,7 @@ export const hu: Record<MessageKey, string> = {
   'launcher.presetNamePlaceholder': 'Sablon neve',
   'launcher.untitledPreset': 'Névtelen',
   'launcher.saveAndStart': 'Mentés és indítás',
+  'launcher.launchOnOpen': 'Indítás a workspace megnyitásakor',
   'launcher.cancel': 'Mégse',
   'tab.defaultName': '{n}. lap',
   'tab.new': 'Új lap',

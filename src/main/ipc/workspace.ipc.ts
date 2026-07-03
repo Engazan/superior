@@ -13,6 +13,7 @@ import {
   reorderFolders,
   setActiveProfile,
   setActiveWorkspace,
+  setWorkspaceStartupLayout,
   updateFolder,
   updateProfile
 } from '../services/workspace.service'
@@ -78,6 +79,12 @@ export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
     IPC.WORKSPACE_RENAME,
     (_e, args: { id: string; name: string }): WorkspaceState =>
       renameWorkspace(args.id, args.name)
+  )
+
+  ipcMain.handle(
+    IPC.WORKSPACE_SET_STARTUP_LAYOUT,
+    (_e, args: { id: string; layoutId: string | null }): WorkspaceState =>
+      setWorkspaceStartupLayout(args.id, args.layoutId)
   )
 
   ipcMain.handle(

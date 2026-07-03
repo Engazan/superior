@@ -300,6 +300,7 @@ export const cs: Record<MessageKey, string> = {
   'launcher.presetNamePlaceholder': 'Název předvolby',
   'launcher.untitledPreset': 'Bez názvu',
   'launcher.saveAndStart': 'Uložit a spustit',
+  'launcher.launchOnOpen': 'Spustit při otevření tohoto workspace',
   'launcher.cancel': 'Zrušit',
   'tab.defaultName': 'Karta {n}',
   'tab.new': 'Nová karta',

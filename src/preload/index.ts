@@ -114,6 +114,11 @@ const api = {
     return ipcRenderer.invoke(IPC.WORKSPACE_RENAME, { id, name })
   },
 
+  /** Set (or clear) the layout auto-launched when the workspace opens empty. */
+  setWorkspaceStartupLayout(id: string, layoutId: string | null): Promise<WorkspaceState> {
+    return ipcRenderer.invoke(IPC.WORKSPACE_SET_STARTUP_LAYOUT, { id, layoutId })
+  },
+
   removeWorkspace(id: string, force = false): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_REMOVE, { id, force })
   },

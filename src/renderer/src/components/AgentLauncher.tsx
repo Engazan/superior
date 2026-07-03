@@ -17,6 +17,10 @@ interface Props {
   workingDir: string | null
   /** saved launch layouts shown in the Preset tab */
   layoutPresets: LayoutPreset[]
+  /** the layout auto-launched when this workspace opens empty, if any */
+  startupLayoutId?: string
+  /** set (or clear, with null) the workspace's startup layout */
+  onSetStartupLayout: (layoutId: string | null) => void
   onSaveLayoutPreset: (layout: LayoutPreset) => Promise<void>
   onDeleteLayoutPreset: (id: string) => Promise<void>
   onStart: (config: LaunchConfig) => void
@@ -51,6 +55,8 @@ export function AgentLauncher({
   presets,
   workingDir,
   layoutPresets,
+  startupLayoutId,
+  onSetStartupLayout,
   onSaveLayoutPreset,
   onDeleteLayoutPreset,
   onStart
@@ -63,6 +69,8 @@ export function AgentLauncher({
   const [creating, setCreating] = useState(false)
   const [selectedLayoutId, setSelectedLayoutId] = useState<string | null>(null)
   const [name, setName] = useState('')
+  // "+ New" builder: also mark the saved layout as this workspace's startup layout.
+  const [launchOnOpen, setLaunchOnOpen] = useState(false)
 
   const [count, setCount] = useState(1)
   const [slots, setSlots] = useState<string[]>(() => {
@@ -81,6 +89,7 @@ export function AgentLauncher({
     setSlots(active[0]?.id ? [active[0].id] : [])
     setNicks(active[0]?.id ? [''] : [])
     setName('')
+    setLaunchOnOpen(false)
   }
 
   // Resize the slot + nickname lists, keeping existing choices for slots that survive.
@@ -127,14 +136,16 @@ export function AgentLauncher({
     const { presetIds, nicknames } = buildConfig()
     if (presetIds.length === 0) return
     const layoutName = name.trim() || t('launcher.untitledPreset')
+    const id = crypto.randomUUID()
     await onSaveLayoutPreset({
-      id: crypto.randomUUID(),
+      id,
       name: layoutName,
       presetIds,
       // Only persist nicknames when at least one slot has a custom one.
       nicknames: nicknames?.some(Boolean) ? nicknames : undefined,
       createdAt: Date.now()
     })
+    if (launchOnOpen) onSetStartupLayout(id)
     setCreating(false)
     toast.success(t('toast.layoutSaved', { name: layoutName }))
     onStart({ presetIds, nicknames })
@@ -307,7 +318,21 @@ export function AgentLauncher({
                 ))}
               </div>
             )}
-            <Button className="mt-5 w-full" disabled={!selectedLayoutId} onClick={startSelectedLayout}>
+            {/* Auto-launch the selected layout whenever this workspace opens empty. */}
+            {selectedLayoutId && (
+              <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-fgdim">
+                <input
+                  type="checkbox"
+                  checked={startupLayoutId === selectedLayoutId}
+                  onChange={(e) =>
+                    onSetStartupLayout(e.target.checked ? selectedLayoutId : null)
+                  }
+                  className="h-3.5 w-3.5 accent-[var(--c-accent-solid)]"
+                />
+                {t('launcher.launchOnOpen')}
+              </label>
+            )}
+            <Button className="mt-3 w-full" disabled={!selectedLayoutId} onClick={startSelectedLayout}>
               {t('launcher.start')}
             </Button>
           </>
@@ -318,12 +343,23 @@ export function AgentLauncher({
             {builder}
 
             {creating && (
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('launcher.presetNamePlaceholder')}
-                className="mt-4"
-              />
+              <>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('launcher.presetNamePlaceholder')}
+                  className="mt-4"
+                />
+                <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-fgdim">
+                  <input
+                    type="checkbox"
+                    checked={launchOnOpen}
+                    onChange={(e) => setLaunchOnOpen(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-[var(--c-accent-solid)]"
+                  />
+                  {t('launcher.launchOnOpen')}
+                </label>
+              </>
             )}
 
             <div className="mt-5 flex gap-2">

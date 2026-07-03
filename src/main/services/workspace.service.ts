@@ -481,6 +481,19 @@ export function renameWorkspace(id: string, name: string): WorkspaceState {
   return next
 }
 
+/** Set (or clear, with null) the layout auto-launched when the workspace opens empty. */
+export function setWorkspaceStartupLayout(id: string, layoutId: string | null): WorkspaceState {
+  const state = readState()
+  const ws = state.workspaces.find((w) => w.id === id)
+  if (ws) {
+    if (layoutId) ws.startupLayoutId = layoutId
+    else delete ws.startupLayoutId
+  }
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
 /**
  * Remove a workspace. The folder is kept even if it becomes empty. A
  * worktree-backed workspace also tears down its worktree; without `force` git

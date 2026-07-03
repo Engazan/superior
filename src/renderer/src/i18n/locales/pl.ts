@@ -300,6 +300,7 @@ export const pl: Record<MessageKey, string> = {
   'launcher.presetNamePlaceholder': 'Nazwa presetu',
   'launcher.untitledPreset': 'Bez nazwy',
   'launcher.saveAndStart': 'Zapisz i uruchom',
+  'launcher.launchOnOpen': 'Uruchom przy otwarciu tego workspace',
   'launcher.cancel': 'Anuluj',
   'tab.defaultName': 'Karta {n}',
   'tab.new': 'Nowa karta',

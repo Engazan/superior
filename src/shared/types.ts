@@ -291,6 +291,12 @@ export interface Workspace {
   worktreePath?: string
   /** Branch checked out in the worktree (display + git ops). Absent on plain workspaces. */
   branch?: string
+  /**
+   * When set, selecting this workspace while it has no terminals auto-launches
+   * the referenced {@link LayoutPreset}. Cleared by unchecking in the launcher;
+   * a dangling id (deleted layout) is ignored.
+   */
+  startupLayoutId?: string
 }
 
 /** A branch (local or remote-tracking), for the branch/worktree pickers. */
@@ -740,6 +746,7 @@ export const IPC = {
   FOLDER_UPDATE: 'folder:update',
   WORKSPACE_ADD: 'workspace:add',
   WORKSPACE_RENAME: 'workspace:rename',
+  WORKSPACE_SET_STARTUP_LAYOUT: 'workspace:set-startup-layout',
   WORKSPACE_REMOVE: 'workspace:remove',
   WORKSPACE_SET_ACTIVE: 'workspace:set-active',
   WORKSPACE_ADD_WORKTREE: 'workspace:add-worktree',

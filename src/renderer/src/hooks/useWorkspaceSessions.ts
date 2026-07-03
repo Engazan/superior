@@ -39,6 +39,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null)
   const [sessions, setSessions] = useState<AgentSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  // True once surviving daemon sessions were adopted (auto-launch waits for this).
+  const [sessionsRestored, setSessionsRestored] = useState(false)
   // Per-workspace tabs (each tab is a grid of terminals) + the active tab, kept
   // in memory and mirrored to disk. A workspace always has at least one tab.
   const [tabsByWs, setTabsByWs] = useState<Record<string, WorkspaceTabs>>({})
@@ -140,6 +142,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       const tab = active ? nextTabs[active]?.activeTabId : undefined
       const inActive = pinned.filter((s) => s.workspaceId === active && s.tabId === tab)
       setActiveSessionId(inActive.length ? inActive[inActive.length - 1].id : null)
+      // Only now do surviving daemon sessions count — gates workspace auto-launch.
+      setSessionsRestored(true)
     })().catch((err) => console.error('[restore] failed:', err))
   }, [newTab])
 
@@ -370,6 +374,12 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
 
   const renameWorkspace = useCallback(async (id: string, name: string) => {
     const state = await window.api.renameWorkspace(id, name)
+    setWorkspaces(state.workspaces)
+  }, [])
+
+  // Set/clear the layout auto-launched when the workspace opens with no terminals.
+  const setStartupLayout = useCallback(async (id: string, layoutId: string | null) => {
+    const state = await window.api.setWorkspaceStartupLayout(id, layoutId)
     setWorkspaces(state.workspaces)
   }, [])
 
@@ -771,6 +781,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     activeFolder,
     effectiveDir,
     sessions,
+    sessionsRestored,
     activeSessionId,
     setActiveSessionId,
     tabsByWs,
@@ -789,6 +800,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     addWorkspace,
     addWorktreeWorkspace,
     renameWorkspace,
+    setStartupLayout,
     selectWorkspace,
     removeWorkspace,
     launchAgent,

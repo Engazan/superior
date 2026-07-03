@@ -297,6 +297,7 @@ export const en = {
   'launcher.presetNamePlaceholder': 'Preset name',
   'launcher.untitledPreset': 'Untitled',
   'launcher.saveAndStart': 'Save & Start',
+  'launcher.launchOnOpen': 'Launch when this workspace opens',
   'launcher.cancel': 'Cancel',
   'tab.defaultName': 'Tab {n}',
   'tab.new': 'New tab',
