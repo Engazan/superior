@@ -13,6 +13,7 @@ import { registerSettingsIpc } from './ipc/settings.ipc'
 import { registerPresetsIpc } from './ipc/presets.ipc'
 import { registerIntegrationsIpc } from './ipc/integrations.ipc'
 import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
+import { registerNotificationsIpc } from './ipc/notifications.ipc'
 import { registerLayoutIpc } from './ipc/layout.ipc'
 import { registerGitIpc } from './ipc/git.ipc'
 import { registerFsIpc } from './ipc/fs.ipc'
@@ -116,6 +117,9 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
     applicationVersion: app.getVersion()
   })
 
+  // Windows needs an explicit AppUserModelID for native notifications to show.
+  if (process.platform === 'win32') app.setAppUserModelId('com.superior.app')
+
   // A folder passed on the command line (`superior /some/dir`). Persist it before
   // the window loads so the renderer's initial state read already includes it and
   // opens it active. Restrict cold-start parsing to the explicit `--path` flag in
@@ -145,6 +149,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerPresetsIpc()
   registerIntegrationsIpc()
   registerWindowIpc()
+  registerNotificationsIpc(() => mainWindow)
   registerLayoutIpc()
   registerGitIpc()
   registerFsIpc()

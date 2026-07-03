@@ -1,7 +1,9 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { SearchAddon } from '@xterm/addon-search'
 import { subscribe } from '../terminalBus'
+import { registerSearch, unregisterSearch } from '../terminalSearch'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
@@ -221,6 +223,11 @@ export const TerminalView = memo(function TerminalView({
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
+    // Scrollback search, driven by the App-owned overlay via the registry —
+    // no props change, so the memoization contract stays intact.
+    const search = new SearchAddon()
+    term.loadAddon(search)
+    registerSearch(session.id, search, term)
     term.open(host)
     fit.fit()
 
@@ -303,6 +310,7 @@ export const TerminalView = memo(function TerminalView({
       if (raf !== null) cancelAnimationFrame(raf)
       host.removeEventListener('focusin', onFocusIn)
       unsubscribe()
+      unregisterSearch(session.id)
       dataDisposable.dispose()
       term.dispose()
       termRef.current = null

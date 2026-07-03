@@ -18,7 +18,8 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   nextWorkspace: 'mod+shift+arrowdown',
   prevProfile: 'mod+shift+arrowleft',
   nextProfile: 'mod+shift+arrowright',
-  manageProfiles: 'mod+shift+p'
+  manageProfiles: 'mod+shift+p',
+  searchTerminal: 'mod+f'
 }
 
 const isMac = window.api.platform === 'darwin'

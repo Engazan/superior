@@ -6,6 +6,7 @@ import { FilePreviewPanel } from './components/FilePreviewPanel'
 import { TerminalPanel } from './components/TerminalPanel'
 import { SettingsView, type SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
+import { TerminalSearchOverlay } from './components/TerminalSearchOverlay'
 import { ProfileManager } from './components/ProfileManager'
 import { OpenProjectModal } from './components/OpenProjectModal'
 import { TooltipLayer } from './components/TooltipLayer'
@@ -21,7 +22,12 @@ import { useLayoutPresets } from './hooks/useLayoutPresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
-import { setActivitySessions, setActivityActiveWorkspace } from './activityStore'
+import {
+  setActivitySessions,
+  setActivityActiveWorkspace,
+  setActivityNotifier,
+  useAttentionWorkspaces
+} from './activityStore'
 
 type View = 'main' | 'settings'
 
@@ -45,6 +51,8 @@ export default function App(): JSX.Element {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   // Quick-launch preset picker overlay (opened by shortcut).
   const [launcherOpen, setLauncherOpen] = useState(false)
+  // Find-in-terminal overlay (⌘F), targeting the active session.
+  const [searchOpen, setSearchOpen] = useState(false)
   // "Manage profiles" modal, opened from the title-bar profile switcher.
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
   // "Open / clone project" modal, opened from the sidebar.
@@ -116,6 +124,41 @@ export default function App(): JSX.Element {
     setActivityActiveWorkspace(ws.activeWorkspaceId)
   }, [ws.activeWorkspaceId])
   const update = useUpdateCheck()
+
+  // Native OS notification when an agent finishes while the app is unfocused.
+  // Names resolve through refs so the notifier callback never goes stale.
+  const notifyCtxRef = useRef({ sessions: ws.sessions, workspaces: ws.workspaces, t })
+  notifyCtxRef.current = { sessions: ws.sessions, workspaces: ws.workspaces, t }
+  useEffect(() => {
+    setActivityNotifier((sessionId, workspaceId) => {
+      if (document.hasFocus()) return
+      void window.api.getSettings().then((s) => {
+        if (!s.notifications) return
+        const ctx = notifyCtxRef.current
+        const session = ctx.sessions.find((x) => x.id === sessionId)
+        const workspace = ctx.workspaces.find((w) => w.id === workspaceId)
+        const label = session
+          ? session.nickname
+            ? `${session.label} · ${session.nickname}`
+            : session.label
+          : 'Agent'
+        window.api.notifyAgentFinished({
+          workspaceId,
+          title: ctx.t('notify.finishedTitle', { label }),
+          body: ctx.t('notify.finishedBody', { workspace: workspace?.name ?? '' })
+        })
+      })
+    })
+    return () => setActivityNotifier(null)
+  }, [])
+
+  // Clicking the notification selects the workspace the agent finished in.
+  const selectWorkspaceRef = useRef(ws.selectWorkspace)
+  selectWorkspaceRef.current = ws.selectWorkspace
+  useEffect(
+    () => window.api.onNotificationActivated((id) => selectWorkspaceRef.current(id)),
+    []
+  )
 
   const openPresets = useCallback(() => {
     setSettingsSection('presets')
@@ -233,6 +276,11 @@ export default function App(): JSX.Element {
         e.preventDefault()
         e.stopPropagation()
         setProfileManagerOpen((o) => !o)
+      } else if (chord === shortcuts.searchTerminal) {
+        if (view !== 'main' || !ws.activeSessionId) return
+        e.preventDefault()
+        e.stopPropagation()
+        setSearchOpen(true)
       }
     }
     window.addEventListener('keydown', onKeyDown, true)
@@ -407,6 +455,13 @@ export default function App(): JSX.Element {
         />
       )}
 
+      {view === 'main' && searchOpen && ws.activeSessionId && (
+        <TerminalSearchOverlay
+          sessionId={ws.activeSessionId}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+
       {projectModalOpen && (
         <OpenProjectModal
           integrations={integrations}
@@ -434,7 +489,20 @@ export default function App(): JSX.Element {
         />
       )}
 
+      <AttentionBadgeSync />
       <TooltipLayer />
     </div>
   )
+}
+
+/**
+ * Mirrors the attention-workspace count onto the dock/taskbar badge. A separate
+ * null-rendering subscriber so attention changes never re-render App itself.
+ */
+function AttentionBadgeSync(): null {
+  const attention = useAttentionWorkspaces()
+  useEffect(() => {
+    window.api.setBadgeCount(attention.size)
+  }, [attention])
+  return null
 }

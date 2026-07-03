@@ -65,6 +65,17 @@ function refresh(): void {
   if (changed) for (const listener of listeners) listener()
 }
 
+// Optional hook fired when a session finishes (busy → idle); App installs it
+// to raise a native OS notification when the whole app is unfocused.
+let notifier: ((sessionId: string, workspaceId: string) => void) | null = null
+
+/** Install the finished-session callback (App wires OS notifications here). */
+export function setActivityNotifier(
+  fn: ((sessionId: string, workspaceId: string) => void) | null
+): void {
+  notifier = fn
+}
+
 // busy → idle for a session that was producing output: clear busy, then raise
 // attention on its workspace unless that workspace is focused.
 function finish(id: string): void {
@@ -72,6 +83,7 @@ function finish(id: string): void {
   busySessions.delete(id)
   const wsId = sessionInfo.get(id)?.workspaceId
   if (wsId && wsId !== activeWs) attention.add(wsId)
+  if (wsId) notifier?.(id, wsId)
   refresh()
 }
 

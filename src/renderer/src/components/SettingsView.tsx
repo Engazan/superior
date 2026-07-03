@@ -84,9 +84,18 @@ function AppearanceSection(): JSX.Element {
   const { usagePrimary, setUsagePrimary } = useUsagePrimary()
 
   const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
+  const [notifications, setNotifications] = useState<boolean | null>(null)
   useEffect(() => {
-    window.api.getSettings().then((s) => setUsageTracking(s.usageTracking))
+    window.api.getSettings().then((s) => {
+      setUsageTracking(s.usageTracking)
+      setNotifications(s.notifications)
+    })
   }, [])
+
+  const toggleNotifications = (next: boolean): void => {
+    setNotifications(next)
+    window.api.setNotifications(next).then((s) => setNotifications(s.notifications))
+  }
 
   const toggleUsageTracking = (next: boolean): void => {
     setUsageTracking(next)
@@ -144,6 +153,14 @@ function AppearanceSection(): JSX.Element {
               aria-label={t('appearance.attentionColor')}
             />
           </label>
+        </SettingRow>
+
+        <SettingRow title={t('notify.setting')} description={t('notify.settingDesc')}>
+          <Toggle
+            checked={notifications === true}
+            onChange={toggleNotifications}
+            label={t('notify.setting')}
+          />
         </SettingRow>
 
         <SettingRow title={t('usage.tracking')} description={t('usage.trackingDesc')}>

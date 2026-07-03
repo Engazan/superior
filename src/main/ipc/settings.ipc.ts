@@ -12,6 +12,7 @@ import {
   getSettings,
   setAttentionColor,
   setLanguage,
+  setNotifications,
   setShortcuts,
   setTheme,
   setUi,
@@ -50,5 +51,9 @@ export function registerSettingsIpc(): void {
 
   ipcMain.handle(IPC.SETTINGS_SET_USAGE_PRIMARY, (_event, primary: UsagePrimary): AppSettings =>
     setUsagePrimary(primary)
+  )
+
+  ipcMain.handle(IPC.SETTINGS_SET_NOTIFICATIONS, (_event, enabled: boolean): AppSettings =>
+    setNotifications(enabled)
   )
 }

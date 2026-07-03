@@ -21,6 +21,7 @@ export type ShortcutAction =
   | 'prevProfile'
   | 'nextProfile'
   | 'manageProfiles'
+  | 'searchTerminal'
 
 /**
  * A chord stored in a platform-neutral, normalized form: lowercase tokens
@@ -77,6 +78,8 @@ export interface AppSettings {
    * tooltip always lists every stat regardless of this choice.
    */
   usagePrimary: UsagePrimary
+  /** Native OS notification when an agent finishes while the app is unfocused. */
+  notifications: boolean
 }
 
 /** The single usage figure shown front-and-center in the topbar badge. */
@@ -709,6 +712,10 @@ export const IPC = {
   SETTINGS_SET_UI: 'settings:set-ui',
   SETTINGS_SET_ATTENTION_COLOR: 'settings:set-attention-color',
   SETTINGS_SET_USAGE_TRACKING: 'settings:set-usage-tracking',
+  SETTINGS_SET_NOTIFICATIONS: 'settings:set-notifications',
+  NOTIFY_FINISHED: 'notify:finished',
+  NOTIFY_ACTIVATED: 'notify:activated',
+  APP_SET_BADGE: 'app:set-badge',
   SETTINGS_SET_USAGE_PRIMARY: 'settings:set-usage-primary',
   INTEGRATIONS_LIST: 'integrations:list',
   INTEGRATIONS_SAVE: 'integrations:save',

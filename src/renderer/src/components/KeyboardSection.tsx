@@ -20,7 +20,8 @@ const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
   { id: 'nextWorkspace', labelKey: 'keyboard.nextWorkspace' },
   { id: 'prevProfile', labelKey: 'keyboard.prevProfile' },
   { id: 'nextProfile', labelKey: 'keyboard.nextProfile' },
-  { id: 'manageProfiles', labelKey: 'keyboard.manageProfiles' }
+  { id: 'manageProfiles', labelKey: 'keyboard.manageProfiles' },
+  { id: 'searchTerminal', labelKey: 'keyboard.searchTerminal' }
 ]
 
 /** Rebindable keyboard shortcuts. Click a chord to record a new key combination. */

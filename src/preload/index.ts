@@ -224,6 +224,27 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_USAGE_TRACKING, enabled)
   },
 
+  setNotifications(enabled: boolean): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_NOTIFICATIONS, enabled)
+  },
+
+  /** Show a native "agent finished" notification (clicking focuses the workspace). */
+  notifyAgentFinished(payload: { workspaceId: string; title: string; body: string }): void {
+    ipcRenderer.send(IPC.NOTIFY_FINISHED, payload)
+  },
+
+  /** Subscribe to notification clicks. Returns an unsubscribe function. */
+  onNotificationActivated(cb: (workspaceId: string) => void): () => void {
+    const listener = (_e: unknown, workspaceId: string): void => cb(workspaceId)
+    ipcRenderer.on(IPC.NOTIFY_ACTIVATED, listener)
+    return () => ipcRenderer.removeListener(IPC.NOTIFY_ACTIVATED, listener)
+  },
+
+  /** Mirror the attention-workspace count on the dock/taskbar badge. */
+  setBadgeCount(count: number): void {
+    ipcRenderer.send(IPC.APP_SET_BADGE, count)
+  },
+
   /** Choose which usage figure the topbar badge leads with. */
   setUsagePrimary(primary: UsagePrimary): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_USAGE_PRIMARY, primary)

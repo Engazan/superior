@@ -25,7 +25,8 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   nextWorkspace: 'mod+shift+arrowdown',
   prevProfile: 'mod+shift+arrowleft',
   nextProfile: 'mod+shift+arrowright',
-  manageProfiles: 'mod+shift+p'
+  manageProfiles: 'mod+shift+p',
+  searchTerminal: 'mod+f'
 }
 const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'toggleSidebar',
@@ -43,7 +44,8 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'nextWorkspace',
   'prevProfile',
   'nextProfile',
-  'manageProfiles'
+  'manageProfiles',
+  'searchTerminal'
 ]
 const DEFAULT_UI: UiState = {
   sidebarCollapsed: false,
@@ -58,7 +60,8 @@ const DEFAULTS: AppSettings = {
   ui: { ...DEFAULT_UI },
   attentionColor: DEFAULT_ATTENTION_COLOR,
   usageTracking: false,
-  usagePrimary: 'remaining'
+  usagePrimary: 'remaining',
+  notifications: true
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system', 'transparent']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
@@ -119,7 +122,9 @@ export function getSettings(): AppSettings {
       typeof parsed.usageTracking === 'boolean' ? parsed.usageTracking : DEFAULTS.usageTracking,
     usagePrimary: USAGE_PRIMARIES.includes(parsed.usagePrimary as UsagePrimary)
       ? (parsed.usagePrimary as UsagePrimary)
-      : DEFAULTS.usagePrimary
+      : DEFAULTS.usagePrimary,
+    notifications:
+      typeof parsed.notifications === 'boolean' ? parsed.notifications : DEFAULTS.notifications
   }
   return cached
 }
@@ -184,6 +189,16 @@ export function setUsageTracking(enabled: boolean): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     usageTracking: Boolean(enabled)
+  }
+  save(next)
+  return next
+}
+
+/** Persist whether finished-agent OS notifications are enabled. */
+export function setNotifications(enabled: boolean): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    notifications: Boolean(enabled)
   }
   save(next)
   return next
