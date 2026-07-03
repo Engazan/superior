@@ -27,7 +27,10 @@ import {
   type FolderUpdate,
   type ProfileUpdate,
   type FsListResult,
+  type GitActionResult,
   type GitDiff,
+  type GitDiffFile,
+  type GitLogEntry,
   type GitStatus,
   type Language,
   type TabsState,
@@ -172,6 +175,42 @@ const api = {
   /** Create `branch` from the current HEAD and switch to it. */
   createBranch(folderPath: string, branch: string): Promise<BranchSwitchResult> {
     return ipcRenderer.invoke(IPC.GIT_CREATE_BRANCH, { folderPath, branch })
+  },
+
+  gitStage(folderPath: string, path: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_STAGE, { folderPath, path })
+  },
+
+  gitUnstage(folderPath: string, path: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_UNSTAGE, { folderPath, path })
+  },
+
+  gitStageAll(folderPath: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_STAGE_ALL, folderPath)
+  },
+
+  gitUnstageAll(folderPath: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_UNSTAGE_ALL, folderPath)
+  },
+
+  gitCommit(folderPath: string, message: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_COMMIT, { folderPath, message })
+  },
+
+  gitPush(folderPath: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_PUSH, folderPath)
+  },
+
+  gitPull(folderPath: string): Promise<GitActionResult> {
+    return ipcRenderer.invoke(IPC.GIT_PULL, folderPath)
+  },
+
+  gitLog(folderPath: string): Promise<GitLogEntry[]> {
+    return ipcRenderer.invoke(IPC.GIT_LOG, folderPath)
+  },
+
+  gitShowCommit(folderPath: string, hash: string): Promise<GitDiffFile[]> {
+    return ipcRenderer.invoke(IPC.GIT_SHOW_COMMIT, { folderPath, hash })
   },
 
   listDir(dirPath: string): Promise<FsListResult> {

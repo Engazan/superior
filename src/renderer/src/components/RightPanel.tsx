@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
+import { HistoryView } from './HistoryView'
 import { useI18n } from '../i18n'
 import type { FsEntry, GitDiff } from '../types'
 
-type Tab = 'files' | 'changes'
+type Tab = 'files' | 'changes' | 'history'
 
 interface Props {
   /** Whether the panel is open. Kept mounted while closed (for the slide
@@ -56,7 +57,13 @@ export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Pro
     return () => window.clearInterval(id)
   }, [folderPath, fetchDiff, active])
 
-  const refresh = useCallback((): void => void fetchDiff(true), [fetchDiff])
+  // Bumped on every explicit refresh (incl. after commit/pull) so the history
+  // tab refetches its log without its own poller.
+  const [refreshToken, setRefreshToken] = useState(0)
+  const refresh = useCallback((): void => {
+    setRefreshToken((n) => n + 1)
+    void fetchDiff(true)
+  }, [fetchDiff])
 
   const totals = diff?.isRepository && !diff.error ? diff.totals : null
 
@@ -81,10 +88,15 @@ export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Pro
             </span>
           )}
         </button>
+        <button className={tabClass(tab === 'history')} onClick={() => setTab('history')}>
+          {t('rightPanel.history')}
+        </button>
       </div>
 
       {tab === 'changes' ? (
-        <ChangesView diff={diff} loading={loading} onRefresh={refresh} />
+        <ChangesView folderPath={folderPath} diff={diff} loading={loading} onRefresh={refresh} />
+      ) : tab === 'history' ? (
+        <HistoryView folderPath={folderPath} refreshToken={refreshToken} />
       ) : (
         <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}

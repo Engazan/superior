@@ -2,7 +2,15 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import type { BranchSwitchResult, GitDiff, GitDiffFile, GitDiffLine, GitStatus } from '@shared/types'
+import type {
+  BranchSwitchResult,
+  GitActionResult,
+  GitDiff,
+  GitDiffFile,
+  GitDiffLine,
+  GitLogEntry,
+  GitStatus
+} from '@shared/types'
 import { isWithinWorkspaceFolder } from './workspace.service'
 import { parseUnifiedDiff } from './git.diff'
 
@@ -56,16 +64,36 @@ interface RepoState {
   branch: string | null
   hasCommits: boolean
   untracked: string[]
+  /** The tracking ref (e.g. 'origin/main'), or null when none is set. */
+  upstream: string | null
+  /** Commits ahead of / behind the upstream (0/0 without an upstream). */
+  ahead: number
+  behind: number
+  /** True when the index differs from HEAD (something is staged). */
+  hasStaged: boolean
   error?: string
 }
 
 async function readRepoState(folderPath: string): Promise<RepoState> {
+  const empty = {
+    branch: null,
+    hasCommits: false,
+    untracked: [],
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    hasStaged: false
+  }
   try {
     // -z: NUL-terminated entries so untracked paths with any characters survive.
     // -uall: individual files (not collapsed dirs), matching ls-files --others.
     const raw = await gitRaw(folderPath, ['status', '--porcelain=v2', '--branch', '-uall', '-z'])
     let oid = ''
     let head = ''
+    let upstream: string | null = null
+    let ahead = 0
+    let behind = 0
+    let hasStaged = false
     const untracked: string[] = []
     const tokens = raw.split('\0')
     for (let i = 0; i < tokens.length; i++) {
@@ -73,8 +101,20 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
       if (!tok) continue
       if (tok.startsWith('# branch.oid ')) oid = tok.slice(13)
       else if (tok.startsWith('# branch.head ')) head = tok.slice(14)
-      else if (tok.startsWith('? ')) untracked.push(tok.slice(2))
-      else if (tok.startsWith('2 ')) i++ // rename entry: its origin path is the next token
+      else if (tok.startsWith('# branch.upstream ')) upstream = tok.slice(18)
+      else if (tok.startsWith('# branch.ab ')) {
+        // '# branch.ab +A -B'
+        const m = /\+(\d+) -(\d+)/.exec(tok.slice(12))
+        if (m) {
+          ahead = Number(m[1])
+          behind = Number(m[2])
+        }
+      } else if (tok.startsWith('? ')) untracked.push(tok.slice(2))
+      else if (tok.startsWith('1 ') || tok.startsWith('2 ')) {
+        // '1 XY ...' / '2 XY ...': X = staged column, Y = unstaged column.
+        if (tok[2] !== '.') hasStaged = true
+        if (tok.startsWith('2 ')) i++ // rename entry: its origin path is the next token
+      }
     }
     const hasCommits = oid !== '' && oid !== '(initial)'
     const branch =
@@ -83,19 +123,13 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
         : hasCommits
           ? `detached@${oid.slice(0, 7)}`
           : 'HEAD'
-    return { isRepository: true, branch, hasCommits, untracked }
+    return { isRepository: true, branch, hasCommits, untracked, upstream, ahead, behind, hasStaged }
   } catch (err) {
     const e = err as NodeJS.ErrnoException
     if (e.code === 'ENOENT') {
-      return {
-        isRepository: false,
-        branch: null,
-        hasCommits: false,
-        untracked: [],
-        error: gitErrorMessage(err)
-      }
+      return { isRepository: false, ...empty, error: gitErrorMessage(err) }
     }
-    return { isRepository: false, branch: null, hasCommits: false, untracked: [] }
+    return { isRepository: false, ...empty }
   }
 }
 
@@ -154,7 +188,14 @@ async function computeGitStatus(folderPath: string): Promise<GitStatus> {
   if (!repo.isRepository) return { isRepository: false, branch: null, error: repo.error }
   try {
     const stats = await getDiffStats(folderPath, repo)
-    return { isRepository: true, branch: repo.branch, ...stats }
+    return {
+      isRepository: true,
+      branch: repo.branch,
+      ...stats,
+      ahead: repo.ahead,
+      behind: repo.behind,
+      upstream: repo.upstream
+    }
   } catch {
     return { isRepository: false, branch: null }
   }
@@ -327,27 +368,39 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
       isRepository: false,
       branch: null,
       files: [],
+      staged: [],
       totals: emptyTotals,
       error: 'Workspace folder is invalid.'
     }
   }
   const repo = await readRepoState(folderPath)
   if (!repo.isRepository) {
-    return { isRepository: false, branch: null, files: [], totals: emptyTotals, error: repo.error }
+    return {
+      isRepository: false,
+      branch: null,
+      files: [],
+      staged: [],
+      totals: emptyTotals,
+      error: repo.error
+    }
   }
 
   try {
-    // Compare the working tree against HEAD once there's a commit; before the
-    // first commit, fall back to the index so staged files still show up.
-    const base = repo.hasCommits ? ['diff', 'HEAD'] : ['diff', '--cached']
-    const raw = await gitRaw(folderPath, [...base, '--no-color', '--no-ext-diff', '-M'])
-    const files = parseUnifiedDiff(raw)
+    // Two separate diffs so the UI can offer stage/unstage per section:
+    // staged = index vs HEAD (works before the first commit too), unstaged =
+    // worktree vs index. Untracked files belong to the unstaged side.
+    const [stagedRaw, unstagedRaw] = await Promise.all([
+      gitRaw(folderPath, ['diff', '--cached', '--no-color', '--no-ext-diff', '-M']),
+      gitRaw(folderPath, ['diff', '--no-color', '--no-ext-diff', '-M'])
+    ])
+    const staged = parseUnifiedDiff(stagedRaw)
+    const files = parseUnifiedDiff(unstagedRaw)
 
     for (const rel of repo.untracked) {
       files.push(await untrackedEntry(folderPath, rel))
     }
 
-    const totals = files.reduce(
+    const totals = [...staged, ...files].reduce(
       (acc, f) => ({
         files: acc.files + 1,
         additions: acc.additions + f.additions,
@@ -355,14 +408,151 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
       }),
       { ...emptyTotals }
     )
-    return { isRepository: true, branch: repo.branch, files, totals }
+    return {
+      isRepository: true,
+      branch: repo.branch,
+      files,
+      staged,
+      totals,
+      ahead: repo.ahead,
+      behind: repo.behind,
+      upstream: repo.upstream
+    }
   } catch (err) {
     return {
       isRepository: true,
       branch: repo.branch,
       files: [],
+      staged: [],
       totals: emptyTotals,
       error: gitErrorMessage(err)
     }
+  }
+}
+
+/** Run a mutating git command, mapping failure to a user-facing message. */
+async function gitAction(folderPath: string, args: string[]): Promise<GitActionResult> {
+  if (!isWithinWorkspaceFolder(folderPath)) return { error: 'Workspace folder is invalid.' }
+  try {
+    await git(folderPath, args)
+    invalidateGitStatus(folderPath)
+    return {}
+  } catch (err) {
+    invalidateGitStatus(folderPath)
+    return { error: gitErrorMessage(err) }
+  }
+}
+
+/** Stage one file (also stages a tracked file's deletion). */
+export function stageFile(folderPath: string, rel: string): Promise<GitActionResult> {
+  return gitAction(folderPath, ['add', '--', rel])
+}
+
+/** Unstage one file. `git reset` works on an unborn branch too. */
+export function unstageFile(folderPath: string, rel: string): Promise<GitActionResult> {
+  return gitAction(folderPath, ['reset', '-q', '--', rel])
+}
+
+export function stageAll(folderPath: string): Promise<GitActionResult> {
+  return gitAction(folderPath, ['add', '-A'])
+}
+
+export function unstageAll(folderPath: string): Promise<GitActionResult> {
+  return gitAction(folderPath, ['reset', '-q'])
+}
+
+export function commit(folderPath: string, message: string): Promise<GitActionResult> {
+  const msg = message.trim()
+  if (!msg) return Promise.resolve({ error: 'Enter a commit message.' })
+  return gitAction(folderPath, ['commit', '-m', msg])
+}
+
+/**
+ * Network-bound git commands get their own exec: `runGit`'s 5s timeout is far
+ * too tight for a push/pull over a slow link.
+ */
+async function runGitLong(dir: string, args: string[]): Promise<void> {
+  await execFileAsync('git', ['-C', dir, ...args], {
+    encoding: 'utf-8',
+    timeout: 120_000,
+    maxBuffer: 8 * 1024 * 1024,
+    windowsHide: true
+  })
+}
+
+/** Push the current branch; publishes it (`-u origin`) when no upstream is set. */
+export async function pushBranch(folderPath: string): Promise<GitActionResult> {
+  if (!isWithinWorkspaceFolder(folderPath)) return { error: 'Workspace folder is invalid.' }
+  const repo = await readRepoState(folderPath)
+  if (!repo.isRepository) return { error: repo.error ?? 'Not a Git repository.' }
+  try {
+    if (repo.upstream) await runGitLong(folderPath, ['push'])
+    else {
+      if (!repo.branch || repo.branch.startsWith('detached@') || repo.branch === 'HEAD') {
+        return { error: 'No branch to push (detached HEAD).' }
+      }
+      await runGitLong(folderPath, ['push', '-u', 'origin', repo.branch])
+    }
+    invalidateGitStatus(folderPath)
+    return {}
+  } catch (err) {
+    invalidateGitStatus(folderPath)
+    return { error: gitErrorMessage(err) }
+  }
+}
+
+/** Fast-forward pull of the current branch. */
+export async function pullBranch(folderPath: string): Promise<GitActionResult> {
+  if (!isWithinWorkspaceFolder(folderPath)) return { error: 'Workspace folder is invalid.' }
+  try {
+    await runGitLong(folderPath, ['pull', '--ff-only'])
+    invalidateGitStatus(folderPath)
+    return {}
+  } catch (err) {
+    invalidateGitStatus(folderPath)
+    return { error: gitErrorMessage(err) }
+  }
+}
+
+/** The most recent commits, newest first; [] before the first commit. */
+export async function getGitLog(folderPath: string, limit = 50): Promise<GitLogEntry[]> {
+  if (!isWithinWorkspaceFolder(folderPath)) return []
+  try {
+    // Unit separator between fields, record separator between commits, so
+    // subjects with any printable characters survive parsing.
+    const raw = await gitRaw(folderPath, [
+      'log',
+      `-n${limit}`,
+      '--format=%H%x1f%h%x1f%an%x1f%ct%x1f%s%x1e'
+    ])
+    return raw
+      .split('\x1e')
+      .map((rec) => rec.trim())
+      .filter(Boolean)
+      .map((rec) => {
+        const [hash, shortHash, author, ts, subject] = rec.split('\x1f')
+        return { hash, shortHash, author, timestamp: Number(ts) || 0, subject: subject ?? '' }
+      })
+  } catch {
+    return [] // empty/unborn repo has no log
+  }
+}
+
+/** The diff a single commit introduced, reusing the working-tree diff parser. */
+export async function getCommitDiff(folderPath: string, hash: string): Promise<GitDiffFile[]> {
+  if (!isWithinWorkspaceFolder(folderPath)) return []
+  if (!/^[0-9a-f]{7,40}$/i.test(hash)) return []
+  try {
+    const raw = await gitRaw(folderPath, [
+      'show',
+      hash,
+      '--no-color',
+      '--no-ext-diff',
+      '-M',
+      '--format='
+    ])
+    return parseUnifiedDiff(raw)
+  } catch {
+    return []
   }
 }

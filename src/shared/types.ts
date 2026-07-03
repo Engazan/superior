@@ -404,6 +404,27 @@ export interface GitStatus {
   additions?: number
   /** Total removed lines across the working-tree diff. */
   deletions?: number
+  /** Commits ahead of / behind the upstream; absent without an upstream. */
+  ahead?: number
+  behind?: number
+  /** The tracking ref (e.g. 'origin/main'), or null when none is set. */
+  upstream?: string | null
+  error?: string
+}
+
+/** One commit in the history view. */
+export interface GitLogEntry {
+  hash: string
+  shortHash: string
+  author: string
+  /** Unix seconds of the commit time. */
+  timestamp: number
+  subject: string
+}
+
+/** Outcome of a mutating git action (stage, commit, push, …). */
+export interface GitActionResult {
+  /** User-facing error; absent on success. */
   error?: string
 }
 
@@ -506,8 +527,16 @@ export interface FileWriteResult {
 export interface GitDiff {
   isRepository: boolean
   branch: string | null
+  /** Unstaged changes (worktree vs index), incl. untracked files. */
   files: GitDiffFile[]
+  /** Staged changes (index vs HEAD). */
+  staged: GitDiffFile[]
+  /** Combined totals across staged + unstaged. */
   totals: { files: number; additions: number; deletions: number }
+  /** Commits ahead of / behind the upstream; absent without an upstream. */
+  ahead?: number
+  behind?: number
+  upstream?: string | null
   error?: string
 }
 
@@ -700,6 +729,15 @@ export const IPC = {
   GIT_DIFF: 'git:diff',
   GIT_SWITCH_BRANCH: 'git:switch-branch',
   GIT_CREATE_BRANCH: 'git:create-branch',
+  GIT_STAGE: 'git:stage',
+  GIT_UNSTAGE: 'git:unstage',
+  GIT_STAGE_ALL: 'git:stage-all',
+  GIT_UNSTAGE_ALL: 'git:unstage-all',
+  GIT_COMMIT: 'git:commit',
+  GIT_PUSH: 'git:push',
+  GIT_PULL: 'git:pull',
+  GIT_LOG: 'git:log',
+  GIT_SHOW_COMMIT: 'git:show-commit',
   FS_LIST_DIR: 'fs:list-dir',
   FS_SEARCH: 'fs:search',
   FS_READ_FILE: 'fs:read-file',
