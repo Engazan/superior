@@ -222,6 +222,7 @@ export const sk: Record<MessageKey, string> = {
   'tab.defaultName': 'Karta {n}',
   'tab.new': 'Nová karta',
   'tab.rename': 'Dvojklikom premenujete',
+  'tab.renameAction': 'Premenovať tab',
   'tab.close': 'Zavrieť kartu',
   'terminal.addTerminal': 'Pridať terminál',
   'terminal.managePresets': 'Spravovať predvoľby…',

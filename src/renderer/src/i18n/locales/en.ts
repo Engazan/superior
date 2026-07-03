@@ -218,6 +218,7 @@ export const en = {
   'tab.defaultName': 'Tab {n}',
   'tab.new': 'New tab',
   'tab.rename': 'Double-click to rename',
+  'tab.renameAction': 'Rename tab',
   'tab.close': 'Close tab',
   'terminal.addTerminal': 'Add terminal',
   'terminal.managePresets': 'Manage presets…',

@@ -221,6 +221,7 @@ export const pl: Record<MessageKey, string> = {
   'tab.defaultName': 'Karta {n}',
   'tab.new': 'Nowa karta',
   'tab.rename': 'Kliknij dwukrotnie, aby zmienić nazwę',
+  'tab.renameAction': 'Zmień nazwę karty',
   'tab.close': 'Zamknij kartę',
   'terminal.addTerminal': 'Dodaj terminal',
   'terminal.managePresets': 'Zarządzaj presetami…',

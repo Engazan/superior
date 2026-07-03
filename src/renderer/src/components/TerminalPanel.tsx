@@ -223,17 +223,41 @@ export function TerminalPanel({
                     </span>
                   )}
                   {!editing && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onCloseTab(tab.id)
-                      }}
-                      className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
-                      aria-label={t('tab.close')}
-                      title={t('tab.close')}
-                    >
-                      ✕
-                    </button>
+                    <>
+                      {/* Pencil appears on hover; opens the inline rename (double-click also works). */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingTab({ id: tab.id, name: tab.name })
+                        }}
+                        className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
+                        aria-label={t('tab.renameAction')}
+                        title={t('tab.renameAction')}
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          className="h-3 w-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M11.5 2.5l2 2L6 12l-2.5.5L4 10z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onCloseTab(tab.id)
+                        }}
+                        className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg"
+                        aria-label={t('tab.close')}
+                        title={t('tab.close')}
+                      >
+                        ✕
+                      </button>
+                    </>
                   )}
                 </div>
               )

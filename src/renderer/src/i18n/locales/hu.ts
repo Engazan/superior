@@ -221,6 +221,7 @@ export const hu: Record<MessageKey, string> = {
   'tab.defaultName': '{n}. lap',
   'tab.new': 'Új lap',
   'tab.rename': 'Dupla kattintás az átnevezéshez',
+  'tab.renameAction': 'Lap átnevezése',
   'tab.close': 'Lap bezárása',
   'terminal.addTerminal': 'Terminál hozzáadása',
   'terminal.managePresets': 'Sablonok kezelése…',
