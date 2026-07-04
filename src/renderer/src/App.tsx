@@ -502,8 +502,6 @@ export default function App(): JSX.Element {
           view === 'main' && !!gitStatus?.isRepository && !ws.activeWorkspace?.worktreePath
         }
         onBranchSwitched={refreshGitStatus}
-        // Reopens on the last-visited section rather than resetting to Appearance.
-        onOpenSettings={() => setView('settings')}
         onOpenLauncher={() => setLauncherOpen(true)}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
         profiles={ws.profiles}
@@ -551,6 +549,8 @@ export default function App(): JSX.Element {
               collapsed={sidebarCollapsed}
               onExpand={expandSidebar}
               onOpenProject={openProjectModal}
+              // Reopens on the last-visited section rather than resetting to Appearance.
+              onOpenSettings={() => setView('settings')}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
               onUpdateFolder={ws.updateFolder}

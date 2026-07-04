@@ -6,6 +6,7 @@ import { useBusyWorkspaces, useAttentionWorkspaces } from '../activityStore'
 import {
   ChevronIcon,
   ExternalLinkIcon,
+  GearIcon,
   GripIcon,
   KebabIcon,
   Menu,
@@ -14,6 +15,7 @@ import {
   TrashIcon,
   type MenuItem
 } from './ui'
+import { useShortcutTitle } from '../shortcuts'
 import {
   BranchBadge,
   DiffStat,
@@ -49,6 +51,8 @@ interface Props {
   onExpand: () => void
   /** Open the "open or clone a project" modal (local folder or git forge). */
   onOpenProject: () => void
+  /** Open the settings view. Its button is pinned to the bottom of the rail. */
+  onOpenSettings: () => void
   onRemoveFolder: (path: string) => void
   /** Persist a new folder order after a drag-to-reorder in the sidebar. */
   onReorderFolders: (orderedPaths: string[]) => void
@@ -76,6 +80,7 @@ export const Sidebar = memo(function Sidebar({
   collapsed,
   onExpand,
   onOpenProject,
+  onOpenSettings,
   onRemoveFolder,
   onReorderFolders,
   onUpdateFolder,
@@ -86,6 +91,7 @@ export const Sidebar = memo(function Sidebar({
   onSelectWorkspace
 }: Props): JSX.Element {
   const { t } = useI18n()
+  const shortcutTitle = useShortcutTitle()
   // Live activity signals, subscribed here (not in App) so per-chunk terminal
   // output only ever re-renders the sidebar — and only on real transitions.
   const busyWorkspaceIds = useBusyWorkspaces()
@@ -467,6 +473,16 @@ export const Sidebar = memo(function Sidebar({
             </button>
           </div>
         )}
+        <div className="shrink-0 border-t border-edge p-2">
+          <button
+            onClick={onOpenSettings}
+            title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
+            aria-label={t('sidebar.settings')}
+            className="mx-auto flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          >
+            <GearIcon size={18} />
+          </button>
+        </div>
       </aside>
     )
   }
@@ -741,6 +757,18 @@ export const Sidebar = memo(function Sidebar({
           </div>
         </div>
       )}
+      <div className="shrink-0 border-t border-edge p-2">
+        <button
+          onClick={onOpenSettings}
+          title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          <span className="flex h-5 w-5 items-center justify-center">
+            <GearIcon size={17} />
+          </span>
+          {t('sidebar.settings')}
+        </button>
+      </div>
     </aside>
   )
 })

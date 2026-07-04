@@ -22,8 +22,6 @@ interface Props {
   branchSwitchable: boolean
   /** Re-read git status right after a successful branch switch. */
   onBranchSwitched: () => void
-  /** Open the settings view. The gear sits at the far right of the strip. */
-  onOpenSettings: () => void
   /** Open the quick-launch preset picker (also reachable via its shortcut). */
   onOpenLauncher: () => void
   /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
@@ -62,8 +60,8 @@ function BranchIcon(): JSX.Element {
 /**
  * Full-width draggable window strip across the top. The sidebar toggle lives
  * here (next to the native traffic lights on macOS / custom controls elsewhere)
- * so it stays put when the sidebar collapses to a rail. The settings gear is
- * pinned to the far right, before the window controls.
+ * so it stays put when the sidebar collapses to a rail. Settings now lives at the
+ * bottom of the sidebar; the right edge holds the panel toggles + window controls.
  */
 export function TitleBar({
   showToggle,
@@ -74,7 +72,6 @@ export function TitleBar({
   gitDir,
   branchSwitchable,
   onBranchSwitched,
-  onOpenSettings,
   onOpenLauncher,
   onToggleRight,
   profiles,
@@ -162,8 +159,8 @@ export function TitleBar({
         )}
       </div>
 
-      {/* RIGHT — settings + right-panel toggles + window controls. flex-1 to mirror
-          the left column; its content is right-aligned. */}
+      {/* RIGHT — quick-launch + right-panel toggles + window controls. flex-1 to
+          mirror the left column; its content is right-aligned. */}
       <div className="flex h-full min-w-0 flex-1 items-center justify-end" onDoubleClick={onMaximize}>
         {/* Visible entry point for the quick-launch picker, so the feature is
             discoverable without knowing its shortcut. */}
@@ -186,29 +183,6 @@ export function TitleBar({
             >
               <rect x="3" y="4" width="18" height="16" rx="2" />
               <path d="m7 9 3 3-3 3M12 15h5" />
-            </svg>
-          </button>
-        )}
-
-        {showToggle && (
-          <button
-            onClick={onOpenSettings}
-            title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
-            aria-label={t('sidebar.settings')}
-            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-          >
-            <svg
-              className="block h-[17px] w-[17px]"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
-              <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
         )}
