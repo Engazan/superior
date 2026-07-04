@@ -56,7 +56,7 @@ const DEFAULT_UI: UiState = {
 /** Catppuccin peach — a warm "done" tint that reads against the dark UI. */
 const DEFAULT_ATTENTION_COLOR = '#fab387'
 const DEFAULTS: AppSettings = {
-  theme: 'system',
+  theme: 'gradient-light',
   language: 'en',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ui: { ...DEFAULT_UI },
