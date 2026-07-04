@@ -56,7 +56,7 @@ export function CommandPalette({ commands, onClose }: Props): JSX.Element {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[26rem] w-[28rem] flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
+        className="solid-surface flex max-h-[26rem] w-[28rem] flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >
         <input
           autoFocus

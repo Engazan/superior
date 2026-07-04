@@ -172,7 +172,7 @@ export function ProfileManager({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
+        className="solid-surface flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
       >
         <div className="flex shrink-0 items-start gap-3 border-b border-edge px-5 py-4">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accentBg text-accent ring-1 ring-inset ring-accentBorder">
@@ -295,7 +295,7 @@ export function ProfileManager({
                 <div
                   role="menu"
                   style={{ top: colorPicker.y, left: colorPicker.x }}
-                  className="menu-solid fixed z-50 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
+                  className="solid-surface fixed z-50 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     {COLOR_SWATCHES.map((c) => (

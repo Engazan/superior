@@ -60,7 +60,7 @@ export function PromptPicker({ onPick, onClose }: Props): JSX.Element {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-96 w-96 flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
+        className="solid-surface flex max-h-96 w-96 flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >
         <input
           autoFocus

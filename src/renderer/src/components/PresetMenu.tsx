@@ -40,7 +40,7 @@ export function PresetMenu({ presets, disabled, dropUp, onSelect, onManage }: Pr
 
       {open && (
         <div
-          className={`menu-solid absolute right-0 z-50 min-w-44 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg ${
+          className={`solid-surface absolute right-0 z-50 min-w-44 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg ${
             dropUp ? 'bottom-8' : 'top-7'
           }`}
         >

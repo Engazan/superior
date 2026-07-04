@@ -139,7 +139,7 @@ export function TooltipLayer(): JSX.Element | null {
     <div
       ref={bubbleRef}
       role="tooltip"
-      className={`menu-solid pointer-events-none fixed z-[100] max-w-[min(22rem,90vw)] rounded-md border border-edge bg-panel px-2 py-1 text-xs font-medium leading-snug text-fg shadow-xl transition-opacity duration-100 ${
+      className={`solid-surface pointer-events-none fixed z-[100] max-w-[min(22rem,90vw)] rounded-md border border-edge bg-panel px-2 py-1 text-xs font-medium leading-snug text-fg shadow-xl transition-opacity duration-100 ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{

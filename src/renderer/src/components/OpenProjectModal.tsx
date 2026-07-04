@@ -101,7 +101,7 @@ export function OpenProjectModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
+        className="solid-surface flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-edge px-5 py-3">
           <h2 id={titleId} className="text-sm font-semibold text-fg">

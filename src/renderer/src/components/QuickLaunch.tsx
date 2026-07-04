@@ -50,7 +50,7 @@ export function QuickLaunch({ presets, onSelect, onClose }: Props): JSX.Element 
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-80 overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
+        className="solid-surface w-80 overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >
         <div className="border-b border-edge px-3 py-2 text-xs font-semibold uppercase tracking-wide text-fgmuted">
           {t('terminal.addTerminal')}

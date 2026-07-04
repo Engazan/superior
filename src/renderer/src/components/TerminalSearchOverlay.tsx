@@ -42,7 +42,7 @@ export function TerminalSearchOverlay({ sessionId, onClose }: Props): JSX.Elemen
   }
 
   return (
-    <div className="fixed right-6 top-16 z-[90] flex items-center gap-1 rounded-lg border border-edge bg-panel p-1.5 shadow-xl">
+    <div className="solid-surface fixed right-6 top-16 z-[90] flex items-center gap-1 rounded-lg border border-edge bg-panel p-1.5 shadow-xl">
       <input
         ref={inputRef}
         autoFocus

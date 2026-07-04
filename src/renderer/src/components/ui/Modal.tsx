@@ -89,7 +89,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
-        className={`flex max-h-full w-full flex-col rounded-xl border border-edge bg-panel p-5 shadow-2xl ${SIZE[size]}`}
+        className={`solid-surface flex max-h-full w-full flex-col rounded-xl border border-edge bg-panel p-5 shadow-2xl ${SIZE[size]}`}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -109,7 +109,11 @@ export function Modal({
           )}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        {/* overflow-y-auto turns the horizontal axis into a clip box too (CSS
+            promotes the sibling `visible` axis to `auto`), which would shave the
+            outward focus ring off full-width inputs on their left/right edges.
+            The `px-1 -mx-1` gives the ring room without shifting content. */}
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{children}</div>
 
         {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
       </div>

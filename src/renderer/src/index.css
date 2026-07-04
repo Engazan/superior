@@ -155,21 +155,27 @@ body,
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
-/* Floating menus/dropdowns must read as solid popovers, not frosted chrome. Over
-   the gradient — especially the light one, where a translucent white panel sits
-   on a bright backdrop — the frosted surface looks invisible. Give `.menu-solid`
-   surfaces an opaque panel (and drop the blur) in both gradient themes. These
-   rules come after the frosting block above, so they win at equal specificity. */
-.gradient .menu-solid,
-.gradient .menu-solid [class*='bg-panel'] {
+/* Floating surfaces that overlay content — menus, dropdowns, tooltips and modal
+   dialogs — must read as solid, not frosted chrome. Over the gradient (especially
+   the light one, where a translucent white panel sits on a bright backdrop) the
+   frosted surface looks invisible and its content washes out. Give `.solid-surface`
+   an opaque panel (and drop the blur) in both gradient themes. These rules come
+   after the frosting block above, so they win at equal specificity. */
+.gradient .solid-surface,
+.gradient .solid-surface [class*='bg-panel'],
+.gradient .solid-surface [class*='bg-bar'] {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
-.gradient .menu-solid {
+/* Restore the opaque light/dark tokens inside the surface so the panel and any
+   nested bg-bar inputs paint solid (hover stays a translucent wash, as intended). */
+.gradient .solid-surface {
+  --c-bar: #181825;
   --c-panel: #1e1e2e;
   --c-edge: #313244;
 }
-.gradient-light .menu-solid {
+.gradient-light .solid-surface {
+  --c-bar: #f2f3f5;
   --c-panel: #ffffff;
   --c-edge: #d7d9de;
 }
