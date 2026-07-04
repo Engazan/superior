@@ -89,7 +89,7 @@ export function Menu({ items, anchor, onClose }: Props): JSX.Element {
       ref={ref}
       role="menu"
       style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, visibility: 'hidden' }}
-      className="fixed z-[100] min-w-40 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl"
+      className="menu-solid fixed z-[100] min-w-40 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl"
     >
       {items.map((item, i) =>
         item === 'separator' ? (

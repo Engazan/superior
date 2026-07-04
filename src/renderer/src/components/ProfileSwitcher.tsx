@@ -97,7 +97,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
       {open && (
         <div
           role="menu"
-          className="absolute left-1/2 top-8 z-50 min-w-52 -translate-x-1/2 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg"
+          className="menu-solid absolute left-1/2 top-8 z-50 min-w-52 -translate-x-1/2 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg"
         >
           {profiles.map((p) => (
             <button

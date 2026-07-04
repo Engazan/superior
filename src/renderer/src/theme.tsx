@@ -33,20 +33,31 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   // window into macOS vibrancy + translucent chrome via the .transparent class.
   // Gradient mode is always dark-based and paints the app-icon gradient behind
   // frosted chrome purely in CSS (via the .gradient class), so it needs no OS
-  // vibrancy and works on every platform.
+  // vibrancy and works on every platform. Gradient-light is its light-based twin
+  // (same glows, light backdrop) via .gradient + .gradient-light.
   useEffect(() => {
     // Vibrancy only exists on macOS; elsewhere the mode degrades to 'system'.
     const transparent = mode === 'transparent' && isMac
     const gradient = mode === 'gradient'
+    const gradientLight = mode === 'gradient-light'
     const apply = (): void => {
       const next =
-        mode === 'light' || mode === 'dark' ? mode : gradient ? 'dark' : systemTheme()
+        mode === 'light' || mode === 'dark'
+          ? mode
+          : gradient
+            ? 'dark'
+            : gradientLight
+              ? 'light'
+              : systemTheme()
       setResolved(next)
       const el = document.documentElement
       el.classList.remove('light', 'dark')
       el.classList.add(next)
       el.classList.toggle('transparent', transparent)
-      el.classList.toggle('gradient', gradient)
+      // Both gradient variants share the .gradient frosting; the light twin adds
+      // .gradient-light to override the backdrop and surfaces.
+      el.classList.toggle('gradient', gradient || gradientLight)
+      el.classList.toggle('gradient-light', gradientLight)
     }
     apply()
     window.api.setWindowVibrancy(transparent)

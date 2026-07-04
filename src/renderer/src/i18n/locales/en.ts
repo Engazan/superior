@@ -212,6 +212,7 @@ export const en = {
   'theme.system': 'System',
   'theme.transparent': 'Transparent',
   'theme.gradient': 'Gradient',
+  'theme.gradientLight': 'Light gradient',
   'language.desc': 'Choose the interface language.',
   'presets.add': 'Add preset',
   'presets.colIcon': 'Icon',

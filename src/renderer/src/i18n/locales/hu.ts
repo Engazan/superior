@@ -216,6 +216,7 @@ export const hu: Record<MessageKey, string> = {
   'theme.system': 'Rendszer',
   'theme.transparent': 'Áttetsző',
   'theme.gradient': 'Színátmenet',
+  'theme.gradientLight': 'Világos színátmenet',
   'language.desc': 'Válaszd ki a felület nyelvét.',
   'presets.add': 'Sablon hozzáadása',
   'presets.colIcon': 'Ikon',

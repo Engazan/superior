@@ -295,7 +295,7 @@ export function ProfileManager({
                 <div
                   role="menu"
                   style={{ top: colorPicker.y, left: colorPicker.x }}
-                  className="fixed z-50 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
+                  className="menu-solid fixed z-50 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     {COLOR_SWATCHES.map((c) => (

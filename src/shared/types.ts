@@ -2,8 +2,10 @@
  * 'transparent' = macOS vibrancy (blur-behind); resolves light/dark from the OS.
  * 'gradient' = the app-icon gradient painted as the window background with a
  * frosted-glass (blurred, translucent) chrome; always dark-based, all platforms.
+ * 'gradient-light' = the same gradient glows over a light backdrop with light
+ * translucent chrome; always light-based, all platforms.
  */
-export type ThemeMode = 'light' | 'dark' | 'system' | 'transparent' | 'gradient'
+export type ThemeMode = 'light' | 'dark' | 'system' | 'transparent' | 'gradient' | 'gradient-light'
 
 export type Language = 'en' | 'sk' | 'cs' | 'pl' | 'hu'
 

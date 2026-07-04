@@ -255,7 +255,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
       </button>
 
       {open && (
-        <div className="absolute left-0 top-8 z-50 flex max-h-[60vh] w-72 flex-col overflow-hidden rounded-md border border-edge bg-panel shadow-lg">
+        <div className="menu-solid absolute left-0 top-8 z-50 flex max-h-[60vh] w-72 flex-col overflow-hidden rounded-md border border-edge bg-panel shadow-lg">
           <div className="border-b border-edge p-1.5">
             <input
               autoFocus

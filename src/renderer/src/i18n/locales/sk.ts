@@ -216,6 +216,7 @@ export const sk: Record<MessageKey, string> = {
   'theme.system': 'Systém',
   'theme.transparent': 'Priesvitná',
   'theme.gradient': 'Gradient',
+  'theme.gradientLight': 'Svetlý gradient',
   'language.desc': 'Vyberte jazyk rozhrania.',
   'presets.add': 'Pridať predvoľbu',
   'presets.colIcon': 'Ikona',
