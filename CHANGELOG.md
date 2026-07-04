@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-04
+
 ### Added
 
 - **Task queue.** A new **Tasks** tab in the right panel queues agent work per
@@ -19,6 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   be paused, tasks canceled or removed, finished tasks report their exit code,
   and the whole queue persists across app restarts — tasks whose terminals
   survived in the daemon are picked up again on launch.
+- **New "Light gradient" appearance theme.** A soft light gradient painted
+  across the whole window with solid (non-transparent) dropdowns, available
+  under Settings → Appearance. New users now default to this theme.
+
+### Changed
+
+- **Settings button moved to the sidebar.** The settings entry point now lives
+  at the bottom of the sidebar instead of the top bar.
+
+### Fixed
+
+- **Opaque overlays on gradient themes.** Modals and overlays now stay fully
+  opaque over the gradient themes instead of bleeding the background through.
 
 ## [0.14.0] - 2026-07-04
 
