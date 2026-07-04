@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-07-04
+
+### Added
+
+- **New "Gradient" appearance theme.** A theme that paints the app-icon gradient
+  (blue → violet → magenta → orange over near-black) across the whole window,
+  with frosted-glass chrome floating on top. Unlike the macOS-only Transparent
+  theme it is pure CSS, so it works on every platform. Pick it under
+  Settings → Appearance.
+- **App icon.** The macOS, Windows and Linux builds now ship with a proper
+  application icon instead of the default Electron logo.
+
+### Fixed
+
+- **Theme choice persists across restarts.** Selecting the Gradient theme is now
+  saved instead of silently reverting to the default on the next launch.
+
 ## [0.12.1] - 2026-07-02
 
 ### Changed
