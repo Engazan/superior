@@ -51,11 +51,13 @@ interface Props {
 
 const THEME_OPTIONS: {
   value: ThemeMode
-  labelKey: 'theme.light' | 'theme.dark' | 'theme.system' | 'theme.transparent'
+  labelKey: 'theme.light' | 'theme.dark' | 'theme.system' | 'theme.transparent' | 'theme.gradient'
 }[] = [
   { value: 'light', labelKey: 'theme.light' },
   { value: 'dark', labelKey: 'theme.dark' },
   { value: 'system', labelKey: 'theme.system' },
+  // The app-icon gradient with frosted chrome — pure CSS, so it works everywhere.
+  { value: 'gradient', labelKey: 'theme.gradient' },
   // Vibrancy (blur-behind) exists only on macOS.
   ...(window.api.platform === 'darwin'
     ? ([{ value: 'transparent', labelKey: 'theme.transparent' }] as const)

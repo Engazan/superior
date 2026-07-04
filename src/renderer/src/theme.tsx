@@ -31,21 +31,28 @@ export function ThemeProvider({ children }: { children: ReactNode }): JSX.Elemen
   // Resolve the mode to a concrete theme and apply it to <html>. Transparent
   // mode follows the OS light/dark (like 'system') and additionally flips the
   // window into macOS vibrancy + translucent chrome via the .transparent class.
+  // Gradient mode is always dark-based and paints the app-icon gradient behind
+  // frosted chrome purely in CSS (via the .gradient class), so it needs no OS
+  // vibrancy and works on every platform.
   useEffect(() => {
     // Vibrancy only exists on macOS; elsewhere the mode degrades to 'system'.
     const transparent = mode === 'transparent' && isMac
+    const gradient = mode === 'gradient'
     const apply = (): void => {
-      const next = mode === 'light' || mode === 'dark' ? mode : systemTheme()
+      const next =
+        mode === 'light' || mode === 'dark' ? mode : gradient ? 'dark' : systemTheme()
       setResolved(next)
       const el = document.documentElement
       el.classList.remove('light', 'dark')
       el.classList.add(next)
       el.classList.toggle('transparent', transparent)
+      el.classList.toggle('gradient', gradient)
     }
     apply()
     window.api.setWindowVibrancy(transparent)
 
-    if (mode === 'light' || mode === 'dark') return
+    // Only 'system' and 'transparent' follow the OS light/dark; the rest are fixed.
+    if (mode !== 'system' && mode !== 'transparent') return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)

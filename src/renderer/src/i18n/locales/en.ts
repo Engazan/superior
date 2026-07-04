@@ -211,6 +211,7 @@ export const en = {
   'theme.dark': 'Dark',
   'theme.system': 'System',
   'theme.transparent': 'Transparent',
+  'theme.gradient': 'Gradient',
   'language.desc': 'Choose the interface language.',
   'presets.add': 'Add preset',
   'presets.colIcon': 'Icon',

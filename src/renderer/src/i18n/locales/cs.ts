@@ -215,6 +215,7 @@ export const cs: Record<MessageKey, string> = {
   'theme.dark': 'Tmavý',
   'theme.system': 'Systém',
   'theme.transparent': 'Průsvitná',
+  'theme.gradient': 'Přechod',
   'language.desc': 'Vyberte jazyk rozhraní.',
   'presets.add': 'Přidat předvolbu',
   'presets.colIcon': 'Ikona',

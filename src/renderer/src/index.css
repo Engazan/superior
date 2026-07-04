@@ -84,6 +84,54 @@ body,
   --c-panel: rgba(255, 255, 255, 0.6);
 }
 
+/*
+ * Gradient theme: the app-icon gradient (blue → violet → magenta → orange over
+ * near-black) painted as the full-window background, with frosted-glass chrome
+ * floating on top. Always dark-based, no OS vibrancy required, so it works on
+ * every platform. `.gradient` is applied alongside `.dark`, so it inherits the
+ * dark foreground tokens and only overrides the surface colors to be
+ * translucent — letting the gradient glow through the blurred chrome.
+ */
+.gradient {
+  --c-bar: rgba(20, 18, 33, 0.55);
+  --c-panel: rgba(26, 22, 42, 0.5);
+  --c-edge: rgba(255, 255, 255, 0.09);
+  --c-hover: rgba(255, 255, 255, 0.12);
+  background: transparent;
+}
+.gradient body {
+  /* Radial glows echo the icon's corner blooms; the linear base is its dark
+     backdrop. Fixed attachment keeps the gradient anchored to the window. */
+  background:
+    radial-gradient(115% 115% at 14% 10%, #2f6fe0 0%, rgba(47, 111, 224, 0) 46%),
+    radial-gradient(120% 120% at 38% 44%, #6d28d9 0%, rgba(109, 40, 217, 0) 54%),
+    radial-gradient(115% 115% at 66% 80%, #e0338a 0%, rgba(224, 51, 138, 0) 55%),
+    radial-gradient(110% 110% at 93% 97%, #f97316 0%, rgba(249, 115, 22, 0) 50%),
+    linear-gradient(135deg, #0b1020 0%, #0a0713 55%, #0a0510 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+/* Frost every bar/panel surface so the gradient reads as blurred glass behind
+   the chrome. `[class*="bg-bar"]`/`[class*="bg-panel"]` also catches Tailwind's
+   opacity variants (e.g. bg-bar/40). Terminal cells stay opaque (xterm paints
+   its own background), so text contrast is never affected. */
+.gradient [class*='bg-bar'],
+.gradient [class*='bg-panel'] {
+  backdrop-filter: blur(26px) saturate(1.5);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+}
+/* `-webkit-app-region: drag` + `backdrop-filter` is a known Chromium combination
+   that makes the drag region swallow clicks on its `no-drag` children — which is
+   why the profile switcher (and other title-bar controls) became unclickable.
+   The title bar sits over the gradient only, where blur is invisible anyway, so
+   strip backdrop-filter from the drag region and everything nested inside it. */
+.gradient .app-drag,
+.gradient .app-drag [class*='bg-bar'],
+.gradient .app-drag [class*='bg-panel'] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 /* Frameless-window drag regions. */
 .app-drag {
   -webkit-app-region: drag;

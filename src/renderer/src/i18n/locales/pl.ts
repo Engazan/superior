@@ -215,6 +215,7 @@ export const pl: Record<MessageKey, string> = {
   'theme.dark': 'Ciemny',
   'theme.system': 'Systemowy',
   'theme.transparent': 'Przezroczysty',
+  'theme.gradient': 'Gradient',
   'language.desc': 'Wybierz język interfejsu.',
   'presets.add': 'Dodaj preset',
   'presets.colIcon': 'Ikona',
