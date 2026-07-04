@@ -11,6 +11,7 @@ import {
   type FolderUpdate,
   type Profile,
   type ProfileUpdate,
+  type StartAgentResult,
   type TerminalPreset,
   type Workspace,
   type WorkspaceState,
@@ -453,6 +454,42 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [tabsByWs, newTab]
   )
 
+  /**
+   * Start a preset's command (or an override) in any workspace's active tab
+   * without moving the user's focus — the task queue launches into background
+   * (often freshly created worktree) workspaces this way. Returns the session
+   * or an error instead of surfacing it, so callers decide how to report.
+   */
+  const launchSessionIn = useCallback(
+    async (args: {
+      preset: TerminalPreset
+      workspaceId: string
+      cwd: string
+      /** Command to run; defaults to the preset's own. */
+      command?: string
+      /** Nickname for the session; defaults to the preset's own. */
+      nickname?: string
+    }): Promise<StartAgentResult> => {
+      const { preset } = args
+      const tabId = ensureActiveTab(args.workspaceId)
+      const res = await window.api.startAgent({
+        command: args.command ?? preset.command,
+        label: preset.name,
+        nickname: args.nickname ?? preset.nickname,
+        iconType: preset.iconType,
+        icon: preset.icon,
+        color: preset.color,
+        cwd: args.cwd,
+        workspaceId: args.workspaceId,
+        tabId
+      })
+      if ('error' in res) return res
+      setSessions((prev) => [...prev, res.session])
+      return res
+    },
+    [ensureActiveTab]
+  )
+
   const launchAgent = useCallback(
     async (preset: TerminalPreset) => {
       setError(null)
@@ -460,26 +497,18 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setError(t('error.noWorkspace'))
         return
       }
-      const tabId = ensureActiveTab(activeWorkspace.id)
-      const res = await window.api.startAgent({
-        command: preset.command,
-        label: preset.name,
-        nickname: preset.nickname,
-        iconType: preset.iconType,
-        icon: preset.icon,
-        color: preset.color,
-        cwd: effectiveDir,
+      const res = await launchSessionIn({
+        preset,
         workspaceId: activeWorkspace.id,
-        tabId
+        cwd: effectiveDir
       })
       if ('error' in res) {
         setError(res.error)
         return
       }
-      setSessions((prev) => [...prev, res.session])
       setActiveSessionId(res.session.id)
     },
-    [activeWorkspace, effectiveDir, ensureActiveTab, t, setError]
+    [activeWorkspace, effectiveDir, launchSessionIn, t, setError]
   )
 
   // Fill the active tab's grid from the launch wizard: spawn each chosen preset.
@@ -803,7 +832,9 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     setStartupLayout,
     selectWorkspace,
     removeWorkspace,
+    applyState,
     launchAgent,
+    launchSessionIn,
     startLayout,
     setGridLayout,
     updateSession,

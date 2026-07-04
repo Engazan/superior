@@ -13,6 +13,7 @@ import { registerAgentIpc } from './ipc/agent.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { registerPresetsIpc } from './ipc/presets.ipc'
 import { registerPromptsIpc } from './ipc/prompts.ipc'
+import { registerTasksIpc } from './ipc/tasks.ipc'
 import { registerIntegrationsIpc } from './ipc/integrations.ipc'
 import { registerWindowIpc, attachWindowMaximizeEvents } from './ipc/window.ipc'
 import { registerNotificationsIpc } from './ipc/notifications.ipc'
@@ -150,6 +151,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerSettingsIpc()
   registerPresetsIpc()
   registerPromptsIpc()
+  registerTasksIpc()
   registerIntegrationsIpc()
   registerWindowIpc()
   registerNotificationsIpc(() => mainWindow)

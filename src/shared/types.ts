@@ -163,6 +163,53 @@ export interface PromptsState {
   prompts: Prompt[]
 }
 
+/**
+ * Lifecycle of a queued agent task. 'running' means a terminal session was
+ * spawned for it and hasn't exited yet; 'canceled' is a user-initiated kill
+ * (distinct from 'failed', a nonzero exit or a launch error).
+ */
+export type AgentTaskStatus = 'queued' | 'running' | 'done' | 'failed' | 'canceled'
+
+/**
+ * One queued unit of agent work: a prompt handed to a {@link TerminalPreset}'s
+ * command, optionally inside a freshly created worktree-backed workspace. Tasks
+ * are scoped to a project folder; per folder they run one at a time, and the
+ * next queued task starts when the previous task's terminal exits.
+ */
+export interface AgentTask {
+  /** crypto.randomUUID() */
+  id: string
+  /** The project folder the task belongs to (queues are per-folder). */
+  folderPath: string
+  /** Prompt appended (shell-quoted) to the preset's command. */
+  prompt: string
+  /** The terminal preset whose command runs this task. */
+  presetId: string
+  /** Run in a fresh worktree-backed workspace (a new task/<slug> branch). */
+  useWorktree: boolean
+  status: AgentTaskStatus
+  /** The terminal session running/having run the task; set on start. */
+  sessionId?: string
+  /** The workspace the task ran in (the fresh worktree one, or an existing one). */
+  workspaceId?: string
+  /** Branch created for a worktree task; set on start. */
+  branch?: string
+  /** Exit code of the task's terminal; null when unknown (e.g. lost session). */
+  exitCode?: number | null
+  /** User-facing reason when the task failed before/while launching. */
+  error?: string
+  createdAt: number
+  startedAt?: number
+  finishedAt?: number
+}
+
+/** Persisted task queue: every folder's tasks plus the global pause flag. */
+export interface TasksState {
+  tasks: AgentTask[]
+  /** True while the queue is paused: running tasks finish, queued ones wait. */
+  paused: boolean
+}
+
 export type CustomMemoryProvider = 'claude' | 'codex'
 
 /** A provider-specific config directory discovered in the user's home folder. */
@@ -812,6 +859,11 @@ export const IPC = {
   PROMPTS_LIST: 'prompts:list',
   PROMPTS_SAVE: 'prompts:save',
   PROMPTS_DELETE: 'prompts:delete',
+  TASKS_LIST: 'tasks:list',
+  TASKS_SAVE: 'tasks:save',
+  TASKS_DELETE: 'tasks:delete',
+  TASKS_CLEAR_FINISHED: 'tasks:clear-finished',
+  TASKS_SET_PAUSED: 'tasks:set-paused',
   CUSTOM_MEMORY_LIST: 'custom-memory:list',
   CUSTOM_MEMORY_CREATE: 'custom-memory:create',
   CUSTOM_MEMORY_ADD_ALIAS: 'custom-memory:add-alias',

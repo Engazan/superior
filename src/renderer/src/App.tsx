@@ -25,6 +25,7 @@ import { usePresets } from './hooks/usePresets'
 import { useLayoutPresets } from './hooks/useLayoutPresets'
 import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
+import { useTaskQueue } from './hooks/useTaskQueue'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import {
   setActivitySessions,
@@ -82,6 +83,25 @@ export default function App(): JSX.Element {
   const layoutPresets = useLayoutPresets()
   const preview = usePreviewPane()
   const ws = useWorkspaceSessions({ setError, t, presets })
+  // The agent-task queue: persists in main, runs here (one task per folder at
+  // a time, next starts when the previous task's terminal exits).
+  const taskQueue = useTaskQueue({
+    workspaces: ws.workspaces,
+    activeWorkspaceId: ws.activeWorkspaceId,
+    sessionsRestored: ws.sessionsRestored,
+    sessions: ws.sessions,
+    presets,
+    applyState: ws.applyState,
+    launchSessionIn: ws.launchSessionIn
+  })
+  // Jump to the workspace a task ran in (from the Tasks tab).
+  const onJumpToTask = useCallback(
+    (task: { workspaceId?: string }) => {
+      if (task.workspaceId) void ws.selectWorkspace(task.workspaceId)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ws.selectWorkspace]
+  )
   // The active workspace's tabs + its active tab (drives the terminal grid).
   const activeTabs = ws.activeWorkspaceId ? ws.tabsByWs[ws.activeWorkspaceId] : undefined
   const activeTab = activeTabs?.tabs.find((tb) => tb.id === activeTabs.activeTabId)
@@ -630,6 +650,10 @@ export default function App(): JSX.Element {
               <RightPanel
                 active={rightSidebarOpen}
                 folderPath={ws.effectiveDir}
+                tasksFolder={ws.activeFolder?.path ?? null}
+                taskQueue={taskQueue}
+                presets={presets}
+                onJumpToTask={onJumpToTask}
                 onOpenFile={preview.setPreviewFile}
                 selectedPath={preview.previewFile?.path ?? null}
               />

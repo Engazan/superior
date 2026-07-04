@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Task queue.** A new **Tasks** tab in the right panel queues agent work per
+  project: each task is a prompt plus a terminal preset, optionally launched in
+  a freshly created branch workspace (git worktree) so parallel tasks never
+  collide. Tasks run one at a time per project — the queued command is
+  `<preset command> '<prompt>'`, and the next task starts automatically when
+  the previous task's terminal exits (quit the CLI to advance, or use a
+  headless preset like `claude -p` for a fully automatic queue). The queue can
+  be paused, tasks canceled or removed, finished tasks report their exit code,
+  and the whole queue persists across app restarts — tasks whose terminals
+  survived in the daemon are picked up again on launch.
+
 ## [0.14.0] - 2026-07-04
 
 ### Changed

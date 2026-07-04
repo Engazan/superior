@@ -40,6 +40,8 @@ import {
   type LayoutPresetsState,
   type Prompt,
   type PromptsState,
+  type AgentTask,
+  type TasksState,
   type ShellCommandInstallResult,
   type ShellCommandStatus,
   type ShortcutMap,
@@ -402,6 +404,30 @@ const api = {
 
   deletePrompt(id: string): Promise<PromptsState> {
     return ipcRenderer.invoke(IPC.PROMPTS_DELETE, id)
+  },
+
+  /** The persisted task queue (all folders) plus its pause flag. */
+  listTasks(): Promise<TasksState> {
+    return ipcRenderer.invoke(IPC.TASKS_LIST)
+  },
+
+  /** Upsert a task by id (adds when new, replaces when existing). */
+  saveTask(task: AgentTask): Promise<TasksState> {
+    return ipcRenderer.invoke(IPC.TASKS_SAVE, task)
+  },
+
+  deleteTask(id: string): Promise<TasksState> {
+    return ipcRenderer.invoke(IPC.TASKS_DELETE, id)
+  },
+
+  /** Drop every finished (done/failed/canceled) task of one folder. */
+  clearFinishedTasks(folderPath: string): Promise<TasksState> {
+    return ipcRenderer.invoke(IPC.TASKS_CLEAR_FINISHED, folderPath)
+  },
+
+  /** Pause/resume the queue (running tasks finish; queued ones wait). */
+  setTasksPaused(paused: boolean): Promise<TasksState> {
+    return ipcRenderer.invoke(IPC.TASKS_SET_PAUSED, paused)
   },
 
   listCustomMemoryPresets(): Promise<CustomMemoryPreset[]> {

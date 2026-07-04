@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { HistoryView } from './HistoryView'
+import { TasksView } from './TasksView'
 import { useI18n } from '../i18n'
-import type { FsEntry, GitDiff } from '../types'
+import type { TaskQueueApi } from '../hooks/useTaskQueue'
+import type { AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
 
-type Tab = 'files' | 'changes' | 'history'
+type Tab = 'files' | 'changes' | 'history' | 'tasks'
 
 interface Props {
   /** Whether the panel is open. Kept mounted while closed (for the slide
@@ -13,6 +15,13 @@ interface Props {
   active: boolean
   /** Folder backing the active workspace, or null when none is selected. */
   folderPath: string | null
+  /** The active project folder (main repo path) the task queue is scoped to.
+      Distinct from folderPath, which is the worktree dir for branch workspaces. */
+  tasksFolder: string | null
+  taskQueue: TaskQueueApi
+  presets: TerminalPreset[]
+  /** Jump to the workspace a task ran/runs in. */
+  onJumpToTask: (task: AgentTask) => void
   /** Open a file's preview (handled at the app level so it spans the main area). */
   onOpenFile: (file: FsEntry) => void
   /** Path of the file currently previewed, for highlighting in the tree. */
@@ -24,7 +33,16 @@ interface Props {
  * and Changes (working-tree diff) tabs. The diff is fetched here so the +/−
  * totals can show on the Changes tab even while the Files tab is open.
  */
-export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
+export function RightPanel({
+  active,
+  folderPath,
+  tasksFolder,
+  taskQueue,
+  presets,
+  onJumpToTask,
+  onOpenFile,
+  selectedPath
+}: Props): JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('changes')
   const [diff, setDiff] = useState<GitDiff | null>(null)
@@ -67,6 +85,17 @@ export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Pro
 
   const totals = diff?.isRepository && !diff.error ? diff.totals : null
 
+  // Queued + running task count for this folder, badged on the Tasks tab.
+  const pendingTasks = useMemo(
+    () =>
+      taskQueue.tasks.filter(
+        (task) =>
+          task.folderPath === tasksFolder &&
+          (task.status === 'queued' || task.status === 'running')
+      ).length,
+    [taskQueue.tasks, tasksFolder]
+  )
+
   const tabClass = (active: boolean): string =>
     `flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition border-b-2 ${
       active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
@@ -91,12 +120,25 @@ export function RightPanel({ active, folderPath, onOpenFile, selectedPath }: Pro
         <button className={tabClass(tab === 'history')} onClick={() => setTab('history')}>
           {t('rightPanel.history')}
         </button>
+        <button className={tabClass(tab === 'tasks')} onClick={() => setTab('tasks')}>
+          {t('rightPanel.tasks')}
+          {pendingTasks > 0 && (
+            <span className="font-mono text-[10px] tabular-nums text-accent">{pendingTasks}</span>
+          )}
+        </button>
       </div>
 
       {tab === 'changes' ? (
         <ChangesView folderPath={folderPath} diff={diff} loading={loading} onRefresh={refresh} />
       ) : tab === 'history' ? (
         <HistoryView folderPath={folderPath} refreshToken={refreshToken} />
+      ) : tab === 'tasks' ? (
+        <TasksView
+          folderPath={tasksFolder}
+          queue={taskQueue}
+          presets={presets}
+          onJumpTo={onJumpToTask}
+        />
       ) : (
         <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}
