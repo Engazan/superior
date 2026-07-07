@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-07
+
+### Added
+
+- **Open file paths from terminal output.** Cmd/Ctrl+click a path in any
+  terminal to open it in your editor. A link provider scans terminal lines for
+  path-like tokens (absolute, `~/`, cwd-relative, with optional `:line:col`),
+  validates them against the opened workspace folders, and underlines only the
+  paths that actually exist. The target editor is configurable — OS default,
+  VS Code, Cursor, Zed (via URL schemes), or Sublime Text, PhpStorm, WebStorm
+  (via their CLI) — and jumps to the exact line and column when present.
+- **Editor picker with icons.** The editor dropdown in settings now shows a
+  brand-colored monogram badge for each editor (VS, C, Z, S, PS, WS) and a
+  monitor glyph for the OS default, so options are easy to scan. It is
+  keyboard-navigable with Escape and outside-click dismissal.
+- **Agent activity signals.** Per-session busy/attention dots appear on cells
+  and the tab strip, dead terminals get a restart chip, and task failures raise
+  a toast with retry support.
+
+### Changed
+
+- **UI/UX overhaul across shell, terminals, panels and settings.** The right
+  panel is drag-resizable with persisted width and tab; the diff view gains
+  two-column line numbers, auto-collapse for large diffs, stable expansion
+  across staging, and stage-all-and-commit; history supports load-more and
+  error states; terminal search shows a match counter with highlighted
+  decorations; tasks support retry and reordering.
+- **Shortcut changes.** Quick-launch default moved to `mod+t` (`ctrl+§` was
+  ISO-only) and terminal cycling to `mod+alt+arrows`, with old defaults
+  migrated automatically; Escape now exits settings; added shortcut-conflict
+  detection and a focus-cell binding in Keyboard settings.
+- **Consistency, accessibility and i18n.** Layered Escape handling via an
+  overlay stack, modal focus trap, keyboard-accessible sidebar rows and a
+  radiogroup segmented control, tone-aware error notes, and ~40 new i18n keys
+  across all five locales.
+
+### Fixed
+
+- **Data-loss guards.** Closing running terminals/tabs and deleting a layout
+  preset now ask for confirmation; the file preview warns on unsaved changes
+  and checks the on-disk mtime before saving; global shortcuts no longer fire
+  behind open overlays.
+- **Quieter notifications.** The finished notification is debounced by 3s so
+  mid-task pauses stop firing it, and SIGINT/SIGTERM exits no longer show as
+  errors.
+
 ## [0.15.0] - 2026-07-04
 
 ### Added
