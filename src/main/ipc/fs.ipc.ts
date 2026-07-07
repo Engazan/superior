@@ -1,12 +1,20 @@
 import { ipcMain, shell } from 'electron'
 import {
   IPC,
+  type FileLinkTarget,
   type FileReadOptions,
   type FileReadResult,
   type FileWriteResult,
   type FsListResult
 } from '@shared/types'
-import { listDir, readFilePreview, searchFiles, writeFilePreview } from '../services/fs.service'
+import {
+  listDir,
+  readFilePreview,
+  resolveFileLink,
+  searchFiles,
+  writeFilePreview
+} from '../services/fs.service'
+import { openFileTarget } from '../services/file-opener.service'
 
 export function registerFsIpc(): void {
   ipcMain.handle(IPC.FS_LIST_DIR, (_event, dirPath: string): Promise<FsListResult> =>
@@ -35,5 +43,19 @@ export function registerFsIpc(): void {
   // and other binaries we don't render in-app). Returns '' on success.
   ipcMain.handle(IPC.SHELL_OPEN_PATH, (_event, filePath: string): Promise<string> =>
     shell.openPath(filePath)
+  )
+
+  // Terminal file links: validate a path-like token against the workspace
+  // (hover), and open a resolved target in the configured editor (click).
+  ipcMain.handle(
+    IPC.FS_RESOLVE_FILE_LINK,
+    (_event, cwd: string | null, token: string): Promise<FileLinkTarget | null> =>
+      resolveFileLink(cwd, token)
+  )
+
+  ipcMain.handle(
+    IPC.FS_OPEN_FILE_TARGET,
+    (_event, target: FileLinkTarget): Promise<{ ok: boolean; error?: string }> =>
+      openFileTarget(target)
   )
 }

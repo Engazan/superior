@@ -450,6 +450,7 @@ export function TerminalPanel({
             <TerminalView
               key={s.id}
               session={s}
+              workingDir={workingDir}
               rect={l.rect}
               visible={l.visible}
               focused={l.focused}

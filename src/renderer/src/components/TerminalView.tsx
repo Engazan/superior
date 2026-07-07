@@ -4,13 +4,14 @@ import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
+import { registerFileLinkProvider } from '../terminalLinks'
 import { useAttentionSessions, useBusySessions } from '../activityStore'
 import { useAttentionColor } from '../attentionColor'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
-import { CloseIcon, IconButton, PencilIcon, RestartIcon } from './ui'
+import { CloseIcon, IconButton, PencilIcon, RestartIcon, useToast } from './ui'
 import { UsageBadge } from './UsageBadge'
 import { barTint } from '../tint'
 import type { Rect } from '../gridLayout'
@@ -68,6 +69,8 @@ function sanitizeReplay(data: string): string {
 
 interface Props {
   session: AgentSession
+  /** working dir file-path links resolve against (the workspace's effective dir) */
+  workingDir?: string | null
   /** the cell this terminal occupies, in percentages; defaults to filling the panel */
   rect?: Rect
   /** whether this terminal is shown (vs. kept mounted but hidden) */
@@ -157,6 +160,7 @@ function rectEqual(a?: Rect, b?: Rect): boolean {
 function propsEqual(prev: Props, next: Props): boolean {
   return (
     prev.session === next.session &&
+    prev.workingDir === next.workingDir &&
     rectEqual(prev.rect, next.rect) &&
     prev.visible === next.visible &&
     prev.focused === next.focused &&
@@ -176,6 +180,7 @@ function propsEqual(prev: Props, next: Props): boolean {
 
 export const TerminalView = memo(function TerminalView({
   session,
+  workingDir,
   rect,
   visible,
   focused,
@@ -205,6 +210,13 @@ export const TerminalView = memo(function TerminalView({
   // Keep the latest onSelect without re-running the creation effect.
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+
+  // Live cwd + toast for the file-link provider (registered once per session).
+  const toast = useToast()
+  const toastRef = useRef(toast)
+  toastRef.current = toast
+  const workingDirRef = useRef<string | null>(workingDir ?? null)
+  workingDirRef.current = workingDir ?? null
 
   // Same for onRestart, since the keystroke handler is wired once per session id.
   const onRestartRef = useRef(onRestart)
@@ -265,6 +277,11 @@ export const TerminalView = memo(function TerminalView({
     const search = new SearchAddon()
     term.loadAddon(search)
     registerSearch(session.id, search, term)
+    // mod+click on a file path in the output opens it in the configured editor.
+    const fileLinks = registerFileLinkProvider(term, {
+      getCwd: () => workingDirRef.current,
+      onOpenError: (message) => toastRef.current.error(message)
+    })
     term.open(host)
     fit.fit()
 
@@ -348,6 +365,7 @@ export const TerminalView = memo(function TerminalView({
       host.removeEventListener('focusin', onFocusIn)
       unsubscribe()
       unregisterSearch(session.id)
+      fileLinks.dispose()
       dataDisposable.dispose()
       term.dispose()
       termRef.current = null

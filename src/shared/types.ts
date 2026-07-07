@@ -100,6 +100,25 @@ export interface AppSettings {
    * or null when disabled. Registered via Electron globalShortcut.
    */
   globalHotkey: string | null
+  /** Editor that mod+clicked file paths in a terminal open in. */
+  fileOpener: FileOpener
+}
+
+/** Editors a terminal file link can open in ('system' = OS default app). */
+export type FileOpener =
+  | 'system'
+  | 'vscode'
+  | 'cursor'
+  | 'zed'
+  | 'sublime'
+  | 'phpstorm'
+  | 'webstorm'
+
+/** A resolved file link from terminal output: absolute path + optional position. */
+export interface FileLinkTarget {
+  path: string
+  line?: number
+  column?: number
 }
 
 /** Result of persisting + registering the global hotkey. */
@@ -838,7 +857,10 @@ export const IPC = {
   FS_SEARCH: 'fs:search',
   FS_READ_FILE: 'fs:read-file',
   FS_WRITE_FILE: 'fs:write-file',
+  FS_RESOLVE_FILE_LINK: 'fs:resolve-file-link',
+  FS_OPEN_FILE_TARGET: 'fs:open-file-target',
   SHELL_OPEN_PATH: 'shell:open-path',
+  SETTINGS_SET_FILE_OPENER: 'settings:set-file-opener',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',

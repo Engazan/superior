@@ -12,6 +12,7 @@ import { useUsagePrimary } from '../usagePrimary'
 import { useI18n, LANGUAGES } from '../i18n'
 import { Button, SectionHeader, SegmentedControl, Select, SettingRow, SettingsCard, Toggle } from './ui'
 import type {
+  FileOpener,
   Folder,
   PresetsState,
   ThemeMode,
@@ -88,6 +89,17 @@ const USAGE_PRIMARY_OPTIONS: {
   { value: 'context', labelKey: 'usage.primaryContext' }
 ]
 
+// Fixed product names — not translated.
+const FILE_OPENER_OPTIONS: { value: FileOpener; label: string }[] = [
+  { value: 'system', label: '' }, // label resolved via i18n at render time
+  { value: 'vscode', label: 'Visual Studio Code' },
+  { value: 'cursor', label: 'Cursor' },
+  { value: 'zed', label: 'Zed' },
+  { value: 'sublime', label: 'Sublime Text' },
+  { value: 'phpstorm', label: 'PhpStorm' },
+  { value: 'webstorm', label: 'WebStorm' }
+]
+
 function AppearanceSection(): JSX.Element {
   const { mode, setMode } = useTheme()
   const { lang, setLang, t } = useI18n()
@@ -97,12 +109,19 @@ function AppearanceSection(): JSX.Element {
 
   const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean | null>(null)
+  const [fileOpener, setFileOpenerState] = useState<FileOpener>('system')
   useEffect(() => {
     window.api.getSettings().then((s) => {
       setUsageTracking(s.usageTracking)
       setNotifications(s.notifications)
+      setFileOpenerState(s.fileOpener)
     })
   }, [])
+
+  const changeFileOpener = (next: FileOpener): void => {
+    setFileOpenerState(next)
+    void window.api.setFileOpener(next).then((s) => setFileOpenerState(s.fileOpener))
+  }
 
   const toggleNotifications = (next: boolean): void => {
     setNotifications(next)
@@ -173,6 +192,21 @@ function AppearanceSection(): JSX.Element {
               aria-label={t('appearance.attentionColor')}
             />
           </label>
+        </SettingRow>
+
+        <SettingRow title={t('fileOpener.title')} description={t('fileOpener.desc')}>
+          <div className="w-56">
+            <Select
+              value={fileOpener}
+              onChange={(e) => changeFileOpener(e.target.value as FileOpener)}
+            >
+              {FILE_OPENER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.value === 'system' ? t('fileOpener.system') : opt.label}
+                </option>
+              ))}
+            </Select>
+          </div>
         </SettingRow>
 
         <SettingRow title={t('notify.setting')} description={t('notify.settingDesc')}>

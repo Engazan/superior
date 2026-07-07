@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  FileOpener,
   Language,
   ShortcutAction,
   ShortcutMap,
@@ -64,11 +65,21 @@ const DEFAULTS: AppSettings = {
   usageTracking: false,
   usagePrimary: 'remaining',
   notifications: true,
-  globalHotkey: null
+  globalHotkey: null,
+  fileOpener: 'system'
 }
 const THEMES: ThemeMode[] = ['light', 'dark', 'system', 'transparent', 'gradient', 'gradient-light']
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
 const USAGE_PRIMARIES: UsagePrimary[] = ['remaining', 'sevenDay', 'cost', 'tokens', 'context']
+const FILE_OPENERS: FileOpener[] = [
+  'system',
+  'vscode',
+  'cursor',
+  'zed',
+  'sublime',
+  'phpstorm',
+  'webstorm'
+]
 
 /**
  * Chords that used to be shipped defaults. A stored value matching its action's
@@ -151,7 +162,10 @@ export function getSettings(): AppSettings {
     globalHotkey:
       typeof parsed.globalHotkey === 'string' && parsed.globalHotkey.trim()
         ? parsed.globalHotkey
-        : null
+        : null,
+    fileOpener: FILE_OPENERS.includes(parsed.fileOpener as FileOpener)
+      ? (parsed.fileOpener as FileOpener)
+      : DEFAULTS.fileOpener
   }
   return cached
 }
@@ -238,6 +252,16 @@ export function setGlobalHotkey(chord: string | null): AppSettings {
   const next: AppSettings = {
     ...getSettings(),
     globalHotkey: typeof chord === 'string' && chord.trim() ? chord : null
+  }
+  save(next)
+  return next
+}
+
+/** Persist which editor terminal file links open in. */
+export function setFileOpener(opener: FileOpener): AppSettings {
+  const next: AppSettings = {
+    ...getSettings(),
+    fileOpener: FILE_OPENERS.includes(opener) ? opener : DEFAULTS.fileOpener
   }
   save(next)
   return next

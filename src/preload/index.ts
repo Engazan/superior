@@ -42,6 +42,8 @@ import {
   type PromptsState,
   type AgentTask,
   type TasksState,
+  type FileLinkTarget,
+  type FileOpener,
   type ShellCommandInstallResult,
   type ShellCommandStatus,
   type ShortcutMap,
@@ -242,6 +244,21 @@ const api = {
 
   openPath(filePath: string): Promise<string> {
     return ipcRenderer.invoke(IPC.SHELL_OPEN_PATH, filePath)
+  },
+
+  /** Validate a path-like token from terminal output against the workspace. */
+  resolveFileLink(cwd: string | null, token: string): Promise<FileLinkTarget | null> {
+    return ipcRenderer.invoke(IPC.FS_RESOLVE_FILE_LINK, cwd, token)
+  },
+
+  /** Open a resolved terminal file link in the configured editor. */
+  openFileTarget(target: FileLinkTarget): Promise<{ ok: boolean; error?: string }> {
+    return ipcRenderer.invoke(IPC.FS_OPEN_FILE_TARGET, target)
+  },
+
+  /** Persist which editor terminal file links open in. */
+  setFileOpener(opener: FileOpener): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_FILE_OPENER, opener)
   },
 
   getSettings(): Promise<AppSettings> {

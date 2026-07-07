@@ -32,6 +32,8 @@ export type {
   CustomMemoryMutationResult,
   CustomMemoryPreset,
   CustomMemoryProvider,
+  FileLinkTarget,
+  FileOpener,
   FileReadOptions,
   FileReadResult,
   Folder,

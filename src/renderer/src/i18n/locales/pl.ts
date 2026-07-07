@@ -535,5 +535,8 @@ export const pl: Record<MessageKey, string> = {
   'presets.markActive': 'Oznacz {name} jako aktywny',
   'daemons.loading': 'Wczytywanie sesji demona…',
   'launcher.morePresets': '+{n} więcej w ustawieniach presetów',
-  'terminal.hiddenSessions': '{n} terminali ukrytych — siatka jest pełna'
+  'terminal.hiddenSessions': '{n} terminali ukrytych — siatka jest pełna',
+  'fileOpener.title': 'Otwieraj pliki w',
+  'fileOpener.desc': 'Edytor używany po kliknięciu ścieżki pliku w terminalu z Cmd/Ctrl.',
+  'fileOpener.system': 'Domyślna aplikacja systemu'
 }

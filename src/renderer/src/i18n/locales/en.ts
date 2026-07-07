@@ -531,7 +531,10 @@ export const en = {
   'presets.markActive': 'Mark {name} active',
   'daemons.loading': 'Loading daemon sessions…',
   'launcher.morePresets': '+{n} more in preset settings',
-  'terminal.hiddenSessions': '{n} more terminal(s) hidden — the grid is full'
+  'terminal.hiddenSessions': '{n} more terminal(s) hidden — the grid is full',
+  'fileOpener.title': 'Open files with',
+  'fileOpener.desc': 'Editor used when you Cmd/Ctrl-click a file path in a terminal.',
+  'fileOpener.system': 'System default'
 }
 
 export type MessageKey = keyof typeof en

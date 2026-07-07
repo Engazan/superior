@@ -535,5 +535,8 @@ export const cs: Record<MessageKey, string> = {
   'presets.markActive': 'Označit {name} jako aktivní',
   'daemons.loading': 'Načítají se daemon session…',
   'launcher.morePresets': '+{n} dalších v nastavení presetů',
-  'terminal.hiddenSessions': '{n} dalších terminálů je skryto — mřížka je plná'
+  'terminal.hiddenSessions': '{n} dalších terminálů je skryto — mřížka je plná',
+  'fileOpener.title': 'Otevírat soubory v',
+  'fileOpener.desc': 'Editor použitý při Cmd/Ctrl kliknutí na cestu k souboru v terminálu.',
+  'fileOpener.system': 'Výchozí aplikace systému'
 }

@@ -535,5 +535,8 @@ export const hu: Record<MessageKey, string> = {
   'presets.markActive': '{name} megjelölése aktívként',
   'daemons.loading': 'Daemon munkamenetek betöltése…',
   'launcher.morePresets': '+{n} további a preset-beállításokban',
-  'terminal.hiddenSessions': '{n} további terminál rejtve — a rács megtelt'
+  'terminal.hiddenSessions': '{n} további terminál rejtve — a rács megtelt',
+  'fileOpener.title': 'Fájlok megnyitása ezzel',
+  'fileOpener.desc': 'A terminálban Cmd/Ctrl-kattintással megnyitott fájlútvonalakhoz használt szerkesztő.',
+  'fileOpener.system': 'Rendszer alapértelmezése'
 }

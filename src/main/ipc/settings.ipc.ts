@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain } from 'electron'
 import {
   IPC,
   type AppSettings,
+  type FileOpener,
   type GlobalHotkeyResult,
   type Language,
   type ShortcutMap,
@@ -12,6 +13,7 @@ import {
 import {
   getSettings,
   setAttentionColor,
+  setFileOpener,
   setGlobalHotkey,
   setLanguage,
   setNotifications,
@@ -38,6 +40,10 @@ export function registerSettingsIpc(): void {
   )
 
   ipcMain.handle(IPC.SETTINGS_SET_UI, (_event, ui: Partial<UiState>): AppSettings => setUi(ui))
+
+  ipcMain.handle(IPC.SETTINGS_SET_FILE_OPENER, (_event, opener: FileOpener): AppSettings =>
+    setFileOpener(opener)
+  )
 
   ipcMain.handle(IPC.SETTINGS_SET_ATTENTION_COLOR, (_event, color: string): AppSettings =>
     setAttentionColor(color)

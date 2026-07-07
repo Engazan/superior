@@ -1,6 +1,8 @@
 import { open, readdir, stat, writeFile } from 'fs/promises'
-import { join, sep } from 'path'
+import { isAbsolute, join, normalize, resolve, sep } from 'path'
+import { homedir } from 'os'
 import type {
+  FileLinkTarget,
   FileReadOptions,
   FileReadResult,
   FileWriteResult,
@@ -210,4 +212,54 @@ export async function writeFilePreview(
   } catch (err) {
     return { ok: false, error: (err as Error).message }
   }
+}
+
+/**
+ * Resolve a path-like token from terminal output into an existing file.
+ *
+ * Accepts absolute, `~/`, and cwd-relative paths with an optional
+ * `:line[:column]` suffix, trims surrounding punctuation that commonly wraps
+ * paths in program output, and only ever resolves to a regular file inside an
+ * opened workspace folder — the same containment rule every other fs entry
+ * point enforces. Returns null when the token doesn't name an existing file,
+ * so the renderer never underlines dead links.
+ */
+export async function resolveFileLink(
+  cwd: string | null,
+  rawToken: string
+): Promise<FileLinkTarget | null> {
+  // Strip wrapping quotes/brackets and trailing punctuation: "(src/a.ts:3)." → "src/a.ts:3"
+  let token = rawToken.trim().replace(/^["'`([{<]+/, '').replace(/["'`)\]}>.,;:]+$/, '')
+  if (!token) return null
+
+  // Peel off a trailing :line[:col] (a bare drive letter like C: survives via
+  // the length check on what remains).
+  let line: number | undefined
+  let column: number | undefined
+  const pos = token.match(/^(.*?):(\d+)(?::(\d+))?$/)
+  if (pos && pos[1].length > 1) {
+    token = pos[1]
+    line = Number(pos[2])
+    column = pos[3] ? Number(pos[3]) : undefined
+  }
+
+  if (token.startsWith('~/')) token = join(homedir(), token.slice(2))
+
+  let candidate: string
+  if (isAbsolute(token)) {
+    candidate = normalize(token)
+  } else if (cwd) {
+    candidate = resolve(cwd, token)
+  } else {
+    return null
+  }
+
+  if (!isWithinWorkspaceFolder(candidate)) return null
+  try {
+    const info = await stat(candidate)
+    if (!info.isFile()) return null
+  } catch {
+    return null
+  }
+  return { path: candidate, line, column }
 }
