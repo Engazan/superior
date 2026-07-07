@@ -15,6 +15,10 @@ interface Props {
   file: GitDiffFile
   /** collapsed by default (used by the history view for large commits) */
   defaultOpen?: boolean
+  /** controlled expansion — when provided (with onToggleOpen), the parent owns
+      the state so it survives the row moving between staged/unstaged lists */
+  open?: boolean
+  onToggleOpen?: () => void
   /** hover action rendered at the row's right edge (e.g. stage/unstage) */
   action?: ReactNode
 }
@@ -24,9 +28,17 @@ interface Props {
  * working-tree Changes view (with stage/unstage actions) and the commit
  * History view (read-only).
  */
-export function DiffFileView({ file, defaultOpen = true, action }: Props): JSX.Element {
+export function DiffFileView({
+  file,
+  defaultOpen = true,
+  open: openProp,
+  onToggleOpen,
+  action
+}: Props): JSX.Element {
   const { t } = useI18n()
-  const [open, setOpen] = useState(defaultOpen)
+  const [openState, setOpenState] = useState(defaultOpen)
+  const open = openProp ?? openState
+  const toggle = onToggleOpen ?? ((): void => setOpenState((o) => !o))
   const meta = STATUS_META[file.status]
   const name = file.path.split('/').pop() ?? file.path
   const dir = file.path.slice(0, file.path.length - name.length)
@@ -35,8 +47,9 @@ export function DiffFileView({ file, defaultOpen = true, action }: Props): JSX.E
     <div className="border-b border-edge">
       <div className="group flex w-full items-center">
         <button
-          onClick={() => setOpen((o) => !o)}
-          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover"
+          onClick={toggle}
+          aria-expanded={open}
+          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
           title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
         >
           <span className={`shrink-0 font-mono font-semibold ${meta.className}`}>{meta.letter}</span>
@@ -61,7 +74,10 @@ export function DiffFileView({ file, defaultOpen = true, action }: Props): JSX.E
         ) : (
           <div className="overflow-x-auto bg-panel font-mono text-[11px] leading-[1.5]">
             {file.hunks.map((hunk, hi) => (
-              <div key={hi}>
+              // content-visibility lets the browser skip layout/paint of
+              // off-screen hunks — a cheap stand-in for real virtualization on
+              // hundred-file diffs re-rendered by the 3s poll.
+              <div key={hi} className="[content-visibility:auto]">
                 <div className="whitespace-pre bg-hover px-2 py-0.5 text-fgmuted">
                   {hunk.header}
                 </div>
@@ -81,9 +97,14 @@ export function DiffFileView({ file, defaultOpen = true, action }: Props): JSX.E
                         ? 'text-danger'
                         : 'text-transparent'
                   return (
+                    // Two gutters (old | new) so deleted-line numbers don't
+                    // interleave with new-file numbers in a single column.
                     <div key={li} className={`flex ${bg}`}>
-                      <span className="w-9 shrink-0 select-none px-1 text-right text-fgmuted tabular-nums">
-                        {line.newLine ?? line.oldLine ?? ''}
+                      <span className="w-8 shrink-0 select-none px-1 text-right text-fgmuted tabular-nums">
+                        {line.oldLine ?? ''}
+                      </span>
+                      <span className="w-8 shrink-0 select-none px-1 text-right text-fgmuted tabular-nums">
+                        {line.newLine ?? ''}
                       </span>
                       <span className={`w-3 shrink-0 select-none text-center ${markerColor}`}>
                         {marker}

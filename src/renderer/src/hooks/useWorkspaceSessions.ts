@@ -619,21 +619,37 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [sessions, effectiveDir, t, setError]
   )
 
-  const closeSession = useCallback((id: string) => {
-    window.api.killAgent(id)
-    setSessions((prev) => {
-      const closed = prev.find((s) => s.id === id)
-      const next = prev.filter((s) => s.id !== id)
-      setActiveSessionId((curr) => {
-        if (curr !== id) return curr
-        const siblings = next.filter(
-          (s) => s.workspaceId === closed?.workspaceId && s.tabId === closed?.tabId
-        )
-        return siblings.length ? siblings[siblings.length - 1].id : null
+  const closeSession = useCallback(
+    async (id: string) => {
+      // ⌘W muscle memory from browsers must not silently kill a running agent
+      // mid-task — the conversation is unrecoverable. Exited cells close freely.
+      const target = sessions.find((s) => s.id === id)
+      if (target?.status === 'running') {
+        const label = target.nickname ? `${target.label} · ${target.nickname}` : target.label
+        const ok = await confirm({
+          title: t('terminal.closeSession'),
+          message: t('terminal.closeRunningConfirm', { label }),
+          confirmLabel: t('terminal.closeSession'),
+          tone: 'danger'
+        })
+        if (!ok) return
+      }
+      window.api.killAgent(id)
+      setSessions((prev) => {
+        const closed = prev.find((s) => s.id === id)
+        const next = prev.filter((s) => s.id !== id)
+        setActiveSessionId((curr) => {
+          if (curr !== id) return curr
+          const siblings = next.filter(
+            (s) => s.workspaceId === closed?.workspaceId && s.tabId === closed?.tabId
+          )
+          return siblings.length ? siblings[siblings.length - 1].id : null
+        })
+        return next
       })
-      return next
-    })
-  }, [])
+    },
+    [sessions, confirm, t]
+  )
 
   // Toggle a grid cell's maximized state and focus it (per-cell button).
   const toggleMaximize = useCallback((id: string) => {
@@ -772,9 +788,24 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   // Closing the last tab leaves the workspace with no tabs, so it falls back to
   // the launch wizard (a fresh Tab 1 is minted on the next launch).
   const closeTab = useCallback(
-    (workspaceId: string, tabId: string) => {
+    async (workspaceId: string, tabId: string) => {
       const wt = tabsByWs[workspaceId]
       if (!wt) return
+      // The hover X sits right next to the tab label — an easy misclick that
+      // would kill every terminal in the tab, so running tabs confirm first.
+      const runningCount = sessions.filter(
+        (s) => s.workspaceId === workspaceId && s.tabId === tabId && s.status === 'running'
+      ).length
+      if (runningCount > 0) {
+        const name = wt.tabs.find((tb) => tb.id === tabId)?.name ?? ''
+        const ok = await confirm({
+          title: t('tab.close'),
+          message: t('tab.closeRunningConfirm', { name, count: String(runningCount) }),
+          confirmLabel: t('tab.close'),
+          tone: 'danger'
+        })
+        if (!ok) return
+      }
       sessions
         .filter((s) => s.workspaceId === workspaceId && s.tabId === tabId)
         .forEach((s) => window.api.killAgent(s.id))
@@ -796,7 +827,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setActiveSessionId(inTab.length ? inTab[inTab.length - 1].id : null)
       }
     },
-    [tabsByWs, sessions]
+    [tabsByWs, sessions, confirm, t]
   )
 
   return {

@@ -86,8 +86,13 @@ export function registerGitIpc(): void {
     pullBranch(folderPath)
   )
 
-  ipcMain.handle(IPC.GIT_LOG, (_event, folderPath: string): Promise<GitLogEntry[]> =>
-    getGitLog(folderPath)
+  ipcMain.handle(
+    IPC.GIT_LOG,
+    (_event, folderPath: string, limit?: number): Promise<GitLogEntry[]> =>
+      getGitLog(
+        folderPath,
+        typeof limit === 'number' && limit > 0 ? Math.min(limit, 1000) : undefined
+      )
   )
 
   ipcMain.handle(

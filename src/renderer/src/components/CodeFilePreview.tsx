@@ -113,10 +113,12 @@ export function CodeFilePreview({ content, language, wrap, editable, onChange }:
       parent: host
     })
 
-    // Open the find panel on Cmd/Ctrl+F while a preview is showing, even when
-    // focus isn't already inside the editor. Capture so it beats other handlers.
+    // Open the find panel on Cmd/Ctrl+F — but only when focus is inside this
+    // preview. A window-wide capture here used to hijack ⌘F from the focused
+    // terminal (its own scrollback search) for as long as any preview was open.
     const onKey = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+        if (!host.contains(document.activeElement)) return
         e.preventDefault()
         e.stopPropagation()
         view.focus()

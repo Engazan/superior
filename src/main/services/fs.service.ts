@@ -121,35 +121,44 @@ export async function readFilePreview(
 ): Promise<FileReadResult> {
   if (!isWithinWorkspaceFolder(filePath)) return { ...EMPTY_READ, error: OUTSIDE_WORKSPACE }
   let size: number
+  let mtimeMs: number
   try {
     const info = await stat(filePath)
     if (!info.isFile()) {
       return { ...EMPTY_READ, error: 'Not a file.' }
     }
     size = info.size
+    mtimeMs = info.mtimeMs
   } catch (err) {
     return { ...EMPTY_READ, error: (err as Error).message }
   }
 
   if (!opts.read) {
-    return { ...EMPTY_READ, size, truncated: size > opts.maxBytes }
+    return { ...EMPTY_READ, size, mtimeMs, truncated: size > opts.maxBytes }
   }
 
   // Base64 (images): only when the whole file fits, otherwise fall back.
   if (opts.asBase64) {
     if (size > opts.maxBytes) {
-      return { ...EMPTY_READ, size, truncated: true }
+      return { ...EMPTY_READ, size, mtimeMs, truncated: true }
     }
     try {
       const fh = await open(filePath, 'r')
       try {
         const buf = await fh.readFile()
-        return { size, truncated: false, encoding: 'base64', content: buf.toString('base64'), isBinary: true }
+        return {
+          size,
+          mtimeMs,
+          truncated: false,
+          encoding: 'base64',
+          content: buf.toString('base64'),
+          isBinary: true
+        }
       } finally {
         await fh.close()
       }
     } catch (err) {
-      return { ...EMPTY_READ, size, error: (err as Error).message }
+      return { ...EMPTY_READ, size, mtimeMs, error: (err as Error).message }
     }
   }
 
@@ -163,6 +172,7 @@ export async function readFilePreview(
       const slice = buf.subarray(0, bytesRead)
       return {
         size,
+        mtimeMs,
         truncated: size > opts.maxBytes,
         encoding: 'utf8',
         content: slice.toString('utf8'),
@@ -172,7 +182,7 @@ export async function readFilePreview(
       await fh.close()
     }
   } catch (err) {
-    return { ...EMPTY_READ, size, error: (err as Error).message }
+    return { ...EMPTY_READ, size, mtimeMs, error: (err as Error).message }
   }
 }
 

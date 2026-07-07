@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { IconButton } from './IconButton'
 import { CloseIcon } from './icons'
+import { useOverlayLayer } from '../../overlayStack'
+import { useI18n } from '../../i18n'
 
 type Size = 'sm' | 'md' | 'lg'
 
@@ -44,23 +46,52 @@ export function Modal({
   closeLabel,
   children
 }: Props): JSX.Element {
+  const { t } = useI18n()
   const titleId = useId()
   const descId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
+  // Registered on the overlay stack so only the frontmost layer reacts to
+  // Escape — closing a confirm dialog must never also close the modal under it.
+  const layer = useOverlayLayer()
 
-  // Escape to close.
+  // Escape to close (only while this modal is the top overlay).
   useEffect(() => {
     if (!dismissable) return
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && layer.isTop()) {
         e.stopPropagation()
         onClose()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dismissable, onClose])
+
+  // Focus trap: Tab cycles inside the dialog instead of escaping into the app
+  // behind it (aria-modal promises as much).
+  const onTrapKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key !== 'Tab') return
+    const panel = panelRef.current
+    if (!panel) return
+    const focusables = Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((el) => el.offsetParent !== null)
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    const active = document.activeElement
+    if (e.shiftKey && (active === first || !panel.contains(active))) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && (active === last || !panel.contains(active))) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
 
   // Focus into the dialog on mount; restore focus on unmount.
   useEffect(() => {
@@ -82,6 +113,7 @@ export function Modal({
       onMouseDown={(e) => {
         if (dismissable && e.target === e.currentTarget) onClose()
       }}
+      onKeyDown={onTrapKeyDown}
     >
       <div
         ref={panelRef}
@@ -103,7 +135,12 @@ export function Modal({
             )}
           </div>
           {dismissable && (
-            <IconButton size="sm" label={closeLabel ?? 'Close'} onClick={onClose} data-modal-close>
+            <IconButton
+              size="sm"
+              label={closeLabel ?? t('common.close')}
+              onClick={onClose}
+              data-modal-close
+            >
               <CloseIcon size={14} />
             </IconButton>
           )}

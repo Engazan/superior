@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDismiss } from './ui'
 import type { Profile } from '../types'
@@ -71,10 +71,38 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const active = profiles.find((p) => p.id === activeProfileId) ?? null
 
   // Close on outside click or Escape.
   useDismiss(ref, open, () => setOpen(false))
+
+  // Menu keyboard model (matching ui/Menu): focus lands on the first item,
+  // ArrowUp/Down roves, closing restores focus to the trigger.
+  useEffect(() => {
+    if (!open) return
+    const menu = menuRef.current
+    if (!menu) return
+    const opener = document.activeElement as HTMLElement | null
+    menu.querySelector<HTMLButtonElement>('button')?.focus()
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+      e.preventDefault()
+      const buttons = Array.from(menu.querySelectorAll<HTMLButtonElement>('button'))
+      if (buttons.length === 0) return
+      const idx = buttons.indexOf(document.activeElement as HTMLButtonElement)
+      const next =
+        e.key === 'ArrowDown'
+          ? buttons[(idx + 1) % buttons.length]
+          : buttons[(idx - 1 + buttons.length) % buttons.length]
+      next.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      opener?.focus()
+    }
+  }, [open])
 
   return (
     <div ref={ref} className="app-no-drag relative">
@@ -96,6 +124,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
 
       {open && (
         <div
+          ref={menuRef}
           role="menu"
           className="solid-surface absolute left-1/2 top-8 z-50 min-w-52 -translate-x-1/2 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg"
         >
@@ -108,7 +137,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
                 setOpen(false)
                 onSelect(p.id)
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-none"
             >
               <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                 {p.id === activeProfileId && <CheckGlyph />}
@@ -123,7 +152,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
               setOpen(false)
               onManage()
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:outline-none"
           >
             <svg
               className="block h-3.5 w-3.5 shrink-0"

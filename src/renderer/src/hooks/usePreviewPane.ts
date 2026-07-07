@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FsEntry } from '../types'
 
 interface PreviewPaneApi {
@@ -19,18 +19,33 @@ export function usePreviewPane(): PreviewPaneApi {
   const [previewWidth, setPreviewWidth] = useState(0.5)
   const previewRowRef = useRef<HTMLDivElement>(null)
 
+  // Restore the persisted width once; drags persist on release (not per-move,
+  // to avoid an IPC write per pointer event).
+  const widthRestored = useRef(false)
+  useEffect(() => {
+    void window.api.getSettings().then((s) => {
+      if (widthRestored.current) return
+      widthRestored.current = true
+      if (typeof s.ui.previewWidth === 'number') setPreviewWidth(s.ui.previewWidth)
+    })
+  }, [])
+
   const startPreviewResize = useCallback((e: React.PointerEvent): void => {
     e.preventDefault()
     const row = previewRowRef.current
     if (!row) return
+    widthRestored.current = true
+    let latest: number | null = null
     const move = (ev: PointerEvent): void => {
       const box = row.getBoundingClientRect()
       const fraction = (box.right - ev.clientX) / box.width
-      setPreviewWidth(Math.min(0.8, Math.max(0.2, fraction)))
+      latest = Math.min(0.8, Math.max(0.2, fraction))
+      setPreviewWidth(latest)
     }
     const up = (): void => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      if (latest !== null) void window.api.setUiState({ previewWidth: latest })
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)

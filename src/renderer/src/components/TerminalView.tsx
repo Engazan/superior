@@ -4,6 +4,8 @@ import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
+import { useAttentionSessions, useBusySessions } from '../activityStore'
+import { useAttentionColor } from '../attentionColor'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
@@ -20,6 +22,41 @@ const STATUS_DOT: Record<AgentSession['status'], string> = {
   running: 'bg-status',
   exited: 'bg-fgmuted',
   error: 'bg-dangerSolid'
+}
+
+/**
+ * Per-cell status dot: layers live activity on top of the process state so a
+ * glance tells *which* terminal is streaming output (pulsing green), which one
+ * finished and awaits input (attention color), and which merely runs idle.
+ * A separate subscriber component so busy churn re-renders only the dot.
+ */
+function CellStatusDot({ session }: { session: AgentSession }): JSX.Element {
+  const { t } = useI18n()
+  const busy = useBusySessions()
+  const attention = useAttentionSessions()
+  const { attentionColor } = useAttentionColor()
+  if (session.status === 'running' && attention.has(session.id)) {
+    return (
+      <span
+        className="h-2 w-2 shrink-0 animate-pulse rounded-full"
+        style={{ backgroundColor: attentionColor }}
+        title={t('terminal.statusFinished')}
+      />
+    )
+  }
+  const isBusy = session.status === 'running' && busy.has(session.id)
+  return (
+    <span
+      className={`h-2 w-2 shrink-0 rounded-full ${isBusy ? 'animate-pulse' : ''} ${STATUS_DOT[session.status]}`}
+      title={
+        isBusy
+          ? t('terminal.statusWorking')
+          : session.status === 'error'
+            ? t('terminal.statusError')
+            : undefined
+      }
+    />
+  )
 }
 
 // Older builds could accidentally feed xterm's OSC 10/11 color responses into
@@ -416,7 +453,7 @@ export const TerminalView = memo(function TerminalView({
           >
             {/* Identity zone — status, icon, name, nickname. Truncates first. */}
             <div className="group flex min-w-0 flex-1 items-center gap-1.5">
-              <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[session.status]}`} />
+              <CellStatusDot session={session} />
               <PresetIcon
                 iconType={session.iconType}
                 icon={session.icon}
@@ -535,6 +572,30 @@ export const TerminalView = memo(function TerminalView({
           </div>
         )}
         <div ref={hostRef} className="min-h-0 w-full flex-1" />
+
+        {/* Dead-terminal affordance: the "[press Enter to restart]" scrollback
+            line scrolls away; this chip stays put so a dead cell never looks
+            frozen. */}
+        {visible && session.status !== 'running' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRestart(session.id)
+            }}
+            className={`solid-surface absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border px-3 py-1 text-xs shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+              session.status === 'error'
+                ? 'border-dangerBorder bg-panel text-danger hover:text-fg'
+                : 'border-edge bg-panel text-fgdim hover:text-fg'
+            }`}
+          >
+            <RestartIcon size={12} />
+            <span>
+              {t('terminal.exitedChip', { code: String(session.exitCode ?? 0) })}
+              {' · '}
+              {t('terminal.restartHint')}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   )

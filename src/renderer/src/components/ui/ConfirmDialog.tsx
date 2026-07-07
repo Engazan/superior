@@ -55,7 +55,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }): JSX.Elem
     setPending(null)
   }
 
-  const danger = pending?.options.tone !== 'default'
+  // Danger styling is opt-in: a caller that forgets `tone` gets the neutral
+  // dialog, not a red one.
+  const danger = pending?.options.tone === 'danger'
 
   return (
     <ConfirmContext.Provider value={confirm}>

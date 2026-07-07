@@ -107,7 +107,14 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
     setConflict(null)
     setNote(null)
     setBranches(null)
-    void window.api.listBranches(gitDir).then(setBranches)
+    window.api
+      .listBranches(gitDir)
+      .then(setBranches)
+      .catch((err) => {
+        // A rejected IPC would otherwise leave the menu on "Loading…" forever.
+        setBranches([])
+        setError(err instanceof Error ? err.message : String(err))
+      })
   }, [open, gitDir])
 
   // Collapsed group keys ('local' or a remote name). A group not present is expanded.

@@ -93,6 +93,18 @@ export function PresetsSection({
     else setOrder(null)
   }
 
+  // Keyboard alternative to the mouse-only drag grip.
+  const moveBy = (id: string, direction: -1 | 1): void => {
+    const ids = displayed.map((p) => p.id)
+    const idx = ids.indexOf(id)
+    const target = idx + direction
+    if (idx === -1 || target < 0 || target >= ids.length) return
+    const next = [...ids]
+    next.splice(idx, 1)
+    next.splice(target, 0, id)
+    onReorder(next)
+  }
+
   const removePreset = async (p: TerminalPreset): Promise<void> => {
     const ok = await confirm({
       title: t('presets.deleteTitle'),
@@ -145,6 +157,8 @@ export function PresetsSection({
                 >
                   <td
                     draggable
+                    tabIndex={0}
+                    role="button"
                     onDragStart={(e) => {
                       startDrag(p.id)
                       // No floating ghost — just sort the rows in place.
@@ -152,7 +166,17 @@ export function PresetsSection({
                       e.dataTransfer.effectAllowed = 'move'
                     }}
                     onDragEnd={endDrag}
-                    className="cursor-grab select-none px-2 py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing"
+                    // Arrow keys reorder too — the drag grip alone is mouse-only.
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        moveBy(p.id, -1)
+                      } else if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        moveBy(p.id, 1)
+                      }
+                    }}
+                    className="cursor-grab select-none px-2 py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                     title={t('presets.dragReorder')}
                     aria-label={t('presets.dragReorder')}
                   >
@@ -171,7 +195,7 @@ export function PresetsSection({
                       <Toggle
                         checked={p.active}
                         onChange={(checked) => onToggleActive(p.id, checked)}
-                        label={`Mark ${p.name} active`}
+                        label={t('presets.markActive', { name: p.name })}
                       />
                     </div>
                   </td>

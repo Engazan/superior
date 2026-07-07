@@ -13,13 +13,13 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   toggleSidebar: 'mod+b',
   openSettings: 'mod+,',
   maximizeFocusedCell: 'ctrl+enter',
-  openLauncher: 'ctrl+§',
+  openLauncher: 'mod+t',
   toggleRightPanel: 'mod+j',
   closeFocusedCell: 'mod+w',
   closePreview: 'mod+shift+w',
   saveFile: 'mod+s',
-  prevTerminal: 'ctrl+arrowleft',
-  nextTerminal: 'ctrl+arrowright',
+  prevTerminal: 'mod+alt+arrowleft',
+  nextTerminal: 'mod+alt+arrowright',
   openFolder: 'mod+o',
   prevWorkspace: 'mod+shift+arrowup',
   nextWorkspace: 'mod+shift+arrowdown',
@@ -70,17 +70,31 @@ const THEMES: ThemeMode[] = ['light', 'dark', 'system', 'transparent', 'gradient
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
 const USAGE_PRIMARIES: UsagePrimary[] = ['remaining', 'sevenDay', 'cost', 'tokens', 'context']
 
+/**
+ * Chords that used to be shipped defaults. A stored value matching its action's
+ * retired default was never a deliberate user choice (the full map is persisted
+ * on any rebind), so it upgrades to the current default instead of sticking.
+ */
+const RETIRED_DEFAULTS: Partial<Record<ShortcutAction, string[]>> = {
+  openLauncher: ['ctrl+§'],
+  prevTerminal: ['ctrl+arrowleft'],
+  nextTerminal: ['ctrl+arrowright']
+}
+
 /** Merge stored shortcuts over the defaults, dropping unknown actions and non-string chords. */
 function normalizeShortcuts(raw: unknown): ShortcutMap {
   const next: ShortcutMap = { ...DEFAULT_SHORTCUTS }
   if (raw && typeof raw === 'object') {
     for (const action of SHORTCUT_ACTIONS) {
       const value = (raw as Record<string, unknown>)[action]
-      if (typeof value === 'string' && value.trim()) next[action] = value
+      if (typeof value === 'string' && value.trim() && !RETIRED_DEFAULTS[action]?.includes(value))
+        next[action] = value
     }
   }
   return next
 }
+
+const RIGHT_PANEL_TABS = ['files', 'changes', 'history', 'tasks']
 
 /** Coerce stored UI layout flags to booleans, falling back to defaults. */
 function normalizeUi(raw: unknown): UiState {
@@ -89,6 +103,12 @@ function normalizeUi(raw: unknown): UiState {
     const obj = raw as Record<string, unknown>
     if (typeof obj.sidebarCollapsed === 'boolean') next.sidebarCollapsed = obj.sidebarCollapsed
     if (typeof obj.rightSidebarOpen === 'boolean') next.rightSidebarOpen = obj.rightSidebarOpen
+    if (typeof obj.rightPanelTab === 'string' && RIGHT_PANEL_TABS.includes(obj.rightPanelTab))
+      next.rightPanelTab = obj.rightPanelTab as UiState['rightPanelTab']
+    if (typeof obj.previewWidth === 'number' && Number.isFinite(obj.previewWidth))
+      next.previewWidth = Math.min(0.8, Math.max(0.2, obj.previewWidth))
+    if (typeof obj.rightPanelWidth === 'number' && Number.isFinite(obj.rightPanelWidth))
+      next.rightPanelWidth = Math.min(560, Math.max(280, Math.round(obj.rightPanelWidth)))
   }
   return next
 }
@@ -171,11 +191,13 @@ export function setShortcuts(shortcuts: ShortcutMap): AppSettings {
   return next
 }
 
-/** Persist the sidebar layout state and return the updated settings. */
-export function setUi(ui: UiState): AppSettings {
+/** Persist the sidebar layout state (merged over the stored state, so partial
+ * updates from different components don't clobber each other's fields). */
+export function setUi(ui: Partial<UiState>): AppSettings {
+  const current = getSettings()
   const next: AppSettings = {
-    ...getSettings(),
-    ui: normalizeUi(ui)
+    ...current,
+    ui: normalizeUi({ ...current.ui, ...ui })
   }
   save(next)
   return next

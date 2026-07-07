@@ -507,9 +507,15 @@ export const Sidebar = memo(function Sidebar({
 
       <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto py-2">
         {folders.length === 0 ? (
-          <p className="px-3 py-8 text-center text-xs leading-5 text-fgmuted">
-            {t('sidebar.noWorkspaces')}
-          </p>
+          <div className="flex flex-col items-center gap-3 px-3 py-8 text-center">
+            <p className="text-xs leading-5 text-fgmuted">{t('sidebar.noWorkspaces')}</p>
+            <button
+              onClick={onOpenProject}
+              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            >
+              {t('sidebar.openProject')}
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
             {displayFolders.map((folder) => {
@@ -528,13 +534,28 @@ export const Sidebar = memo(function Sidebar({
                 >
                   {/* Folder header — click to collapse / expand; the grip drags to reorder */}
                   <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={open}
                     onClick={() => toggleFolder(folder)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        toggleFolder(folder)
+                      } else if (e.key === 'ArrowLeft' && open) {
+                        e.preventDefault()
+                        toggleFolder(folder)
+                      } else if (e.key === 'ArrowRight' && !open) {
+                        e.preventDefault()
+                        toggleFolder(folder)
+                      }
+                    }}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
                     title={folder.path}
-                    className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover"
+                    className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
@@ -599,13 +620,29 @@ export const Sidebar = memo(function Sidebar({
                         return (
                           <li key={ws.id}>
                             <div
+                              role="button"
+                              tabIndex={0}
+                              aria-current={active || undefined}
                               onClick={() => onSelectWorkspace(ws.id)}
+                              onKeyDown={(e) => {
+                                if (editingId === ws.id) return
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  onSelectWorkspace(ws.id)
+                                } else if (e.key === 'F2') {
+                                  e.preventDefault()
+                                  startRename(ws)
+                                } else if (e.key === 'ContextMenu') {
+                                  e.preventDefault()
+                                  setWsMenu({ id: ws.id, anchor: e.currentTarget })
+                                }
+                              }}
                               onContextMenu={(e) => {
                                 e.preventDefault()
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-4 pr-2 transition ${
+                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-4 pr-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : attn
@@ -647,7 +684,12 @@ export const Sidebar = memo(function Sidebar({
                                     className={`truncate text-sm ${
                                       active ? 'font-medium text-fg' : 'text-fg2'
                                     }`}
-                                    title={t('sidebar.renameWorkspace')}
+                                    // The tooltip shows the workspace itself (its branch/
+                                    // path live only on the collapsed rail otherwise);
+                                    // rename stays discoverable via the kebab menu.
+                                    title={
+                                      ws.branch ? `${ws.name} · ${ws.branch}` : ws.name
+                                    }
                                   >
                                     {ws.name}
                                   </span>

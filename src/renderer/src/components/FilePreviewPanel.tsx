@@ -5,7 +5,7 @@ import { MarkdownFilePreview } from './MarkdownFilePreview'
 import { ImageFilePreview } from './ImageFilePreview'
 import { UnsupportedFilePreview } from './UnsupportedFilePreview'
 import { useI18n } from '../i18n'
-import { IconButton, useToast } from './ui'
+import { IconButton, useConfirm, useToast } from './ui'
 import { eventToChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import {
   IMAGE_MAX_BYTES,
@@ -20,6 +20,9 @@ import type { FileReadResult, FsEntry } from '../types'
 interface Props {
   file: FsEntry
   onClose: () => void
+  /** Reports the editor's unsaved-changes state up, so the owner can guard
+      file switches and closes behind a confirm instead of dropping edits. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 /** Pretty-print JSON when possible; fall back to the raw text on parse errors. */
@@ -31,8 +34,9 @@ function prettyJson(text: string): string {
   }
 }
 
-export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
+export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): JSX.Element {
   const { t } = useI18n()
+  const confirm = useConfirm()
   const shortcutTitle = useShortcutTitle()
   const { shortcuts } = useShortcuts()
   const type = useMemo(() => getFilePreviewType(file), [file])
@@ -53,9 +57,24 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   // The content currently in the editor (kept in a ref so per-keystroke edits
   // don't re-render the panel and feed a new `content` prop back into CodeMirror,
   // which would tear the editor down). `baseline` is what's on disk — comparing
-  // the two drives the dirty indicator and gates saving.
+  // the two drives the dirty indicator and gates saving. `mtime` is the disk
+  // mtime the baseline was read at, checked again before writing so a stale
+  // preview never silently clobbers a file an agent has since rewritten.
   const liveContentRef = useRef('')
   const baselineRef = useRef('')
+  const baselineMtimeRef = useRef<number | undefined>(undefined)
+
+  // Mirror dirty state up (and always clear it on unmount so a discarded
+  // editor doesn't leave the guard armed).
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty])
+  useEffect(
+    () => () => onDirtyChange?.(false),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
 
   const openRaw = (): void => void window.api.openPath(file.path)
   const copyPath = (): void => {
@@ -110,8 +129,9 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   useEffect(() => {
     baselineRef.current = editorText ?? ''
     liveContentRef.current = editorText ?? ''
+    baselineMtimeRef.current = data?.mtimeMs
     setDirty(false)
-  }, [editorText])
+  }, [editorText, data?.mtimeMs])
 
   const handleChange = useCallback((value: string) => {
     liveContentRef.current = value
@@ -124,15 +144,45 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
     setSaving(true)
     setSaveError(null)
     const next = liveContentRef.current
+    // Agents in the embedded terminals rewrite files constantly — a save from a
+    // stale baseline would silently clobber their output, so re-stat first.
+    const current = await window.api.readFile(file.path, {
+      maxBytes: 0,
+      asBase64: false,
+      read: false
+    })
+    if (
+      !current.error &&
+      baselineMtimeRef.current !== undefined &&
+      current.mtimeMs !== undefined &&
+      current.mtimeMs !== baselineMtimeRef.current
+    ) {
+      setSaving(false)
+      const overwrite = await confirm({
+        title: t('preview.changedOnDiskTitle'),
+        message: t('preview.changedOnDiskConfirm'),
+        confirmLabel: t('preview.overwrite'),
+        tone: 'danger'
+      })
+      if (!overwrite) return
+      setSaving(true)
+    }
     const res = await window.api.writeFile(file.path, next)
-    setSaving(false)
     if (res.ok) {
       baselineRef.current = next
       setDirty(liveContentRef.current !== next)
+      // Refresh the baseline mtime to the just-written state.
+      const after = await window.api.readFile(file.path, {
+        maxBytes: 0,
+        asBase64: false,
+        read: false
+      })
+      if (!after.error) baselineMtimeRef.current = after.mtimeMs
     } else {
       setSaveError(res.error ?? t('preview.saveFailed'))
     }
-  }, [editable, saving, file.path, t])
+    setSaving(false)
+  }, [editable, saving, file.path, t, confirm])
 
   // Save on the configured shortcut (⌘/Ctrl+S by default), even when focus is
   // inside the editor. Capture so it beats CodeMirror and the browser's own save.
@@ -201,7 +251,7 @@ export function FilePreviewPanel({ file, onClose }: Props): JSX.Element {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-panel">
+    <div data-preview-panel className="flex h-full min-h-0 w-full flex-col bg-panel">
       <div className="flex shrink-0 items-center gap-2 border-b border-edge bg-bar px-3 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">

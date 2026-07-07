@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useOverlayLayer } from '../../overlayStack'
 
 export type MenuItem =
   | {
@@ -29,6 +30,7 @@ interface Props {
 export function Menu({ items, anchor, onClose }: Props): JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const layer = useOverlayLayer()
 
   // Place at the anchor, then clamp to the viewport once measured.
   useLayoutEffect(() => {
@@ -54,6 +56,8 @@ export function Menu({ items, anchor, onClose }: Props): JSX.Element {
     }
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
+        // Only the frontmost overlay closes — a menu under a modal stays put.
+        if (!layer.isTop()) return
         e.stopPropagation()
         onClose()
         return
@@ -79,9 +83,12 @@ export function Menu({ items, anchor, onClose }: Props): JSX.Element {
     }
   }, [onClose])
 
-  // Focus the first item so keyboard users land inside the menu.
+  // Focus the first item so keyboard users land inside the menu; restore focus
+  // to the opener when the menu closes so keyboard flow isn't dropped.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
     ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    return () => opener?.focus()
   }, [])
 
   return createPortal(

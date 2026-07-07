@@ -22,7 +22,7 @@ function errorMessage(t: TFunction, raw: string): string {
     case 'no-workspace':
       return t('tasks.errNoWorkspace')
     case 'worktree-missing':
-      return t('error.worktreeCreateFailed', { message: '' })
+      return t('tasks.errWorktreeMissing')
     case WORKTREE_ERROR.NOT_A_REPO:
     case WORKTREE_ERROR.INVALID_FOLDER:
       return t('error.notARepo')
@@ -55,6 +55,23 @@ function JumpMark(): JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M7 17L17 7M9 7h8v8" />
+    </svg>
+  )
+}
+
+function RetryMark(): JSX.Element {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 12a8 8 0 1 1-2.3-5.6" />
+      <path d="M20 3v5h-5" />
+    </svg>
+  )
+}
+
+function ArrowMark({ up }: { up: boolean }): JSX.Element {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {up ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M5 12l7 7 7-7" />}
     </svg>
   )
 }
@@ -158,7 +175,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
     }
   }
 
-  const row = (task: AgentTask): JSX.Element => {
+  const row = (task: AgentTask, queueIndex?: number, queueLength?: number): JSX.Element => {
     const preset = presetOf(task)
     return (
       <div key={task.id} className="group flex items-start gap-2 border-b border-edge/50 px-2 py-2">
@@ -188,7 +205,32 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
             </div>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+          {task.status === 'queued' && queueIndex !== undefined && queueLength !== undefined && (
+            <>
+              <IconButton
+                size="sm"
+                label={t('tasks.moveUp')}
+                disabled={queueIndex === 0}
+                onClick={() => void queue.moveTask(task.id, -1)}
+              >
+                <ArrowMark up />
+              </IconButton>
+              <IconButton
+                size="sm"
+                label={t('tasks.moveDown')}
+                disabled={queueIndex === queueLength - 1}
+                onClick={() => void queue.moveTask(task.id, 1)}
+              >
+                <ArrowMark up={false} />
+              </IconButton>
+            </>
+          )}
+          {(task.status === 'failed' || task.status === 'canceled') && (
+            <IconButton size="sm" label={t('tasks.retry')} onClick={() => void queue.retryTask(task.id)}>
+              <RetryMark />
+            </IconButton>
+          )}
           {task.workspaceId && task.status !== 'queued' && (
             <IconButton size="sm" label={t('tasks.goTo')} onClick={() => onJumpTo(task)}>
               <JumpMark />
@@ -242,19 +284,19 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
             {running.length > 0 && (
               <>
                 <GroupHead label={t('tasks.statusRunning')} count={running.length} />
-                {running.map(row)}
+                {running.map((task) => row(task))}
               </>
             )}
             {queued.length > 0 && (
               <>
                 <GroupHead label={t('tasks.statusQueued')} count={queued.length} />
-                {queued.map(row)}
+                {queued.map((task, i) => row(task, i, queued.length))}
               </>
             )}
             {finished.length > 0 && (
               <>
                 <GroupHead label={t('tasks.finishedGroup')} count={finished.length} />
-                {finished.map(row)}
+                {finished.map((task) => row(task))}
               </>
             )}
           </>

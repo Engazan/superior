@@ -37,7 +37,7 @@ export function registerSettingsIpc(): void {
     setShortcuts(shortcuts)
   )
 
-  ipcMain.handle(IPC.SETTINGS_SET_UI, (_event, ui: UiState): AppSettings => setUi(ui))
+  ipcMain.handle(IPC.SETTINGS_SET_UI, (_event, ui: Partial<UiState>): AppSettings => setUi(ui))
 
   ipcMain.handle(IPC.SETTINGS_SET_ATTENTION_COLOR, (_event, color: string): AppSettings =>
     setAttentionColor(color)

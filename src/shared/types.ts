@@ -61,10 +61,18 @@ export interface UpdateProgress {
   error?: string
 }
 
+export type RightPanelTab = 'files' | 'changes' | 'history' | 'tasks'
+
 /** Persisted layout state for the left/right sidebars, restored on launch. */
 export interface UiState {
   sidebarCollapsed: boolean
   rightSidebarOpen: boolean
+  /** Last-active right-panel tab, restored on reopen. */
+  rightPanelTab?: RightPanelTab
+  /** File-preview pane width as a fraction of the row (clamped to 0.2–0.8). */
+  previewWidth?: number
+  /** Right panel width in px (clamped to 280–560). */
+  rightPanelWidth?: number
 }
 
 export interface AppSettings {
@@ -588,6 +596,9 @@ export interface FileReadOptions {
 export interface FileReadResult {
   /** Total size on disk, in bytes. */
   size: number
+  /** Modification time (ms since epoch) at read time; absent on stat errors.
+      The preview editor compares it before saving to catch concurrent edits. */
+  mtimeMs?: number
   /** True when the file is larger than the requested limit (content omitted/partial). */
   truncated: boolean
   /** Encoding of `content`; 'none' when nothing was read. */

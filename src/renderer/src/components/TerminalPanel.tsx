@@ -4,8 +4,20 @@ import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
 import { PromptPicker } from './PromptPicker'
 import { insertIntoTerminal, wrapForPty } from '../terminalInput'
-import { BroadcastIcon, CheckIcon, CloseIcon, IconButton, Menu, PencilIcon, PromptIcon } from './ui'
+import {
+  Button,
+  BroadcastIcon,
+  CheckIcon,
+  CloseIcon,
+  IconButton,
+  Menu,
+  PencilIcon,
+  PromptIcon
+} from './ui'
+import { useAttentionSessions, useBusySessions } from '../activityStore'
+import { useAttentionColor } from '../attentionColor'
 import { useI18n } from '../i18n'
+import { useShortcutTitle } from '../shortcuts'
 import {
   gridRects,
   gridDividers,
@@ -60,6 +72,8 @@ interface Props {
   /** add a single terminal (another grid cell) to the active tab */
   onLaunch: (preset: TerminalPreset) => void
   onManagePresets: () => void
+  /** open the "Open / Clone project" modal (first-run empty state CTA) */
+  onOpenProject: () => void
   /** persist a grid sizing change */
   onGridLayoutChange: (layout: GridLayout) => void
   /** switch the active tab */
@@ -102,6 +116,7 @@ export function TerminalPanel({
   onStart,
   onLaunch,
   onManagePresets,
+  onOpenProject,
   onGridLayoutChange,
   onSelectTab,
   onAddTab,
@@ -109,12 +124,18 @@ export function TerminalPanel({
   onRenameTab
 }: Props): JSX.Element {
   const { t } = useI18n()
+  const shortcutTitle = useShortcutTitle()
   const containerRef = useRef<HTMLDivElement>(null)
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
   // Stable identity so memoized TerminalViews don't re-render on every panel render.
+  // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
+  // "error" dot for Ctrl+C would cry wolf and erode the real-crash signal.
   const handleExit = useCallback(
     (id: string, exitCode: number) =>
-      onSessionUpdate(id, { status: exitCode === 0 ? 'exited' : 'error', exitCode }),
+      onSessionUpdate(id, {
+        status: exitCode === 0 || exitCode === 130 || exitCode === 143 ? 'exited' : 'error',
+        exitCode
+      }),
     [onSessionUpdate]
   )
   // Inline tab rename: the tab being edited and its draft name.
@@ -125,9 +146,11 @@ export function TerminalPanel({
   )
   // Saved-prompt picker overlay (inserts into the active terminal).
   const [promptPickerOpen, setPromptPickerOpen] = useState(false)
-  // Broadcast mode: one input bar typing into every targeted grid cell at once.
+  // Broadcast mode: one input bar typing into every running grid cell at once.
+  // Stored as an *exclusion* set so cells launched or restarted (new session id)
+  // while the bar is open participate by default instead of silently dropping out.
   const [broadcastMode, setBroadcastMode] = useState(false)
-  const [broadcastTargets, setBroadcastTargets] = useState<Set<string>>(new Set())
+  const [broadcastExcluded, setBroadcastExcluded] = useState<Set<string>>(new Set())
 
   // Terminals of the active tab (active workspace + active tab), in creation order.
   const tabSessions = sessions.filter(
@@ -199,15 +222,13 @@ export function TerminalPanel({
   const toggleBroadcast = (): void => {
     setBroadcastMode((on) => {
       if (on) return false
-      setBroadcastTargets(
-        new Set(gridCells.filter((s) => s.status === 'running').map((s) => s.id))
-      )
+      setBroadcastExcluded(new Set())
       return true
     })
   }
 
   const toggleTarget = (id: string): void => {
-    setBroadcastTargets((prev) => {
+    setBroadcastExcluded((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -215,20 +236,22 @@ export function TerminalPanel({
     })
   }
 
+  // Live recipient list: running cells of the current grid minus opt-outs.
+  const broadcastTargets = gridCells.filter(
+    (s) => s.status === 'running' && !broadcastExcluded.has(s.id)
+  )
+
   const sendBroadcast = (text: string): void => {
     const payload = wrapForPty(text) + '\r'
-    for (const id of broadcastTargets) {
-      // Only cells still present and running receive input.
-      const s = gridCells.find((x) => x.id === id)
-      if (s && s.status === 'running') window.api.sendInput(id, payload)
-    }
+    for (const s of broadcastTargets) window.api.sendInput(s.id, payload)
   }
 
   // Switching tab/workspace invalidates the targeted cells — drop the mode.
   useEffect(() => {
     setBroadcastMode(false)
-    setBroadcastTargets(new Set())
+    setBroadcastExcluded(new Set())
   }, [activeTabId, activeWorkspaceId])
+
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-panel">
@@ -239,32 +262,32 @@ export function TerminalPanel({
             {tabs.map((tab) => {
               const active = tab.id === activeTabId
               const editing = editingTab?.id === tab.id
-              // Aggregate activity dot: green while any terminal in the tab runs,
-              // grey once they've all exited, nothing for an empty tab.
               const tabCells = sessions.filter(
                 (s) => s.workspaceId === activeWorkspaceId && s.tabId === tab.id
               )
-              const running = tabCells.some((s) => s.status === 'running')
               return (
                 <div
                   key={tab.id}
+                  role="tab"
+                  aria-selected={active}
+                  tabIndex={0}
                   onClick={() => onSelectTab(tab.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onSelectTab(tab.id)
+                    }
+                  }}
                   onDoubleClick={() => setEditingTab({ id: tab.id, name: tab.name })}
                   onContextMenu={(e) => {
                     e.preventDefault()
                     setTabMenu({ id: tab.id, name: tab.name, x: e.clientX, y: e.clientY })
                   }}
-                  className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs ${
+                  className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                     active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
                   }`}
                 >
-                  {tabCells.length > 0 && (
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${
-                        running ? 'bg-status' : 'bg-fgmuted'
-                      }`}
-                    />
-                  )}
+                  {tabCells.length > 0 && <TabActivityDot cells={tabCells} />}
                   {editing ? (
                     <input
                       autoFocus
@@ -352,7 +375,7 @@ export function TerminalPanel({
                 setBroadcastMode(false)
               }
             }}
-            placeholder={t('broadcast.placeholder', { n: broadcastTargets.size })}
+            placeholder={t('broadcast.placeholder', { n: broadcastTargets.length })}
             className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warn/50"
           />
           <IconButton size="sm" label={t('broadcast.exit')} onClick={() => setBroadcastMode(false)}>
@@ -405,10 +428,18 @@ export function TerminalPanel({
               onSaveLayoutPreset={onSaveLayoutPreset}
               onDeleteLayoutPreset={onDeleteLayoutPreset}
               onStart={onStart}
+              onManagePresets={onManagePresets}
             />
           ) : (
-            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-fgmuted">
-              {t('terminal.noWorkspace')}
+            // First-run empty state: a real path forward, not just a sentence.
+            <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="max-w-sm text-sm text-fgmuted">{t('terminal.noWorkspace')}</p>
+              <Button variant="primary" onClick={onOpenProject}>
+                {t('sidebar.openProject')}
+              </Button>
+              <p className="text-xs text-fgmuted">
+                {shortcutTitle(t('keyboard.openPalette'), 'openPalette')}
+              </p>
             </div>
           ))}
 
@@ -444,7 +475,7 @@ export function TerminalPanel({
           gridCells.map((s, i) => {
             const r = rects[i]
             if (!r || s.status !== 'running') return null
-            const targeted = broadcastTargets.has(s.id)
+            const targeted = !broadcastExcluded.has(s.id)
             return (
               <div
                 key={`bc-${s.id}`}
@@ -524,6 +555,14 @@ export function TerminalPanel({
           />
         )}
 
+        {/* Sessions beyond the grid capacity stay mounted but invisible — say
+            so instead of losing them silently. */}
+        {tabSessions.length > MAX_GRID && (
+          <div className="solid-surface absolute bottom-3 left-3 z-50 rounded-full border border-warnBorder bg-panel px-3 py-1 text-[11px] text-warn shadow-lg">
+            {t('terminal.hiddenSessions', { n: tabSessions.length - MAX_GRID })}
+          </div>
+        )}
+
         {activeWorkspaceId && tabSessions.length > 0 && (
           <div className="absolute bottom-3 right-3 z-50 rounded-md border border-edge bg-bar shadow-lg">
             <PresetMenu
@@ -537,5 +576,38 @@ export function TerminalPanel({
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Aggregate activity dot for one tab chip. Subscribes to the activity store
+ * itself so per-chunk busy churn re-renders only these dots, not the panel:
+ * attention color = a terminal finished and hasn't been seen, pulsing green =
+ * output streaming, steady green = running-idle, grey = all exited.
+ */
+function TabActivityDot({ cells }: { cells: AgentSession[] }): JSX.Element {
+  const { t } = useI18n()
+  const busy = useBusySessions()
+  const attention = useAttentionSessions()
+  const { attentionColor } = useAttentionColor()
+  const hasAttention = cells.some((s) => attention.has(s.id))
+  const isBusy = cells.some((s) => s.status === 'running' && busy.has(s.id))
+  const running = cells.some((s) => s.status === 'running')
+  if (hasAttention) {
+    return (
+      <span
+        className="h-2 w-2 shrink-0 animate-pulse rounded-full"
+        style={{ backgroundColor: attentionColor }}
+        title={t('terminal.statusFinished')}
+      />
+    )
+  }
+  return (
+    <span
+      className={`h-2 w-2 shrink-0 rounded-full ${
+        isBusy ? 'animate-pulse bg-status' : running ? 'bg-status' : 'bg-fgmuted'
+      }`}
+      title={isBusy ? t('terminal.statusWorking') : undefined}
+    />
   )
 }

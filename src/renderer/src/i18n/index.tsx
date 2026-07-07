@@ -9,7 +9,7 @@ import { hu } from './locales/hu'
 export const LANGUAGES: { value: Language; label: string }[] = [
   { value: 'en', label: 'En' },
   { value: 'sk', label: 'Sk' },
-  { value: 'cs', label: 'Cz' },
+  { value: 'cs', label: 'Cs' },
   { value: 'pl', label: 'Pl' },
   { value: 'hu', label: 'Hu' }
 ]
@@ -42,7 +42,9 @@ export function I18nProvider({ children }: { children: ReactNode }): JSX.Element
   const t: TFunction = (key, params) => {
     let str = (messages[lang] ?? en)[key] ?? en[key] ?? key
     if (params) {
-      for (const [k, v] of Object.entries(params)) str = str.replace(`{${k}}`, String(v))
+      // split/join replaces every occurrence — a translation may repeat a
+      // placeholder, and String.replace with a string only hits the first.
+      for (const [k, v] of Object.entries(params)) str = str.split(`{${k}}`).join(String(v))
     }
     return str
   }

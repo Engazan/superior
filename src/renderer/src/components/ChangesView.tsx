@@ -60,12 +60,20 @@ function SectionHead({
   )
 }
 
+// Above these sizes a file's diff starts collapsed — a refactor touching a
+// hundred files must not render tens of thousands of rows at once.
+const AUTO_COLLAPSE_LINES = 400
+const AUTO_COLLAPSE_FILES = 20
+
 export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const [message, setMessage] = useState('')
   const [committing, setCommitting] = useState(false)
   const [syncing, setSyncing] = useState<'push' | 'pull' | null>(null)
+  // Expansion state owned here and keyed by path, so a row keeps its state
+  // when staging moves it between the staged/unstaged lists (whose keys differ).
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
 
   if (!diff && loading) {
     return <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.loading')}</div>
@@ -92,9 +100,21 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
     onRefresh()
   }
 
+  // With nothing staged the button becomes "Stage all & commit" (the common
+  // Git-UI pattern) instead of sitting dead until the staged-first model clicks.
   const doCommit = async (): Promise<void> => {
-    if (!folderPath || !message.trim() || staged.length === 0) return
+    if (!folderPath || !message.trim() || committing) return
+    if (staged.length === 0 && unstaged.length === 0) return
     setCommitting(true)
+    if (staged.length === 0) {
+      const stagedRes = await window.api.gitStageAll(folderPath)
+      if (stagedRes.error) {
+        setCommitting(false)
+        toast.error(stagedRes.error)
+        onRefresh()
+        return
+      }
+    }
     const res = await window.api.gitCommit(folderPath, message)
     setCommitting(false)
     if (res.error) {
@@ -141,6 +161,13 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
   // Publish (no upstream yet) vs push (ahead of upstream).
   const canPush = diff.upstream ? (diff.ahead ?? 0) > 0 : true
   const canPull = !!diff.upstream && (diff.behind ?? 0) > 0
+
+  const isOpen = (file: GitDiffFile): boolean =>
+    openMap[file.path] ??
+    (file.additions + file.deletions <= AUTO_COLLAPSE_LINES &&
+      staged.length + unstaged.length <= AUTO_COLLAPSE_FILES)
+  const toggleOpen = (file: GitDiffFile): void =>
+    setOpenMap((prev) => ({ ...prev, [file.path]: !isOpen(file) }))
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -225,6 +252,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
               <DiffFileView
                 key={`s:${file.oldPath ? `${file.oldPath}>${file.path}` : file.path}`}
                 file={file}
+                open={isOpen(file)}
+                onToggleOpen={() => toggleOpen(file)}
                 action={unstageAction(file)}
               />
             ))}
@@ -239,6 +268,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
               <DiffFileView
                 key={`u:${file.oldPath ? `${file.oldPath}>${file.path}` : file.path}`}
                 file={file}
+                open={isOpen(file)}
+                onToggleOpen={() => toggleOpen(file)}
                 action={stageAction(file)}
               />
             ))}
@@ -246,7 +277,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
         )}
       </div>
 
-      {/* Commit box — enabled once something is staged and a message is typed. */}
+      {/* Commit box — a message plus anything to commit enables it; with an
+          empty stage it stages everything first. */}
       <div className="shrink-0 space-y-1.5 border-t border-edge p-2">
         <textarea
           value={message}
@@ -255,18 +287,24 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void doCommit()
           }}
           rows={2}
+          aria-label={t('changes.commitPlaceholder')}
           placeholder={t('changes.commitPlaceholder')}
           className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
         />
         <Button
           size="sm"
           className="w-full"
-          disabled={staged.length === 0 || !message.trim()}
+          disabled={(staged.length === 0 && unstaged.length === 0) || !message.trim()}
           loading={committing}
           onClick={() => void doCommit()}
         >
-          {t('changes.commit')}
+          {staged.length === 0 && unstaged.length > 0
+            ? t('changes.stageAllCommit')
+            : t('changes.commit')}
         </Button>
+        {totals.files > 0 && !message.trim() && (
+          <p className="text-[10px] text-fgmuted">{t('changes.commitHint')}</p>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n, type MessageKey } from '../i18n'
-import { Button, SectionHeader, SettingRow, SettingsCard, useToast } from './ui'
+import { Button, IconButton, RestartIcon, SectionHeader, SettingRow, SettingsCard, useToast } from './ui'
 import { useShortcuts, eventToChord, formatChord, setRecording } from '../shortcuts'
 import type { ShortcutAction } from '../types'
 
@@ -45,6 +45,16 @@ export function KeyboardSection(): JSX.Element {
     })
   }
 
+  // Which action already owns a chord — assigning the same chord twice would
+  // silently leave the winner to dispatcher order.
+  const findConflict = (chord: string, self: ShortcutAction | 'global'): string | null => {
+    for (const { id, labelKey } of ACTIONS) {
+      if (id !== self && shortcuts[id] === chord) return t(labelKey)
+    }
+    if (self !== 'global' && globalHotkey === chord) return t('keyboard.globalHotkey')
+    return null
+  }
+
   // While recording, the next key combination is captured and saved. Capture
   // phase + the module-level recording flag keep the global dispatcher quiet.
   useEffect(() => {
@@ -59,6 +69,14 @@ export function KeyboardSection(): JSX.Element {
       }
       const chord = eventToChord(e)
       if (!chord) return // modifier-only press — keep waiting for the real key
+      const conflict = findConflict(chord, recordingFor)
+      if (conflict) {
+        toast.error(
+          t('keyboard.conflict', { chord: formatChord(chord), action: conflict })
+        )
+        setRecordingFor(null)
+        return
+      }
       if (recordingFor === 'global') applyGlobal(chord)
       else setShortcut(recordingFor, chord)
       setRecordingFor(null)
@@ -69,7 +87,7 @@ export function KeyboardSection(): JSX.Element {
       setRecording(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recordingFor, setShortcut])
+  }, [recordingFor, setShortcut, shortcuts, globalHotkey])
 
   return (
     <div className="max-w-2xl">
@@ -127,20 +145,27 @@ export function KeyboardSection(): JSX.Element {
                 >
                   {isRecording ? t('keyboard.recording') : formatChord(shortcuts[id])}
                 </button>
-                <button
+                <IconButton
+                  size="sm"
+                  label={t('keyboard.reset')}
                   onClick={() => {
                     setRecordingFor(null)
                     resetShortcut(id)
                   }}
-                  title={t('keyboard.reset')}
-                  aria-label={t('keyboard.reset')}
-                  className="shrink-0 rounded-md px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg"
                 >
-                  ↺
-                </button>
+                  <RestartIcon size={13} />
+                </IconButton>
               </li>
             )
           })}
+          {/* Fixed binding, listed so the grid-focus feature is discoverable. */}
+          <li className="flex items-center gap-3 px-3 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate text-fg">{t('keyboard.focusCell')}</span>
+            <span className="min-w-24 rounded-md border border-edge px-2.5 py-1 text-center font-mono text-xs text-fgdim">
+              {formatChord('ctrl+1')}–{formatChord('ctrl+9').split(/[\s+]/).pop()}
+            </span>
+            <span className="w-6 shrink-0" aria-hidden />
+          </li>
         </ul>
       </div>
     </div>

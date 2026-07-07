@@ -24,8 +24,15 @@ interface Props {
   onBranchSwitched: () => void
   /** Open the quick-launch preset picker (also reachable via its shortcut). */
   onOpenLauncher: () => void
+  /** False when no workspace is active — launching can't work, so the button
+      is disabled with an explanatory tooltip instead of opening a dead picker. */
+  launcherEnabled: boolean
   /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
   onToggleRight: () => void
+  /** Current open state of the right panel, for aria-expanded. */
+  rightOpen: boolean
+  /** Current collapsed state of the left sidebar, for aria-expanded. */
+  sidebarCollapsed: boolean
   /** Profiles for the center switcher (each owns its own folders). */
   profiles: Profile[]
   activeProfileId: string | null
@@ -73,7 +80,10 @@ export function TitleBar({
   branchSwitchable,
   onBranchSwitched,
   onOpenLauncher,
+  launcherEnabled,
   onToggleRight,
+  rightOpen,
+  sidebarCollapsed,
   profiles,
   activeProfileId,
   onSelectProfile,
@@ -100,12 +110,14 @@ export function TitleBar({
       >
         {showToggle && (
           <div className="app-no-drag flex h-full min-w-0 items-center pr-1">
-            <SidebarToggle onClick={onToggle} />
+            <SidebarToggle onClick={onToggle} expanded={!sidebarCollapsed} />
             {showGit && (
               <>
                 <span className="mx-2 h-4 w-px shrink-0 bg-edge" aria-hidden />
                 {gitLoading && !gitStatus ? (
-                  <span className="flex h-full items-center px-1 text-xs text-fgmuted">Git…</span>
+                  <span className="flex h-full items-center px-1 text-xs text-fgmuted">
+                    {t('titlebar.gitLoading')}
+                  </span>
                 ) : gitStatus?.isRepository ? (
                   <div className="flex h-full min-w-0 max-w-72 items-center gap-1.5 px-1 text-xs font-medium text-fgdim">
                     {branchSwitchable && gitDir ? (
@@ -133,11 +145,13 @@ export function TitleBar({
                   <button
                     onClick={onInitGit}
                     disabled={gitLoading || !!gitStatus?.error}
-                    title={gitStatus?.error ?? 'Initialize a Git repository in this folder'}
+                    title={gitStatus?.error ?? t('titlebar.initGitTitle')}
                     className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
                   >
                     <BranchIcon />
-                    <span>{gitStatus?.error ? 'Git unavailable' : 'Init git'}</span>
+                    <span>
+                      {gitStatus?.error ? t('titlebar.gitUnavailable') : t('titlebar.initGit')}
+                    </span>
                   </button>
                 )}
               </>
@@ -167,9 +181,14 @@ export function TitleBar({
         {showToggle && (
           <button
             onClick={onOpenLauncher}
-            title={shortcutTitle(t('terminal.addTerminal'), 'openLauncher')}
+            disabled={!launcherEnabled}
+            title={
+              launcherEnabled
+                ? shortcutTitle(t('terminal.addTerminal'), 'openLauncher')
+                : t('terminal.noWorkspace')
+            }
             aria-label={t('terminal.addTerminal')}
-            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <svg
               className="block h-[16px] w-[16px]"
@@ -190,6 +209,7 @@ export function TitleBar({
         {showToggle && (
           <button
             onClick={onToggleRight}
+            aria-expanded={rightOpen}
             title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
             aria-label={t('common.toggleRightSidebar')}
             className="group app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"

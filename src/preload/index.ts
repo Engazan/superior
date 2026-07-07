@@ -215,8 +215,8 @@ const api = {
     return ipcRenderer.invoke(IPC.GIT_PULL, folderPath)
   },
 
-  gitLog(folderPath: string): Promise<GitLogEntry[]> {
-    return ipcRenderer.invoke(IPC.GIT_LOG, folderPath)
+  gitLog(folderPath: string, limit?: number): Promise<GitLogEntry[]> {
+    return ipcRenderer.invoke(IPC.GIT_LOG, folderPath, limit)
   },
 
   gitShowCommit(folderPath: string, hash: string): Promise<GitDiffFile[]> {
@@ -260,7 +260,7 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_SHORTCUTS, shortcuts)
   },
 
-  setUiState(ui: UiState): Promise<AppSettings> {
+  setUiState(ui: Partial<UiState>): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_UI, ui)
   },
 

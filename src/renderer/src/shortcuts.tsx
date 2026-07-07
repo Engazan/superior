@@ -6,13 +6,17 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   toggleSidebar: 'mod+b',
   openSettings: 'mod+,',
   maximizeFocusedCell: 'ctrl+enter',
-  openLauncher: 'ctrl+§',
+  // `mod+t` ("new terminal") — the old `ctrl+§` default only exists on ISO
+  // keyboards, leaving US/ANSI users with no working launcher shortcut.
+  openLauncher: 'mod+t',
   toggleRightPanel: 'mod+j',
   closeFocusedCell: 'mod+w',
   closePreview: 'mod+shift+w',
   saveFile: 'mod+s',
-  prevTerminal: 'ctrl+arrowleft',
-  nextTerminal: 'ctrl+arrowright',
+  // `alt` included so the chords don't collide with macOS Spaces switching or
+  // in-terminal word navigation on plain ctrl+arrows.
+  prevTerminal: 'mod+alt+arrowleft',
+  nextTerminal: 'mod+alt+arrowright',
   openFolder: 'mod+o',
   prevWorkspace: 'mod+shift+arrowup',
   nextWorkspace: 'mod+shift+arrowdown',

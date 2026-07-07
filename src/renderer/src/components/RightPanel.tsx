@@ -26,6 +26,8 @@ interface Props {
   onOpenFile: (file: FsEntry) => void
   /** Path of the file currently previewed, for highlighting in the tree. */
   selectedPath: string | null
+  /** Panel width in px — owned by App (drag-resizable, persisted). */
+  width: number
 }
 
 /**
@@ -41,10 +43,27 @@ export function RightPanel({
   presets,
   onJumpToTask,
   onOpenFile,
-  selectedPath
+  selectedPath,
+  width
 }: Props): JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('changes')
+
+  // Restore the last-open tab once; after that every switch persists, so users
+  // who live in Tasks aren't dropped back on Changes each app run.
+  const tabRestored = useRef(false)
+  useEffect(() => {
+    void window.api.getSettings().then((s) => {
+      if (tabRestored.current) return
+      tabRestored.current = true
+      if (s.ui.rightPanelTab) setTab(s.ui.rightPanelTab)
+    })
+  }, [])
+  const selectTab = useCallback((next: Tab): void => {
+    tabRestored.current = true
+    setTab(next)
+    void window.api.setUiState({ rightPanelTab: next })
+  }, [])
   const [diff, setDiff] = useState<GitDiff | null>(null)
   const [loading, setLoading] = useState(false)
   // Monotonic token so a slow fetch can't overwrite a newer one (or a stale folder).
@@ -97,17 +116,37 @@ export function RightPanel({
   )
 
   const tabClass = (active: boolean): string =>
-    `flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition border-b-2 ${
+    `flex min-w-0 flex-1 items-center justify-center gap-1.5 truncate px-2 py-2 text-xs font-medium transition border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
       active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
     }`
 
+  // One Tab stop + arrow keys, per the tabs pattern.
+  const TABS: Tab[] = ['files', 'changes', 'history', 'tasks']
+  const onTabKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    e.preventDefault()
+    const delta = e.key === 'ArrowLeft' ? -1 : 1
+    const next = TABS[(TABS.indexOf(tab) + delta + TABS.length) % TABS.length]
+    selectTab(next)
+    ;(e.currentTarget.parentElement?.querySelector(`[data-tab="${next}"]`) as HTMLElement)?.focus()
+  }
+  const tabA11y = (id: Tab): Record<string, unknown> => ({
+    role: 'tab',
+    'data-tab': id,
+    'aria-selected': tab === id,
+    tabIndex: tab === id ? 0 : -1,
+    title: t(`rightPanel.${id}` as Parameters<typeof t>[0]),
+    onKeyDown: onTabKeyDown,
+    onClick: () => selectTab(id)
+  })
+
   return (
-    <aside className="flex w-96 shrink-0 flex-col border-l border-edge bg-bar">
-      <div className="flex shrink-0 border-b border-edge">
-        <button className={tabClass(tab === 'files')} onClick={() => setTab('files')}>
+    <aside style={{ width }} className="flex shrink-0 flex-col border-l border-edge bg-bar">
+      <div role="tablist" className="flex shrink-0 border-b border-edge">
+        <button className={tabClass(tab === 'files')} {...tabA11y('files')}>
           {t('rightPanel.files')}
         </button>
-        <button className={tabClass(tab === 'changes')} onClick={() => setTab('changes')}>
+        <button className={tabClass(tab === 'changes')} {...tabA11y('changes')}>
           {t('rightPanel.changes')}
           {totals && (totals.additions > 0 || totals.deletions > 0) && (
             <span className="font-mono text-[10px] tabular-nums">
@@ -117,10 +156,10 @@ export function RightPanel({
             </span>
           )}
         </button>
-        <button className={tabClass(tab === 'history')} onClick={() => setTab('history')}>
+        <button className={tabClass(tab === 'history')} {...tabA11y('history')}>
           {t('rightPanel.history')}
         </button>
-        <button className={tabClass(tab === 'tasks')} onClick={() => setTab('tasks')}>
+        <button className={tabClass(tab === 'tasks')} {...tabA11y('tasks')}>
           {t('rightPanel.tasks')}
           {pendingTasks > 0 && (
             <span className="font-mono text-[10px] tabular-nums text-accent">{pendingTasks}</span>

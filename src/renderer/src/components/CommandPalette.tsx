@@ -99,11 +99,14 @@ export function CommandPalette({ commands, onClose }: Props): JSX.Element {
                     data-active={i === index || undefined}
                     onMouseEnter={() => setIndex(i)}
                     onClick={() => run(cmd)}
-                    className={`block w-full truncate px-3 py-1.5 text-left text-sm text-fg transition ${
+                    className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-sm text-fg transition ${
                       i === index ? 'bg-hover' : ''
                     }`}
                   >
-                    {cmd.title}
+                    <span className="min-w-0 flex-1 truncate">{cmd.title}</span>
+                    {cmd.hint && (
+                      <span className="shrink-0 text-xs text-fgmuted">{cmd.hint}</span>
+                    )}
                   </button>
                 )
               })}

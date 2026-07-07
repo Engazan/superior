@@ -14,7 +14,9 @@ export function CliToolsHealth(): JSX.Element {
   const { t } = useI18n()
   const [tools, setTools] = useState<CliToolStatus[] | null>(null)
   const [busyId, setBusyId] = useState<CliToolId | null>(null)
-  const [note, setNote] = useState<string | null>(null)
+  // tone distinguishes a failure from a success note — muted gray for both
+  // made errors invisible.
+  const [note, setNote] = useState<{ text: string; tone: 'success' | 'danger' } | null>(null)
 
   const refresh = useCallback(async (force = false) => {
     setTools(await window.api.checkCliTools(force))
@@ -31,9 +33,9 @@ export function CliToolsHealth(): JSX.Element {
       const result = await window.api.fixCliTool(id)
       setTools((prev) => (prev ? prev.map((tnow) => (tnow.id === id ? result.status : tnow)) : prev))
       if (result.fixedFile && result.status.availableInShell) {
-        setNote(t('cli.fixed', { file: result.fixedFile }))
+        setNote({ text: t('cli.fixed', { file: result.fixedFile }), tone: 'success' })
       } else {
-        setNote(t('cli.fixFailed'))
+        setNote({ text: t('cli.fixFailed'), tone: 'danger' })
       }
     } finally {
       setBusyId(null)
@@ -103,7 +105,18 @@ export function CliToolsHealth(): JSX.Element {
         )}
       </div>
 
-      {note && <p className="mt-2 text-xs text-fgdim">{note}</p>}
+      {note && (
+        <p
+          role="status"
+          className={`mt-2 rounded-md border px-3 py-2 text-xs ${
+            note.tone === 'danger'
+              ? 'border-dangerBorder bg-dangerBg text-danger'
+              : 'border-statusBorder bg-statusBg text-status'
+          }`}
+        >
+          {note.text}
+        </p>
+      )}
     </div>
   )
 }

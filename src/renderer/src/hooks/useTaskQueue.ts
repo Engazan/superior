@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useToast } from '../components/ui'
+import { useI18n } from '../i18n'
 import type {
   AgentSession,
   AgentTask,
@@ -39,6 +41,10 @@ export interface TaskQueueApi {
   deleteTask: (id: string) => Promise<void>
   /** Kill a running task's terminal and mark it canceled. */
   cancelTask: (id: string) => Promise<void>
+  /** Re-enqueue a copy of a failed/canceled task. */
+  retryTask: (id: string) => Promise<void>
+  /** Move a queued task up/down within its folder's queue. */
+  moveTask: (id: string, direction: -1 | 1) => Promise<void>
   clearFinished: (folderPath: string) => Promise<void>
   setPaused: (paused: boolean) => Promise<void>
 }
@@ -79,6 +85,8 @@ function promptExcerpt(prompt: string): string {
  * session state are owned here.
  */
 export function useTaskQueue(deps: Deps): TaskQueueApi {
+  const toast = useToast()
+  const { t } = useI18n()
   const [tasks, setTasks] = useState<AgentTask[]>([])
   const [paused, setPausedState] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -142,10 +150,14 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
   }, [loaded, deps.sessionsRestored, persistTask])
 
   // Terminal exits drive queue progress: finish the matching running task.
+  // Failures surface as a toast too — the Tasks panel may not be open.
   useEffect(() => {
     return window.api.onAgentExit(({ id, exitCode }) => {
-      const task = tasksRef.current.find((t) => t.sessionId === id && t.status === 'running')
+      const task = tasksRef.current.find((tk) => tk.sessionId === id && tk.status === 'running')
       if (!task) return
+      if (exitCode !== 0) {
+        toast.error(t('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
+      }
       void persistTask({
         ...task,
         status: exitCode === 0 ? 'done' : 'failed',
@@ -153,12 +165,16 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         finishedAt: Date.now()
       })
     })
-  }, [persistTask])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistTask, toast])
 
   const failTask = useCallback(
-    (task: AgentTask, error: string) =>
-      persistTask({ ...task, status: 'failed', error, finishedAt: Date.now() }),
-    [persistTask]
+    (task: AgentTask, error: string) => {
+      toast.error(t('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
+      return persistTask({ ...task, status: 'failed', error, finishedAt: Date.now() })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [persistTask, toast]
   )
 
   const startTask = useCallback(
@@ -304,6 +320,42 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
     [persistTask]
   )
 
+  const retryTask = useCallback(
+    async (id: string) => {
+      const task = tasksRef.current.find((tk) => tk.id === id)
+      if (!task || (task.status !== 'failed' && task.status !== 'canceled')) return
+      await persistTask({
+        id: crypto.randomUUID(),
+        folderPath: task.folderPath,
+        prompt: task.prompt,
+        presetId: task.presetId,
+        useWorktree: task.useWorktree,
+        status: 'queued',
+        createdAt: Date.now()
+      })
+    },
+    [persistTask]
+  )
+
+  // Queue order is createdAt — swapping the timestamps of two adjacent queued
+  // tasks reorders them without a schema change.
+  const moveTask = useCallback(
+    async (id: string, direction: -1 | 1) => {
+      const all = tasksRef.current
+      const task = all.find((tk) => tk.id === id)
+      if (!task || task.status !== 'queued') return
+      const queue = all
+        .filter((tk) => tk.folderPath === task.folderPath && tk.status === 'queued')
+        .sort((a, b) => a.createdAt - b.createdAt)
+      const idx = queue.findIndex((tk) => tk.id === id)
+      const other = queue[idx + direction]
+      if (!other) return
+      await window.api.saveTask({ ...task, createdAt: other.createdAt })
+      adopt(await window.api.saveTask({ ...other, createdAt: task.createdAt }))
+    },
+    [adopt]
+  )
+
   const clearFinished = useCallback(
     async (folderPath: string) => {
       adopt(await window.api.clearFinishedTasks(folderPath))
@@ -318,5 +370,15 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
     [adopt]
   )
 
-  return { tasks, paused, addTask, deleteTask, cancelTask, clearFinished, setPaused }
+  return {
+    tasks,
+    paused,
+    addTask,
+    deleteTask,
+    cancelTask,
+    retryTask,
+    moveTask,
+    clearFinished,
+    setPaused
+  }
 }

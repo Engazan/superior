@@ -75,7 +75,9 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
   }
 
   const create = async (): Promise<void> => {
-    if (!name.trim()) return
+    // busyId guard: Enter in the name input can fire again before the button
+    // disables, which would create the preset twice.
+    if (!name.trim() || busyId === 'create') return
     setBusyId('create')
     setError(null)
     try {

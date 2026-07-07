@@ -12,7 +12,9 @@ export function ShellCommandSection(): JSX.Element {
   const { t } = useI18n()
   const [status, setStatus] = useState<ShellCommandStatus | null>(null)
   const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState<string | null>(null)
+  // tone distinguishes a failure from a success note — muted gray for both
+  // made errors invisible.
+  const [note, setNote] = useState<{ text: string; tone: 'success' | 'danger' } | null>(null)
 
   const refresh = useCallback(async () => {
     setStatus(await window.api.getShellCommandStatus())
@@ -28,11 +30,14 @@ export function ShellCommandSection(): JSX.Element {
     try {
       const result = await window.api.installShellCommand()
       if (!result.ok) {
-        setNote(t('shell.installFailed', { message: result.error ?? '' }))
+        setNote({ text: t('shell.installFailed', { message: result.error ?? '' }), tone: 'danger' })
       } else if (result.resolvable) {
-        setNote(t('shell.installed'))
+        setNote({ text: t('shell.installed'), tone: 'success' })
       } else {
-        setNote(t('shell.installedReopen', { file: result.pathNote ?? 'PATH' }))
+        setNote({
+          text: t('shell.installedReopen', { file: result.pathNote ?? 'PATH' }),
+          tone: 'success'
+        })
       }
       await refresh()
     } finally {
@@ -76,7 +81,18 @@ export function ShellCommandSection(): JSX.Element {
         </SettingRow>
       </SettingsCard>
 
-      {note && <p className="mt-3 text-xs text-fgdim">{note}</p>}
+      {note && (
+        <p
+          role="status"
+          className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+            note.tone === 'danger'
+              ? 'border-dangerBorder bg-dangerBg text-danger'
+              : 'border-statusBorder bg-statusBg text-status'
+          }`}
+        >
+          {note.text}
+        </p>
+      )}
     </div>
   )
 }

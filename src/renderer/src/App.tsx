@@ -14,11 +14,12 @@ import type { Command } from './commands'
 import { ProfileManager } from './components/ProfileManager'
 import { OpenProjectModal } from './components/OpenProjectModal'
 import { TooltipLayer } from './components/TooltipLayer'
-import { useToast } from './components/ui'
-import type { Integration } from './types'
+import { useConfirm, useToast } from './components/ui'
+import type { FsEntry, Integration } from './types'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
-import { useShortcuts, eventToChord, isRecordingShortcut } from './shortcuts'
+import { useShortcuts, eventToChord, formatChord, isRecordingShortcut } from './shortcuts'
+import { overlayCount } from './overlayStack'
 import { useGitStatus } from './hooks/useGitStatus'
 import { useWorkspaceGitStats } from './hooks/useWorkspaceGitStats'
 import { usePresets } from './hooks/usePresets'
@@ -30,6 +31,7 @@ import { useUpdateCheck } from './hooks/useUpdateCheck'
 import {
   setActivitySessions,
   setActivityActiveWorkspace,
+  setActivityActiveSession,
   setActivityNotifier,
   useAttentionWorkspaces
 } from './activityStore'
@@ -67,7 +69,7 @@ export default function App(): JSX.Element {
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   // Set when "Add integration" was clicked inside the project modal, so leaving
   // settings returns to the modal instead of abandoning the clone flow.
-  const [resumeProjectModal, setResumeProjectModal] = useState(false)
+  const [, setResumeProjectModal] = useState(false)
 
   // Saved git-forge integrations — drives the clone tab of the project modal.
   const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -82,6 +84,31 @@ export default function App(): JSX.Element {
   const { presets } = presetsApi
   const layoutPresets = useLayoutPresets()
   const preview = usePreviewPane()
+  const confirm = useConfirm()
+
+  // Unsaved-edit guard for the file preview: switching to another file or
+  // closing the pane while the editor is dirty asks before discarding.
+  const previewDirtyRef = useRef(false)
+  const onPreviewDirtyChange = useCallback((dirty: boolean) => {
+    previewDirtyRef.current = dirty
+  }, [])
+  const setPreviewFileGuarded = useCallback(
+    async (file: FsEntry | null) => {
+      if (previewDirtyRef.current) {
+        const ok = await confirm({
+          title: t('preview.unsavedTitle'),
+          message: t('preview.unsavedConfirm'),
+          confirmLabel: t('preview.discard'),
+          tone: 'danger'
+        })
+        if (!ok) return
+        previewDirtyRef.current = false
+      }
+      preview.setPreviewFile(file)
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [confirm, t, preview.setPreviewFile]
+  )
   const ws = useWorkspaceSessions({ setError, t, presets })
   // The agent-task queue: persists in main, runs here (one task per folder at
   // a time, next starts when the previous task's terminal exits).
@@ -118,6 +145,27 @@ export default function App(): JSX.Element {
     ensureBus()
   }, [])
 
+  // Right-panel width in px, drag-resizable via the divider on its left edge.
+  const [rightPanelWidth, setRightPanelWidth] = useState(384)
+  const [rightResizing, setRightResizing] = useState(false)
+  const startRightResize = useCallback((e: React.PointerEvent): void => {
+    e.preventDefault()
+    setRightResizing(true)
+    let latest: number | null = null
+    const move = (ev: PointerEvent): void => {
+      latest = Math.min(560, Math.max(280, Math.round(window.innerWidth - ev.clientX)))
+      setRightPanelWidth(latest)
+    }
+    const up = (): void => {
+      setRightResizing(false)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      if (latest !== null) void window.api.setUiState({ rightPanelWidth: latest })
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }, [])
+
   // Restore the persisted sidebar layout once on mount; only after that do we
   // start persisting changes, so the initial defaults don't overwrite the store.
   const uiLoaded = useRef(false)
@@ -125,6 +173,7 @@ export default function App(): JSX.Element {
     window.api.getSettings().then((s) => {
       setSidebarCollapsed(s.ui.sidebarCollapsed)
       setRightSidebarOpen(s.ui.rightSidebarOpen)
+      if (typeof s.ui.rightPanelWidth === 'number') setRightPanelWidth(s.ui.rightPanelWidth)
       uiLoaded.current = true
     })
   }, [])
@@ -150,6 +199,9 @@ export default function App(): JSX.Element {
   useEffect(() => {
     setActivityActiveWorkspace(ws.activeWorkspaceId)
   }, [ws.activeWorkspaceId])
+  useEffect(() => {
+    setActivityActiveSession(ws.activeSessionId)
+  }, [ws.activeSessionId])
   const update = useUpdateCheck()
 
   // Native OS notification when an agent finishes while the app is unfocused.
@@ -222,6 +274,16 @@ export default function App(): JSX.Element {
     setView('settings')
   }, [])
 
+  // Single exit path from settings — shared by the Back button, the ⌘, toggle
+  // and Escape — so the interrupted "clone from git" flow always resumes.
+  const closeSettings = useCallback(() => {
+    setView('main')
+    setResumeProjectModal((resume) => {
+      if (resume) setProjectModalOpen(true)
+      return false
+    })
+  }, [])
+
   const openProjectModal = useCallback(() => setProjectModalOpen(true), [])
   // Stable reference — Sidebar is memoized, an inline arrow would defeat it.
   const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
@@ -287,6 +349,7 @@ export default function App(): JSX.Element {
         id: 'terminal:search',
         title: t('keyboard.searchTerminal'),
         section: t('palette.sectionTerminals'),
+        hint: formatChord(shortcuts.searchTerminal),
         run: () => setSearchOpen(true)
       })
     }
@@ -322,21 +385,59 @@ export default function App(): JSX.Element {
         id: 'view:sidebar',
         title: t('keyboard.toggleSidebar'),
         section: t('palette.sectionView'),
+        hint: formatChord(shortcuts.toggleSidebar),
         run: () => setSidebarCollapsed((c) => !c)
       },
       {
         id: 'view:right',
         title: t('keyboard.toggleRightPanel'),
         section: t('palette.sectionView'),
+        hint: formatChord(shortcuts.toggleRightPanel),
         run: () => setRightSidebarOpen((o) => !o)
       },
+      // Open project is always available — it's the only recovery action when
+      // nothing is open yet; Manage profiles likewise had no palette entry.
       {
+        id: 'project:open',
+        title: t('sidebar.openProject'),
+        keywords: 'open clone project folder',
+        section: t('palette.sectionView'),
+        run: () => setProjectModalOpen(true)
+      },
+      {
+        id: 'profiles:manage',
+        title: t('profile.manageTitle'),
+        section: t('palette.sectionProfiles'),
+        hint: formatChord(shortcuts.manageProfiles),
+        run: () => setProfileManagerOpen(true)
+      }
+    )
+    if (ws.activeWorkspaceId) {
+      cmds.push({
         id: 'view:launcher',
         title: t('keyboard.openLauncher'),
         section: t('palette.sectionView'),
+        hint: formatChord(shortcuts.openLauncher),
         run: () => setLauncherOpen(true)
-      }
-    )
+      })
+    }
+    if (update.info?.updateAvailable) {
+      cmds.push({
+        id: 'update:install',
+        title:
+          update.progress.phase === 'downloaded'
+            ? t('update.restart')
+            : `${t('update.action')}: ${t('update.available', {
+                version: update.info.latestVersion ?? ''
+              })}`,
+        keywords: 'update upgrade version install',
+        section: t('palette.sectionView'),
+        run: () =>
+          update.progress.phase === 'downloaded'
+            ? update.installAndRestart()
+            : update.startDownload()
+      })
+    }
     const sections: { id: SettingsSection; label: string }[] = [
       { id: 'appearance', label: t('settings.appearance') },
       { id: 'integrations', label: t('settings.integrations') },
@@ -369,6 +470,9 @@ export default function App(): JSX.Element {
     ws.effectiveDir,
     presets,
     layoutPresets.layouts,
+    shortcuts,
+    update.info,
+    update.progress.phase,
     t
   ])
 
@@ -396,6 +500,33 @@ export default function App(): JSX.Element {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
       if (e.repeat || isRecordingShortcut()) return
+      // While any overlay is open (palette, launcher, modals, menus…), global
+      // chords must not reach through it — ⌘W behind a modal would kill the
+      // focused terminal. Only "toggle palette closed" stays live; each overlay
+      // handles its own Escape.
+      const appOverlayOpen =
+        launcherOpen ||
+        searchOpen ||
+        paletteOpen ||
+        palettePromptsOpen ||
+        projectModalOpen ||
+        profileManagerOpen
+      const anyOverlayOpen = appOverlayOpen || overlayCount() > 0
+      if (anyOverlayOpen) {
+        const chord = eventToChord(e)
+        if (chord && chord === shortcuts.openPalette && paletteOpen) {
+          e.preventDefault()
+          e.stopPropagation()
+          setPaletteOpen(false)
+        }
+        return
+      }
+      // Escape leaves settings (mouse-only Back button otherwise).
+      if (e.key === 'Escape' && view === 'settings') {
+        e.preventDefault()
+        closeSettings()
+        return
+      }
       if (
         e.ctrlKey &&
         !e.metaKey &&
@@ -403,7 +534,6 @@ export default function App(): JSX.Element {
         !e.shiftKey &&
         /^[1-9]$/.test(e.key) &&
         view === 'main' &&
-        !launcherOpen &&
         ws.focusGridCell(Number(e.key) - 1)
       ) {
         e.preventDefault()
@@ -413,23 +543,25 @@ export default function App(): JSX.Element {
       const chord = eventToChord(e)
       if (!chord) return
       if (chord === shortcuts.toggleSidebar) {
+        if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
         setSidebarCollapsed((c) => !c)
       } else if (chord === shortcuts.openSettings) {
         e.preventDefault()
         e.stopPropagation()
-        setView('settings')
+        if (view === 'settings') closeSettings()
+        else setView('settings')
       } else if (chord === shortcuts.maximizeFocusedCell) {
         if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
         ws.toggleMaximizeFocused()
       } else if (chord === shortcuts.openLauncher) {
-        if (view !== 'main') return
+        if (view !== 'main' || !ws.activeWorkspaceId) return
         e.preventDefault()
         e.stopPropagation()
-        setLauncherOpen((o) => !o && !!ws.activeWorkspaceId)
+        setLauncherOpen(true)
       } else if (chord === shortcuts.toggleRightPanel) {
         if (view !== 'main') return
         e.preventDefault()
@@ -444,13 +576,13 @@ export default function App(): JSX.Element {
         if (view !== 'main' || !preview.previewFile) return
         e.preventDefault()
         e.stopPropagation()
-        preview.setPreviewFile(null)
+        void setPreviewFileGuarded(null)
       } else if (chord === shortcuts.prevTerminal) {
-        if (view !== 'main' || launcherOpen || !ws.cycleSession(-1)) return
+        if (view !== 'main' || !ws.cycleSession(-1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.nextTerminal) {
-        if (view !== 'main' || launcherOpen || !ws.cycleSession(1)) return
+        if (view !== 'main' || !ws.cycleSession(1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.openFolder) {
@@ -459,11 +591,11 @@ export default function App(): JSX.Element {
         e.stopPropagation()
         void ws.addFolder()
       } else if (chord === shortcuts.prevWorkspace) {
-        if (view !== 'main' || launcherOpen || !ws.cycleWorkspace(-1)) return
+        if (view !== 'main' || !ws.cycleWorkspace(-1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.nextWorkspace) {
-        if (view !== 'main' || launcherOpen || !ws.cycleWorkspace(1)) return
+        if (view !== 'main' || !ws.cycleWorkspace(1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.prevProfile) {
@@ -481,6 +613,8 @@ export default function App(): JSX.Element {
         setProfileManagerOpen((o) => !o)
       } else if (chord === shortcuts.searchTerminal) {
         if (view !== 'main' || !ws.activeSessionId) return
+        // Focus inside the file preview → ⌘F belongs to its own find panel.
+        if (document.activeElement?.closest('[data-preview-panel]')) return
         e.preventDefault()
         e.stopPropagation()
         setSearchOpen(true)
@@ -496,6 +630,12 @@ export default function App(): JSX.Element {
     shortcuts,
     view,
     launcherOpen,
+    searchOpen,
+    paletteOpen,
+    palettePromptsOpen,
+    projectModalOpen,
+    profileManagerOpen,
+    closeSettings,
     ws.activeWorkspaceId,
     ws.activeSessionId,
     ws.focusGridCell,
@@ -506,7 +646,7 @@ export default function App(): JSX.Element {
     ws.cycleWorkspace,
     ws.cycleProfile,
     preview.previewFile,
-    preview.setPreviewFile
+    setPreviewFileGuarded
   ])
 
   return (
@@ -522,8 +662,13 @@ export default function App(): JSX.Element {
           view === 'main' && !!gitStatus?.isRepository && !ws.activeWorkspace?.worktreePath
         }
         onBranchSwitched={refreshGitStatus}
-        onOpenLauncher={() => setLauncherOpen(true)}
+        launcherEnabled={view === 'main' && !!ws.activeWorkspaceId}
+        onOpenLauncher={() => {
+          if (view === 'main' && ws.activeWorkspaceId) setLauncherOpen(true)
+        }}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
+        rightOpen={rightSidebarOpen}
+        sidebarCollapsed={sidebarCollapsed}
         profiles={ws.profiles}
         activeProfileId={ws.activeProfileId}
         onSelectProfile={ws.selectProfile}
@@ -536,14 +681,7 @@ export default function App(): JSX.Element {
           <SettingsView
             initialSection={settingsSection}
             onSectionChange={setSettingsSection}
-            onBack={() => {
-              setView('main')
-              // Resume the interrupted "clone from git" flow, if any.
-              if (resumeProjectModal) {
-                setResumeProjectModal(false)
-                setProjectModalOpen(true)
-              }
-            }}
+            onBack={closeSettings}
             onIntegrationsChanged={reloadIntegrations}
             presets={presets}
             onSavePreset={presetsApi.savePreset}
@@ -610,6 +748,7 @@ export default function App(): JSX.Element {
                     onStart={ws.startLayout}
                     onLaunch={ws.launchAgent}
                     onManagePresets={openPresets}
+                    onOpenProject={openProjectModal}
                     onGridLayoutChange={ws.setGridLayout}
                     onSelectTab={onSelectTab}
                     onAddTab={onAddTab}
@@ -632,7 +771,8 @@ export default function App(): JSX.Element {
                     >
                       <FilePreviewPanel
                         file={preview.previewFile}
-                        onClose={() => preview.setPreviewFile(null)}
+                        onClose={() => void setPreviewFileGuarded(null)}
+                        onDirtyChange={onPreviewDirtyChange}
                       />
                     </div>
                   </>
@@ -640,21 +780,33 @@ export default function App(): JSX.Element {
               </div>
             </div>
 
+            {/* Drag handle for the right panel — same pattern as the preview divider. */}
+            {rightSidebarOpen && (
+              <div
+                onPointerDown={startRightResize}
+                className="group flex w-1.5 shrink-0 cursor-col-resize items-stretch"
+              >
+                <span className="w-full bg-edge transition group-hover:bg-accent" />
+              </div>
+            )}
             {/* Always mounted so the width can animate; the inner panel keeps its
-                fixed width and is clipped while collapsed. */}
+                fixed width and is clipped while collapsed. Transition disabled
+                while dragging so the resize tracks the pointer. */}
             <div
-              className={`flex shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
-                rightSidebarOpen ? 'w-96' : 'w-0'
+              style={{ width: rightSidebarOpen ? rightPanelWidth : 0 }}
+              className={`flex shrink-0 overflow-hidden ${
+                rightResizing ? '' : 'transition-[width] duration-200 ease-out'
               }`}
             >
               <RightPanel
+                width={rightPanelWidth}
                 active={rightSidebarOpen}
                 folderPath={ws.effectiveDir}
                 tasksFolder={ws.activeFolder?.path ?? null}
                 taskQueue={taskQueue}
                 presets={presets}
                 onJumpToTask={onJumpToTask}
-                onOpenFile={preview.setPreviewFile}
+                onOpenFile={(file) => void setPreviewFileGuarded(file)}
                 selectedPath={preview.previewFile?.path ?? null}
               />
             </div>
@@ -667,6 +819,7 @@ export default function App(): JSX.Element {
           presets={presets.filter((p) => p.active)}
           onSelect={ws.launchAgent}
           onClose={() => setLauncherOpen(false)}
+          onManagePresets={openPresets}
         />
       )}
 

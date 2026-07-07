@@ -11,6 +11,8 @@ export interface Command {
   keywords?: string
   /** Group header in the list. */
   section: string
+  /** Right-aligned hint, e.g. the bound keyboard chord (already formatted). */
+  hint?: string
   run: () => void
 }
 

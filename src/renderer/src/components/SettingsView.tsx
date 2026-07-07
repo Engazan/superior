@@ -126,6 +126,7 @@ function AppearanceSection(): JSX.Element {
           <SegmentedControl
             aria-label={t('appearance.theme')}
             size="sm"
+            wrap
             options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
             value={mode}
             onChange={setMode}
@@ -146,11 +147,18 @@ function AppearanceSection(): JSX.Element {
           title={t('appearance.attentionColor')}
           description={t('appearance.attentionColorDesc')}
         >
-          {!isDefaultAttention && (
-            <Button variant="ghost" size="sm" onClick={resetAttentionColor}>
-              {t('appearance.resetColor')}
-            </Button>
-          )}
+          {/* invisible (not unmounted) when at the default, so the hex label
+              and swatch don't shift when the button appears */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetAttentionColor}
+            className={isDefaultAttention ? 'invisible' : ''}
+            aria-hidden={isDefaultAttention || undefined}
+            tabIndex={isDefaultAttention ? -1 : undefined}
+          >
+            {t('appearance.resetColor')}
+          </Button>
           <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
           <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge">
             <span

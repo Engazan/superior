@@ -85,7 +85,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
       />
 
       {list.length === 0 ? (
-        <EmptyState title={loading ? '…' : t('daemons.empty')} />
+        <EmptyState title={loading ? t('daemons.loading') : t('daemons.empty')} />
       ) : (
         <div className="overflow-hidden rounded-lg border border-edge">
           <div className="flex items-center gap-3 border-b border-edge bg-bar px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
@@ -119,7 +119,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
                 <span className="w-16 shrink-0 text-right">
                   <button
                     onClick={() => void kill(s)}
-                    className="rounded-md px-2 py-0.5 text-xs text-danger transition hover:bg-dangerBg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    className="rounded-md px-2 py-0.5 text-xs text-danger transition hover:bg-dangerBg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
                   >
                     {t('daemons.kill')}
                   </button>

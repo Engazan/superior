@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
-import { Button, CloseIcon, EmptyState, IconButton, Input, SegmentedControl, useToast } from './ui'
+import {
+  Button,
+  CloseIcon,
+  EmptyState,
+  IconButton,
+  Input,
+  SegmentedControl,
+  useConfirm,
+  useToast
+} from './ui'
 import { MAX_GRID, distribute } from '../gridLayout'
 import type { LayoutPreset, TerminalPreset } from '../types'
 
@@ -24,6 +33,8 @@ interface Props {
   onSaveLayoutPreset: (layout: LayoutPreset) => Promise<void>
   onDeleteLayoutPreset: (id: string) => Promise<void>
   onStart: (config: LaunchConfig) => void
+  /** jump to Settings → Terminal presets (empty-state CTA) */
+  onManagePresets: () => void
 }
 
 /** Terminal counts offered in the launcher (capped at 8, even if the grid allows more). */
@@ -59,10 +70,12 @@ export function AgentLauncher({
   onSetStartupLayout,
   onSaveLayoutPreset,
   onDeleteLayoutPreset,
-  onStart
+  onStart,
+  onManagePresets
 }: Props): JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
+  const confirm = useConfirm()
   const active = presets.filter((p) => p.active)
   const [tab, setTab] = useState<Tab>('preset')
   // In the Preset tab, whether the inline builder ("+ New") is open.
@@ -80,6 +93,17 @@ export function AgentLauncher({
   // Per-slot nicknames, aligned with `slots` by index. Blank means "use the
   // preset's own nickname" (resolved at launch time).
   const [nicks, setNicks] = useState<string[]>(() => (active[0]?.id ? [''] : []))
+
+  // Presets may load after mount; without this the builder renders an empty
+  // slot list (and a dead Start) until the user re-clicks a count.
+  useEffect(() => {
+    if (slots.length === 0 && active[0]?.id) {
+      setSlots([active[0].id])
+      setNicks([''])
+      setCount(1)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active.length])
 
   const defaultSlot = (i: number): string => (active[i] ?? active[0])?.id ?? ''
 
@@ -158,8 +182,11 @@ export function AgentLauncher({
 
   if (active.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-fgmuted">
-        {t('launcher.noPresets')}
+      <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-sm text-fgmuted">{t('launcher.noPresets')}</p>
+        <Button variant="primary" onClick={onManagePresets}>
+          {t('terminal.managePresets')}
+        </Button>
       </div>
     )
   }
@@ -308,8 +335,19 @@ export function AgentLauncher({
                       label={t('launcher.deletePreset')}
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (selectedLayoutId === layout.id) setSelectedLayoutId(null)
-                        void onDeleteLayoutPreset(layout.id)
+                        void (async () => {
+                          // A hover X one pixel from the row is too easy to hit
+                          // for an unrecoverable delete — confirm first.
+                          const ok = await confirm({
+                            title: t('launcher.deletePreset'),
+                            message: t('launcher.deletePresetConfirm', { name: layout.name }),
+                            confirmLabel: t('common.delete'),
+                            tone: 'danger'
+                          })
+                          if (!ok) return
+                          if (selectedLayoutId === layout.id) setSelectedLayoutId(null)
+                          void onDeleteLayoutPreset(layout.id)
+                        })()
                       }}
                     >
                       <CloseIcon size={12} />

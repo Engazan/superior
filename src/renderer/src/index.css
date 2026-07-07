@@ -142,8 +142,10 @@ body,
 .gradient-light {
   --c-bar: rgba(255, 255, 255, 0.55);
   --c-panel: rgba(255, 255, 255, 0.6);
-  --c-edge: rgba(0, 0, 0, 0.08);
-  --c-hover: rgba(0, 0, 0, 0.06);
+  /* Bumped vs. the plain light theme — over the bright gradient backdrop the
+     low-alpha borders/hover washes were barely perceptible. */
+  --c-edge: rgba(0, 0, 0, 0.12);
+  --c-hover: rgba(0, 0, 0, 0.09);
 }
 .gradient-light body {
   background:

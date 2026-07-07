@@ -283,7 +283,12 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
       )}
 
       {editing && (
-        <div className="mt-3">
+        <div
+          className="mt-3"
+          // The form renders below the list — clicking Edit on the first row
+          // can otherwise leave it off-screen with no hint it opened.
+          ref={(el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}
+        >
           <IntegrationForm
             key={editing.id || 'new'}
             initial={editing}

@@ -77,6 +77,8 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.El
   const [children, setChildren] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const [error, setError] = useState(false)
+
   const activate = async (): Promise<void> => {
     if (!entry.isDirectory) {
       onOpenFile(entry)
@@ -84,10 +86,15 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.El
     }
     const next = !open
     setOpen(next)
-    if (next && children === null) {
+    if (next && (children === null || error)) {
       setLoading(true)
-      const res = await window.api.listDir(entry.path)
-      setChildren(res.entries)
+      setError(false)
+      try {
+        const res = await window.api.listDir(entry.path)
+        setChildren(res.entries)
+      } catch {
+        setError(true)
+      }
       setLoading(false)
     }
   }
@@ -99,7 +106,8 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.El
       <button
         onClick={() => void activate()}
         title={entry.name}
-        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg ${
+        aria-expanded={entry.isDirectory ? open : undefined}
+        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
           selected ? 'bg-accentBg text-accent' : 'text-fgdim'
         }`}
         style={{ paddingLeft: depth * 12 + 8 }}
@@ -110,7 +118,11 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.El
       </button>
 
       {open &&
-        (loading && children === null ? (
+        (error ? (
+          <div className="py-1 text-[11px] text-danger" style={{ paddingLeft: (depth + 1) * 12 + 8 }}>
+            {t('files.loadFailed')}
+          </div>
+        ) : loading && children === null ? (
           <div className="py-1 text-[11px] text-fgmuted" style={{ paddingLeft: (depth + 1) * 12 + 8 }}>
             {t('files.loading')}
           </div>
@@ -168,26 +180,43 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
   const { t } = useI18n()
   const [entries, setEntries] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<FsEntry[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [truncated, setTruncated] = useState(false)
+  // Bumped by the refresh button: reloads the root and remounts the tree (its
+  // key), which drops every TreeNode's cached children — files created by
+  // agents in the terminals otherwise never appear.
+  const [refreshToken, setRefreshToken] = useState(0)
 
   // Load the root tree level; clear the query when switching folders.
   useEffect(() => {
     let active = true
     setEntries(null)
-    setQuery('')
+    setLoadError(false)
     if (!folderPath) return
     setLoading(true)
-    window.api.listDir(folderPath).then((res) => {
-      if (!active) return
-      setEntries(res.entries)
-      setLoading(false)
-    })
+    window.api
+      .listDir(folderPath)
+      .then((res) => {
+        if (!active) return
+        setEntries(res.entries)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (!active) return
+        setLoadError(true)
+        setLoading(false)
+      })
     return () => {
       active = false
     }
+  }, [folderPath, refreshToken])
+
+  // Only a folder switch clears the query (not a refresh).
+  useEffect(() => {
+    setQuery('')
   }, [folderPath])
 
   // Debounced recursive search; empty query falls back to the tree.
@@ -231,8 +260,8 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 border-b border-edge p-2">
-        <div className="flex items-center gap-1.5 rounded border border-edge bg-panel px-2 py-1">
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-edge p-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-edge bg-panel px-2 py-1">
           <svg className="h-3.5 w-3.5 shrink-0 text-fgmuted" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <circle cx="7" cy="7" r="4.5" />
             <path d="m10.5 10.5 3 3" />
@@ -246,7 +275,8 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
           {searchActive && (
             <button
               onClick={() => setQuery('')}
-              aria-label={t('window.close')}
+              aria-label={t('files.clearSearch')}
+              title={t('files.clearSearch')}
               className="shrink-0 text-fgmuted transition hover:text-fg"
             >
               <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -255,6 +285,26 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
             </button>
           )}
         </div>
+        <button
+          onClick={() => setRefreshToken((n) => n + 1)}
+          title={t('files.refresh')}
+          aria-label={t('files.refresh')}
+          className="shrink-0 rounded p-1 text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          <svg
+            className="block h-3.5 w-3.5"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
+            <path d="M13.5 2v3.5H10" />
+          </svg>
+        </button>
       </div>
 
       {searchActive ? (
@@ -278,12 +328,14 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
             )}
           </div>
         )
+      ) : loadError ? (
+        <div className="px-3 py-4 text-xs text-danger">{t('files.loadFailed')}</div>
       ) : loading && entries === null ? (
         <div className="px-3 py-4 text-xs text-fgmuted">{t('files.loading')}</div>
       ) : entries && entries.length === 0 ? (
         <div className="px-3 py-4 text-xs text-fgmuted">{t('files.empty')}</div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+        <div key={refreshToken} className="min-h-0 flex-1 overflow-y-auto py-1">
           {entries?.map((entry) => (
             <TreeNode
               key={entry.path}

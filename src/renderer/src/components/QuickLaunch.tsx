@@ -10,13 +10,15 @@ interface Props {
   presets: TerminalPreset[]
   onSelect: (preset: TerminalPreset) => void
   onClose: () => void
+  /** jump to Settings → Terminal presets (empty-state CTA) */
+  onManagePresets: () => void
 }
 
 /**
  * Centered overlay for adding a terminal. Presets are pickable by mouse or by
  * Ctrl+1…Ctrl+9; Escape dismisses. Rendered into <body> so it floats above the grid.
  */
-export function QuickLaunch({ presets, onSelect, onClose }: Props): JSX.Element {
+export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Props): JSX.Element {
   const { t } = useI18n()
   const items = presets.slice(0, 9)
 
@@ -56,7 +58,18 @@ export function QuickLaunch({ presets, onSelect, onClose }: Props): JSX.Element 
           {t('terminal.addTerminal')}
         </div>
         {items.length === 0 ? (
-          <div className="px-3 py-6 text-center text-sm text-fgmuted">{t('launcher.noPresets')}</div>
+          <div className="flex flex-col items-center gap-3 px-3 py-6 text-center">
+            <span className="text-sm text-fgmuted">{t('launcher.noPresets')}</span>
+            <button
+              onClick={() => {
+                onClose()
+                onManagePresets()
+              }}
+              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            >
+              {t('terminal.managePresets')}
+            </button>
+          </div>
         ) : (
           <ul className="py-1">
             {items.map((p, i) => (
@@ -66,7 +79,7 @@ export function QuickLaunch({ presets, onSelect, onClose }: Props): JSX.Element 
                     onSelect(p)
                     onClose()
                   }}
-                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-hover"
+                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-none"
                 >
                   <kbd className="flex h-5 shrink-0 items-center justify-center rounded border border-edge bg-bar px-1.5 font-mono text-[10px] text-fgdim">
                     {formatChord(`ctrl+${i + 1}`)}
@@ -76,6 +89,13 @@ export function QuickLaunch({ presets, onSelect, onClose }: Props): JSX.Element 
                 </button>
               </li>
             ))}
+            {presets.length > items.length && (
+              // The picker caps at 9 (its shortcut range); say so instead of
+              // silently hiding the rest.
+              <li className="px-3 py-1.5 text-[11px] text-fgmuted">
+                {t('launcher.morePresets', { n: presets.length - items.length })}
+              </li>
+            )}
           </ul>
         )}
       </div>
