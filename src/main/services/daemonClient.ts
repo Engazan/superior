@@ -11,6 +11,7 @@ import {
   type ClientMessage,
   type DaemonSession,
   type DaemonSessionMeta,
+  type DirectSpawn,
   type ServerMessage
 } from '@shared/daemon-protocol'
 
@@ -181,6 +182,7 @@ export const daemonClient = {
   async spawn(payload: {
     id: string
     command: string
+    direct?: DirectSpawn
     cwd: string
     cols: number
     rows: number

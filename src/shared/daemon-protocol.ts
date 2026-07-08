@@ -1,4 +1,4 @@
-import type { AgentStatus, PresetIconType } from './types'
+import type { AgentLaunchTarget, AgentStatus, PresetIconType } from './types'
 
 /** Metadata the app needs to rebuild a session's UI after a restart. */
 export interface DaemonSessionMeta {
@@ -11,6 +11,8 @@ export interface DaemonSessionMeta {
   command: string
   /** Working directory the session launched in; used to locate its Claude transcript. */
   cwd: string
+  /** Where the user command logically runs. Absent means a local cwd from older builds. */
+  launchTarget?: AgentLaunchTarget
   workspaceId: string
   /** The tab (a grid within the workspace) this session belongs to. Absent on sessions spawned by an older build. */
   tabId?: string
@@ -28,6 +30,11 @@ export interface DaemonSession {
   exitCode?: number
 }
 
+export interface DirectSpawn {
+  executable: string
+  args: string[]
+}
+
 /** Messages a client (the Electron main process) sends to the daemon. */
 export type ClientMessage =
   | { t: 'hello' }
@@ -36,6 +43,7 @@ export type ClientMessage =
       t: 'spawn'
       id: string
       command: string
+      direct?: DirectSpawn
       cwd: string
       cols: number
       rows: number

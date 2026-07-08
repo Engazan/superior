@@ -40,6 +40,9 @@ import {
   type LayoutPresetsState,
   type Prompt,
   type PromptsState,
+  type RemoteFolderAddArgs,
+  type RemoteFolderTestResult,
+  type RemoteWorkspaceTarget,
   type AgentTask,
   type TasksState,
   type FileLinkTarget,
@@ -94,6 +97,14 @@ const api = {
 
   addFolder(): Promise<WorkspaceState | null | { error: string }> {
     return ipcRenderer.invoke(IPC.FOLDER_ADD)
+  },
+
+  addRemoteFolder(args: RemoteFolderAddArgs): Promise<WorkspaceState | { error: string }> {
+    return ipcRenderer.invoke(IPC.FOLDER_ADD_REMOTE, args)
+  },
+
+  testRemoteFolder(args: RemoteWorkspaceTarget): Promise<RemoteFolderTestResult> {
+    return ipcRenderer.invoke(IPC.REMOTE_WORKSPACE_TEST, args)
   },
 
   removeFolder(folderPath: string): Promise<WorkspaceState> {

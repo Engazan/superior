@@ -1,12 +1,17 @@
 import { dialog } from 'electron'
+import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
+import { promisify } from 'util'
 import type {
   Folder,
   FolderUpdate,
   Profile,
   ProfileUpdate,
+  RemoteFolderAddArgs,
+  RemoteFolderTestResult,
+  RemoteWorkspaceTarget,
   Workspace,
   WorkspaceState,
   WorktreeAddArgs
@@ -18,6 +23,8 @@ import {
   pruneWorktrees,
   removeWorktree
 } from './worktree.service'
+
+const execFileAsync = promisify(execFile)
 
 function storeFile(): string {
   return userDataFile('workspaces.json')
@@ -55,8 +62,10 @@ let cachedAllowedRoots: string[] | null = null
 
 /** Canonical folder roots + persisted worktree paths. */
 function computeAllowedRoots(state: WorkspaceState): string[] {
-  const folders = state.folders.map((f) => canonicalPath(f.path))
+  const localFolderPaths = new Set(state.folders.filter(isLocalFolder).map((f) => f.path))
+  const folders = [...localFolderPaths].map((p) => canonicalPath(p))
   const worktrees = state.workspaces
+    .filter((w) => localFolderPaths.has(w.folderPath))
     .map((w) => w.worktreePath)
     .filter((p): p is string => !!p)
     .map(canonicalPath)
@@ -92,11 +101,80 @@ function makeProfile(name: string): Profile {
 }
 
 function makeFolder(dir: string, profileId: string): Folder {
-  return { path: dir, name: path.basename(dir) || dir, profileId, lastOpenedAt: Date.now() }
+  return {
+    path: dir,
+    kind: 'local',
+    name: path.basename(dir) || dir,
+    profileId,
+    lastOpenedAt: Date.now()
+  }
 }
 
 function makeWorkspace(folderPath: string, name: string): Workspace {
   return { id: randomUUID(), folderPath, name, createdAt: Date.now() }
+}
+
+function remoteInternalPath(host: string, remotePath: string): string {
+  return `remote:${encodeURIComponent(host)}:${encodeURIComponent(remotePath)}`
+}
+
+function remoteBasename(remotePath: string): string {
+  const trimmed = remotePath.trim().replace(/\/+$/, '')
+  if (!trimmed || trimmed === '~' || trimmed === '/') return trimmed || 'Remote'
+  return trimmed.split('/').filter(Boolean).pop() ?? trimmed
+}
+
+function makeRemoteFolder(target: RemoteWorkspaceTarget, profileId: string, name?: string): Folder {
+  const display = name?.trim() || remoteBasename(target.path) || target.host
+  return {
+    path: remoteInternalPath(target.host, target.path),
+    kind: 'remote',
+    remote: target,
+    name: display,
+    profileId,
+    lastOpenedAt: Date.now()
+  }
+}
+
+function isRemoteFolder(folder: Folder | undefined): boolean {
+  return folder?.kind === 'remote'
+}
+
+function isLocalFolder(folder: Folder | undefined): boolean {
+  return folder?.kind !== 'remote'
+}
+
+function hasControlChars(value: string): boolean {
+  return /[\u0000-\u001f\u007f]/.test(value)
+}
+
+function cleanRemoteTarget(args: RemoteWorkspaceTarget): RemoteWorkspaceTarget {
+  const host = args.host.trim()
+  const remotePath = args.path.trim()
+  if (!host) throw new Error('Enter an SSH host or alias.')
+  if (!remotePath) throw new Error('Enter a remote path.')
+  if (host.startsWith('-') || /\s/.test(host) || hasControlChars(host)) {
+    throw new Error('SSH host must be an alias or user@host without spaces.')
+  }
+  if (hasControlChars(remotePath)) {
+    throw new Error('Remote path cannot contain control characters.')
+  }
+  return { host, path: remotePath }
+}
+
+function remotePathScript(remotePath: string): string {
+  const q = shellQuote(remotePath)
+  return [
+    `dir=${q}`,
+    `case "$dir" in`,
+    `  '~') dir="$HOME" ;;`,
+    `  '~/'*) dir="$HOME/\${dir#\\~/}" ;;`,
+    `esac`
+  ].join('\n')
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
 /** Read raw state from disk, migrating older formats if needed. */
@@ -275,6 +353,74 @@ export function addFolderByPath(dir: string): WorkspaceState {
 }
 
 /**
+ * Register a remote SSH workspace. This does not manage credentials; it relies
+ * on the user's existing ssh config/agent. The internal folder path is only a
+ * stable id and is never added to the local filesystem allowlist.
+ */
+export function addRemoteFolder(args: RemoteFolderAddArgs): WorkspaceState {
+  const target = cleanRemoteTarget(args)
+  const state = readState()
+  const internalPath = remoteInternalPath(target.host, target.path)
+  const existing = state.folders.find((f) => f.path === internalPath)
+  if (!existing) {
+    const folder = makeRemoteFolder(target, state.activeProfileId as string, args.name)
+    state.folders.push(folder)
+    const ws = makeWorkspace(folder.path, 'Main')
+    state.workspaces.push(ws)
+    state.activeWorkspaceId = ws.id
+  } else {
+    existing.lastOpenedAt = Date.now()
+    existing.kind = 'remote'
+    existing.remote = target
+    if (args.name?.trim()) existing.name = args.name.trim()
+    if (existing.profileId) state.activeProfileId = existing.profileId
+    const ws = state.workspaces.find((w) => w.folderPath === existing.path)
+    if (ws) state.activeWorkspaceId = ws.id
+  }
+
+  const next = normalize(state)
+  saveState(next)
+  return next
+}
+
+/** Probe that ssh can reach the host and the remote directory exists. */
+export async function testRemoteFolder(
+  args: RemoteWorkspaceTarget
+): Promise<RemoteFolderTestResult> {
+  let target: RemoteWorkspaceTarget
+  try {
+    target = cleanRemoteTarget(args)
+  } catch (err) {
+    return { ok: false, error: (err as Error).message }
+  }
+
+  const script = [
+    remotePathScript(target.path),
+    `test -d "$dir" && test -x "$dir"`
+  ].join('\n')
+
+  try {
+    await execFileAsync(
+      'ssh',
+      ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', target.host, script],
+      {
+        encoding: 'utf-8',
+        timeout: 10000,
+        windowsHide: true
+      }
+    )
+    return { ok: true }
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException & { stderr?: string; stdout?: string }
+    if (e.code === 'ENOENT') return { ok: false, error: 'SSH is not installed or not on PATH.' }
+    return {
+      ok: false,
+      error: e.stderr?.trim() || e.stdout?.trim() || e.message || 'Remote workspace test failed.'
+    }
+  }
+}
+
+/**
  * Create a new profile and switch to it (its folder list starts empty). The
  * caller then opens folders into it. Returns the updated state.
  */
@@ -443,7 +589,8 @@ export function addWorkspace(folderPath: string, name: string): WorkspaceState {
  */
 export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<WorkspaceState> {
   const state = readState()
-  if (!state.folders.some((f) => f.path === args.folderPath)) {
+  const folder = state.folders.find((f) => f.path === args.folderPath)
+  if (!folder || !isLocalFolder(folder)) {
     throw new Error('worktree:invalid-folder')
   }
 

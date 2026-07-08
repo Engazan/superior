@@ -28,6 +28,12 @@ export function folderLabel(folder: Folder): string {
   return folder.displayName?.trim() || folder.name
 }
 
+export function folderTitle(folder: Folder): string {
+  return folder.kind === 'remote' && folder.remote
+    ? `${folder.remote.host}:${folder.remote.path}`
+    : folder.path
+}
+
 /** Subtle row-background tint for a folder's chosen color, or undefined when unset. */
 export function folderTint(color: string | null | undefined): CSSProperties | undefined {
   return color ? { backgroundColor: `${color}26` } : undefined
@@ -46,7 +52,29 @@ export function FolderGlyph({ folder, size = 14 }: { folder: Folder; size?: numb
       />
     )
   }
+  if (folder.kind === 'remote') return <RemoteGlyph size={size} />
   return <FolderIcon className="shrink-0" />
+}
+
+function RemoteGlyph({ size }: { size: number }): JSX.Element {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+      aria-hidden
+    >
+      <rect x="4" y="3" width="16" height="6" rx="1.5" />
+      <rect x="4" y="15" width="16" height="6" rx="1.5" />
+      <path d="M8 9v6M16 9v6M8 6h.01M8 18h.01" />
+    </svg>
+  )
 }
 
 export function RunningBadge({ count, title }: { count: number; title: string }): JSX.Element {
@@ -135,6 +163,17 @@ export function BranchBadge({ branch, title }: { branch: string; title: string }
     >
       <BranchIcon size={11} className="shrink-0" />
       <span className="truncate">{branch}</span>
+    </span>
+  )
+}
+
+export function RemoteBadge({ title }: { title: string }): JSX.Element {
+  return (
+    <span
+      title={title}
+      className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-accent"
+    >
+      SSH
     </span>
   )
 }

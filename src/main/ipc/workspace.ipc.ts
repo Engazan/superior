@@ -1,7 +1,16 @@
 import { ipcMain } from 'electron'
-import { IPC, type FolderUpdate, type ProfileUpdate, type WorkspaceState } from '@shared/types'
+import {
+  IPC,
+  type FolderUpdate,
+  type ProfileUpdate,
+  type RemoteFolderAddArgs,
+  type RemoteFolderTestResult,
+  type RemoteWorkspaceTarget,
+  type WorkspaceState
+} from '@shared/types'
 import {
   addFolder,
+  addRemoteFolder,
   addProfile,
   addWorkspace,
   listWorkspaces,
@@ -14,6 +23,7 @@ import {
   setActiveProfile,
   setActiveWorkspace,
   setWorkspaceStartupLayout,
+  testRemoteFolder,
   updateFolder,
   updateProfile
 } from '../services/workspace.service'
@@ -53,6 +63,22 @@ export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
         return { error: (err as Error).message }
       }
     }
+  )
+
+  ipcMain.handle(
+    IPC.FOLDER_ADD_REMOTE,
+    (_e, args: RemoteFolderAddArgs): WorkspaceState | { error: string } => {
+      try {
+        return addRemoteFolder(args)
+      } catch (err) {
+        return { error: (err as Error).message }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    IPC.REMOTE_WORKSPACE_TEST,
+    (_e, args: RemoteWorkspaceTarget): Promise<RemoteFolderTestResult> => testRemoteFolder(args)
   )
 
   ipcMain.handle(IPC.FOLDER_REMOVE, (_e, folderPath: string): Promise<WorkspaceState> =>

@@ -9,6 +9,7 @@ export { WORKTREE_ERROR } from '@shared/types'
 export type {
   AgentDataEvent,
   AgentExitEvent,
+  AgentLaunchTarget,
   AgentSession,
   AgentStatus,
   AgentTask,
@@ -58,6 +59,9 @@ export type {
   Profile,
   Prompt,
   PromptsState,
+  RemoteFolderAddArgs,
+  RemoteFolderTestResult,
+  RemoteWorkspaceTarget,
   ShortcutAction,
   ShellCommandInstallResult,
   ShellCommandStatus,

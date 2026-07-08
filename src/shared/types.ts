@@ -326,6 +326,10 @@ export interface ProfileUpdate {
 /** A project folder (cwd for its workspaces' terminals). */
 export interface Folder {
   path: string
+  /** Absent is treated as 'local' for legacy state. */
+  kind?: WorkspaceFolderKind
+  /** Present when kind === 'remote'. Uses the user's existing SSH config/agent. */
+  remote?: RemoteWorkspaceTarget
   /** basename of path */
   name: string
   /**
@@ -352,6 +356,22 @@ export interface FolderUpdate {
   /** Sidebar expand/collapse state. Absent leaves it untouched. */
   collapsed?: boolean
 }
+
+export type WorkspaceFolderKind = 'local' | 'remote'
+
+export interface RemoteWorkspaceTarget {
+  /** SSH alias or user@host, resolved by the system ssh client. */
+  host: string
+  /** Directory on the remote host. `~` and `~/...` are expanded by the remote shell. */
+  path: string
+}
+
+export interface RemoteFolderAddArgs extends RemoteWorkspaceTarget {
+  /** Optional sidebar label. Falls back to the remote directory name. */
+  name?: string
+}
+
+export type RemoteFolderTestResult = { ok: true } | { ok: false; error: string }
 
 /** A named working context inside a folder, owning its own terminals + layout. */
 export interface Workspace {
@@ -431,6 +451,8 @@ export interface AgentSession {
   nickname?: string
   /** the command run in the workspace */
   command: string
+  /** Where the command logically runs. Absent means local cwd from older builds. */
+  launchTarget?: AgentLaunchTarget
   iconType?: PresetIconType
   icon?: string
   /** optional hex tint inherited from the launching preset, used for the top bar */
@@ -485,6 +507,8 @@ export interface StartAgentArgs {
   color?: string
   /** working directory (the workspace's folder path) */
   cwd: string
+  /** Where to run the command. Absent means local `cwd`, preserving older callers. */
+  launchTarget?: AgentLaunchTarget
   /** the workspace this session belongs to */
   workspaceId: string
   /** the tab (a grid within the workspace) this session belongs to */
@@ -492,6 +516,10 @@ export interface StartAgentArgs {
   cols?: number
   rows?: number
 }
+
+export type AgentLaunchTarget =
+  | { kind: 'local'; cwd: string }
+  | { kind: 'remote'; host: string; path: string }
 
 /** Saved profiles + folders + their workspaces, plus the active selections. */
 export interface WorkspaceState {
@@ -824,6 +852,7 @@ export const IPC = {
   PROFILE_REMOVE: 'profile:remove',
   PROFILE_SET_ACTIVE: 'profile:set-active',
   FOLDER_ADD: 'folder:add',
+  FOLDER_ADD_REMOTE: 'folder:add-remote',
   FOLDER_REMOVE: 'folder:remove',
   FOLDER_REORDER: 'folder:reorder',
   FOLDER_UPDATE: 'folder:update',
@@ -835,6 +864,7 @@ export const IPC = {
   WORKSPACE_ADD_WORKTREE: 'workspace:add-worktree',
   /** Main → renderer: workspace state changed out-of-band (e.g. `superior .`). */
   WORKSPACE_STATE_CHANGED: 'workspace:state-changed',
+  REMOTE_WORKSPACE_TEST: 'remote-workspace:test',
   SHELL_COMMAND_STATUS: 'shell-command:status',
   SHELL_COMMAND_INSTALL: 'shell-command:install',
   WORKTREE_LIST_BRANCHES: 'worktree:list-branches',

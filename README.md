@@ -2,7 +2,7 @@
 
 # Superior
 
-A minimal desktop core. Open a local project folder and run agent CLIs (`claude`, `codex`) inside it, with live output in an embedded, tabbed terminal.
+A minimal desktop core. Open a local or SSH-backed project folder and run agent CLIs (`claude`, `codex`) inside it, with live output in an embedded, tabbed terminal.
 
 [![Download](https://img.shields.io/github/v/release/Engazan/superior?label=Download&style=for-the-badge&logo=github)](https://github.com/Engazan/superior/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#license)
@@ -62,6 +62,9 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
 - **Open from folder** → native directory picker (main process). The chosen path is
   validated and persisted to `workspace.json` under the app's `userData` dir, then
   restored on next launch.
+- **Remote SSH workspace** → stores an SSH host/alias plus remote path and launches
+  terminals through the system `ssh` client in that directory. Credentials, keys
+  and passphrases stay owned by your normal SSH config/agent.
 - **Open Claude / Open Codex** → spawns the CLI through the host shell with `cwd`
   set to the workspace. On macOS/Linux that's a *login shell* (`$SHELL -l -c <cmd>`,
   falling back to `/bin/bash`) so your real `PATH` (e.g. `~/.local/bin`, nvm) is

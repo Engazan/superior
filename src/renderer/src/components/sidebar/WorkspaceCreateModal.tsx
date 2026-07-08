@@ -18,22 +18,25 @@ interface Props {
 /** Radio-card selector for the workspace type, rendered inside the modal. */
 function TypeSelector({
   value,
-  onChange
+  onChange,
+  allowBranch
 }: {
   value: WorkspaceCreateKind
   onChange: (value: WorkspaceCreateKind) => void
+  allowBranch: boolean
 }): JSX.Element {
   const { t } = useI18n()
+  const options = (
+    [
+      ['standard', 'workspace.standardType', 'workspace.standardTypeDescription', <WorkspaceGlyph key="s" />],
+      ['branch', 'workspace.branchType', 'workspace.branchTypeDescription', <BranchIcon key="b" size={11} />]
+    ] as const
+  ).filter(([kind]) => allowBranch || kind !== 'branch')
   return (
     <fieldset>
       <legend className="mb-2 text-xs font-semibold text-fgdim">{t('workspace.type')}</legend>
-      <div className="grid grid-cols-2 gap-2" role="radiogroup">
-        {(
-          [
-            ['standard', 'workspace.standardType', 'workspace.standardTypeDescription', <WorkspaceGlyph key="s" />],
-            ['branch', 'workspace.branchType', 'workspace.branchTypeDescription', <BranchIcon key="b" size={11} />]
-          ] as const
-        ).map(([kind, label, description, icon]) => {
+      <div className={`grid gap-2 ${allowBranch ? 'grid-cols-2' : 'grid-cols-1'}`} role="radiogroup">
+        {options.map(([kind, label, description, icon]) => {
           const selected = value === kind
           return (
             <button
@@ -75,6 +78,7 @@ export function WorkspaceCreateModal({
 }: Props): JSX.Element {
   const { t } = useI18n()
   const [kind, setKind] = useState<WorkspaceCreateKind>('standard')
+  const allowBranch = folder.kind !== 'remote'
   // Shared across both kinds so switching type never loses the typed name.
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -89,6 +93,10 @@ export function WorkspaceCreateModal({
   const [branchLoadFailed, setBranchLoadFailed] = useState(false)
 
   useEffect(() => {
+    if (!allowBranch) {
+      setLoadingBranches(false)
+      return
+    }
     let active = true
     void window.api
       .listBranches(folder.path)
@@ -106,7 +114,7 @@ export function WorkspaceCreateModal({
     return () => {
       active = false
     }
-  }, [folder.path])
+  }, [folder.path, allowBranch])
 
   const normalizedName = name.trim()
   const duplicate =
@@ -177,9 +185,9 @@ export function WorkspaceCreateModal({
           void submit()
         }}
       >
-        <TypeSelector value={kind} onChange={switchKind} />
+        <TypeSelector value={kind} onChange={switchKind} allowBranch={allowBranch} />
 
-        {kind === 'branch' && (
+        {allowBranch && kind === 'branch' && (
           <>
             <fieldset>
               <legend className="mb-2 text-xs font-semibold text-fgdim">

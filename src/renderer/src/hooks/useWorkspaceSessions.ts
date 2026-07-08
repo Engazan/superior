@@ -5,12 +5,14 @@ import { type GridLayout } from '../gridLayout'
 import { type TFunction } from '../i18n'
 import {
   WORKTREE_ERROR,
+  type AgentLaunchTarget,
   type AgentSession,
   type CloneArgs,
   type Folder,
   type FolderUpdate,
   type Profile,
   type ProfileUpdate,
+  type RemoteFolderAddArgs,
   type StartAgentResult,
   type TerminalPreset,
   type Workspace,
@@ -76,11 +78,25 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     () => folders.find((f) => f.path === activeWorkspace?.folderPath) ?? null,
     [folders, activeWorkspace]
   )
-  // The working directory for this workspace's terminals: its worktree when
-  // worktree-backed, else the repo root. Also drives git status/diff scoping.
+  const activeRemote = activeFolder?.kind === 'remote' ? activeFolder.remote : undefined
+  // Local directory for filesystem/git features: a worktree when worktree-backed,
+  // else the repo root. Remote workspaces deliberately return null here.
   const effectiveDir = useMemo(
-    () => activeWorkspace?.worktreePath ?? activeFolder?.path ?? null,
-    [activeWorkspace, activeFolder]
+    () => (activeRemote ? null : activeWorkspace?.worktreePath ?? activeFolder?.path ?? null),
+    [activeWorkspace, activeFolder, activeRemote]
+  )
+  const workingDirLabel = useMemo(
+    () => (activeRemote ? `${activeRemote.host}:${activeRemote.path}` : effectiveDir),
+    [activeRemote, effectiveDir]
+  )
+  const activeLaunchTarget = useMemo<AgentLaunchTarget | null>(
+    () =>
+      activeRemote
+        ? { kind: 'remote', host: activeRemote.host, path: activeRemote.path }
+        : effectiveDir
+          ? { kind: 'local', cwd: effectiveDir }
+          : null,
+    [activeRemote, effectiveDir]
   )
 
   // Running-terminal count per workspace, for the sidebar badges.
@@ -194,6 +210,20 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     }
     applyState(res)
   }, [applyState, setError])
+
+  const addRemoteFolder = useCallback(
+    async (args: RemoteFolderAddArgs): Promise<string | null> => {
+      setError(null)
+      const res = await window.api.addRemoteFolder(args)
+      if ('error' in res) {
+        setError(res.error)
+        return res.error
+      }
+      applyState(res)
+      return null
+    },
+    [applyState, setError]
+  )
 
   /**
    * Clone a forge repo (main picks the destination dir) and open it as a folder.
@@ -465,6 +495,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       preset: TerminalPreset
       workspaceId: string
       cwd: string
+      launchTarget?: AgentLaunchTarget
       /** Command to run; defaults to the preset's own. */
       command?: string
       /** Nickname for the session; defaults to the preset's own. */
@@ -480,6 +511,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         icon: preset.icon,
         color: preset.color,
         cwd: args.cwd,
+        launchTarget: args.launchTarget ?? { kind: 'local', cwd: args.cwd },
         workspaceId: args.workspaceId,
         tabId
       })
@@ -493,14 +525,15 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const launchAgent = useCallback(
     async (preset: TerminalPreset) => {
       setError(null)
-      if (!activeWorkspace || !effectiveDir) {
+      if (!activeWorkspace || !activeLaunchTarget || !workingDirLabel) {
         setError(t('error.noWorkspace'))
         return
       }
       const res = await launchSessionIn({
         preset,
         workspaceId: activeWorkspace.id,
-        cwd: effectiveDir
+        cwd: workingDirLabel,
+        launchTarget: activeLaunchTarget
       })
       if ('error' in res) {
         setError(res.error)
@@ -508,14 +541,14 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       }
       setActiveSessionId(res.session.id)
     },
-    [activeWorkspace, effectiveDir, launchSessionIn, t, setError]
+    [activeWorkspace, activeLaunchTarget, workingDirLabel, launchSessionIn, t, setError]
   )
 
   // Fill the active tab's grid from the launch wizard: spawn each chosen preset.
   const startLayout = useCallback(
     async ({ presetIds, nicknames }: LaunchConfig) => {
       setError(null)
-      if (!activeWorkspace || !effectiveDir) {
+      if (!activeWorkspace || !activeLaunchTarget || !workingDirLabel) {
         setError(t('error.noWorkspace'))
         return
       }
@@ -533,7 +566,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
           iconType: preset.iconType,
           icon: preset.icon,
           color: preset.color,
-          cwd: effectiveDir,
+          cwd: workingDirLabel,
+          launchTarget: activeLaunchTarget,
           workspaceId: wsId,
           tabId
         })
@@ -548,7 +582,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setActiveSessionId(launched[launched.length - 1].id)
       }
     },
-    [activeWorkspace, effectiveDir, ensureActiveTab, presets, t, setError]
+    [activeWorkspace, activeLaunchTarget, workingDirLabel, ensureActiveTab, presets, t, setError]
   )
 
   // Persist a grid sizing change onto the active workspace's active tab.
@@ -591,7 +625,12 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       setError(null)
       const prev = sessions.find((s) => s.id === id)
       if (!prev) return
-      if (!effectiveDir) {
+      const launchTarget = prev.launchTarget ?? activeLaunchTarget
+      const cwd =
+        launchTarget?.kind === 'remote'
+          ? `${launchTarget.host}:${launchTarget.path}`
+          : launchTarget?.cwd
+      if (!launchTarget || !cwd) {
         setError(t('error.noWorkspace'))
         return
       }
@@ -603,7 +642,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         iconType: prev.iconType,
         icon: prev.icon,
         color: prev.color,
-        cwd: effectiveDir,
+        cwd,
+        launchTarget,
         workspaceId: prev.workspaceId,
         tabId: prev.tabId,
         cols: prev.cols,
@@ -617,7 +657,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       setSessions((curr) => curr.map((s) => (s.id === id ? res.session : s)))
       setActiveSessionId((curr) => (curr === id ? res.session.id : curr))
     },
-    [sessions, effectiveDir, t, setError]
+    [sessions, activeLaunchTarget, t, setError]
   )
 
   const closeSession = useCallback(
@@ -841,6 +881,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     activeWorkspace,
     activeFolder,
     effectiveDir,
+    workingDirLabel,
+    activeLaunchTarget,
     sessions,
     sessionsRestored,
     activeSessionId,
@@ -854,6 +896,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     removeProfile,
     selectProfile,
     addFolder,
+    addRemoteFolder,
     cloneRepository,
     removeFolder,
     reorderFolders,

@@ -20,10 +20,12 @@ import {
   BranchBadge,
   DiffStat,
   FolderGlyph,
+  RemoteBadge,
   RunningBadge,
   UpdateGlyph,
   WorkingSpinner,
   folderLabel,
+  folderTitle,
   folderTint,
   initial,
   updateTitle
@@ -378,7 +380,7 @@ export const Sidebar = memo(function Sidebar({
                       e.preventDefault()
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
-                    title={folderLabel(folder)}
+                    title={folderTitle(folder)}
                     aria-label={folderLabel(folder)}
                     style={folderTint(folder.color)}
                     className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
@@ -412,7 +414,7 @@ export const Sidebar = memo(function Sidebar({
                           e.preventDefault()
                           setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                         }}
-                        title={`${folder.name} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
+                        title={`${folderLabel(folder)} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
                         style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
                         className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                           active
@@ -554,7 +556,7 @@ export const Sidebar = memo(function Sidebar({
                       e.preventDefault()
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
-                    title={folder.path}
+                    title={folderTitle(folder)}
                     className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
@@ -693,8 +695,11 @@ export const Sidebar = memo(function Sidebar({
                                   >
                                     {ws.name}
                                   </span>
-                                  {(ws.branch || gitStats[ws.id]) && (
+                                  {(folder.kind === 'remote' || ws.branch || gitStats[ws.id]) && (
                                     <span className="flex min-w-0 items-center gap-2">
+                                      {folder.kind === 'remote' && (
+                                        <RemoteBadge title={folderTitle(folder)} />
+                                      )}
                                       {ws.branch && (
                                         <BranchBadge
                                           branch={ws.branch}

@@ -1,4 +1,4 @@
-import type { AgentSession, AgentStatus } from '@shared/types'
+import type { AgentLaunchTarget, AgentSession, AgentStatus } from '@shared/types'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
 function storeFile(): string {
@@ -15,6 +15,18 @@ function optionalString(value: unknown): string | undefined {
 
 function optionalNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function normalizeLaunchTarget(value: unknown): AgentLaunchTarget | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const raw = value as Record<string, unknown>
+  if (raw.kind === 'local' && typeof raw.cwd === 'string') {
+    return { kind: 'local', cwd: raw.cwd }
+  }
+  if (raw.kind === 'remote' && typeof raw.host === 'string' && typeof raw.path === 'string') {
+    return { kind: 'remote', host: raw.host, path: raw.path }
+  }
+  return undefined
 }
 
 function normalize(value: unknown): AgentSession | null {
@@ -35,6 +47,7 @@ function normalize(value: unknown): AgentSession | null {
     label: raw.label,
     nickname: optionalString(raw.nickname),
     command: raw.command,
+    launchTarget: normalizeLaunchTarget(raw.launchTarget),
     iconType: raw.iconType === 'emoji' || raw.iconType === 'image' ? raw.iconType : undefined,
     icon: optionalString(raw.icon),
     color: optionalString(raw.color),

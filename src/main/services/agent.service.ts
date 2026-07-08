@@ -1,5 +1,12 @@
 import { randomUUID } from 'crypto'
-import { type AgentSession, type StartAgentArgs, type StartAgentResult } from '@shared/types'
+import * as os from 'os'
+import {
+  type AgentLaunchTarget,
+  type AgentSession,
+  type StartAgentArgs,
+  type StartAgentResult
+} from '@shared/types'
+import type { DirectSpawn } from '@shared/daemon-protocol'
 import { daemonClient } from './daemonClient'
 import { isValidWorkspaceDir } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
@@ -12,12 +19,81 @@ import {
   upsertPersistedSession
 } from './session-store.service'
 
+function hasControlChars(value: string): boolean {
+  return /[\u0000-\u001f\u007f]/.test(value)
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+function cleanLaunchTarget(args: StartAgentArgs): AgentLaunchTarget | { error: string } {
+  const target = args.launchTarget ?? { kind: 'local' as const, cwd: args.cwd }
+  if (target.kind === 'local') {
+    if (!target.cwd) return { error: 'No workspace selected. Open a folder first.' }
+    if (!isValidWorkspaceDir(target.cwd)) {
+      return { error: 'Workspace folder is invalid or no longer exists.' }
+    }
+    return target
+  }
+
+  const host = target.host.trim()
+  const remotePath = target.path.trim()
+  if (!host) return { error: 'Remote SSH host is empty.' }
+  if (!remotePath) return { error: 'Remote workspace path is empty.' }
+  if (host.startsWith('-') || /\s/.test(host) || hasControlChars(host)) {
+    return { error: 'Remote SSH host must be an alias or user@host without spaces.' }
+  }
+  if (hasControlChars(remotePath)) {
+    return { error: 'Remote workspace path cannot contain control characters.' }
+  }
+  return { kind: 'remote', host, path: remotePath }
+}
+
+function remotePathScript(remotePath: string): string {
+  return [
+    `dir=${shellQuote(remotePath)}`,
+    `case "$dir" in`,
+    `  '~') dir="$HOME" ;;`,
+    `  '~/'*) dir="$HOME/\${dir#\\~/}" ;;`,
+    `esac`,
+    `cd -- "$dir" || exit 72`
+  ].join('\n')
+}
+
+function remoteCommandScript(remotePath: string, command: string): string {
+  const prefix = remotePathScript(remotePath)
+  if (command.trim()) {
+    return [
+      prefix,
+      `if [ -n "\${SHELL:-}" ]; then`,
+      `  exec "$SHELL" -l -c ${shellQuote(command)}`,
+      `else`,
+      `  exec /bin/sh -c ${shellQuote(command)}`,
+      `fi`
+    ].join('\n')
+  }
+  return [
+    prefix,
+    `if [ -n "\${SHELL:-}" ]; then`,
+    `  exec "$SHELL" -l -i`,
+    `else`,
+    `  exec /bin/sh`,
+    `fi`
+  ].join('\n')
+}
+
+function remoteDisplayCwd(target: Extract<AgentLaunchTarget, { kind: 'remote' }>): string {
+  return `${target.host}:${target.path}`
+}
+
 function sessionFromDaemon(s: Awaited<ReturnType<typeof daemonClient.list>>[number]): AgentSession {
   return {
     id: s.id,
     label: s.meta.label,
     nickname: s.meta.nickname,
     command: s.meta.command,
+    launchTarget: s.meta.launchTarget,
     iconType: s.meta.iconType,
     icon: s.meta.icon,
     color: s.meta.color,
@@ -37,34 +113,45 @@ function sessionFromDaemon(s: Awaited<ReturnType<typeof daemonClient.list>>[numb
  * pty and streams output/exit back to the renderer via daemonClient's relay.
  */
 export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult> {
-  const { command, label, cwd, workspaceId, tabId } = args
+  const { command, label, workspaceId, tabId } = args
   // Blank nicknames are stored as absent so the label shows alone.
   const nickname = args.nickname?.trim() || undefined
 
-  if (!cwd) {
-    return { error: 'No workspace selected. Open a folder first.' }
-  }
-  if (!isValidWorkspaceDir(cwd)) {
-    return { error: 'Workspace folder is invalid or no longer exists.' }
-  }
+  const launchTarget = cleanLaunchTarget(args)
+  if ('error' in launchTarget) return launchTarget
   // An empty command is allowed: the daemon launches a plain interactive shell.
 
   const id = randomUUID()
   const createdAt = Date.now()
   const cols = args.cols ?? 80
   const rows = args.rows ?? 24
+  const remote = launchTarget.kind === 'remote' ? launchTarget : null
+  const local = launchTarget.kind === 'local' ? launchTarget : null
+  const spawnCwd = remote ? os.homedir() : local?.cwd
+  if (!spawnCwd) return { error: 'No workspace selected. Open a folder first.' }
+  const sessionCwd = remote ? remoteDisplayCwd(remote) : spawnCwd
+  const direct: DirectSpawn | undefined = remote
+    ? {
+        executable: 'ssh',
+        args: ['-tt', remote.host, remoteCommandScript(remote.path, command)]
+      }
+    : undefined
+  const daemonCommand = remote
+    ? 'echo Remote SSH workspaces require restarting Superior. && exit 78'
+    : command
 
   // Only when the user has opted in: install the status-line wrapper before launch
   // so this very session reports its rate-limit usage (Claude reads settings.json
   // at startup). No-op for non-Claude. Off by default → Claude config is untouched.
   const usageEnabled = getSettings().usageTracking
-  if (usageEnabled) ensureClaudeStatusline(command)
+  if (usageEnabled && !remote) ensureClaudeStatusline(command)
 
   try {
     const { pid } = await daemonClient.spawn({
       id,
-      command,
-      cwd,
+      command: daemonCommand,
+      direct,
+      cwd: spawnCwd,
       cols,
       rows,
       meta: {
@@ -74,7 +161,8 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
         icon: args.icon,
         color: args.color,
         command,
-        cwd,
+        cwd: sessionCwd,
+        launchTarget,
         workspaceId,
         tabId,
         createdAt
@@ -82,13 +170,14 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
     })
 
     // Surface live token/cost usage when this command runs a Claude CLI (no-op otherwise).
-    if (usageEnabled) startUsageTracking({ id, cwd, command, createdAt })
+    if (usageEnabled && local) startUsageTracking({ id, cwd: local.cwd, command, createdAt })
 
     const session: AgentSession = {
       id,
       label,
       nickname,
       command,
+      launchTarget,
       iconType: args.iconType,
       icon: args.icon,
       color: args.color,
@@ -116,7 +205,7 @@ export async function restoreSessions(): Promise<AgentSession[]> {
   // absent on sessions spawned by an older build — those simply aren't tracked).
   if (getSettings().usageTracking) {
     for (const s of list) {
-      if (s.meta.cwd) {
+      if (s.meta.cwd && s.meta.launchTarget?.kind !== 'remote') {
         startUsageTracking({
           id: s.id,
           cwd: s.meta.cwd,
@@ -170,7 +259,7 @@ export async function syncUsageTracking(enabled: boolean): Promise<void> {
   }
   const list = await daemonClient.list()
   for (const s of list) {
-    if (!s.meta.cwd) continue
+    if (!s.meta.cwd || s.meta.launchTarget?.kind === 'remote') continue
     ensureClaudeStatusline(s.meta.command)
     startUsageTracking({
       id: s.id,

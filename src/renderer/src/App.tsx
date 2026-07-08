@@ -134,11 +134,11 @@ export default function App(): JSX.Element {
   const activeTab = activeTabs?.tabs.find((tb) => tb.id === activeTabs.activeTabId)
   const { gitStatus, gitLoading, initializeGit, refresh: refreshGitStatus } = useGitStatus(
     ws.effectiveDir,
-    ws.activeFolder?.path ?? null,
+    ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null,
     setError
   )
   // Per-workspace +/- line counts shown beside each name in the sidebar.
-  const workspaceGitStats = useWorkspaceGitStats(ws.workspaces)
+  const workspaceGitStats = useWorkspaceGitStats(ws.workspaces, ws.folders)
 
   // Initialize the terminal data/exit bus once on mount.
   useEffect(() => {
@@ -315,7 +315,7 @@ export default function App(): JSX.Element {
         run: () => ws.selectProfile(p.id)
       })
     }
-    if (ws.activeWorkspaceId) {
+    if (ws.activeLaunchTarget) {
       for (const p of presets.filter((x) => x.active)) {
         cmds.push({
           id: `preset:${p.id}`,
@@ -412,7 +412,7 @@ export default function App(): JSX.Element {
         run: () => setProfileManagerOpen(true)
       }
     )
-    if (ws.activeWorkspaceId) {
+    if (ws.activeLaunchTarget) {
       cmds.push({
         id: 'view:launcher',
         title: t('keyboard.openLauncher'),
@@ -466,6 +466,7 @@ export default function App(): JSX.Element {
     ws.profiles,
     ws.activeProfileId,
     ws.activeWorkspaceId,
+    ws.activeLaunchTarget,
     ws.activeSessionId,
     ws.effectiveDir,
     presets,
@@ -558,7 +559,7 @@ export default function App(): JSX.Element {
         e.stopPropagation()
         ws.toggleMaximizeFocused()
       } else if (chord === shortcuts.openLauncher) {
-        if (view !== 'main' || !ws.activeWorkspaceId) return
+        if (view !== 'main' || !ws.activeLaunchTarget) return
         e.preventDefault()
         e.stopPropagation()
         setLauncherOpen(true)
@@ -637,6 +638,7 @@ export default function App(): JSX.Element {
     profileManagerOpen,
     closeSettings,
     ws.activeWorkspaceId,
+    ws.activeLaunchTarget,
     ws.activeSessionId,
     ws.focusGridCell,
     ws.toggleMaximizeFocused,
@@ -662,9 +664,9 @@ export default function App(): JSX.Element {
           view === 'main' && !!gitStatus?.isRepository && !ws.activeWorkspace?.worktreePath
         }
         onBranchSwitched={refreshGitStatus}
-        launcherEnabled={view === 'main' && !!ws.activeWorkspaceId}
+        launcherEnabled={view === 'main' && !!ws.activeLaunchTarget}
         onOpenLauncher={() => {
-          if (view === 'main' && ws.activeWorkspaceId) setLauncherOpen(true)
+          if (view === 'main' && ws.activeLaunchTarget) setLauncherOpen(true)
         }}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
         rightOpen={rightSidebarOpen}
@@ -725,7 +727,7 @@ export default function App(): JSX.Element {
                   <TerminalPanel
                     sessions={ws.sessions}
                     activeWorkspaceId={ws.activeWorkspaceId}
-                    workingDir={ws.effectiveDir}
+                    workingDir={ws.workingDirLabel}
                     layoutPresets={layoutPresets.layouts}
                     startupLayoutId={ws.activeWorkspace?.startupLayoutId}
                     onSetStartupLayout={(layoutId) => {
@@ -802,7 +804,7 @@ export default function App(): JSX.Element {
                 width={rightPanelWidth}
                 active={rightSidebarOpen}
                 folderPath={ws.effectiveDir}
-                tasksFolder={ws.activeFolder?.path ?? null}
+                tasksFolder={ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null}
                 taskQueue={taskQueue}
                 presets={presets}
                 onJumpToTask={onJumpToTask}
@@ -848,6 +850,7 @@ export default function App(): JSX.Element {
           integrations={integrations}
           onOpenFolder={ws.addFolder}
           onClone={ws.cloneRepository}
+          onAddRemote={ws.addRemoteFolder}
           onAddIntegration={() => {
             setProjectModalOpen(false)
             setResumeProjectModal(true)

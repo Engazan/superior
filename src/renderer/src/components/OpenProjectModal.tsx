@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { describeIntegrationError, providerLabel } from '../integrations'
 import { Button, CloseIcon, IconButton, Input } from './ui'
-import type { CloneArgs, Integration, RemoteRepo } from '../types'
+import type { CloneArgs, Integration, RemoteFolderAddArgs, RemoteRepo } from '../types'
 
 interface Props {
   integrations: Integration[]
@@ -10,17 +10,20 @@ interface Props {
   onOpenFolder: () => void
   /** Resolves to a backend error code on failure, or null on success/cancel. */
   onClone: (args: CloneArgs) => Promise<string | null>
+  /** Add an SSH-backed remote workspace. Resolves to a user-facing error, or null. */
+  onAddRemote: (args: RemoteFolderAddArgs) => Promise<string | null>
   /** Navigate to the integrations settings so the user can add a forge. */
   onAddIntegration: () => void
   onClose: () => void
 }
 
-type Source = 'local' | 'git'
+type Source = 'local' | 'git' | 'remote'
 
 export function OpenProjectModal({
   integrations,
   onOpenFolder,
   onClone,
+  onAddRemote,
   onAddIntegration,
   onClose
 }: Props): JSX.Element {
@@ -34,16 +37,23 @@ export function OpenProjectModal({
   const [query, setQuery] = useState('')
   const [cloningId, setCloningId] = useState<string | null>(null)
   const [cloneError, setCloneError] = useState<string | null>(null)
+  const [remoteHost, setRemoteHost] = useState('')
+  const [remotePath, setRemotePath] = useState('')
+  const [remoteName, setRemoteName] = useState('')
+  const [remoteBusy, setRemoteBusy] = useState(false)
+  const [remoteTesting, setRemoteTesting] = useState(false)
+  const [remoteOk, setRemoteOk] = useState(false)
+  const [remoteError, setRemoteError] = useState<string | null>(null)
 
   const hasIntegrations = integrations.length > 0
 
   useEffect(() => {
     const closeOnEscape = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && !cloningId) onClose()
+      if (e.key === 'Escape' && !cloningId && !remoteBusy && !remoteTesting) onClose()
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose, cloningId])
+  }, [onClose, cloningId, remoteBusy, remoteTesting])
 
   // Load the selected integration's repositories whenever the git tab is active
   // and its integration changes.
@@ -85,6 +95,32 @@ export function OpenProjectModal({
     else onClose()
   }
 
+  const remoteArgs = (): RemoteFolderAddArgs => ({
+    host: remoteHost.trim(),
+    path: remotePath.trim(),
+    name: remoteName.trim() || undefined
+  })
+
+  const testRemote = async (): Promise<void> => {
+    setRemoteTesting(true)
+    setRemoteError(null)
+    setRemoteOk(false)
+    const res = await window.api.testRemoteFolder(remoteArgs())
+    setRemoteTesting(false)
+    if (res.ok) setRemoteOk(true)
+    else setRemoteError(res.error)
+  }
+
+  const addRemote = async (): Promise<void> => {
+    setRemoteBusy(true)
+    setRemoteError(null)
+    setRemoteOk(false)
+    const err = await onAddRemote(remoteArgs())
+    setRemoteBusy(false)
+    if (err) setRemoteError(err)
+    else onClose()
+  }
+
   const tabClass = (active: boolean): string =>
     `flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
       active ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder' : 'text-fgdim hover:bg-hover hover:text-fg'
@@ -94,7 +130,7 @@ export function OpenProjectModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-5 backdrop-blur-[2px]"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !cloningId) onClose()
+        if (e.target === e.currentTarget && !cloningId && !remoteBusy && !remoteTesting) onClose()
       }}
     >
       <div
@@ -110,7 +146,7 @@ export function OpenProjectModal({
           <IconButton
             size="sm"
             label={t('integrations.cancel')}
-            onClick={() => !cloningId && onClose()}
+            onClick={() => !cloningId && !remoteBusy && !remoteTesting && onClose()}
           >
             <CloseIcon size={14} />
           </IconButton>
@@ -123,6 +159,9 @@ export function OpenProjectModal({
           <button onClick={() => setSource('git')} className={tabClass(source === 'git')}>
             {t('openProject.fromGit')}
           </button>
+          <button onClick={() => setSource('remote')} className={tabClass(source === 'remote')}>
+            {t('openProject.remoteSsh')}
+          </button>
         </div>
 
         {source === 'local' ? (
@@ -130,6 +169,79 @@ export function OpenProjectModal({
             <p className="text-sm text-fgmuted">{t('openProject.thisPcHint')}</p>
             <Button onClick={openFolder}>{t('openProject.chooseFolder')}</Button>
           </div>
+        ) : source === 'remote' ? (
+          <form
+            className="space-y-4 px-5 py-5"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void addRemote()
+            }}
+          >
+            <p className="text-sm text-fgmuted">{t('remote.hint')}</p>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-fgdim">
+                {t('remote.host')}
+              </label>
+              <Input
+                value={remoteHost}
+                onChange={(event) => {
+                  setRemoteHost(event.target.value)
+                  setRemoteOk(false)
+                  setRemoteError(null)
+                }}
+                placeholder={t('remote.hostPlaceholder')}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-fgdim">
+                {t('remote.path')}
+              </label>
+              <Input
+                value={remotePath}
+                onChange={(event) => {
+                  setRemotePath(event.target.value)
+                  setRemoteOk(false)
+                  setRemoteError(null)
+                }}
+                placeholder={t('remote.pathPlaceholder')}
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-fgdim">
+                {t('remote.name')}
+              </label>
+              <Input
+                value={remoteName}
+                onChange={(event) => setRemoteName(event.target.value)}
+                placeholder={t('remote.namePlaceholder')}
+              />
+            </div>
+            {remoteError && <p className="text-sm text-danger">{remoteError}</p>}
+            {remoteOk && <p className="text-sm text-status">{t('remote.testOk')}</p>}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                loading={remoteTesting}
+                disabled={remoteBusy || !remoteHost.trim() || !remotePath.trim()}
+                onClick={() => void testRemote()}
+              >
+                {t('remote.test')}
+              </Button>
+              <Button
+                type="submit"
+                loading={remoteBusy}
+                disabled={remoteTesting || !remoteHost.trim() || !remotePath.trim()}
+              >
+                {t('remote.add')}
+              </Button>
+            </div>
+          </form>
         ) : !hasIntegrations ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
             <p className="text-sm text-fgmuted">{t('openProject.noIntegrations')}</p>

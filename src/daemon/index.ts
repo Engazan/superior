@@ -8,6 +8,7 @@ import {
   type ClientMessage,
   type DaemonSession,
   type DaemonSessionMeta,
+  type DirectSpawn,
   type ServerMessage
 } from '@shared/daemon-protocol'
 import { RingBuffer } from './ringBuffer'
@@ -167,14 +168,18 @@ function resolveShell(command: string): { shell: string; shellArgs: string[] } {
 function spawnSession(
   id: string,
   command: string,
+  direct: DirectSpawn | undefined,
   cwd: string,
   cols: number,
   rows: number,
   meta: DaemonSessionMeta
 ): void {
   if (sessions.has(id)) return
-  const { shell, shellArgs } = resolveShell(command)
-  const proc = pty.spawn(shell, shellArgs, {
+  const resolved = direct ?? (() => {
+    const { shell, shellArgs } = resolveShell(command)
+    return { executable: shell, args: shellArgs }
+  })()
+  const proc = pty.spawn(resolved.executable, resolved.args, {
     name: 'xterm-256color',
     cols: cols || 80,
     rows: rows || 24,
@@ -211,7 +216,7 @@ function spawnSession(
     scheduleShutdownCheck()
   })
 
-  log(`spawned ${id} pid=${proc.pid} cmd=${command}`)
+  log(`spawned ${id} pid=${proc.pid} cmd=${command || resolved.executable}`)
 }
 
 function listSessions(): DaemonSession[] {
@@ -235,8 +240,12 @@ function handle(conn: Conn, msg: ClientMessage): void {
       break
     case 'spawn':
       cancelShutdown()
-      spawnSession(msg.id, msg.command, msg.cwd, msg.cols, msg.rows, msg.meta)
-      send(conn, { t: 'spawned', id: msg.id, pid: sessions.get(msg.id)?.proc.pid })
+      try {
+        spawnSession(msg.id, msg.command, msg.direct, msg.cwd, msg.cols, msg.rows, msg.meta)
+        send(conn, { t: 'spawned', id: msg.id, pid: sessions.get(msg.id)?.proc.pid })
+      } catch (err) {
+        send(conn, { t: 'error', id: msg.id, message: (err as Error).message || 'spawn failed' })
+      }
       break
     case 'attach': {
       const s = sessions.get(msg.id)
