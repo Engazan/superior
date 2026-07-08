@@ -506,6 +506,7 @@ export const pl: Record<MessageKey, string> = {
   'terminal.statusFinished': 'Zakończono — czeka na Ciebie',
   'terminal.statusError': 'Proces zakończył się błędem',
   'terminal.exitedChip': 'Zakończony (kod {code})',
+  'terminal.notRunningChip': 'Proces już nie działa',
   'terminal.closeRunningConfirm': 'Zatrzymać „{label}”? Działający proces zostanie zabity.',
   'tab.closeRunningConfirm': 'Zamknąć „{name}”? Zostanie zabitych {count} działających terminali.',
   'preview.unsavedTitle': 'Niezapisane zmiany',

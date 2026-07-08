@@ -5,6 +5,32 @@ import { isValidWorkspaceDir } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
 import { ensureClaudeStatusline, restoreAllClaudeStatuslines } from './statusline.service'
 import { getSettings } from './settings.service'
+import {
+  patchPersistedSession,
+  reconcilePersistedSessions,
+  removePersistedSession,
+  upsertPersistedSession
+} from './session-store.service'
+
+function sessionFromDaemon(s: Awaited<ReturnType<typeof daemonClient.list>>[number]): AgentSession {
+  return {
+    id: s.id,
+    label: s.meta.label,
+    nickname: s.meta.nickname,
+    command: s.meta.command,
+    iconType: s.meta.iconType,
+    icon: s.meta.icon,
+    color: s.meta.color,
+    workspaceId: s.meta.workspaceId,
+    // Absent on sessions from an older build; the renderer reassigns these to the workspace's active tab.
+    tabId: s.meta.tabId ?? '',
+    status: s.status,
+    pid: s.pid,
+    cols: s.cols,
+    rows: s.rows,
+    createdAt: s.meta.createdAt
+  }
+}
 
 /**
  * Validate, then ask the daemon to spawn a preset's command. The daemon owns the
@@ -74,6 +100,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       rows,
       createdAt
     }
+    upsertPersistedSession(session)
     return { session }
   } catch (err) {
     const what = command.trim().split(/\s+/)[0] || label || 'terminal'
@@ -81,9 +108,10 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
   }
 }
 
-/** Rebuild the AgentSession list from the daemon's surviving sessions. */
+/** Rebuild the UI session list from live daemon PTYs plus restartable snapshots. */
 export async function restoreSessions(): Promise<AgentSession[]> {
   const list = await daemonClient.list()
+  const live = list.map(sessionFromDaemon)
   // Resume usage tracking for any Claude session that outlived the app (cwd is
   // absent on sessions spawned by an older build — those simply aren't tracked).
   if (getSettings().usageTracking) {
@@ -98,33 +126,33 @@ export async function restoreSessions(): Promise<AgentSession[]> {
       }
     }
   }
-  return list.map((s) => ({
-    id: s.id,
-    label: s.meta.label,
-    nickname: s.meta.nickname,
-    command: s.meta.command,
-    iconType: s.meta.iconType,
-    icon: s.meta.icon,
-    color: s.meta.color,
-    workspaceId: s.meta.workspaceId,
-    // Absent on sessions from an older build; the renderer reassigns these to the workspace's active tab.
-    tabId: s.meta.tabId ?? '',
-    status: s.status,
-    pid: s.pid,
-    cols: s.cols,
-    rows: s.rows,
-    createdAt: s.meta.createdAt
-  }))
+  return reconcilePersistedSessions(live)
 }
 
 export function killAgent(id: string): void {
+  removePersistedSession(id)
   daemonClient.kill(id)
 }
 
 /** Persist a session's nickname in the daemon so it survives an app restart. */
 export function updateSessionNickname(id: string, nickname: string): void {
+  patchPersistedSession(id, { nickname: nickname.trim() || undefined })
   daemonClient.updateMeta(id, { nickname })
 }
+
+/** Persist the latest terminal size and forward it to the live daemon session. */
+export function resizeAgent(id: string, cols: number, rows: number): void {
+  patchPersistedSession(id, { cols, rows })
+  daemonClient.resize(id, cols, rows)
+}
+
+daemonClient.onExit(({ id, exitCode }) => {
+  patchPersistedSession(id, {
+    status: exitCode === 0 || exitCode === 130 || exitCode === 143 ? 'exited' : 'error',
+    exitCode,
+    pid: undefined
+  })
+})
 
 /**
  * React to the usage-tracking toggle without needing an app restart. When turned

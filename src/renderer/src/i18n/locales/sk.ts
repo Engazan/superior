@@ -507,6 +507,7 @@ export const sk: Record<MessageKey, string> = {
   'terminal.statusFinished': 'Dokončené — čaká na vás',
   'terminal.statusError': 'Proces zlyhal',
   'terminal.exitedChip': 'Ukončený (kód {code})',
+  'terminal.notRunningChip': 'Proces už nebeží',
   'terminal.closeRunningConfirm': 'Zastaviť „{label}“? Bežiaci proces bude ukončený.',
   'tab.closeRunningConfirm': 'Zavrieť „{name}“? Ukončí sa {count} bežiacich terminálov.',
   'preview.unsavedTitle': 'Neuložené zmeny',

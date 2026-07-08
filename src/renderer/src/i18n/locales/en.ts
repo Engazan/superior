@@ -502,6 +502,7 @@ export const en = {
   'terminal.statusFinished': 'Finished — waiting for you',
   'terminal.statusError': 'Process failed',
   'terminal.exitedChip': 'Exited (code {code})',
+  'terminal.notRunningChip': 'Process no longer running',
   'terminal.closeRunningConfirm': 'Stop “{label}”? The running process will be killed.',
   'tab.closeRunningConfirm': 'Close “{name}”? {count} running terminal(s) will be killed.',
   'preview.unsavedTitle': 'Unsaved changes',

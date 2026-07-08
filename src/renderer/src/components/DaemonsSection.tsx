@@ -20,7 +20,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
 
   const refresh = useCallback(async () => {
     const sessions = await window.api.restoreSessions()
-    setList(sessions)
+    setList(sessions.filter((s) => s.status === 'running'))
     setLoading(false)
   }, [])
 

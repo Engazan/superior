@@ -506,6 +506,7 @@ export const hu: Record<MessageKey, string> = {
   'terminal.statusFinished': 'Befejeződött — rád vár',
   'terminal.statusError': 'A folyamat hibával leállt',
   'terminal.exitedChip': 'Leállt (kód: {code})',
+  'terminal.notRunningChip': 'A folyamat már nem fut',
   'terminal.closeRunningConfirm': 'Leállítod: „{label}”? A futó folyamat megszakad.',
   'tab.closeRunningConfirm': 'Bezárod: „{name}”? {count} futó terminál fog leállni.',
   'preview.unsavedTitle': 'Nem mentett módosítások',

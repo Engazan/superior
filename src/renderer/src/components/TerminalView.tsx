@@ -255,6 +255,7 @@ export const TerminalView = memo(function TerminalView({
     const last = lastSizeRef.current
     if (last && last.cols === term.cols && last.rows === term.rows) return
     lastSizeRef.current = { cols: term.cols, rows: term.rows }
+    if (exitedRef.current) return
     window.api.resize(session.id, term.cols, term.rows)
   }, [session.id])
 
@@ -306,37 +307,50 @@ export const TerminalView = memo(function TerminalView({
       window.api.sendInput(session.id, data)
     })
 
-    // pty output / exit -> xterm
-    const unsubscribe = subscribe(session.id, {
-      onData: (data, replay) => {
-        if (!replay) {
-          // Follow the tail: pin to the bottom on new output, but only when the
-          // user hasn't scrolled up to read history. Checked per-chunk *before*
-          // the write so a burst keeps following, yet scrolling up pauses it.
-          const buf = term.buffer.active
-          const atBottom = buf.viewportY >= buf.baseY
-          term.write(data, atBottom ? () => term.scrollToBottom() : undefined)
-          return
+    let attached = false
+    let unsubscribe = (): void => {}
+    if (session.status === 'running') {
+      // pty output / exit -> xterm
+      unsubscribe = subscribe(session.id, {
+        onData: (data, replay) => {
+          if (!replay) {
+            // Follow the tail: pin to the bottom on new output, but only when the
+            // user hasn't scrolled up to read history. Checked per-chunk *before*
+            // the write so a burst keeps following, yet scrolling up pauses it.
+            const buf = term.buffer.active
+            const atBottom = buf.viewportY >= buf.baseY
+            term.write(data, atBottom ? () => term.scrollToBottom() : undefined)
+            return
+          }
+          const restored = sanitizeReplay(data)
+          if (!restored) return
+          replayWritesRef.current += 1
+          term.write(restored, () => {
+            replayWritesRef.current = Math.max(0, replayWritesRef.current - 1)
+          })
+        },
+        onExit: (e) => {
+          const dim = '\x1b[2m'
+          const reset = '\x1b[0m'
+          const note = e.message ? `${e.message}` : `process exited with code ${e.exitCode}`
+          exitedRef.current = true
+          term.write(`\r\n${dim}[${note}]${reset}\r\n${dim}[${restartHintRef.current}]${reset}\r\n`)
+          onExit(session.id, e.exitCode)
         }
-        const restored = sanitizeReplay(data)
-        if (!restored) return
-        replayWritesRef.current += 1
-        term.write(restored, () => {
-          replayWritesRef.current = Math.max(0, replayWritesRef.current - 1)
-        })
-      },
-      onExit: (e) => {
-        const dim = '\x1b[2m'
-        const reset = '\x1b[0m'
-        const note = e.message ? `${e.message}` : `process exited with code ${e.exitCode}`
-        exitedRef.current = true
-        term.write(`\r\n${dim}[${note}]${reset}\r\n${dim}[${restartHintRef.current}]${reset}\r\n`)
-        onExit(session.id, e.exitCode)
-      }
-    })
+      })
 
-    // Attach to the daemon-owned pty: replays scrollback, then streams live.
-    window.api.attach(session.id)
+      // Attach to the daemon-owned pty: replays scrollback, then streams live.
+      attached = true
+      window.api.attach(session.id)
+    } else {
+      const dim = '\x1b[2m'
+      const reset = '\x1b[0m'
+      const note =
+        session.exitCode == null
+          ? t('terminal.notRunningChip')
+          : t('terminal.exitedChip', { code: String(session.exitCode) })
+      term.write(`${dim}[${note}]${reset}\r\n${dim}[${restartHintRef.current}]${reset}\r\n`)
+    }
 
     // tell the pty our real size (no-op while hidden; synced on first show)
     syncSize()
@@ -359,7 +373,7 @@ export const TerminalView = memo(function TerminalView({
     host.addEventListener('focusin', onFocusIn)
 
     return () => {
-      window.api.detach(session.id)
+      if (attached) window.api.detach(session.id)
       ro.disconnect()
       if (raf !== null) cancelAnimationFrame(raf)
       host.removeEventListener('focusin', onFocusIn)
@@ -608,7 +622,9 @@ export const TerminalView = memo(function TerminalView({
           >
             <RestartIcon size={12} />
             <span>
-              {t('terminal.exitedChip', { code: String(session.exitCode ?? 0) })}
+              {session.exitCode == null
+                ? t('terminal.notRunningChip')
+                : t('terminal.exitedChip', { code: String(session.exitCode) })}
               {' · '}
               {t('terminal.restartHint')}
             </span>

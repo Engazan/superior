@@ -8,6 +8,7 @@ import {
 } from '@shared/types'
 import {
   killAgent,
+  resizeAgent,
   restoreSessions,
   startAgent,
   updateSessionNickname
@@ -48,6 +49,6 @@ export function registerAgentIpc(): void {
   })
 
   ipcMain.on(IPC.AGENT_RESIZE, (_event, payload: { id: string; cols: number; rows: number }) => {
-    daemonClient.resize(payload.id, payload.cols, payload.rows)
+    resizeAgent(payload.id, payload.cols, payload.rows)
   })
 }

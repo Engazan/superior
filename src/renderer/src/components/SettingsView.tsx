@@ -368,7 +368,7 @@ export function SettingsView({
     let active = true
     const refresh = async (): Promise<void> => {
       const sessions = await window.api.restoreSessions()
-      if (active) setDaemonCount(sessions.length)
+      if (active) setDaemonCount(sessions.filter((s) => s.status === 'running').length)
     }
     refresh()
     const id = window.setInterval(refresh, 2500)

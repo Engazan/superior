@@ -613,6 +613,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         setError(res.error)
         return
       }
+      void window.api.killAgent(id)
       setSessions((curr) => curr.map((s) => (s.id === id ? res.session : s)))
       setActiveSessionId((curr) => (curr === id ? res.session.id : curr))
     },

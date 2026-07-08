@@ -506,6 +506,7 @@ export const cs: Record<MessageKey, string> = {
   'terminal.statusFinished': 'Dokončeno — čeká na vás',
   'terminal.statusError': 'Proces selhal',
   'terminal.exitedChip': 'Ukončen (kód {code})',
+  'terminal.notRunningChip': 'Proces už neběží',
   'terminal.closeRunningConfirm': 'Zastavit „{label}“? Běžící proces bude ukončen.',
   'tab.closeRunningConfirm': 'Zavřít „{name}“? Ukončí se {count} běžících terminálů.',
   'preview.unsavedTitle': 'Neuložené změny',

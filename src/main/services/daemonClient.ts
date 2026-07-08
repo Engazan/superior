@@ -26,6 +26,7 @@ const pendingSpawns = new Map<
   string,
   { resolve: (res: { pid?: number }) => void; reject: (err: Error) => void }
 >()
+const exitListeners = new Set<(event: { id: string; exitCode: number }) => void>()
 // Compatibility with a daemon started by an older app build that does not yet
 // tag attach snapshots as replay. The first data frame after attach is the
 // synchronous scrollback snapshot (or harmlessly treated as one if empty).
@@ -68,6 +69,7 @@ function onServerMessage(msg: ServerMessage): void {
           ? 'command not found. Is it installed and on your PATH?'
           : undefined
       broadcast(IPC.AGENT_EXIT, { id: msg.id, exitCode: msg.exitCode, message })
+      for (const listener of exitListeners) listener({ id: msg.id, exitCode: msg.exitCode })
       break
     }
     case 'sessions':
@@ -231,6 +233,11 @@ export const daemonClient = {
   },
   kill(id: string): void {
     void send({ t: 'kill', id })
+  },
+
+  onExit(listener: (event: { id: string; exitCode: number }) => void): () => void {
+    exitListeners.add(listener)
+    return () => exitListeners.delete(listener)
   },
 
   /** Drop the connection without killing sessions (used on app quit). */

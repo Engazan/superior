@@ -510,7 +510,7 @@ const api = {
     return ipcRenderer.invoke(IPC.AGENT_START, args)
   },
 
-  /** Surviving sessions from the daemon, to rebuild the UI on launch. */
+  /** Sessions to rebuild the UI on launch: live daemon PTYs plus restartable snapshots. */
   restoreSessions(): Promise<AgentSession[]> {
     return ipcRenderer.invoke(IPC.AGENT_RESTORE)
   },
