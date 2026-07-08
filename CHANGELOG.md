@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-07-08
+
+### Added
+
+- **Remote SSH workspaces.** Open Project now includes a Remote SSH source that
+  stores an SSH host/alias plus remote path, can test the connection, and runs
+  terminal presets through the system `ssh` client in that remote directory.
+  Remote workspaces are marked in the sidebar and deliberately keep local-only
+  file, git, task and worktree features disabled.
+
+### Fixed
+
+- **Terminal cells survive OS restarts.** Terminal sessions are persisted as
+  restartable snapshots, so an app relaunch after the daemon is gone restores
+  the terminal grid cells instead of dropping them.
+
 ## [0.16.0] - 2026-07-07
 
 ### Added
