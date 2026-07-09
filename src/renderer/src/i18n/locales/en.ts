@@ -503,6 +503,8 @@ export const en = {
   'remote.test': 'Test',
   'remote.testOk': 'Remote folder is reachable.',
   'remote.add': 'Add remote workspace',
+  'remote.localOnlyPanel':
+    'Remote workspaces support terminals in this version. Files, Git, history, and tasks stay local-only.',
 
   'common.close': 'Close',
   'common.dismiss': 'Dismiss',

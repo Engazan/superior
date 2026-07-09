@@ -507,6 +507,8 @@ export const pl: Record<MessageKey, string> = {
   'remote.test': 'Testuj',
   'remote.testOk': 'Folder remote jest dostępny.',
   'remote.add': 'Dodaj remote workspace',
+  'remote.localOnlyPanel':
+    'Remote workspace w tej wersji obsługuje terminale. Pliki, Git, historia i zadania pozostają dostępne tylko dla projektów lokalnych.',
 
   'common.close': 'Zamknij',
   'common.dismiss': 'Zamknij powiadomienie',

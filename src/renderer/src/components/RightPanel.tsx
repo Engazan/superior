@@ -15,6 +15,8 @@ interface Props {
   active: boolean
   /** Folder backing the active workspace, or null when none is selected. */
   folderPath: string | null
+  /** True for SSH-backed workspaces; their filesystem/git/task panels are local-only in v1. */
+  isRemoteWorkspace: boolean
   /** The active project folder (main repo path) the task queue is scoped to.
       Distinct from folderPath, which is the worktree dir for branch workspaces. */
   tasksFolder: string | null
@@ -38,6 +40,7 @@ interface Props {
 export function RightPanel({
   active,
   folderPath,
+  isRemoteWorkspace,
   tasksFolder,
   taskQueue,
   presets,
@@ -167,7 +170,11 @@ export function RightPanel({
         </button>
       </div>
 
-      {tab === 'changes' ? (
+      {isRemoteWorkspace ? (
+        <div className="px-3 py-4 text-xs leading-5 text-fgmuted">
+          {t('remote.localOnlyPanel')}
+        </div>
+      ) : tab === 'changes' ? (
         <ChangesView folderPath={folderPath} diff={diff} loading={loading} onRefresh={refresh} />
       ) : tab === 'history' ? (
         <HistoryView folderPath={folderPath} refreshToken={refreshToken} />

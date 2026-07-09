@@ -507,6 +507,8 @@ export const hu: Record<MessageKey, string> = {
   'remote.test': 'Teszt',
   'remote.testOk': 'A remote mappa elérhető.',
   'remote.add': 'Remote workspace hozzáadása',
+  'remote.localOnlyPanel':
+    'A remote workspace ebben a verzióban terminálokat támogat. A fájlok, a Git, az előzmények és a feladatok csak helyi projektekhez érhetők el.',
 
   'common.close': 'Bezárás',
   'common.dismiss': 'Értesítés bezárása',

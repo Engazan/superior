@@ -27,6 +27,14 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
+function cmdQuote(value: string): string {
+  return `"${value.replace(/(["^&|<>%])/g, '^$1')}"`
+}
+
+function localShellQuote(value: string): string {
+  return process.platform === 'win32' ? cmdQuote(value) : shellQuote(value)
+}
+
 function cleanLaunchTarget(args: StartAgentArgs): AgentLaunchTarget | { error: string } {
   const target = args.launchTarget ?? { kind: 'local' as const, cwd: args.cwd }
   if (target.kind === 'local') {
@@ -52,13 +60,13 @@ function cleanLaunchTarget(args: StartAgentArgs): AgentLaunchTarget | { error: s
 
 function remotePathScript(remotePath: string): string {
   return [
-    `dir=${shellQuote(remotePath)}`,
+    `dir=${shellQuote(remotePath)};`,
     `case "$dir" in`,
     `  '~') dir="$HOME" ;;`,
     `  '~/'*) dir="$HOME/\${dir#\\~/}" ;;`,
-    `esac`,
-    `cd -- "$dir" || exit 72`
-  ].join('\n')
+    `esac;`,
+    `cd -- "$dir" || exit 72;`
+  ].join(' ')
 }
 
 function remoteCommandScript(remotePath: string, command: string): string {
@@ -67,24 +75,33 @@ function remoteCommandScript(remotePath: string, command: string): string {
     return [
       prefix,
       `if [ -n "\${SHELL:-}" ]; then`,
-      `  exec "$SHELL" -l -c ${shellQuote(command)}`,
+      `  exec "$SHELL" -l -c ${shellQuote(command)};`,
       `else`,
-      `  exec /bin/sh -c ${shellQuote(command)}`,
+      `  exec /bin/sh -c ${shellQuote(command)};`,
       `fi`
-    ].join('\n')
+    ].join(' ')
   }
   return [
     prefix,
     `if [ -n "\${SHELL:-}" ]; then`,
-    `  exec "$SHELL" -l -i`,
+    `  exec "$SHELL" -l -i;`,
     `else`,
-    `  exec /bin/sh`,
+    `  exec /bin/sh;`,
     `fi`
-  ].join('\n')
+  ].join(' ')
 }
 
 function remoteDisplayCwd(target: Extract<AgentLaunchTarget, { kind: 'remote' }>): string {
   return `${target.host}:${target.path}`
+}
+
+function remoteSshCommand(target: Extract<AgentLaunchTarget, { kind: 'remote' }>, command: string): string {
+  return [
+    'ssh',
+    '-tt',
+    localShellQuote(target.host),
+    localShellQuote(remoteCommandScript(target.path, command))
+  ].join(' ')
 }
 
 function sessionFromDaemon(s: Awaited<ReturnType<typeof daemonClient.list>>[number]): AgentSession {
@@ -136,9 +153,10 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
         args: ['-tt', remote.host, remoteCommandScript(remote.path, command)]
       }
     : undefined
-  const daemonCommand = remote
-    ? 'echo Remote SSH workspaces require restarting Superior. && exit 78'
-    : command
+  // If an older daemon without direct-spawn support is still alive after an app
+  // update, this command still runs through ssh instead of running the preset
+  // locally. Current daemons use `direct` above and treat this as metadata/log text.
+  const daemonCommand = remote ? remoteSshCommand(remote, command) : command
 
   // Only when the user has opted in: install the status-line wrapper before launch
   // so this very session reports its rate-limit usage (Claude reads settings.json

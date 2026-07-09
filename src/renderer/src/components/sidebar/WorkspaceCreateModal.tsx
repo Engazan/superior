@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../../i18n'
 import { BranchIcon, Button, Input, Modal, Select } from '../ui'
-import { FolderGlyph, WorkspaceGlyph, folderLabel } from './parts'
+import { FolderGlyph, WorkspaceGlyph, folderLabel, folderTitle } from './parts'
 import type { BranchInfo, Folder, WorktreeAddArgs } from '../../types'
 
 export type WorkspaceCreateKind = 'standard' | 'branch'
@@ -325,7 +325,7 @@ export function WorkspaceCreateModal({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-fg">{folderLabel(folder)}</p>
-                <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folder.path}</p>
+                <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folderTitle(folder)}</p>
               </div>
               <span className="shrink-0 rounded-full bg-accentBg px-2 py-0.5 text-[10px] font-semibold text-accent ring-1 ring-inset ring-accentBorder">
                 {t('workspace.sharedFolder')}

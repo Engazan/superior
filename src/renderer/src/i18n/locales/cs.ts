@@ -507,6 +507,8 @@ export const cs: Record<MessageKey, string> = {
   'remote.test': 'Otestovat',
   'remote.testOk': 'Remote složka je dostupná.',
   'remote.add': 'Přidat remote workspace',
+  'remote.localOnlyPanel':
+    'Remote workspace v této verzi podporuje terminály. Soubory, Git, historie a úkoly zůstávají jen pro lokální projekty.',
 
   'common.close': 'Zavřít',
   'common.dismiss': 'Zavřít upozornění',

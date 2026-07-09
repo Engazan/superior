@@ -508,6 +508,8 @@ export const sk: Record<MessageKey, string> = {
   'remote.test': 'Otestovať',
   'remote.testOk': 'Remote priečinok je dostupný.',
   'remote.add': 'Pridať remote workspace',
+  'remote.localOnlyPanel':
+    'Remote workspace v tejto verzii podporuje terminály. Súbory, Git, história a úlohy zostávajú len pre lokálne projekty.',
 
   'common.close': 'Zavrieť',
   'common.dismiss': 'Zavrieť upozornenie',

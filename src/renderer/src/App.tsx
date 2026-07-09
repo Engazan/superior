@@ -804,6 +804,7 @@ export default function App(): JSX.Element {
                 width={rightPanelWidth}
                 active={rightSidebarOpen}
                 folderPath={ws.effectiveDir}
+                isRemoteWorkspace={ws.activeFolder?.kind === 'remote'}
                 tasksFolder={ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null}
                 taskQueue={taskQueue}
                 presets={presets}
