@@ -134,6 +134,33 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
 }
 
 /**
+ * Poll path only reads the first N untracked files' line counts; beyond that the
+ * additions total is approximate (the file count stays exact). Keeps the ~1.5s
+ * status poll cheap in a repo lacking a .gitignore (e.g. an untracked node_modules).
+ */
+const MAX_UNTRACKED_STAT_FILES = 500
+/** Cap concurrent untracked-file reads so expanding many can't exhaust file descriptors. */
+const UNTRACKED_READ_CONCURRENCY = 32
+
+/** Map `fn` over `items` with at most `limit` executions in flight at once. */
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out: R[] = new Array(items.length)
+  let next = 0
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
+}
+
+/**
  * Cheap working-tree summary for the title bar: changed-file count plus total
  * added/removed lines. Uses `--numstat` (no hunk parsing) for tracked changes
  * and reads untracked files as all-additions, mirroring {@link getGitDiff}'s
@@ -158,10 +185,14 @@ async function getDiffStats(
     if (del !== '-') deletions += Number(del) || 0
   }
 
-  for (const rel of repo.untracked) {
-    changedFiles++
-    additions += await countUntrackedLines(folderPath, rel)
-  }
+  // Every untracked path is a changed file, but only read the contents of a
+  // bounded prefix — a poll must stay light even when thousands are untracked.
+  changedFiles += repo.untracked.length
+  const sampled = repo.untracked.slice(0, MAX_UNTRACKED_STAT_FILES)
+  const counts = await mapLimit(sampled, UNTRACKED_READ_CONCURRENCY, (rel) =>
+    countUntrackedLines(folderPath, rel)
+  )
+  for (const n of counts) additions += n
 
   return { changedFiles, additions, deletions }
 }
@@ -396,9 +427,13 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
     const staged = parseUnifiedDiff(stagedRaw)
     const files = parseUnifiedDiff(unstagedRaw)
 
-    for (const rel of repo.untracked) {
-      files.push(await untrackedEntry(folderPath, rel))
-    }
+    // Build untracked entries with bounded concurrency instead of serially, so a
+    // large untracked set doesn't stall the diff (or open an unbounded number of
+    // file handles at once).
+    const untracked = await mapLimit(repo.untracked, UNTRACKED_READ_CONCURRENCY, (rel) =>
+      untrackedEntry(folderPath, rel)
+    )
+    files.push(...untracked)
 
     const totals = [...staged, ...files].reduce(
       (acc, f) => ({

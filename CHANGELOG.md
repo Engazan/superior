@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-09
+
+### Added
+
+- **Paste clipboard images into the terminal.** xterm's built-in paste is
+  text-only, so a copied image never reached the agent. Paste is now intercepted
+  in the capture phase, the bytes are saved to a temp file in the main process,
+  and its path is inserted — so Claude/Codex can read the image just like a
+  drag-and-dropped file.
+- **Launch presets on remote SSH workspaces.** Terminal presets now run through
+  the system `ssh` client in the remote directory, with the host/path and
+  command inputs validated before launch.
+
+### Fixed
+
+- **Crash-safe settings and state.** Every JSON store (workspaces, tasks,
+  presets, integrations, layouts, terminal sessions) now writes atomically via a
+  temp file and rename, so an interrupted write can no longer truncate a file and
+  silently reset your data to defaults. An unparseable file is preserved as
+  `.corrupt` instead of being overwritten.
+- **Lighter git status polling.** The working-tree summary no longer reads the
+  contents of every untracked file on each poll — it still counts all files but
+  reads only a bounded, parallelized sample — so a repository without a
+  `.gitignore` (e.g. an untracked `node_modules`) no longer freezes the app.
+- **Language switch keeps your terminals.** Changing the UI language no longer
+  re-runs session restore, which previously dropped terminals that had exited
+  during the session and reset the active cell.
+
+### Security
+
+- **Renderer navigation hardening.** The main window blocks top-frame navigation
+  away from its own bundle, and external links open in the system browser only
+  for `http(s)` URLs — untrusted repository content can no longer redirect the
+  renderer or trigger arbitrary OS protocol handlers.
+
 ## [0.17.0] - 2026-07-08
 
 ### Added

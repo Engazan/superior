@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type LaunchConfig } from '../components/AgentLauncher'
 import { useConfirm } from '../components/ui'
 import { type GridLayout } from '../gridLayout'
@@ -62,6 +62,12 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     (n: number): WorkspaceTab => ({ id: crypto.randomUUID(), name: t('tab.defaultName', { n }) }),
     [t]
   )
+  // The mount-time restore effect must run exactly once. `newTab` depends on `t`,
+  // which is a fresh closure on every language change, so reach it through a ref
+  // instead of listing it as a dependency — otherwise switching the UI language
+  // re-runs restore and drops terminals that exited during this run.
+  const newTabRef = useRef(newTab)
+  newTabRef.current = newTab
 
   // Only the active profile's folders are shown in the sidebar; workspaces are
   // grouped under folders, so filtering folders transitively scopes everything.
@@ -141,7 +147,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       const ensure = (workspaceId: string): WorkspaceTabs => {
         let wt = nextTabs[workspaceId]
         if (!wt || !wt.tabs.length) {
-          const tab = newTab(1)
+          const tab = newTabRef.current(1)
           wt = { tabs: [tab], activeTabId: tab.id }
           nextTabs[workspaceId] = wt
           window.api.setTabs(workspaceId, wt)
@@ -162,7 +168,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       // Only now do surviving daemon sessions count — gates workspace auto-launch.
       setSessionsRestored(true)
     })().catch((err) => console.error('[restore] failed:', err))
-  }, [newTab])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only; see newTabRef
+  }, [])
 
   // A folder opened out-of-band (e.g. `superior .` while the app is running) is
   // pushed from main; adopt the new state and select the folder it activated.

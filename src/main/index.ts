@@ -63,6 +63,15 @@ function focusMainWindow(): void {
   mainWindow.focus()
 }
 
+/** True only for http/https URLs — the sole schemes we hand to the OS browser. */
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    return /^https?:$/.test(new URL(url).protocol)
+  } catch {
+    return false
+  }
+}
+
 function createWindow(): BrowserWindow {
   // Transparent (vibrancy) theme: the window must be created without an opaque
   // background for the macOS blur-behind to show through the renderer's
@@ -99,10 +108,18 @@ function createWindow(): BrowserWindow {
   })
   attachWindowMaximizeEvents(win)
 
-  // Open target=_blank / external links in the system browser, not a new window.
+  // Open target=_blank / external links in the system browser, not a new window —
+  // but only http(s), so untrusted repo content can't fire arbitrary OS protocol
+  // handlers (file:, smb:, custom schemes) through openExternal.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (isSafeExternalUrl(url)) shell.openExternal(url)
     return { action: 'deny' }
+  })
+  // The renderer only ever loads its own bundle. Block any attempt to navigate the
+  // top frame elsewhere (e.g. a link in untrusted markdown): a remote origin here
+  // would inherit the full `window.api` IPC surface exposed over the context bridge.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (url !== win.webContents.getURL()) event.preventDefault()
   })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
