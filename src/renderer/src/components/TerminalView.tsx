@@ -322,14 +322,10 @@ export const TerminalView = memo(function TerminalView({
       if (exitedRef.current) return
       const items = e.clipboardData?.items
       if (!items) return
-      let imageFile: File | null = null
-      for (let i = 0; i < items.length; i++) {
-        const it = items[i]
-        if (it.kind === 'file' && it.type.startsWith('image/')) {
-          imageFile = it.getAsFile()
-          break
-        }
-      }
+      const item = Array.from(items).find(
+        (it) => it.kind === 'file' && it.type.startsWith('image/')
+      )
+      const imageFile = item?.getAsFile()
       if (!imageFile) return // plain-text paste — let xterm handle it
       e.preventDefault()
       e.stopPropagation()

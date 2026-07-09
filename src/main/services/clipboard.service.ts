@@ -46,18 +46,9 @@ async function pruneOldImages(): Promise<void> {
     return
   }
   if (entries.length <= MAX_KEPT) return
-  const stated = await Promise.all(
-    entries.map(async (name) => {
-      const p = join(IMAGE_DIR, name)
-      try {
-        const st = await fs.stat(p)
-        return { p, mtime: st.mtimeMs }
-      } catch {
-        return null
-      }
-    })
-  )
-  const files = stated.filter((f): f is { p: string; mtime: number } => f !== null)
-  files.sort((a, b) => b.mtime - a.mtime)
-  await Promise.all(files.slice(MAX_KEPT).map((f) => fs.rm(f.p, { force: true })))
+  // Names embed a monotonic `Date.now()`, so a lexical sort is chronological —
+  // no per-file stat needed. Drop everything but the newest MAX_KEPT.
+  entries.sort()
+  const stale = entries.slice(0, entries.length - MAX_KEPT)
+  await Promise.all(stale.map((name) => fs.rm(join(IMAGE_DIR, name), { force: true })))
 }
