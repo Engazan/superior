@@ -31,11 +31,11 @@ export async function saveClipboardImage(
   return { path: filePath }
 }
 
+// A process-monotonic suffix so two pastes within the same millisecond never
+// collide; combined with Date.now() the name is unique across restarts too.
 let seq = 0
-// A monotonic suffix so two pastes within the same millisecond never collide.
 function counter(): string {
-  seq = (seq + 1) % 1_000_000
-  return seq.toString(36)
+  return (seq++).toString(36)
 }
 
 async function pruneOldImages(): Promise<void> {

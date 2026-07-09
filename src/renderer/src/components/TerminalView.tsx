@@ -337,7 +337,10 @@ export const TerminalView = memo(function TerminalView({
           window.api.sendInput(session.id, formatPathForPrompt(path))
           toastRef.current.success(tRef.current('terminal.imagePasted'))
         })
-        .catch(() => toastRef.current.error(tRef.current('terminal.imagePasteFailed')))
+        .catch((err) => {
+          console.error('[paste] image save failed:', err)
+          toastRef.current.error(tRef.current('terminal.imagePasteFailed'))
+        })
     }
     host.addEventListener('paste', onPaste, true)
 
