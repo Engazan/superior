@@ -347,6 +347,8 @@ export const pl: Record<MessageKey, string> = {
   'terminal.focusHint': 'Fokus',
   'terminal.nicknamePlaceholder': 'Pseudonim',
   'terminal.restartHint': 'naciśnij Enter, aby uruchomić ponownie',
+  'terminal.imagePasted': 'Obraz dołączony do terminala',
+  'terminal.imagePasteFailed': 'Nie udało się wkleić obrazu',
   'usage.context': 'Kontekst',
   'usage.total': 'Razem',
   'usage.tokens': 'tokenów',

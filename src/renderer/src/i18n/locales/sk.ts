@@ -348,6 +348,8 @@ export const sk: Record<MessageKey, string> = {
   'terminal.focusHint': 'Zamerať',
   'terminal.nicknamePlaceholder': 'Prezývka',
   'terminal.restartHint': 'stlač Enter pre opätovné spustenie',
+  'terminal.imagePasted': 'Obrázok vložený do terminálu',
+  'terminal.imagePasteFailed': 'Obrázok sa nepodarilo vložiť',
   'usage.context': 'Kontext',
   'usage.total': 'Spolu',
   'usage.tokens': 'tokenov',

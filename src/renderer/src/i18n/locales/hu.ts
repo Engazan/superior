@@ -347,6 +347,8 @@ export const hu: Record<MessageKey, string> = {
   'terminal.focusHint': 'Fókusz',
   'terminal.nicknamePlaceholder': 'Becenév',
   'terminal.restartHint': 'nyomd meg az Entert az újraindításhoz',
+  'terminal.imagePasted': 'Kép csatolva a terminálhoz',
+  'terminal.imagePasteFailed': 'A képet nem sikerült beilleszteni',
   'usage.context': 'Kontextus',
   'usage.total': 'Összesen',
   'usage.tokens': 'token',

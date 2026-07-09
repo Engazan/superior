@@ -5,6 +5,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
 import { registerFileLinkProvider } from '../terminalLinks'
+import { formatPathForPrompt } from '../terminalInput'
 import { useAttentionSessions, useBusySessions } from '../activityStore'
 import { useAttentionColor } from '../attentionColor'
 import { useTheme } from '../theme'
@@ -215,6 +216,10 @@ export const TerminalView = memo(function TerminalView({
   const toast = useToast()
   const toastRef = useRef(toast)
   toastRef.current = toast
+  // Read the translator at paste time so a language switch mid-session is
+  // reflected in the toast, without re-running the once-per-session effect.
+  const tRef = useRef(t)
+  tRef.current = t
   const workingDirRef = useRef<string | null>(workingDir ?? null)
   workingDirRef.current = workingDir ?? null
 
@@ -307,6 +312,39 @@ export const TerminalView = memo(function TerminalView({
       window.api.sendInput(session.id, data)
     })
 
+    // Image paste: xterm's built-in paste is text-only, so a clipboard image
+    // (screenshot, copied picture) would otherwise be dropped and never reach
+    // the agent — unlike a native terminal, where the agent reads the OS
+    // clipboard itself. We intercept in the capture phase (before xterm's own
+    // textarea handler), persist the bytes to a temp file, and insert its path
+    // so Claude/Codex can read it, exactly like a drag-and-dropped file.
+    const onPaste = (e: ClipboardEvent): void => {
+      if (exitedRef.current) return
+      const items = e.clipboardData?.items
+      if (!items) return
+      let imageFile: File | null = null
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i]
+        if (it.kind === 'file' && it.type.startsWith('image/')) {
+          imageFile = it.getAsFile()
+          break
+        }
+      }
+      if (!imageFile) return // plain-text paste — let xterm handle it
+      e.preventDefault()
+      e.stopPropagation()
+      const ext = imageFile.type.split('/')[1]?.split('+')[0] || 'png'
+      imageFile
+        .arrayBuffer()
+        .then((buf) => window.api.saveClipboardImage(new Uint8Array(buf), ext))
+        .then(({ path }) => {
+          window.api.sendInput(session.id, formatPathForPrompt(path))
+          toastRef.current.success(tRef.current('terminal.imagePasted'))
+        })
+        .catch(() => toastRef.current.error(tRef.current('terminal.imagePasteFailed')))
+    }
+    host.addEventListener('paste', onPaste, true)
+
     let attached = false
     let unsubscribe = (): void => {}
     if (session.status === 'running') {
@@ -377,6 +415,7 @@ export const TerminalView = memo(function TerminalView({
       ro.disconnect()
       if (raf !== null) cancelAnimationFrame(raf)
       host.removeEventListener('focusin', onFocusIn)
+      host.removeEventListener('paste', onPaste, true)
       unsubscribe()
       unregisterSearch(session.id)
       fileLinks.dispose()

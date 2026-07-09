@@ -916,6 +916,7 @@ export const IPC = {
   PRESETS_REORDER: 'presets:reorder',
   PRESETS_SET_ACTIVE: 'presets:set-active',
   PRESETS_PICK_IMAGE: 'presets:pick-image',
+  CLIPBOARD_SAVE_IMAGE: 'clipboard:save-image',
   LAYOUT_PRESETS_LIST: 'layout-presets:list',
   LAYOUT_PRESETS_SAVE: 'layout-presets:save',
   LAYOUT_PRESETS_DELETE: 'layout-presets:delete',

@@ -21,6 +21,7 @@ import { registerLayoutIpc } from './ipc/layout.ipc'
 import { registerGitIpc } from './ipc/git.ipc'
 import { registerFsIpc } from './ipc/fs.ipc'
 import { registerUpdateIpc } from './ipc/update.ipc'
+import { registerClipboardIpc } from './ipc/clipboard.ipc'
 import { daemonClient } from './services/daemonClient'
 
 const isMac = process.platform === 'darwin'
@@ -159,6 +160,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerGitIpc()
   registerFsIpc()
   registerUpdateIpc()
+  registerClipboardIpc()
   registerCliLauncherIpc()
 
   // Connect to (or launch) the terminal daemon so surviving sessions can be restored.

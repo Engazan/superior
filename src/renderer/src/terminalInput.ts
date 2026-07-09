@@ -10,3 +10,12 @@ export function wrapForPty(text: string): string {
 export function insertIntoTerminal(sessionId: string, text: string, submit: boolean): void {
   window.api.sendInput(sessionId, wrapForPty(text) + (submit ? '\r' : ''))
 }
+
+/**
+ * Format an absolute path for insertion into an agent prompt: quoted when it
+ * contains whitespace so the agent reads it as one path, with a trailing space
+ * separating it from whatever the user types next. Used for pasted images.
+ */
+export function formatPathForPrompt(path: string): string {
+  return (/\s/.test(path) ? `"${path}"` : path) + ' '
+}

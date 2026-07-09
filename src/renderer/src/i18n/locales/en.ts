@@ -344,6 +344,8 @@ export const en = {
   'terminal.focusHint': 'Focus',
   'terminal.nicknamePlaceholder': 'Nickname',
   'terminal.restartHint': 'press Enter to restart',
+  'terminal.imagePasted': 'Image attached to the terminal',
+  'terminal.imagePasteFailed': 'Could not paste the image',
   'usage.context': 'Context',
   'usage.total': 'Total',
   'usage.tokens': 'tokens',

@@ -551,6 +551,11 @@ const api = {
     ipcRenderer.send(IPC.AGENT_INPUT, { id, data })
   },
 
+  /** Persist a pasted clipboard image to a temp file; returns its absolute path. */
+  saveClipboardImage(bytes: Uint8Array, ext: string): Promise<{ path: string }> {
+    return ipcRenderer.invoke(IPC.CLIPBOARD_SAVE_IMAGE, { bytes, ext })
+  },
+
   resize(id: string, cols: number, rows: number): void {
     ipcRenderer.send(IPC.AGENT_RESIZE, { id, cols, rows })
   },

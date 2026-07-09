@@ -347,6 +347,8 @@ export const cs: Record<MessageKey, string> = {
   'terminal.focusHint': 'Zaměřit',
   'terminal.nicknamePlaceholder': 'Přezdívka',
   'terminal.restartHint': 'stiskněte Enter pro opětovné spuštění',
+  'terminal.imagePasted': 'Obrázek vložen do terminálu',
+  'terminal.imagePasteFailed': 'Obrázek se nepodařilo vložit',
   'usage.context': 'Kontext',
   'usage.total': 'Celkem',
   'usage.tokens': 'tokenů',
