@@ -3,6 +3,7 @@ import * as os from 'os'
 import {
   type AgentLaunchTarget,
   type AgentSession,
+  type AgentStatus,
   type StartAgentArgs,
   type StartAgentResult
 } from '@shared/types'
@@ -164,6 +165,15 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
   const usageEnabled = getSettings().usageTracking
   if (usageEnabled && !remote) ensureClaudeStatusline(command)
 
+  // A bad command can die before the spawn reply is processed — the daemon may
+  // deliver `spawned` and `exit` in one socket chunk, so the exit fans out
+  // before this async continuation runs and nothing matches it yet. Capture it
+  // and return the session in its real final state instead of a phantom
+  // 'running' that no later exit event will ever correct.
+  const earlyExit: { exitCode: number | null } = { exitCode: null }
+  const offEarlyExit = daemonClient.onExit((e) => {
+    if (e.id === id) earlyExit.exitCode = e.exitCode
+  })
   try {
     const { pid } = await daemonClient.spawn({
       id,
@@ -187,8 +197,13 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       }
     })
 
-    // Surface live token/cost usage when this command runs a Claude CLI (no-op otherwise).
-    if (usageEnabled && local) startUsageTracking({ id, cwd: local.cwd, command, createdAt })
+    const exited = earlyExit.exitCode
+
+    // Surface live token/cost usage when this command runs a Claude CLI (no-op
+    // otherwise). Skipped for an already-dead session: its stop already fired.
+    if (usageEnabled && local && exited === null) {
+      startUsageTracking({ id, cwd: local.cwd, command, createdAt })
+    }
 
     const session: AgentSession = {
       id,
@@ -201,8 +216,9 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       color: args.color,
       workspaceId,
       tabId,
-      status: 'running',
-      pid,
+      status: exited === null ? 'running' : exitStatus(exited),
+      pid: exited === null ? pid : undefined,
+      exitCode: exited ?? undefined,
       cols,
       rows,
       createdAt
@@ -212,6 +228,8 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
   } catch (err) {
     const what = command.trim().split(/\s+/)[0] || label || 'terminal'
     return { error: `Failed to start ${what}: ${(err as Error).message}` }
+  } finally {
+    offEarlyExit()
   }
 }
 
@@ -253,9 +271,14 @@ export function resizeAgent(id: string, cols: number, rows: number): void {
   daemonClient.resize(id, cols, rows)
 }
 
+/** UI status for an exit code: user-interrupt/TERM codes read as a clean exit. */
+function exitStatus(exitCode: number): AgentStatus {
+  return exitCode === 0 || exitCode === 130 || exitCode === 143 ? 'exited' : 'error'
+}
+
 daemonClient.onExit(({ id, exitCode }) => {
   patchPersistedSession(id, {
-    status: exitCode === 0 || exitCode === 130 || exitCode === 143 ? 'exited' : 'error',
+    status: exitStatus(exitCode),
     exitCode,
     pid: undefined
   })

@@ -102,8 +102,15 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
   depsRef.current = deps
   // Tasks currently mid-start (worktree creation + spawn are async).
   const startingRef = useRef(new Set<string>())
+  // Tasks whose 'running' save is still in flight, keyed by session id: a bad
+  // command can exit within the saveTask round-trip, and that exit must still
+  // find its task or it stays 'running' forever, blocking its folder's queue.
+  const inFlightRef = useRef(new Map<string, AgentTask>())
 
   const adopt = useCallback((state: { tasks: AgentTask[]; paused: boolean }) => {
+    // Sync the ref before the state lands: exit events fire between renders
+    // and must see the freshly saved tasks, not the previous render's.
+    tasksRef.current = state.tasks
     setTasks(state.tasks)
     setPausedState(state.paused)
   }, [])
@@ -149,24 +156,34 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
       .finally(() => setReady(true))
   }, [loaded, deps.sessionsRestored, persistTask])
 
+  // Close a task out with its exit code — shared by the exit listener and the
+  // already-exited path in startTask.
+  const finishTask = useCallback(
+    (task: AgentTask, exitCode: number | null) => {
+      const failed = exitCode !== null && exitCode !== 0
+      if (failed) toast.error(t('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
+      return persistTask({
+        ...task,
+        status: failed ? 'failed' : 'done',
+        exitCode,
+        finishedAt: Date.now()
+      })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [persistTask, toast]
+  )
+
   // Terminal exits drive queue progress: finish the matching running task.
   // Failures surface as a toast too — the Tasks panel may not be open.
   useEffect(() => {
     return window.api.onAgentExit(({ id, exitCode }) => {
-      const task = tasksRef.current.find((tk) => tk.sessionId === id && tk.status === 'running')
+      const task =
+        tasksRef.current.find((tk) => tk.sessionId === id && tk.status === 'running') ??
+        inFlightRef.current.get(id)
       if (!task) return
-      if (exitCode !== 0) {
-        toast.error(t('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
-      }
-      void persistTask({
-        ...task,
-        status: exitCode === 0 ? 'done' : 'failed',
-        exitCode,
-        finishedAt: Date.now()
-      })
+      void finishTask(task, exitCode)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [persistTask, toast])
+  }, [finishTask])
 
   const failTask = useCallback(
     (task: AgentTask, error: string) => {
@@ -254,9 +271,22 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         await failTask(running, res.error)
         return
       }
-      await persistTask({ ...running, sessionId: res.session.id })
+      const started: AgentTask = { ...running, sessionId: res.session.id }
+      if (res.session.status !== 'running') {
+        // Died before the spawn reply landed: the exit event fired before this
+        // task knew its session id, so no listener will ever finish it. Main
+        // reports the final state on the session — close the task from that.
+        await finishTask(started, res.session.exitCode ?? null)
+        return
+      }
+      inFlightRef.current.set(res.session.id, started)
+      try {
+        await persistTask(started)
+      } finally {
+        inFlightRef.current.delete(res.session.id)
+      }
     },
-    [failTask, persistTask]
+    [failTask, finishTask, persistTask]
   )
 
   // The pump: whenever the queue can make progress, start the oldest queued

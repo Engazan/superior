@@ -52,6 +52,15 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
+/** Fan an exit out to the renderer and main-side listeners. */
+function deliverExit(id: string, exitCode: number): void {
+  stopUsageTracking(id)
+  const message =
+    exitCode === 127 ? 'command not found. Is it installed and on your PATH?' : undefined
+  broadcast(IPC.AGENT_EXIT, { id, exitCode, message })
+  for (const listener of exitListeners) listener({ id, exitCode })
+}
+
 function onServerMessage(msg: ServerMessage): void {
   switch (msg.t) {
     case 'data': {
@@ -63,16 +72,9 @@ function onServerMessage(msg: ServerMessage): void {
       })
       break
     }
-    case 'exit': {
-      stopUsageTracking(msg.id)
-      const message =
-        msg.exitCode === 127
-          ? 'command not found. Is it installed and on your PATH?'
-          : undefined
-      broadcast(IPC.AGENT_EXIT, { id: msg.id, exitCode: msg.exitCode, message })
-      for (const listener of exitListeners) listener({ id: msg.id, exitCode: msg.exitCode })
+    case 'exit':
+      deliverExit(msg.id, msg.exitCode)
       break
-    }
     case 'sessions':
       pendingLists.shift()?.(msg.list)
       break
@@ -88,6 +90,12 @@ function onServerMessage(msg: ServerMessage): void {
       if (msg.id && pendingSpawns.has(msg.id)) {
         pendingSpawns.get(msg.id)?.reject(new Error(msg.message || 'spawn failed'))
         pendingSpawns.delete(msg.id)
+      } else if (msg.id && pendingReplay.delete(msg.id)) {
+        // A failed attach (the only id-tagged error besides spawn): the session
+        // is gone — it exited while unattached, under a daemon predating
+        // exit-to-all-clients. Synthesize an exit (code unknowable) so the
+        // terminal and the task queue don't wait forever.
+        deliverExit(msg.id, 0)
       }
       break
   }

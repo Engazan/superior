@@ -78,10 +78,6 @@ function send(conn: Conn, msg: ServerMessage): void {
   }
 }
 
-function broadcast(session: Session, msg: ServerMessage): void {
-  for (const conn of session.attached) send(conn, msg)
-}
-
 /**
  * Write a data frame with backpressure: when the socket can't drain as fast as
  * the pty produces, pause the pty until the socket's 'drain' — otherwise a
@@ -211,7 +207,10 @@ function spawnSession(
   })
   proc.onExit(({ exitCode, signal }) => {
     flush(session) // the last output must land before the exit notice
-    broadcast(session, { t: 'exit', id, exitCode, signal })
+    // Every client hears the exit, not just attached conns: a fast-failing
+    // command can die before the client's attach frame arrives, and an exit
+    // nobody hears leaves the app showing a running session forever.
+    for (const conn of clients) send(conn, { t: 'exit', id, exitCode, signal })
     sessions.delete(id)
     scheduleShutdownCheck()
   })
