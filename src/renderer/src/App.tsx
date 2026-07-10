@@ -300,6 +300,13 @@ export default function App(): JSX.Element {
   // Stable reference — Sidebar is memoized, an inline arrow would defeat it.
   const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
 
+  // The palette memo rebuilds only on its listed deps, but the run callbacks
+  // fire much later — route their ws calls through the latest instance so a
+  // run never acts on a stale closure (ws.selectWorkspace/launchAgent close
+  // over sessions/tabs that aren't memo deps).
+  const wsRef = useRef(ws)
+  wsRef.current = ws
+
   // ⌘K command registry — every currently actionable thing, rebuilt from live
   // state. Terminal/git-scoped entries appear only when their target exists.
   const paletteCommands = useMemo<Command[]>(() => {
@@ -315,7 +322,7 @@ export default function App(): JSX.Element {
         title: `${folderName(w.folderPath)} / ${w.name}`,
         keywords: w.branch ?? '',
         section: t('palette.sectionWorkspaces'),
-        run: () => ws.selectWorkspace(w.id)
+        run: () => wsRef.current.selectWorkspace(w.id)
       })
     }
     for (const p of ws.profiles) {
@@ -324,7 +331,7 @@ export default function App(): JSX.Element {
         id: `profile:${p.id}`,
         title: `${t('profile.switch')}: ${p.name}`,
         section: t('palette.sectionProfiles'),
-        run: () => ws.selectProfile(p.id)
+        run: () => wsRef.current.selectProfile(p.id)
       })
     }
     if (ws.activeLaunchTarget) {
@@ -334,7 +341,7 @@ export default function App(): JSX.Element {
           title: `${t('terminal.addTerminal')}: ${p.name}`,
           keywords: p.command,
           section: t('palette.sectionTerminals'),
-          run: () => void ws.launchAgent(p)
+          run: () => void wsRef.current.launchAgent(p)
         })
       }
       for (const layout of layoutPresets.layouts) {
@@ -343,7 +350,7 @@ export default function App(): JSX.Element {
           title: `${t('launcher.start')}: ${layout.name}`,
           section: t('palette.sectionTerminals'),
           run: () =>
-            void ws.startLayout({
+            void wsRef.current.startLayout({
               presetIds: layout.presetIds.filter(Boolean),
               nicknames: layout.nicknames
             })

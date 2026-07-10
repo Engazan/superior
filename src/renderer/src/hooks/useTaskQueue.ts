@@ -87,6 +87,10 @@ function promptExcerpt(prompt: string): string {
 export function useTaskQueue(deps: Deps): TaskQueueApi {
   const toast = useToast()
   const { t } = useI18n()
+  // Toasts fire from long-lived callbacks whose deps deliberately exclude `t`;
+  // read it through a ref so a language switch is reflected at fire time.
+  const tRef = useRef(t)
+  tRef.current = t
   const [tasks, setTasks] = useState<AgentTask[]>([])
   const [paused, setPausedState] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -161,7 +165,7 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
   const finishTask = useCallback(
     (task: AgentTask, exitCode: number | null) => {
       const failed = exitCode !== null && exitCode !== 0
-      if (failed) toast.error(t('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
+      if (failed) toast.error(tRef.current('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
       return persistTask({
         ...task,
         status: failed ? 'failed' : 'done',
@@ -169,7 +173,6 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         finishedAt: Date.now()
       })
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [persistTask, toast]
   )
 
@@ -187,10 +190,9 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
 
   const failTask = useCallback(
     (task: AgentTask, error: string) => {
-      toast.error(t('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
+      toast.error(tRef.current('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
       return persistTask({ ...task, status: 'failed', error, finishedAt: Date.now() })
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [persistTask, toast]
   )
 

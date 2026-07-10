@@ -231,6 +231,11 @@ export const TerminalView = memo(function TerminalView({
   // instead of being fed to a dead pty. Seeded from the mount-time status so a
   // session restored already-dead (app relaunch) still restarts on Enter.
   const exitedRef = useRef(session.status !== 'running')
+  // Restart in flight — blocks duplicate Enter-restarts. exitedRef itself stays
+  // true across the attempt: success swaps in a new session id (this view
+  // remounts), so still being mounted means the restart failed and the cell
+  // must stay restartable instead of streaming keys to a dead id.
+  const restartingRef = useRef(false)
 
   // Localized "press Enter to restart" hint, read at exit time so a language
   // switch before the process dies is reflected.
@@ -303,9 +308,11 @@ export const TerminalView = memo(function TerminalView({
       // After exit the pty is gone; Enter re-runs the original command instead of
       // sending dead input. Any other key is swallowed so the corpse stays quiet.
       if (exitedRef.current) {
-        if (data.includes('\r')) {
-          exitedRef.current = false
-          onRestartRef.current(session.id)
+        if (data.includes('\r') && !restartingRef.current) {
+          restartingRef.current = true
+          void Promise.resolve(onRestartRef.current(session.id)).finally(() => {
+            restartingRef.current = false
+          })
         }
         return
       }
@@ -369,7 +376,10 @@ export const TerminalView = memo(function TerminalView({
         onExit: (e) => {
           const dim = '\x1b[2m'
           const reset = '\x1b[0m'
-          const note = e.message ? `${e.message}` : `process exited with code ${e.exitCode}`
+          // Localized like the exited chip; read through the ref so a language
+          // switched after mount is reflected at exit time.
+          const note =
+            e.message ?? tRef.current('terminal.exitedChip', { code: String(e.exitCode) })
           exitedRef.current = true
           term.write(`\r\n${dim}[${note}]${reset}\r\n${dim}[${restartHintRef.current}]${reset}\r\n`)
           onExit(session.id, e.exitCode)

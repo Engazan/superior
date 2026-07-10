@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
 import { Button, EmptyState, SectionHeader, useConfirm, useToast } from './ui'
@@ -8,28 +8,29 @@ interface Props {
   workspaces: Workspace[]
   folders: Folder[]
   onKill: (id: string) => void
+  /** Live daemon sessions — polled by SettingsView (which needs them for its
+      nav badge anyway), so an open section doesn't add a second poller. */
+  sessions: AgentSession[]
+  loading: boolean
+  onRefresh: () => void
 }
 
 /** Lists the live PTY sessions owned by the background daemon, with kill controls. */
-export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Element {
+export function DaemonsSection({
+  workspaces,
+  folders,
+  onKill,
+  sessions,
+  loading,
+  onRefresh
+}: Props): JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const toast = useToast()
-  const [list, setList] = useState<AgentSession[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const refresh = useCallback(async () => {
-    const sessions = await window.api.restoreSessions()
-    setList(sessions.filter((s) => s.status === 'running'))
-    setLoading(false)
-  }, [])
-
-  // Poll so the list stays current as sessions start/exit elsewhere.
-  useEffect(() => {
-    refresh()
-    const id = window.setInterval(refresh, 2500)
-    return () => window.clearInterval(id)
-  }, [refresh])
+  // Optimistic removals: a kill disappears immediately, before the parent's
+  // next poll confirms it.
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set())
+  const list = sessions.filter((s) => !hiddenIds.has(s.id))
 
   const workspaceLabel = (workspaceId: string): string => {
     const ws = workspaces.find((w) => w.id === workspaceId)
@@ -48,7 +49,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
     })
     if (!ok) return
     onKill(s.id)
-    setList((prev) => prev.filter((x) => x.id !== s.id))
+    setHiddenIds((prev) => new Set(prev).add(s.id))
     toast.success(t('toast.daemonKilled', { label: s.label }))
   }
   const killAll = async (): Promise<void> => {
@@ -61,7 +62,11 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
     })
     if (!ok) return
     list.forEach((s) => onKill(s.id))
-    setList([])
+    setHiddenIds((prev) => {
+      const next = new Set(prev)
+      list.forEach((s) => next.add(s.id))
+      return next
+    })
     toast.success(t('toast.daemonsKilled', { n }))
   }
 
@@ -72,7 +77,7 @@ export function DaemonsSection({ workspaces, folders, onKill }: Props): JSX.Elem
         description={t('daemons.desc')}
         actions={
           <>
-            <Button variant="secondary" size="sm" onClick={refresh}>
+            <Button variant="secondary" size="sm" onClick={onRefresh}>
               {t('daemons.refresh')}
             </Button>
             {list.length > 0 && (

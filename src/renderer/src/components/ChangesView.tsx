@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { DiffFileView } from './DiffFileView'
 import { BranchIcon, Button, IconButton, useToast } from './ui'
@@ -74,6 +74,12 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
   // Expansion state owned here and keyed by path, so a row keeps its state
   // when staging moves it between the staged/unstaged lists (whose keys differ).
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({})
+
+  // Keyed by relative path, so switching projects must reset it — otherwise
+  // collapsing src/index.ts in project A pre-collapses project B's same-named file.
+  useEffect(() => {
+    setOpenMap({})
+  }, [folderPath])
 
   if (!diff && loading) {
     return <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.loading')}</div>

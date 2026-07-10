@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 
 /**
  * Module-level stack of currently open overlays (modals, menus, popovers).
@@ -37,9 +37,11 @@ export function overlayCount(): number {
  */
 export function useOverlayLayer(): { isTop: () => boolean } {
   const idRef = useRef<symbol | null>(null)
-  if (idRef.current === null) idRef.current = pushOverlay()
-  useEffect(() => {
-    // Re-register on a real remount (StrictMode unmounts pop the first id).
+  // Push in an effect, never during render: a render React discards without
+  // committing would leak a phantom stack entry, and overlayCount() > 0
+  // permanently suppresses all global shortcuts. Layout timing keeps the
+  // registration ahead of the first paint (and thus any user event).
+  useLayoutEffect(() => {
     if (idRef.current === null) idRef.current = pushOverlay()
     return () => {
       if (idRef.current !== null) popOverlay(idRef.current)

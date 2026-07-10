@@ -15,6 +15,19 @@ const listeners = new Set<() => void>()
 let started = false
 let primed = false
 
+// Final usage stays visible on exited cells, so exits must not clear entries —
+// bound the map instead (insertion order ≈ session age) so a long app run
+// can't accumulate one entry per session ever launched.
+const MAX_ENTRIES = 200
+
+function remember(next: AgentUsage): void {
+  if (!usage.has(next.id) && usage.size >= MAX_ENTRIES) {
+    const oldest = usage.keys().next().value
+    if (oldest !== undefined) usage.delete(oldest)
+  }
+  usage.set(next.id, next)
+}
+
 function emit(): void {
   for (const listener of listeners) listener()
 }
@@ -24,7 +37,7 @@ function start(): void {
   started = true
 
   window.api.onAgentUsage((next) => {
-    usage.set(next.id, next)
+    remember(next)
     emit()
   })
 
@@ -37,7 +50,7 @@ function start(): void {
         let touched = false
         for (const snap of snapshots) {
           if (!usage.has(snap.id)) {
-            usage.set(snap.id, snap)
+            remember(snap)
             touched = true
           }
         }
@@ -75,7 +88,7 @@ export function primeUsageStore(): void {
     .then((snapshots) => {
       let touched = false
       for (const snap of snapshots) {
-        usage.set(snap.id, snap)
+        remember(snap)
         touched = true
       }
       if (touched) emit()

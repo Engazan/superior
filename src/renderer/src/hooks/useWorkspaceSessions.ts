@@ -683,19 +683,16 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         })
         if (!ok) return
       }
+      // Compute the sibling fallback first — updaters must stay pure (React may
+      // replay them), so no dispatching from inside setSessions.
+      const closed = sessions.find((s) => s.id === id)
+      const siblings = sessions.filter(
+        (s) => s.id !== id && s.workspaceId === closed?.workspaceId && s.tabId === closed?.tabId
+      )
+      const fallback = siblings.length ? siblings[siblings.length - 1].id : null
       window.api.killAgent(id)
-      setSessions((prev) => {
-        const closed = prev.find((s) => s.id === id)
-        const next = prev.filter((s) => s.id !== id)
-        setActiveSessionId((curr) => {
-          if (curr !== id) return curr
-          const siblings = next.filter(
-            (s) => s.workspaceId === closed?.workspaceId && s.tabId === closed?.tabId
-          )
-          return siblings.length ? siblings[siblings.length - 1].id : null
-        })
-        return next
-      })
+      setSessions((prev) => prev.filter((s) => s.id !== id))
+      setActiveSessionId((curr) => (curr === id ? fallback : curr))
     },
     [sessions, confirm, t]
   )

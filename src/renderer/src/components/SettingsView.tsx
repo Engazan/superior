@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { PresetsSection } from './PresetsSection'
 import { PromptsSection } from './PromptsSection'
 import { DaemonsSection } from './DaemonsSection'
@@ -21,6 +21,7 @@ import {
   Toggle
 } from './ui'
 import type {
+  AgentSession,
   FileOpener,
   Folder,
   PresetsState,
@@ -361,22 +362,22 @@ export function SettingsView({
     setSectionState(next)
     onSectionChange?.(next)
   }
-  const [daemonCount, setDaemonCount] = useState(0)
-
-  // Poll the live daemon sessions so the nav badge stays current.
-  useEffect(() => {
-    let active = true
-    const refresh = async (): Promise<void> => {
-      const sessions = await window.api.restoreSessions()
-      if (active) setDaemonCount(sessions.filter((s) => s.status === 'running').length)
-    }
-    refresh()
-    const id = window.setInterval(refresh, 2500)
-    return () => {
-      active = false
-      window.clearInterval(id)
-    }
+  // One poll serves both the nav badge and the Daemons section's list, so an
+  // open section doesn't hit the daemon a second time on the same cadence.
+  const [daemonSessions, setDaemonSessions] = useState<AgentSession[]>([])
+  const [daemonsLoaded, setDaemonsLoaded] = useState(false)
+  const refreshDaemons = useCallback(async (): Promise<void> => {
+    const sessions = await window.api.restoreSessions().catch(() => null)
+    if (!sessions) return
+    setDaemonSessions(sessions.filter((s) => s.status === 'running'))
+    setDaemonsLoaded(true)
   }, [])
+
+  useEffect(() => {
+    void refreshDaemons()
+    const id = window.setInterval(() => void refreshDaemons(), 2500)
+    return () => window.clearInterval(id)
+  }, [refreshDaemons])
 
   const groups: {
     label: string
@@ -392,7 +393,7 @@ export function SettingsView({
         { id: 'integrations', label: t('settings.integrations') },
         { id: 'presets', label: t('settings.terminalPresets') },
         { id: 'prompts', label: t('settings.prompts') },
-        { id: 'daemons', label: t('settings.daemons'), badge: daemonCount },
+        { id: 'daemons', label: t('settings.daemons'), badge: daemonSessions.length },
         { id: 'keyboard', label: t('settings.keyboard') },
         { id: 'shell', label: t('settings.shellCommand') }
       ]
@@ -466,7 +467,14 @@ export function SettingsView({
         )}
         {section === 'prompts' && <PromptsSection />}
         {section === 'daemons' && (
-          <DaemonsSection workspaces={workspaces} folders={folders} onKill={onKillSession} />
+          <DaemonsSection
+            workspaces={workspaces}
+            folders={folders}
+            onKill={onKillSession}
+            sessions={daemonSessions}
+            loading={!daemonsLoaded}
+            onRefresh={() => void refreshDaemons()}
+          />
         )}
         {section === 'keyboard' && <KeyboardSection />}
         {section === 'shell' && <ShellCommandSection />}
