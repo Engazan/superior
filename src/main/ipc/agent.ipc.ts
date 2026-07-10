@@ -15,23 +15,24 @@ import {
 } from '../services/agent.service'
 import { daemonClient } from '../services/daemonClient'
 import { getUsageSnapshots } from '../services/usage.service'
+import { handle } from './handle'
 
 export function registerAgentIpc(): void {
-  ipcMain.handle(IPC.AGENT_START, (_event, payload: StartAgentArgs): Promise<StartAgentResult> =>
+  handle(IPC.AGENT_START, (payload: StartAgentArgs): Promise<StartAgentResult> =>
     startAgent(payload)
   )
 
-  ipcMain.handle(IPC.AGENT_RESTORE, (): Promise<AgentSession[]> => restoreSessions())
+  handle(IPC.AGENT_RESTORE, (): Promise<AgentSession[]> => restoreSessions())
 
-  ipcMain.handle(IPC.AGENT_USAGE_GET, (): AgentUsage[] => getUsageSnapshots())
+  handle(IPC.AGENT_USAGE_GET, (): AgentUsage[] => getUsageSnapshots())
 
-  ipcMain.handle(IPC.AGENT_KILL, (_event, id: string): void => {
+  handle(IPC.AGENT_KILL, (id: string): void => {
     killAgent(id)
   })
 
-  ipcMain.handle(
+  handle(
     IPC.AGENT_UPDATE_META,
-    (_event, payload: { id: string; nickname: string }): void => {
+    (payload: { id: string; nickname: string }): void => {
       updateSessionNickname(payload.id, payload.nickname)
     }
   )

@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import {
   IPC,
   type CloneArgs,
@@ -17,29 +16,30 @@ import {
   saveIntegration,
   testConnection
 } from '../services/integrations.service'
+import { handle } from './handle'
 
 export function registerIntegrationsIpc(): void {
-  ipcMain.handle(IPC.INTEGRATIONS_LIST, (): IntegrationsState => listIntegrations())
+  handle(IPC.INTEGRATIONS_LIST, (): IntegrationsState => listIntegrations())
 
-  ipcMain.handle(IPC.INTEGRATIONS_SAVE, (_e, integration: Integration): IntegrationsState =>
+  handle(IPC.INTEGRATIONS_SAVE, (integration: Integration): IntegrationsState =>
     saveIntegration(integration)
   )
 
-  ipcMain.handle(IPC.INTEGRATIONS_DELETE, (_e, id: string): IntegrationsState =>
+  handle(IPC.INTEGRATIONS_DELETE, (id: string): IntegrationsState =>
     deleteIntegration(id)
   )
 
-  ipcMain.handle(
+  handle(
     IPC.INTEGRATIONS_TEST,
-    (_e, draft: IntegrationDraft): Promise<IntegrationTestResult> => testConnection(draft)
+    (draft: IntegrationDraft): Promise<IntegrationTestResult> => testConnection(draft)
   )
 
-  ipcMain.handle(
+  handle(
     IPC.INTEGRATIONS_LIST_REPOS,
-    (_e, integrationId: string): Promise<RepoListResult> => listRepos(integrationId)
+    (integrationId: string): Promise<RepoListResult> => listRepos(integrationId)
   )
 
-  ipcMain.handle(IPC.INTEGRATIONS_CLONE, (_e, args: CloneArgs): Promise<CloneResult> =>
+  handle(IPC.INTEGRATIONS_CLONE, (args: CloneArgs): Promise<CloneResult> =>
     cloneRepository(args)
   )
 }

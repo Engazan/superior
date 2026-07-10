@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import { IPC, type UpdateInfo } from '@shared/types'
 import {
   checkForUpdates,
@@ -7,15 +6,16 @@ import {
   openReleasePage,
   quitAndInstall
 } from '../services/update.service'
+import { handle } from './handle'
 
 export function registerUpdateIpc(): void {
   initAutoUpdater()
 
-  ipcMain.handle(IPC.UPDATE_CHECK, (): Promise<UpdateInfo> => checkForUpdates())
+  handle(IPC.UPDATE_CHECK, (): Promise<UpdateInfo> => checkForUpdates())
 
-  ipcMain.handle(IPC.UPDATE_OPEN, (_event, url: string): Promise<void> => openReleasePage(url))
+  handle(IPC.UPDATE_OPEN, (url: string): Promise<void> => openReleasePage(url))
 
-  ipcMain.handle(IPC.UPDATE_DOWNLOAD, (): Promise<void> => downloadUpdate())
+  handle(IPC.UPDATE_DOWNLOAD, (): Promise<void> => downloadUpdate())
 
-  ipcMain.handle(IPC.UPDATE_INSTALL, (): void => quitAndInstall())
+  handle(IPC.UPDATE_INSTALL, (): void => quitAndInstall())
 }
