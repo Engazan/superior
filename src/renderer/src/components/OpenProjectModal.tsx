@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { describeIntegrationError, providerLabel } from '../integrations'
+import { useOverlayLayer } from '../overlayStack'
 import { Button, CloseIcon, IconButton, Input } from './ui'
 import type { CloneArgs, Integration, RemoteFolderAddArgs, RemoteRepo } from '../types'
 
@@ -47,13 +48,17 @@ export function OpenProjectModal({
 
   const hasIntegrations = integrations.length > 0
 
+  // Registered on the overlay stack so Escape only closes the frontmost layer
+  // — a confirm dialog above this modal must not cascade-close it too.
+  const layer = useOverlayLayer()
   useEffect(() => {
     const closeOnEscape = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && !cloningId && !remoteBusy && !remoteTesting) onClose()
+      if (e.key !== 'Escape' || !layer.isTop()) return
+      if (!cloningId && !remoteBusy && !remoteTesting) onClose()
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose, cloningId, remoteBusy, remoteTesting])
+  }, [onClose, cloningId, remoteBusy, remoteTesting, layer])
 
   // Load the selected integration's repositories whenever the git tab is active
   // and its integration changes.
