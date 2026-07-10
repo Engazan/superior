@@ -16,7 +16,7 @@ import type {
   WorkspaceState,
   WorktreeAddArgs
 } from '@shared/types'
-import { userDataFile, writeJsonFile } from '../lib/jsonStore'
+import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 import {
   createWorktree,
   existingWorktreePaths,
@@ -177,28 +177,40 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
-/** Read raw state from disk, migrating older formats if needed. */
-function readState(): WorkspaceState {
+/** Map a parsed workspaces.json (current or pre-folder shape) into state; null
+ * for anything unrecognized, so the caller can fall back to legacy migration. */
+function parseStoredState(parsed: unknown): WorkspaceState | null {
+  if (!parsed || typeof parsed !== 'object') return null
+  const obj = parsed as Record<string, unknown>
   try {
-    const raw = fs.readFileSync(storeFile(), 'utf-8')
-    const parsed = JSON.parse(raw) as Record<string, unknown>
-    if (Array.isArray(parsed.folders)) {
+    if (Array.isArray(obj.folders)) {
       return normalize({
-        profiles: Array.isArray(parsed.profiles) ? (parsed.profiles as Profile[]) : [],
-        activeProfileId: (parsed.activeProfileId as string | null) ?? null,
-        folders: parsed.folders as Folder[],
-        workspaces: Array.isArray(parsed.workspaces) ? (parsed.workspaces as Workspace[]) : [],
-        activeWorkspaceId: (parsed.activeWorkspaceId as string | null) ?? null
+        profiles: Array.isArray(obj.profiles) ? (obj.profiles as Profile[]) : [],
+        activeProfileId: (obj.activeProfileId as string | null) ?? null,
+        folders: obj.folders as Folder[],
+        workspaces: Array.isArray(obj.workspaces) ? (obj.workspaces as Workspace[]) : [],
+        activeWorkspaceId: (obj.activeWorkspaceId as string | null) ?? null
       })
     }
     // Old shape: { workspaces: [{ path, name }], activePath }
     return migrateFolders(
-      Array.isArray(parsed.workspaces) ? (parsed.workspaces as Folder[]) : [],
-      (parsed.activePath as string | null) ?? null
+      Array.isArray(obj.workspaces) ? (obj.workspaces as Folder[]) : [],
+      (obj.activePath as string | null) ?? null
     )
   } catch {
-    return migrateLegacy()
+    return null // malformed entries — don't let one bad element break every read
   }
+}
+
+/**
+ * Read state from disk, migrating older formats if needed. Reading through
+ * readJsonFile preserves a corrupt store as `.corrupt` — a plain read-and-parse
+ * would fall back to an empty state that the next save then writes over the
+ * user's recoverable profiles/folders/workspaces.
+ */
+function readState(): WorkspaceState {
+  const stored = readJsonFile<WorkspaceState | null>(storeFile(), null, parseStoredState)
+  return stored ?? migrateLegacy()
 }
 
 /** Convert a flat list of folder-workspaces into the folder + workspace model. */
