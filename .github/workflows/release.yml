@@ -62,6 +62,31 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      # electron-updater reads the installer name from latest.yml. Keep this
+      # check next to the Windows build so a mismatched published filename
+      # cannot turn the in-app update into a failed/manual download.
+      - name: Verify Windows updater artifacts
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const metadataPath = path.join('dist', 'latest.yml')
+          const metadata = fs.readFileSync(metadataPath, 'utf8')
+          const installerNames = [...metadata.matchAll(/^\s*-\s+url:\s+(.+)\s*$/gm)].map(([, name]) => name.trim())
+
+          if (installerNames.length === 0) {
+            throw new Error(`${metadataPath} does not contain an update installer`)
+          }
+
+          const missing = installerNames.filter((name) => !fs.existsSync(path.join('dist', name)))
+          if (missing.length > 0) {
+            throw new Error(`Windows updater metadata references missing artifact(s): ${missing.join(', ')}`)
+          }
+          NODE
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

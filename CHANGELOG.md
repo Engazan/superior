@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows in-app updates.** The NSIS installer name now matches the filename
+  in `latest.yml`, allowing the in-app updater to download and install Windows
+  releases instead of requiring a manual download. The release workflow now
+  verifies this before publishing.
+
 ## [0.18.0] - 2026-07-09
 
 ### Added
