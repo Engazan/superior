@@ -1,10 +1,3 @@
-import { javascript } from '@codemirror/lang-javascript'
-import { python } from '@codemirror/lang-python'
-import { html } from '@codemirror/lang-html'
-import { css } from '@codemirror/lang-css'
-import { json } from '@codemirror/lang-json'
-import { markdown } from '@codemirror/lang-markdown'
-import type { Extension } from '@codemirror/state'
 import type { FsEntry } from './types'
 
 /** Which preview surface a file should open in. */
@@ -63,48 +56,6 @@ export function getFilePreviewType(file: FsEntry): FilePreviewType {
 export function isTextFile(file: FsEntry): boolean {
   const type = getFilePreviewType(file)
   return type === 'code' || type === 'json' || type === 'markdown'
-}
-
-/** The CodeMirror language extension for a file, or null for plain text. */
-export function getCodeMirrorLanguage(file: FsEntry): Extension | null {
-  const e = ext(file)
-  switch (e) {
-    case 'js':
-    case 'jsx':
-    case 'mjs':
-    case 'cjs':
-      return javascript({ jsx: true })
-    case 'ts':
-    case 'mts':
-    case 'cts':
-      return javascript({ typescript: true })
-    case 'tsx':
-      return javascript({ jsx: true, typescript: true })
-    case 'py':
-      return python()
-    case 'html':
-    case 'htm':
-    case 'vue':
-    case 'svelte':
-    case 'astro':
-      return html()
-    case 'css':
-    case 'scss':
-    case 'sass':
-    case 'less':
-    case 'styl':
-      return css()
-    case 'json':
-    case 'jsonc':
-    case 'json5':
-      return json()
-    case 'md':
-    case 'markdown':
-    case 'mdx':
-      return markdown()
-    default:
-      return null
-  }
 }
 
 export function guessMimeType(file: FsEntry): string {

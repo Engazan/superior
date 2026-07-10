@@ -280,7 +280,11 @@ export const TerminalView = memo(function TerminalView({
       fontSize: 13,
       cursorBlink: true,
       theme: TERM_THEMES[resolved],
-      scrollback: 10_000
+      scrollback: 10_000,
+      // FitAddon subtracts this value from usable terminal width. Keep just a
+      // 1px calculation reserve; the CSS scrollbar below overlays the content
+      // instead of leaving xterm's default 14px empty gutter.
+      overviewRuler: { width: 1 }
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
@@ -442,6 +446,15 @@ export const TerminalView = memo(function TerminalView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id])
 
+  // Also apply the compact scrollbar width to a live terminal after a renderer
+  // hot reload. New terminals receive it in the constructor above; this keeps
+  // an already-open dev session from retaining the old 14px FitAddon gutter.
+  useEffect(() => {
+    if (!termRef.current) return
+    termRef.current.options.overviewRuler = { width: 1 }
+    syncSize()
+  }, [syncSize])
+
   // Recolor an existing terminal when the theme changes (without recreating it).
   useEffect(() => {
     if (termRef.current) termRef.current.options.theme = TERM_THEMES[resolved]
@@ -514,7 +527,16 @@ export const TerminalView = memo(function TerminalView({
     >
       <div
         className="relative flex h-full w-full flex-col overflow-hidden"
-        style={{ backgroundColor: TERM_THEMES[resolved].background }}
+        // xterm's bundled stylesheet defaults its scroll viewport to #000. The
+        // canvas is row-aligned, so a fractional row at the bottom otherwise
+        // exposes that black default in light terminals. Keep the viewport and
+        // its cell wrapper on the exact same theme background.
+        style={
+          {
+            backgroundColor: TERM_THEMES[resolved].background,
+            '--terminal-background': TERM_THEMES[resolved].background
+          } as React.CSSProperties
+        }
       >
         {/* Active-cell highlight, drawn above the terminal content so it stays visible. */}
         {highlight && (

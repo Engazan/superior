@@ -1,18 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
-import { RightPanel } from './components/RightPanel'
-import { FilePreviewPanel } from './components/FilePreviewPanel'
 import { TerminalPanel } from './components/TerminalPanel'
-import { SettingsView, type SettingsSection } from './components/SettingsView'
+import type { SettingsSection } from './components/SettingsView'
 import { QuickLaunch } from './components/QuickLaunch'
 import { TerminalSearchOverlay } from './components/TerminalSearchOverlay'
-import { CommandPalette } from './components/CommandPalette'
 import { PromptPicker } from './components/PromptPicker'
 import { insertIntoTerminal } from './terminalInput'
 import type { Command } from './commands'
-import { ProfileManager } from './components/ProfileManager'
-import { OpenProjectModal } from './components/OpenProjectModal'
 import { TooltipLayer } from './components/TooltipLayer'
 import { useConfirm, useToast } from './components/ui'
 import type { FsEntry, Integration } from './types'
@@ -36,7 +31,33 @@ import {
   useAttentionWorkspaces
 } from './activityStore'
 
+// These surfaces are absent from the initial terminal workspace. Loading them
+// on demand keeps the first renderer parse/evaluate path focused on the app
+// chrome and xterm, while Vite gives each feature its own cached chunk.
+const SettingsView = lazy(() =>
+  import('./components/SettingsView').then(({ SettingsView }) => ({ default: SettingsView }))
+)
+const RightPanel = lazy(() =>
+  import('./components/RightPanel').then(({ RightPanel }) => ({ default: RightPanel }))
+)
+const FilePreviewPanel = lazy(() =>
+  import('./components/FilePreviewPanel').then(({ FilePreviewPanel }) => ({ default: FilePreviewPanel }))
+)
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then(({ CommandPalette }) => ({ default: CommandPalette }))
+)
+const ProfileManager = lazy(() =>
+  import('./components/ProfileManager').then(({ ProfileManager }) => ({ default: ProfileManager }))
+)
+const OpenProjectModal = lazy(() =>
+  import('./components/OpenProjectModal').then(({ OpenProjectModal }) => ({ default: OpenProjectModal }))
+)
+
 type View = 'main' | 'settings'
+
+function DeferredPanel(): React.JSX.Element {
+  return <div className="flex min-h-0 flex-1" aria-busy="true" />
+}
 
 export default function App(): React.JSX.Element {
   const { t } = useI18n()
@@ -56,6 +77,13 @@ export default function App(): React.JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Right-hand panel: fully hidden by default, toggled from the title bar.
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+  // Avoid loading the Git/file/task feature bundle until it is first requested,
+  // then keep it mounted so closing the panel preserves its selected tab, tree
+  // expansion and cached diff just as before.
+  const [rightPanelLoaded, setRightPanelLoaded] = useState(false)
+  useEffect(() => {
+    if (rightSidebarOpen) setRightPanelLoaded(true)
+  }, [rightSidebarOpen])
   // Quick-launch preset picker overlay (opened by shortcut).
   const [launcherOpen, setLauncherOpen] = useState(false)
   // Find-in-terminal overlay (⌘F), targeting the active session.
@@ -701,22 +729,24 @@ export default function App(): React.JSX.Element {
 
       <div className="flex min-h-0 flex-1">
         {view === 'settings' ? (
-          <SettingsView
-            initialSection={settingsSection}
-            onSectionChange={setSettingsSection}
-            onBack={closeSettings}
-            onIntegrationsChanged={reloadIntegrations}
-            presets={presets}
-            onSavePreset={presetsApi.savePreset}
-            onDeletePreset={presetsApi.deletePreset}
-            onReorderPresets={presetsApi.reorderPresets}
-            onTogglePresetActive={presetsApi.togglePresetActive}
-            onPickPresetImage={() => window.api.pickPresetImage()}
-            onPresetsChanged={(state) => presetsApi.setPresets(state.presets)}
-            workspaces={ws.workspaces}
-            folders={ws.folders}
-            onKillSession={ws.closeSession}
-          />
+          <Suspense fallback={<DeferredPanel />}>
+            <SettingsView
+              initialSection={settingsSection}
+              onSectionChange={setSettingsSection}
+              onBack={closeSettings}
+              onIntegrationsChanged={reloadIntegrations}
+              presets={presets}
+              onSavePreset={presetsApi.savePreset}
+              onDeletePreset={presetsApi.deletePreset}
+              onReorderPresets={presetsApi.reorderPresets}
+              onTogglePresetActive={presetsApi.togglePresetActive}
+              onPickPresetImage={() => window.api.pickPresetImage()}
+              onPresetsChanged={(state) => presetsApi.setPresets(state.presets)}
+              workspaces={ws.workspaces}
+              folders={ws.folders}
+              onKillSession={ws.closeSession}
+            />
+          </Suspense>
         ) : (
           <>
             <Sidebar
@@ -792,11 +822,13 @@ export default function App(): React.JSX.Element {
                       className="flex min-h-0 min-w-[280px] shrink-0 flex-col"
                       style={{ width: `${preview.previewWidth * 100}%` }}
                     >
-                      <FilePreviewPanel
-                        file={preview.previewFile}
-                        onClose={() => void setPreviewFileGuarded(null)}
-                        onDirtyChange={onPreviewDirtyChange}
-                      />
+                      <Suspense fallback={<DeferredPanel />}>
+                        <FilePreviewPanel
+                          file={preview.previewFile}
+                          onClose={() => void setPreviewFileGuarded(null)}
+                          onDirtyChange={onPreviewDirtyChange}
+                        />
+                      </Suspense>
                     </div>
                   </>
                 )}
@@ -812,27 +844,31 @@ export default function App(): React.JSX.Element {
                 <span className="w-full bg-edge transition group-hover:bg-accent" />
               </div>
             )}
-            {/* Always mounted so the width can animate; the inner panel keeps its
-                fixed width and is clipped while collapsed. Transition disabled
-                while dragging so the resize tracks the pointer. */}
+            {/* The width wrapper stays mounted for the close animation. The panel
+                itself is loaded only on first use, then remains mounted so its
+                UI state survives close/reopen cycles. */}
             <div
               style={{ width: rightSidebarOpen ? rightPanelWidth : 0 }}
               className={`flex shrink-0 overflow-hidden ${
                 rightResizing ? '' : 'transition-[width] duration-200 ease-out'
               }`}
             >
-              <RightPanel
-                width={rightPanelWidth}
-                active={rightSidebarOpen}
-                folderPath={ws.effectiveDir}
-                isRemoteWorkspace={ws.activeFolder?.kind === 'remote'}
-                tasksFolder={ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null}
-                taskQueue={taskQueue}
-                presets={presets}
-                onJumpToTask={onJumpToTask}
-                onOpenFile={(file) => void setPreviewFileGuarded(file)}
-                selectedPath={preview.previewFile?.path ?? null}
-              />
+              {rightPanelLoaded && (
+                <Suspense fallback={<DeferredPanel />}>
+                  <RightPanel
+                    width={rightPanelWidth}
+                    active={rightSidebarOpen}
+                    folderPath={ws.effectiveDir}
+                    isRemoteWorkspace={ws.activeFolder?.kind === 'remote'}
+                    tasksFolder={ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null}
+                    taskQueue={taskQueue}
+                    presets={presets}
+                    onJumpToTask={onJumpToTask}
+                    onOpenFile={(file) => void setPreviewFileGuarded(file)}
+                    selectedPath={preview.previewFile?.path ?? null}
+                  />
+                </Suspense>
+              )}
             </div>
           </>
         )}
@@ -855,7 +891,9 @@ export default function App(): React.JSX.Element {
       )}
 
       {paletteOpen && (
-        <CommandPalette commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+        <Suspense fallback={null}>
+          <CommandPalette commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+        </Suspense>
       )}
 
       {palettePromptsOpen && ws.activeSessionId && (
@@ -868,31 +906,35 @@ export default function App(): React.JSX.Element {
       )}
 
       {projectModalOpen && (
-        <OpenProjectModal
-          integrations={integrations}
-          onOpenFolder={ws.addFolder}
-          onClone={ws.cloneRepository}
-          onAddRemote={ws.addRemoteFolder}
-          onAddIntegration={() => {
-            setProjectModalOpen(false)
-            setResumeProjectModal(true)
-            setSettingsSection('integrations')
-            setView('settings')
-          }}
-          onClose={() => setProjectModalOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <OpenProjectModal
+            integrations={integrations}
+            onOpenFolder={ws.addFolder}
+            onClone={ws.cloneRepository}
+            onAddRemote={ws.addRemoteFolder}
+            onAddIntegration={() => {
+              setProjectModalOpen(false)
+              setResumeProjectModal(true)
+              setSettingsSection('integrations')
+              setView('settings')
+            }}
+            onClose={() => setProjectModalOpen(false)}
+          />
+        </Suspense>
       )}
 
       {profileManagerOpen && (
-        <ProfileManager
-          profiles={ws.profiles}
-          activeProfileId={ws.activeProfileId}
-          onAdd={ws.addProfile}
-          onRename={ws.renameProfile}
-          onUpdateColor={(id, color) => ws.updateProfile(id, { color })}
-          onRemove={ws.removeProfile}
-          onClose={() => setProfileManagerOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <ProfileManager
+            profiles={ws.profiles}
+            activeProfileId={ws.activeProfileId}
+            onAdd={ws.addProfile}
+            onRename={ws.renameProfile}
+            onUpdateColor={(id, color) => ws.updateProfile(id, { color })}
+            onRemove={ws.removeProfile}
+            onClose={() => setProfileManagerOpen(false)}
+          />
+        </Suspense>
       )}
 
       <AttentionBadgeSync />

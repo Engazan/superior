@@ -1,21 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { json as jsonLang } from '@codemirror/lang-json'
-import { CodeFilePreview } from './CodeFilePreview'
-import { MarkdownFilePreview } from './MarkdownFilePreview'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Extension } from '@codemirror/state'
 import { ImageFilePreview } from './ImageFilePreview'
 import { UnsupportedFilePreview } from './UnsupportedFilePreview'
 import { useI18n } from '../i18n'
 import { IconButton, useConfirm, useToast } from './ui'
 import { eventToChord, useShortcuts, useShortcutTitle } from '../shortcuts'
+import { loadCodeMirrorLanguage } from '../codeMirrorLanguage'
 import {
   IMAGE_MAX_BYTES,
   TEXT_MAX_BYTES,
   formatBytes,
-  getCodeMirrorLanguage,
   getFilePreviewType,
   guessMimeType
 } from '../filePreview'
 import type { FileReadResult, FsEntry } from '../types'
+
+const CodeFilePreview = lazy(() =>
+  import('./CodeFilePreview').then(({ CodeFilePreview }) => ({ default: CodeFilePreview }))
+)
+const MarkdownFilePreview = lazy(() =>
+  import('./MarkdownFilePreview').then(({ MarkdownFilePreview }) => ({ default: MarkdownFilePreview }))
+)
 
 interface Props {
   file: FsEntry
@@ -40,13 +45,27 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React
   const shortcutTitle = useShortcutTitle()
   const { shortcuts } = useShortcuts()
   const type = useMemo(() => getFilePreviewType(file), [file])
-  // Build the CodeMirror language once per file — a new Extension identity would
-  // tear down and recreate the whole editor (losing scroll/find) on every render.
-  const language = useMemo(() => {
-    if (type === 'json') return jsonLang()
-    if (type === 'code') return getCodeMirrorLanguage(file)
-    return null
-  }, [type, file])
+  const languageKey = `${type}:${file.name}`
+  const [language, setLanguage] = useState<{ key: string; value: Extension | null } | null>(null)
+  // Syntax packages load only when a code-like file is opened. Keeping the
+  // extension in state also preserves its identity while the editor is active.
+  useEffect(() => {
+    if (type !== 'code' && type !== 'json') return
+    let active = true
+    void loadCodeMirrorLanguage(file.name)
+      .then((value) => {
+        if (active) setLanguage({ key: languageKey, value })
+      })
+      .catch(() => {
+        // Syntax support is optional; show the source as plain text if a
+        // lazily-loaded language chunk cannot be retrieved.
+        if (active) setLanguage({ key: languageKey, value: null })
+      })
+    return () => {
+      active = false
+    }
+  }, [file.name, languageKey, type])
+  const languageReady = type !== 'code' && type !== 'json' ? true : language?.key === languageKey
   const toast = useToast()
   const [data, setData] = useState<FileReadResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -229,7 +248,9 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React
           <div className="flex h-full min-h-0 flex-col">
             {data.truncated && <TruncatedWarning onOpenRaw={openRaw} />}
             <div className="min-h-0 flex-1">
-              <MarkdownFilePreview content={data.content} />
+              <Suspense fallback={<PreviewLoading />}>
+                <MarkdownFilePreview content={data.content} />
+              </Suspense>
             </div>
           </div>
         )
@@ -239,12 +260,18 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React
           <div className="flex h-full min-h-0 flex-col">
             {data.truncated && <TruncatedWarning onOpenRaw={openRaw} />}
             <div className="min-h-0 flex-1">
-              <CodeFilePreview
-                content={editorText ?? data.content}
-                language={language}
-                editable={editable}
-                onChange={handleChange}
-              />
+              {languageReady ? (
+                <Suspense fallback={<PreviewLoading />}>
+                  <CodeFilePreview
+                    content={editorText ?? data.content}
+                    language={language?.value ?? null}
+                    editable={editable}
+                    onChange={handleChange}
+                  />
+                </Suspense>
+              ) : (
+                <PreviewLoading />
+              )}
             </div>
           </div>
         )
@@ -324,6 +351,10 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React
       <div className="min-h-0 flex-1">{renderBody()}</div>
     </div>
   )
+}
+
+function PreviewLoading(): React.JSX.Element {
+  return <div className="grid h-full place-items-center" aria-busy="true" />
 }
 
 function TruncatedWarning({ onOpenRaw }: { onOpenRaw: () => void }): React.JSX.Element {

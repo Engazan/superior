@@ -1,13 +1,17 @@
-import { useMemo, useState, type ComponentProps } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentProps } from 'react'
+import type { Extension } from '@codemirror/state'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
-import { markdown } from '@codemirror/lang-markdown'
 import 'highlight.js/styles/github-dark.css'
-import { CodeFilePreview } from './CodeFilePreview'
+import { loadCodeMirrorLanguage } from '../codeMirrorLanguage'
 import { useI18n } from '../i18n'
+
+const CodeFilePreview = lazy(() =>
+  import('./CodeFilePreview').then(({ CodeFilePreview }) => ({ default: CodeFilePreview }))
+)
 
 interface Props {
   content: string
@@ -34,6 +38,27 @@ const HIGHLIGHT_MAX_BYTES = 200 * 1024
 export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [raw, setRaw] = useState(false)
+  const [rawLanguage, setRawLanguage] = useState<Extension | null>(null)
+  const [rawLanguageReady, setRawLanguageReady] = useState(false)
+
+  // Raw mode is an explicit user action, so defer both the Markdown language
+  // package and CodeMirror until it is requested.
+  useEffect(() => {
+    if (!raw || rawLanguageReady) return
+    let active = true
+    void loadCodeMirrorLanguage('preview.md')
+      .then((language) => {
+        if (!active) return
+        setRawLanguage(language)
+        setRawLanguageReady(true)
+      })
+      .catch(() => {
+        if (active) setRawLanguageReady(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [raw, rawLanguageReady])
 
   const highlight = content.length <= HIGHLIGHT_MAX_BYTES
   const remarkPlugins = useMemo<MarkdownProps['remarkPlugins']>(() => [remarkGfm], [])
@@ -44,7 +69,6 @@ export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
         : [rehypeRaw, [rehypeSanitize, schema]],
     [highlight]
   )
-  const mdLanguage = useMemo(() => markdown(), [])
 
   const segBtn = (active: boolean): string =>
     `px-2 py-0.5 text-[11px] font-medium rounded transition ${
@@ -64,7 +88,13 @@ export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
 
       {raw ? (
         <div className="min-h-0 flex-1">
-          <CodeFilePreview content={content} language={mdLanguage} wrap />
+          {rawLanguageReady ? (
+            <Suspense fallback={<PreviewLoading />}>
+              <CodeFilePreview content={content} language={rawLanguage} wrap />
+            </Suspense>
+          ) : (
+            <PreviewLoading />
+          )}
         </div>
       ) : (
         <div className="md-preview min-h-0 flex-1 overflow-auto px-4 py-3 text-sm">
@@ -75,4 +105,8 @@ export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
       )}
     </div>
   )
+}
+
+function PreviewLoading(): React.JSX.Element {
+  return <div className="grid h-full place-items-center" aria-busy="true" />
 }

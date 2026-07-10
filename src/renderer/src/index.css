@@ -356,6 +356,36 @@ body {
   height: 100%;
 }
 
+/* xterm's own stylesheet hard-codes the viewport background to black. Its
+   canvas height is a whole number of rows, so any remaining fractional row at
+   the bottom would appear as a black strip in a light-themed terminal. */
+.xterm .xterm-viewport {
+  background-color: var(--terminal-background, var(--c-panel));
+}
+
+/* xterm 6 uses its own DOM scrollbar. FitAddon reserves the overview-ruler
+   width before it counts terminal columns; TerminalView sets that to 1px.
+   Draw the actual thumb as a narrow transparent overlay, not a content gutter. */
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+  width: 6px !important;
+  background: transparent !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+  left: 1px !important;
+  width: 4px !important;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-fgmuted) 58%, transparent) !important;
+  opacity: 0.38;
+  transition: opacity 150ms ease, width 150ms ease;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical:hover > .slider,
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active {
+  width: 5px !important;
+  opacity: 0.8;
+}
+
 /* Rendered-markdown styling for the file preview. Kept scoped and minimal so
    it tracks the app's color tokens (no @tailwindcss/typography dependency). */
 .md-preview {
