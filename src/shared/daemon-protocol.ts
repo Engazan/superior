@@ -1,3 +1,5 @@
+import { createHash } from 'crypto'
+
 import type { AgentLaunchTarget, AgentStatus, PresetIconType } from './types'
 
 /** Metadata the app needs to rebuild a session's UI after a restart. */
@@ -68,7 +70,9 @@ export type ServerMessage =
 export function daemonSocketPath(userData: string): string {
   if (process.platform === 'win32') {
     // Named pipes are namespaced, not files; derive a stable name from userData.
-    const hash = Buffer.from(userData).toString('hex').slice(0, 16)
+    // Hash the whole path — a prefix of its raw bytes would be `C:\Users` for
+    // everyone, colliding across users and installs.
+    const hash = createHash('sha256').update(userData).digest('hex').slice(0, 16)
     return `\\\\.\\pipe\\superior-daemon-${hash}`
   }
   return `${userData}/daemon.sock`
