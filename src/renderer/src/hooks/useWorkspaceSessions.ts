@@ -4,6 +4,7 @@ import { useConfirm } from '../components/ui'
 import { type GridLayout } from '../gridLayout'
 import { type TFunction } from '../i18n'
 import { ipcErrorMessage } from '../ipcError'
+import { useWorkspaceTabs } from './useWorkspaceTabs'
 import {
   WORKTREE_ERROR,
   type AgentLaunchTarget,
@@ -18,8 +19,6 @@ import {
   type TerminalPreset,
   type Workspace,
   type WorkspaceState,
-  type WorkspaceTab,
-  type WorkspaceTabs,
   type WorktreeAddArgs
 } from '../types'
 
@@ -45,30 +44,19 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   // True once surviving daemon sessions were adopted (auto-launch waits for this).
   const [sessionsRestored, setSessionsRestored] = useState(false)
-  // Per-workspace tabs (each tab is a grid of terminals) + the active tab, kept
-  // in memory and mirrored to disk. A workspace always has at least one tab.
-  const [tabsByWs, setTabsByWs] = useState<Record<string, WorkspaceTabs>>({})
   // A grid cell blown up to fill the panel (null = none).
   const [maximizedId, setMaximizedId] = useState<string | null>(null)
-
-  // The active tab id of a workspace, if known.
-  const activeTabId = useCallback(
-    (workspaceId: string | null): string | undefined =>
-      workspaceId ? tabsByWs[workspaceId]?.activeTabId : undefined,
-    [tabsByWs]
-  )
-
-  // Mint a fresh tab with an auto-generated "Tab N" name.
-  const newTab = useCallback(
-    (n: number): WorkspaceTab => ({ id: crypto.randomUUID(), name: t('tab.defaultName', { n }) }),
-    [t]
-  )
-  // The mount-time restore effect must run exactly once. `newTab` depends on `t`,
-  // which is a fresh closure on every language change, so reach it through a ref
-  // instead of listing it as a dependency — otherwise switching the UI language
-  // re-runs restore and drops terminals that exited during this run.
-  const newTabRef = useRef(newTab)
-  newTabRef.current = newTab
+  const {
+    tabsByWs,
+    activeTabId,
+    restoreTabs,
+    ensureActiveTab,
+    setGridLayout: setWorkspaceGridLayout,
+    addTab,
+    selectTab,
+    renameTab,
+    closeTab
+  } = useWorkspaceTabs({ t, sessions, setSessions, setActiveSessionId, setMaximizedId })
 
   // Only the active profile's folders are shown in the sidebar; workspaces are
   // grouped under folders, so filtering folders transitively scopes everything.
@@ -138,39 +126,21 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         return false
       })
 
-      // Adopt persisted tabs for surviving workspaces; seed a default tab for any
-      // workspace that has sessions but no stored tabs (and persist the seed so
-      // its id stays stable). Then pin each session to a valid tab.
-      const nextTabs: Record<string, WorkspaceTabs> = {}
-      for (const [wsId, wt] of Object.entries(tabsState)) {
-        if (validIds.has(wsId) && wt.tabs.length) nextTabs[wsId] = wt
-      }
-      const ensure = (workspaceId: string): WorkspaceTabs => {
-        let wt = nextTabs[workspaceId]
-        if (!wt || !wt.tabs.length) {
-          const tab = newTabRef.current(1)
-          wt = { tabs: [tab], activeTabId: tab.id }
-          nextTabs[workspaceId] = wt
-          window.api.setTabs(workspaceId, wt)
-        }
-        return wt
-      }
-      const pinned = live.map((s) => {
-        const wt = ensure(s.workspaceId)
-        return wt.tabs.some((tb) => tb.id === s.tabId) ? s : { ...s, tabId: wt.activeTabId }
-      })
+      // Adopt persisted tabs for surviving workspaces, then pin each session to
+      // a valid tab. Fresh tabs are seeded and persisted by the tabs domain.
+      const restoredTabs = restoreTabs(validIds, tabsState, live)
+      const pinned = restoredTabs.sessions
       setSessions(pinned)
-      setTabsByWs(nextTabs)
 
       const active = ws.activeWorkspaceId
-      const tab = active ? nextTabs[active]?.activeTabId : undefined
+      const tab = active ? restoredTabs.tabsByWs[active]?.activeTabId : undefined
       const inActive = pinned.filter((s) => s.workspaceId === active && s.tabId === tab)
       setActiveSessionId(inActive.length ? inActive[inActive.length - 1].id : null)
       // Only now do surviving daemon sessions count — gates workspace auto-launch.
       setSessionsRestored(true)
     })().catch((err) => console.error('[restore] failed:', err))
      
-  }, [])
+  }, [restoreTabs])
 
   // Point the active session at the most recent session of a workspace's active tab.
   const focusWorkspaceSession = useCallback(
@@ -477,21 +447,6 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [workspaces, counts, sessions, applyState, setError, t, worktreeErrorMessage, confirm]
   )
 
-  // Ensure a workspace has an active tab and return its id, seeding + persisting
-  // a default "Tab 1" when the workspace has none yet (fresh workspace).
-  const ensureActiveTab = useCallback(
-    (workspaceId: string): string => {
-      const wt = tabsByWs[workspaceId]
-      if (wt && wt.tabs.length) return wt.activeTabId
-      const tab = newTab(1)
-      const next: WorkspaceTabs = { tabs: [tab], activeTabId: tab.id }
-      setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
-      window.api.setTabs(workspaceId, next)
-      return tab.id
-    },
-    [tabsByWs, newTab]
-  )
-
   /**
    * Start a preset's command (or an override) in any workspace's active tab
    * without moving the user's focus — the task queue launches into background
@@ -597,16 +552,9 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const setGridLayout = useCallback(
     (layout: GridLayout) => {
       if (!activeWorkspaceId) return
-      const wt = tabsByWs[activeWorkspaceId]
-      if (!wt) return
-      const next: WorkspaceTabs = {
-        ...wt,
-        tabs: wt.tabs.map((tb) => (tb.id === wt.activeTabId ? { ...tb, gridLayout: layout } : tb))
-      }
-      setTabsByWs((prev) => ({ ...prev, [activeWorkspaceId]: next }))
-      window.api.setTabs(activeWorkspaceId, next)
+      setWorkspaceGridLayout(activeWorkspaceId, layout)
     },
-    [activeWorkspaceId, tabsByWs]
+    [activeWorkspaceId, setWorkspaceGridLayout]
   )
 
   const updateSession = useCallback((id: string, patch: Partial<AgentSession>) => {
@@ -782,98 +730,6 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       return true
     },
     [activeWorkspaceId, activeTabId, sessions]
-  )
-
-  // Add a new (empty) tab to a workspace and switch to it. The empty tab shows
-  // the launch wizard until terminals are added.
-  const addTab = useCallback(
-    (workspaceId: string) => {
-      const wt = tabsByWs[workspaceId]
-      const tab = newTab((wt?.tabs.length ?? 0) + 1)
-      const next: WorkspaceTabs = wt
-        ? { tabs: [...wt.tabs, tab], activeTabId: tab.id }
-        : { tabs: [tab], activeTabId: tab.id }
-      setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
-      window.api.setTabs(workspaceId, next)
-      setMaximizedId(null)
-      setActiveSessionId(null)
-    },
-    [tabsByWs, newTab]
-  )
-
-  // Switch a workspace's active tab and focus that tab's most recent terminal.
-  const selectTab = useCallback(
-    (workspaceId: string, tabId: string) => {
-      const wt = tabsByWs[workspaceId]
-      if (!wt || wt.activeTabId === tabId) return
-      const next: WorkspaceTabs = { ...wt, activeTabId: tabId }
-      setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
-      window.api.setTabs(workspaceId, next)
-      setMaximizedId(null)
-      const inTab = sessions.filter((s) => s.workspaceId === workspaceId && s.tabId === tabId)
-      setActiveSessionId(inTab.length ? inTab[inTab.length - 1].id : null)
-    },
-    [tabsByWs, sessions]
-  )
-
-  const renameTab = useCallback(
-    (workspaceId: string, tabId: string, name: string) => {
-      const wt = tabsByWs[workspaceId]
-      if (!wt) return
-      const next: WorkspaceTabs = {
-        ...wt,
-        tabs: wt.tabs.map((tb) => (tb.id === tabId ? { ...tb, name } : tb))
-      }
-      setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
-      window.api.setTabs(workspaceId, next)
-    },
-    [tabsByWs]
-  )
-
-  // Close a tab: kill its terminals, drop it, and pick a sibling active tab.
-  // Closing the last tab leaves the workspace with no tabs, so it falls back to
-  // the launch wizard (a fresh Tab 1 is minted on the next launch).
-  const closeTab = useCallback(
-    async (workspaceId: string, tabId: string) => {
-      const wt = tabsByWs[workspaceId]
-      if (!wt) return
-      // The hover X sits right next to the tab label — an easy misclick that
-      // would kill every terminal in the tab, so running tabs confirm first.
-      const runningCount = sessions.filter(
-        (s) => s.workspaceId === workspaceId && s.tabId === tabId && s.status === 'running'
-      ).length
-      if (runningCount > 0) {
-        const name = wt.tabs.find((tb) => tb.id === tabId)?.name ?? ''
-        const ok = await confirm({
-          title: t('tab.close'),
-          message: t('tab.closeRunningConfirm', { name, count: String(runningCount) }),
-          confirmLabel: t('tab.close'),
-          tone: 'danger'
-        })
-        if (!ok) return
-      }
-      sessions
-        .filter((s) => s.workspaceId === workspaceId && s.tabId === tabId)
-        .forEach((s) => window.api.killAgent(s.id))
-      setSessions((prev) => prev.filter((s) => !(s.workspaceId === workspaceId && s.tabId === tabId)))
-
-      const closingActive = wt.activeTabId === tabId
-      const remaining = wt.tabs.filter((tb) => tb.id !== tabId)
-      const nextActive = remaining.length
-        ? closingActive
-          ? remaining[remaining.length - 1].id
-          : wt.activeTabId
-        : ''
-      const next: WorkspaceTabs = { tabs: remaining, activeTabId: nextActive }
-      setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
-      window.api.setTabs(workspaceId, next)
-      if (closingActive) {
-        setMaximizedId(null)
-        const inTab = sessions.filter((s) => s.workspaceId === workspaceId && s.tabId === nextActive)
-        setActiveSessionId(inTab.length ? inTab[inTab.length - 1].id : null)
-      }
-    },
-    [tabsByWs, sessions, confirm, t]
   )
 
   return {
