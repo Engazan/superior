@@ -75,6 +75,12 @@ function readSessions(): AgentSession[] {
   return raw.map(normalize).filter((session): session is AgentSession => !!session)
 }
 
+/** The last persisted snapshot, as-is — for when the live daemon list is
+ * unavailable and reconciliation would wrongly downgrade running sessions. */
+export function listPersistedSessions(): AgentSession[] {
+  return readSessions()
+}
+
 function saveSessions(sessions: AgentSession[]): void {
   writeJsonFile(storeFile(), sessions, 'terminal sessions')
 }

@@ -22,7 +22,14 @@ let connecting: Promise<net.Socket> | null = null
 // hang the renderer's await forever.
 const REQUEST_TIMEOUT_MS = 5000
 
-const pendingLists: Array<(list: DaemonSession[]) => void> = []
+interface PendingList {
+  resolve: (list: DaemonSession[]) => void
+  reject: (err: Error) => void
+  /** Timed out or flushed; kept in the FIFO so a late reply consumes its own
+   *  slot instead of the next caller's. */
+  settled: boolean
+}
+const pendingLists: PendingList[] = []
 const pendingSpawns = new Map<
   string,
   { resolve: (res: { pid?: number }) => void; reject: (err: Error) => void }
@@ -32,6 +39,20 @@ const exitListeners = new Set<(event: { id: string; exitCode: number }) => void>
 // tag attach snapshots as replay. The first data frame after attach is the
 // synchronous scrollback snapshot (or harmlessly treated as one if empty).
 const pendingReplay = new Set<string>()
+// Attach state lives per-conn in the daemon, so it dies with the socket. Track
+// it here to restore after a reconnect — without that, every mounted terminal
+// freezes silently (no data, no exit — 'running' forever) once the daemon or
+// the socket drops.
+const attachedIds = new Set<string>()
+// Ids attached on the previous socket, awaiting re-attach on the next connect.
+const toResume = new Set<string>()
+// Re-attach snapshots to drop: the terminal already shows that scrollback, so
+// replaying it would duplicate everything on screen.
+const suppressReplay = new Set<string>()
+// Consecutive silent reconnect cycles — bounded so a daemon that dies faster
+// than it answers isn't respawned in a tight loop.
+let reattachAttempts = 0
+const MAX_REATTACH_ATTEMPTS = 3
 
 function socketPath(): string {
   return daemonSocketPath(app.getPath('userData'))
@@ -54,6 +75,10 @@ function broadcast(channel: string, payload: unknown): void {
 
 /** Fan an exit out to the renderer and main-side listeners. */
 function deliverExit(id: string, exitCode: number): void {
+  attachedIds.delete(id)
+  toResume.delete(id)
+  pendingReplay.delete(id)
+  suppressReplay.delete(id)
   stopUsageTracking(id)
   const message =
     exitCode === 127 ? 'command not found. Is it installed and on your PATH?' : undefined
@@ -62,22 +87,29 @@ function deliverExit(id: string, exitCode: number): void {
 }
 
 function onServerMessage(msg: ServerMessage): void {
+  reattachAttempts = 0 // the daemon is answering — a future drop starts fresh
   switch (msg.t) {
     case 'data': {
       const expectedReplay = pendingReplay.delete(msg.id)
-      broadcast(IPC.AGENT_DATA, {
-        id: msg.id,
-        data: msg.data,
-        replay: msg.replay === true || expectedReplay
-      })
+      const replay = msg.replay === true || expectedReplay
+      // A re-attach snapshot would duplicate scrollback already on screen.
+      if (replay && suppressReplay.delete(msg.id)) break
+      broadcast(IPC.AGENT_DATA, { id: msg.id, data: msg.data, replay })
       break
     }
     case 'exit':
       deliverExit(msg.id, msg.exitCode)
       break
-    case 'sessions':
-      pendingLists.shift()?.(msg.list)
+    case 'sessions': {
+      // One reply per request, in order: a late reply for a timed-out request
+      // consumes its own settled slot rather than the next caller's.
+      const entry = pendingLists.shift()
+      if (entry && !entry.settled) {
+        entry.settled = true
+        entry.resolve(msg.list)
+      }
       break
+    }
     case 'spawned': {
       const entry = pendingSpawns.get(msg.id)
       if (entry) {
@@ -101,15 +133,47 @@ function onServerMessage(msg: ServerMessage): void {
   }
 }
 
-/** Unblock every in-flight request (daemon went away): reject spawns so callers
- * surface an error instead of a phantom session; lists resolve empty. */
+/** Unblock every in-flight request (daemon went away): reject spawns and lists
+ * so callers surface an error instead of mistaking the outage for no sessions. */
 function flushPending(): void {
   for (const { reject } of pendingSpawns.values()) {
     reject(new Error('Terminal daemon disconnected.'))
   }
   pendingSpawns.clear()
-  for (const resolve of pendingLists.splice(0)) resolve([])
+  for (const entry of pendingLists.splice(0)) {
+    if (!entry.settled) {
+      entry.settled = true
+      entry.reject(new Error('Terminal daemon disconnected.'))
+    }
+  }
   pendingReplay.clear()
+  suppressReplay.clear()
+}
+
+/** Give up on re-attaching: synthesize exits so terminals and the task queue
+ * unfreeze into restartable cells instead of waiting forever. */
+function abandonAttached(): void {
+  reattachAttempts = 0
+  toResume.clear()
+  for (const id of [...attachedIds]) deliverExit(id, 0)
+}
+
+/** After a socket drop, restore streaming for mounted terminals. Bounded: give
+ * up (with synthetic exits) when the daemon keeps dying without answering. */
+function scheduleReattach(): void {
+  if (attachedIds.size === 0) {
+    toResume.clear()
+    return
+  }
+  if (reattachAttempts >= MAX_REATTACH_ATTEMPTS) {
+    abandonAttached()
+    return
+  }
+  reattachAttempts += 1
+  setTimeout(() => {
+    if (attachedIds.size === 0) return
+    ensureDaemon().catch(() => abandonAttached())
+  }, 500)
 }
 
 function setupSocket(s: net.Socket): void {
@@ -119,12 +183,26 @@ function setupSocket(s: net.Socket): void {
   })
   s.on('close', () => {
     if (sock === s) sock = null
+    // Remember what was attached so the next connect can restore it; explicit
+    // attach() calls during the gap opt back into a fresh replay instead.
+    for (const id of attachedIds) toResume.add(id)
     flushPending()
+    scheduleReattach()
   })
   s.on('error', () => {
     /* surfaced via close */
   })
   s.write(encodeFrame({ t: 'hello' }))
+  // Restore attach state from the previous conn: resumed sessions stream again
+  // (their snapshot suppressed — that scrollback is already on screen), and ids
+  // the daemon no longer knows error out into synthetic exits above.
+  for (const id of toResume) {
+    if (!attachedIds.has(id)) continue
+    pendingReplay.add(id)
+    suppressReplay.add(id)
+    s.write(encodeFrame({ t: 'attach', id }))
+  }
+  toResume.clear()
 }
 
 function tryConnect(): Promise<net.Socket> {
@@ -184,6 +262,12 @@ async function send(msg: ClientMessage): Promise<void> {
   s.write(encodeFrame(msg))
 }
 
+/** Fire-and-forget send: an unreachable daemon must not surface as an
+ * unhandled rejection on every keystroke/resize. */
+function post(msg: ClientMessage): void {
+  send(msg).catch((err) => console.error('[daemon] send failed:', err))
+}
+
 export const daemonClient = {
   ensure: ensureDaemon,
 
@@ -209,15 +293,17 @@ export const daemonClient = {
     return result
   },
 
+  /** Rejects on timeout/disconnect — the caller must not mistake an
+   * unreachable daemon for one with no sessions. */
   async list(): Promise<DaemonSession[]> {
     const s = await ensureDaemon()
-    const result = new Promise<DaemonSession[]>((resolve) => {
-      pendingLists.push(resolve)
+    const result = new Promise<DaemonSession[]>((resolve, reject) => {
+      const entry: PendingList = { resolve, reject, settled: false }
+      pendingLists.push(entry)
       setTimeout(() => {
-        const i = pendingLists.indexOf(resolve)
-        if (i !== -1) {
-          pendingLists.splice(i, 1)
-          resolve([])
+        if (!entry.settled) {
+          entry.settled = true
+          reject(new Error('Timed out waiting for the terminal daemon.'))
         }
       }, REQUEST_TIMEOUT_MS)
     })
@@ -226,23 +312,27 @@ export const daemonClient = {
   },
 
   attach(id: string): void {
+    attachedIds.add(id)
+    toResume.delete(id) // an explicit (re)mount wants the replay snapshot
     pendingReplay.add(id)
-    void send({ t: 'attach', id })
+    post({ t: 'attach', id })
   },
   detach(id: string): void {
-    void send({ t: 'detach', id })
+    attachedIds.delete(id)
+    pendingReplay.delete(id)
+    post({ t: 'detach', id })
   },
   updateMeta(id: string, meta: Partial<DaemonSessionMeta>): void {
-    void send({ t: 'update', id, meta })
+    post({ t: 'update', id, meta })
   },
   input(id: string, data: string): void {
-    void send({ t: 'input', id, data })
+    post({ t: 'input', id, data })
   },
   resize(id: string, cols: number, rows: number): void {
-    void send({ t: 'resize', id, cols, rows })
+    post({ t: 'resize', id, cols, rows })
   },
   kill(id: string): void {
-    void send({ t: 'kill', id })
+    post({ t: 'kill', id })
   },
 
   onExit(listener: (event: { id: string; exitCode: number }) => void): () => void {
@@ -252,6 +342,9 @@ export const daemonClient = {
 
   /** Drop the connection without killing sessions (used on app quit). */
   disconnect(): void {
+    // Intentional: sessions keep running unobserved — no re-attach cycle.
+    attachedIds.clear()
+    toResume.clear()
     if (sock) {
       sock.destroy()
       sock = null

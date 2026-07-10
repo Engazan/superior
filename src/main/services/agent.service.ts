@@ -7,13 +7,14 @@ import {
   type StartAgentArgs,
   type StartAgentResult
 } from '@shared/types'
-import type { DirectSpawn } from '@shared/daemon-protocol'
+import type { DaemonSession, DirectSpawn } from '@shared/daemon-protocol'
 import { daemonClient } from './daemonClient'
 import { isValidWorkspaceDir } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
 import { ensureClaudeStatusline, restoreAllClaudeStatuslines } from './statusline.service'
 import { getSettings } from './settings.service'
 import {
+  listPersistedSessions,
   patchPersistedSession,
   reconcilePersistedSessions,
   removePersistedSession,
@@ -235,7 +236,16 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
 
 /** Rebuild the UI session list from live daemon PTYs plus restartable snapshots. */
 export async function restoreSessions(): Promise<AgentSession[]> {
-  const list = await daemonClient.list()
+  let list: DaemonSession[]
+  try {
+    list = await daemonClient.list()
+  } catch {
+    // No answer is not the same as no sessions: reconciling against [] would
+    // downgrade every running session to a restartable cell, and "restarting"
+    // one spawns a duplicate next to the still-live pty. Report the last
+    // persisted state instead.
+    return listPersistedSessions()
+  }
   const live = list.map(sessionFromDaemon)
   // Resume usage tracking for any Claude session that outlived the app (cwd is
   // absent on sessions spawned by an older build — those simply aren't tracked).
@@ -298,7 +308,8 @@ export async function syncUsageTracking(enabled: boolean): Promise<void> {
     restoreAllClaudeStatuslines()
     return
   }
-  const list = await daemonClient.list()
+  // An unreachable daemon just means nothing to track right now.
+  const list = await daemonClient.list().catch(() => [] as DaemonSession[])
   for (const s of list) {
     if (!s.meta.cwd || s.meta.launchTarget?.kind === 'remote') continue
     ensureClaudeStatusline(s.meta.command)
