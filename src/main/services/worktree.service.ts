@@ -4,7 +4,7 @@ import * as path from 'path'
 import { WORKTREE_ERROR, type BranchInfo } from '@shared/types'
 import { userDataFile } from '../lib/jsonStore'
 import { canonicalPath } from './workspace.service'
-import { runGit, runGitRaw } from './git.service'
+import { runGit, runGitLong, runGitRaw } from './git.service'
 
 /**
  * Git-worktree lifecycle. Worktree checkouts are app-managed and live under
@@ -150,7 +150,8 @@ export async function createWorktree(
   const args = createBranch
     ? ['worktree', 'add', '-b', branch, wtPath, 'HEAD']
     : ['worktree', 'add', wtPath, branch]
-  await runGit(folderPath, args)
+  // A worktree add checks out the full tree — far beyond runGit's probe timeout.
+  await runGitLong(folderPath, args)
 
   return { worktreePath: canonicalPath(wtPath), branch }
 }
@@ -162,7 +163,7 @@ export async function removeWorktree(
   opts: { force: boolean }
 ): Promise<void> {
   const args = ['worktree', 'remove', ...(opts.force ? ['--force'] : []), worktreePath]
-  await runGit(folderPath, args)
+  await runGitLong(folderPath, args)
   // Drop the now-empty per-repo bucket if nothing else lives there.
   try {
     fs.rmdirSync(path.dirname(worktreePath))

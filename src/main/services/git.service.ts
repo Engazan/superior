@@ -17,10 +17,12 @@ import { parseUnifiedDiff } from './git.diff'
 const execFileAsync = promisify(execFile)
 
 /**
- * Run a git command in `dir` and return trimmed stdout. Exported so sibling
- * services (e.g. worktree.service) share one exec wrapper with consistent
- * timeout / windowsHide behavior. Rejects with the raw child_process error
- * (use {@link gitErrorMessage} to render it).
+ * Run a quick read-only git command in `dir` and return trimmed stdout.
+ * Exported so sibling services (e.g. worktree.service) share one exec wrapper
+ * with consistent timeout / windowsHide behavior. Rejects with the raw
+ * child_process error (use {@link gitErrorMessage} to render it).
+ * The tight 5s timeout is only safe for probes — mutating commands must go
+ * through {@link runGitLong}.
  */
 export async function runGit(dir: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync('git', ['-C', dir, ...args], {
@@ -42,9 +44,25 @@ export async function runGitRaw(dir: string, args: string[]): Promise<string> {
   return stdout
 }
 
+/**
+ * For git commands that must not be killed after 5s: network-bound ones
+ * (push/pull on a slow link) and mutating ones (checkout, stash, commit,
+ * worktree add/remove — a slow hook or a large tree can exceed 5s, and a
+ * SIGTERM mid-operation leaves the working tree half-switched).
+ */
+export async function runGitLong(dir: string, args: string[]): Promise<void> {
+  await execFileAsync('git', ['-C', dir, ...args], {
+    encoding: 'utf-8',
+    timeout: 120_000,
+    maxBuffer: 8 * 1024 * 1024,
+    windowsHide: true
+  })
+}
+
 // Local aliases keep the rest of this file terse.
 const git = runGit
 const gitRaw = runGitRaw
+const gitLong = runGitLong
 
 /** Render a git/child_process error into a user-facing message. */
 export function gitErrorMessage(err: unknown): string {
@@ -285,7 +303,7 @@ export async function switchBranch(
       // entry. `--include-untracked` clears any blocker the checkout might hit.
       const dirty = (await gitRaw(folderPath, ['status', '--porcelain'])).trim().length > 0
       if (dirty) {
-        await git(folderPath, [
+        await gitLong(folderPath, [
           'stash',
           'push',
           '--include-untracked',
@@ -295,7 +313,7 @@ export async function switchBranch(
         stashed = true
       }
     }
-    await git(folderPath, ['checkout', branch])
+    await gitLong(folderPath, ['checkout', branch])
     invalidateGitStatus(folderPath)
     return { status: await getGitStatus(folderPath), stashed }
   } catch (err) {
@@ -328,7 +346,7 @@ export async function createBranch(folderPath: string, branch: string): Promise<
     return { status: null, error: gitErrorMessage(err) }
   }
   try {
-    await git(folderPath, ['checkout', '-b', name])
+    await gitLong(folderPath, ['checkout', '-b', name])
     invalidateGitStatus(folderPath)
     return { status: await getGitStatus(folderPath) }
   } catch (err) {
@@ -343,7 +361,7 @@ export async function initGit(folderPath: string): Promise<GitStatus> {
   }
 
   try {
-    await git(folderPath, ['init'])
+    await gitLong(folderPath, ['init'])
     invalidateGitStatus(folderPath)
     return getGitStatus(folderPath)
   } catch (err) {
@@ -469,7 +487,7 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
 async function gitAction(folderPath: string, args: string[]): Promise<GitActionResult> {
   if (!isWithinWorkspaceFolder(folderPath)) return { error: 'Workspace folder is invalid.' }
   try {
-    await git(folderPath, args)
+    await gitLong(folderPath, args)
     invalidateGitStatus(folderPath)
     return {}
   } catch (err) {
@@ -500,19 +518,6 @@ export function commit(folderPath: string, message: string): Promise<GitActionRe
   const msg = message.trim()
   if (!msg) return Promise.resolve({ error: 'Enter a commit message.' })
   return gitAction(folderPath, ['commit', '-m', msg])
-}
-
-/**
- * Network-bound git commands get their own exec: `runGit`'s 5s timeout is far
- * too tight for a push/pull over a slow link.
- */
-async function runGitLong(dir: string, args: string[]): Promise<void> {
-  await execFileAsync('git', ['-C', dir, ...args], {
-    encoding: 'utf-8',
-    timeout: 120_000,
-    maxBuffer: 8 * 1024 * 1024,
-    windowsHide: true
-  })
 }
 
 /** Push the current branch; publishes it (`-u origin`) when no upstream is set. */
