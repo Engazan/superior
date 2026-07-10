@@ -64,12 +64,20 @@ export function OpenProjectModal({
     setListError(null)
     setRepos([])
     setCloneError(null)
-    window.api.listRepos(integrationId).then((res) => {
-      if (!active) return
-      setLoading(false)
-      if (res.error) setListError(res.error)
-      else setRepos(res.repos)
-    })
+    window.api
+      .listRepos(integrationId)
+      .then((res) => {
+        if (!active) return
+        setLoading(false)
+        if (res.error) setListError(res.error)
+        else setRepos(res.repos)
+      })
+      .catch((err: Error) => {
+        // A rejected IPC would otherwise leave the list on "Loading…" forever.
+        if (!active) return
+        setLoading(false)
+        setListError(err.message)
+      })
     return () => {
       active = false
     }

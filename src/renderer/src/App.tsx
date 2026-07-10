@@ -251,7 +251,13 @@ export default function App(): JSX.Element {
     // layout id simply never matches and is ignored.
     const layout = layoutPresets.layouts.find((l) => l.id === layoutId)
     if (!layout) return
-    if (ws.sessions.some((s) => s.workspaceId === wsId)) return
+    if (ws.sessions.some((s) => s.workspaceId === wsId)) {
+      // Restored daemon sessions count as this run's launch: without marking,
+      // closing the last of them would re-run this effect and spawn the
+      // startup layout mid-run.
+      autoLaunchedRef.current.add(wsId)
+      return
+    }
     autoLaunchedRef.current.add(wsId) // before the await — no double launch
     void ws.startLayout({
       presetIds: layout.presetIds.filter(Boolean),

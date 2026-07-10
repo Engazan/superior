@@ -171,18 +171,6 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only; see newTabRef
   }, [])
 
-  // A folder opened out-of-band (e.g. `superior .` while the app is running) is
-  // pushed from main; adopt the new state and select the folder it activated.
-  useEffect(() => {
-    return window.api.onWorkspaceStateChanged((state) => {
-      setProfiles(state.profiles)
-      setActiveProfileId(state.activeProfileId)
-      setFolders(state.folders)
-      setWorkspaces(state.workspaces)
-      setActiveWorkspaceId(state.activeWorkspaceId)
-    })
-  }, [])
-
   // Point the active session at the most recent session of a workspace's active tab.
   const focusWorkspaceSession = useCallback(
     (workspaceId: string | null) => {
@@ -206,6 +194,17 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     },
     [focusWorkspaceSession]
   )
+
+  // A folder opened out-of-band (e.g. `superior .` while the app is running) is
+  // pushed from main; adopt the new state via applyState so the activated
+  // workspace also gets a focused session — otherwise activeSessionId keeps
+  // pointing into the now-hidden workspace and ⌘W would close an invisible
+  // terminal there.
+  const applyStateRef = useRef(applyState)
+  applyStateRef.current = applyState
+  useEffect(() => {
+    return window.api.onWorkspaceStateChanged((state) => applyStateRef.current(state))
+  }, [])
 
   const addFolder = useCallback(async () => {
     setError(null)

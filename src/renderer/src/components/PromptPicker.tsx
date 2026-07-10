@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
+import { useDismiss } from './ui'
 import type { Prompt } from '../types'
 
 interface Props {
@@ -21,6 +22,13 @@ export function PromptPicker({ onPick, onClose }: Props): JSX.Element {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Register on the overlay stack: the global shortcut gate consults it, so
+  // ⌘W (and friends) can't reach through the open picker and kill a terminal.
+  // Also makes Escape work when focus isn't in the input (the backdrop handles
+  // outside clicks itself).
+  useDismiss(panelRef, true, onClose, { outside: false })
 
   useEffect(() => {
     window.api.listPrompts().then((state) => setPrompts(state.prompts))
@@ -59,6 +67,7 @@ export function PromptPicker({ onPick, onClose }: Props): JSX.Element {
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         onClick={(e) => e.stopPropagation()}
         className="solid-surface flex max-h-96 w-96 flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >

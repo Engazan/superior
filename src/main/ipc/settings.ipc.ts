@@ -26,7 +26,7 @@ import {
 import { applyGlobalHotkey } from '../services/global-hotkey.service'
 import { syncUsageTracking } from '../services/agent.service'
 
-export function registerSettingsIpc(): void {
+export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.SETTINGS_GET, (): AppSettings => getSettings())
 
   ipcMain.handle(IPC.SETTINGS_SET_THEME, (_event, theme: ThemeMode): AppSettings => setTheme(theme))
@@ -67,10 +67,12 @@ export function registerSettingsIpc(): void {
   )
 
   // Try to register first; only persist a chord that actually took effect.
+  // The hotkey callback outlives windows — it must resolve the CURRENT window
+  // through the shared getter, not a webContents captured from the request
+  // (which pins a destroyed window after close + re-create and goes silent).
   ipcMain.handle(
     IPC.SETTINGS_SET_GLOBAL_HOTKEY,
-    (event, chord: string | null): GlobalHotkeyResult => {
-      const getWindow = (): BrowserWindow | null => BrowserWindow.fromWebContents(event.sender)
+    (_event, chord: string | null): GlobalHotkeyResult => {
       const error = applyGlobalHotkey(chord, getWindow)
       if (error) {
         // Fall back to the previously working registration (if any).

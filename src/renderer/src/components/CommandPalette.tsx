@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
+import { useDismiss } from './ui'
 import { filterCommands, type Command } from '../commands'
 
 interface Props {
@@ -18,6 +19,11 @@ export function CommandPalette({ commands, onClose }: Props): JSX.Element {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Escape must close the palette even when focus left the input (Tab onto a
+  // row); the backdrop handles outside clicks itself.
+  useDismiss(panelRef, true, onClose, { outside: false })
 
   const filtered = useMemo(() => filterCommands(commands, query), [commands, query])
 
@@ -55,6 +61,7 @@ export function CommandPalette({ commands, onClose }: Props): JSX.Element {
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         onClick={(e) => e.stopPropagation()}
         className="solid-surface flex max-h-[26rem] w-[28rem] flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >

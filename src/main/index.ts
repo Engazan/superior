@@ -166,7 +166,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerWorkspaceIpc(reconciled)
   registerWorktreeIpc()
   registerAgentIpc()
-  registerSettingsIpc()
+  registerSettingsIpc(() => mainWindow)
   registerPresetsIpc()
   registerPromptsIpc()
   registerTasksIpc()
@@ -199,6 +199,9 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
 app.on('second-instance', (_event, argv, workingDirectory) => {
   const dir = extractFolderArg(argv, workingDirectory || process.cwd())
   if (dir) openFolderFromCli(dir)
+  // macOS keeps the app alive with zero windows; recreate one so `superior
+  // <dir>` visibly opens (the fresh window reads the just-persisted state).
+  if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
   focusMainWindow()
 })
 

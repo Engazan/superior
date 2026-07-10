@@ -326,7 +326,10 @@ export async function switchBranch(
       /would be overwritten|commit your changes or stash/i.test(message)
     invalidateGitStatus(folderPath) // the attempted stash may have changed the tree
     const status = await getGitStatus(folderPath).catch(() => null)
-    return { status, error: message, dirtyConflict }
+    // `stashed` must survive the failure path: when the auto-stash succeeded
+    // but the checkout still failed, the user's edits sit in the stash and the
+    // UI has to say so — otherwise they look lost.
+    return { status, error: message, dirtyConflict, stashed }
   }
 }
 

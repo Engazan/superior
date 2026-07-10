@@ -101,6 +101,11 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): JSX.E
         setData(res)
         setLoading(false)
       })
+      .catch(() => {
+        // A rejected IPC would otherwise leave the panel on "Loading…" forever;
+        // data stays null, which renders as the unavailable state.
+        if (active) setLoading(false)
+      })
     return () => {
       active = false
     }
