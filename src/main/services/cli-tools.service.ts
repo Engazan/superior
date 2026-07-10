@@ -107,7 +107,12 @@ let npmPrefixPromise: Promise<string | null> | null = null
 
 function npmGlobalPrefix(): Promise<string | null> {
   if (!npmPrefixPromise) {
-    npmPrefixPromise = run('npm', ['prefix', '-g']).then((out) => (out || '').trim() || null)
+    // npm is npm.cmd on Windows — execFile without a shell can't run it there.
+    npmPrefixPromise = (
+      isWindows
+        ? run(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', 'npm prefix -g'])
+        : run('npm', ['prefix', '-g'])
+    ).then((out) => (out || '').trim() || null)
   }
   return npmPrefixPromise
 }

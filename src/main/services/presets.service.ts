@@ -59,6 +59,15 @@ function terminalPreset(): TerminalPreset {
 /** A 3- or 6-digit hex color, optionally prefixed with '#'. */
 const HEX_COLOR = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
+/** Minimal shape guard: one malformed element (hand-edited file) must not make
+ * sanitize/read throw and take every PRESETS_LIST call down with it. */
+function isPreset(v: unknown): v is TerminalPreset {
+  const o = v as Partial<TerminalPreset>
+  return (
+    !!o && typeof o.id === 'string' && typeof o.name === 'string' && typeof o.command === 'string'
+  )
+}
+
 /** Drop a preset's color if it isn't a valid hex string. */
 function sanitizePreset(preset: TerminalPreset): TerminalPreset {
   const next: TerminalPreset =
@@ -75,7 +84,7 @@ function read(): PresetsState {
   const parsed = readJsonFile<PresetsState | null>(storeFile(), null, (p) => {
     const obj = p as Partial<PresetsState>
     return obj && Array.isArray(obj.presets)
-      ? { presets: obj.presets.map(sanitizePreset) }
+      ? { presets: obj.presets.filter(isPreset).map(sanitizePreset) }
       : null
   })
   if (parsed) {

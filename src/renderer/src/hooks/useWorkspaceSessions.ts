@@ -3,6 +3,7 @@ import { type LaunchConfig } from '../components/AgentLauncher'
 import { useConfirm } from '../components/ui'
 import { type GridLayout } from '../gridLayout'
 import { type TFunction } from '../i18n'
+import { ipcErrorMessage } from '../ipcError'
 import {
   WORKTREE_ERROR,
   type AgentLaunchTarget,
@@ -469,7 +470,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       try {
         applyState(await window.api.removeWorkspace(id, force))
       } catch (err) {
-        setError(worktreeErrorMessage((err as Error).message))
+        // Strip Electron's invoke envelope or the WORKTREE_ERROR codes never match.
+        setError(worktreeErrorMessage(ipcErrorMessage(err)))
       }
     },
     [workspaces, counts, sessions, applyState, setError, t, worktreeErrorMessage, confirm]

@@ -285,6 +285,10 @@ export const daemonClient = {
       pendingSpawns.set(payload.id, { resolve, reject })
       setTimeout(() => {
         if (pendingSpawns.delete(payload.id)) {
+          // A slow (not dead) daemon may still spawn the pty after we gave up
+          // — reap it (kill of an unknown id is a no-op) so it can't linger as
+          // a ghost session in the next list/restore.
+          post({ t: 'kill', id: payload.id })
           reject(new Error('Timed out waiting for the terminal daemon.'))
         }
       }, REQUEST_TIMEOUT_MS)

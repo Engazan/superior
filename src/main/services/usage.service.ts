@@ -425,10 +425,29 @@ function scheduleRefresh(t: Tracker): void {
   }, REFRESH_THROTTLE_MS)
 }
 
+/** Close and drop this tracker's watchers whose `key` tag differs from `value`
+ * — every `/clear` rotates to a new transcript (and status file), and stale
+ * watchers would otherwise accumulate one fd per rotation for the tracker's
+ * whole lifetime. */
+function dropStaleWatchers(t: Tracker, key: 'dir' | 'file' | 'status', value: string): void {
+  t.watchers = t.watchers.filter((w) => {
+    const tag = (w as unknown as Record<string, string | undefined>)[key]
+    if (tag === undefined || tag === value) return true
+    try {
+      w.close()
+    } catch {
+      /* already closed */
+    }
+    return false
+  })
+}
+
 /** Watch the project dir for new/rotated transcripts (best-effort; poll backs it up). */
 function ensureDirWatch(t: Tracker): void {
   const dir = t.projectDir
-  if (!dir || t.watchers.some((w) => (w as { dir?: string }).dir === dir)) return
+  if (!dir) return
+  dropStaleWatchers(t, 'dir', dir)
+  if (t.watchers.some((w) => (w as { dir?: string }).dir === dir)) return
   try {
     const watcher = fs.watch(dir, () => scheduleRefresh(t))
     ;(watcher as { dir?: string }).dir = dir
@@ -440,6 +459,7 @@ function ensureDirWatch(t: Tracker): void {
 
 /** Watch the specific transcript file for appends. */
 function ensureFileWatch(t: Tracker, file: string): void {
+  dropStaleWatchers(t, 'file', file)
   if (t.watchers.some((w) => (w as { file?: string }).file === file)) return
   try {
     const watcher = fs.watch(file, () => scheduleRefresh(t))
@@ -452,6 +472,7 @@ function ensureFileWatch(t: Tracker, file: string): void {
 
 /** Watch the status-line file the wrapper writes for this session. */
 function ensureStatusWatch(t: Tracker, file: string): void {
+  dropStaleWatchers(t, 'status', file)
   if (t.watchers.some((w) => (w as { status?: string }).status === file)) return
   try {
     const watcher = fs.watch(file, () => scheduleRefresh(t))
@@ -475,6 +496,7 @@ export function startUsageTracking(args: {
   if (trackers.has(args.id)) return
   const configDir = resolveClaudeConfigDir(args.command)
   if (!configDir || !args.cwd) return
+  pruneStatusFiles()
 
   const tracker: Tracker = {
     id: args.id,
@@ -508,6 +530,31 @@ export function startUsageTracking(args: {
   ensureDirWatch(tracker)
 }
 
+// The wrapper writes one <session-id>.json per Claude session and sessions can
+// end while the app is closed, so the dir grows without bound: sweep old ones
+// once per app run. Wrapper scripts/backups ('statusline-*') are kept.
+const STATUS_FILE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
+let statusFilesPruned = false
+
+function pruneStatusFiles(): void {
+  if (statusFilesPruned) return
+  statusFilesPruned = true
+  const cutoff = Date.now() - STATUS_FILE_MAX_AGE_MS
+  try {
+    for (const name of fs.readdirSync(statusDir())) {
+      if (!name.endsWith('.json') || name.startsWith('statusline-')) continue
+      const file = path.join(statusDir(), name)
+      try {
+        if (fs.statSync(file).mtimeMs < cutoff) fs.rmSync(file)
+      } catch {
+        /* vanished mid-sweep */
+      }
+    }
+  } catch {
+    /* dir not created yet */
+  }
+}
+
 /**
  * Stop tracking a session. Does a final read so the badge reflects the last turn,
  * and keeps the snapshot so the UI can keep showing the final usage after exit.
@@ -524,6 +571,14 @@ export function stopUsageTracking(id: string): void {
       w.close()
     } catch {
       /* already closed */
+    }
+  }
+  // The session is over — its status file has served its purpose.
+  if (t.sessionId) {
+    try {
+      fs.rmSync(path.join(statusDir(), `${t.sessionId}.json`), { force: true })
+    } catch {
+      /* best effort */
     }
   }
   trackers.delete(id)

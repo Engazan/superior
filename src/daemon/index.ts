@@ -286,7 +286,12 @@ function handle(conn: Conn, msg: ClientMessage): void {
     case 'update': {
       // Patch persisted metadata (e.g. the user's nickname) so it survives restarts.
       const s = sessions.get(msg.id)
-      if (s) s.meta = { ...s.meta, ...msg.meta }
+      if (s) {
+        s.meta = { ...s.meta, ...msg.meta }
+        // '' is the delete marker: JSON.stringify drops undefined from the
+        // frame, so a cleared nickname arrives as an empty string.
+        if (s.meta.nickname === '') delete s.meta.nickname
+      }
       break
     }
     case 'input': {

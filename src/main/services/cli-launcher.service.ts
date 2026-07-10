@@ -192,10 +192,13 @@ function ensurePosixPath(dir: string): string | undefined {
 
 /** Append `dir` to the persistent user PATH (survives reboots) via PowerShell. */
 async function ensureWindowsPath(dir: string): Promise<string | undefined> {
+  // PowerShell single-quoted strings escape ' by doubling it — a profile path
+  // containing an apostrophe (user O'Brien) would otherwise break the command.
+  const psDir = dir.replace(/'/g, "''")
   const ps = [
     `$p=[Environment]::GetEnvironmentVariable('Path','User');`,
-    `if (($p -split ';') -notcontains '${dir}') {`,
-    `  [Environment]::SetEnvironmentVariable('Path', ($p.TrimEnd(';') + ';${dir}'), 'User')`,
+    `if (($p -split ';') -notcontains '${psDir}') {`,
+    `  [Environment]::SetEnvironmentVariable('Path', ($p.TrimEnd(';') + ';${psDir}'), 'User')`,
     `}`
   ].join(' ')
   try {

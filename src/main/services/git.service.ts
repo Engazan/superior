@@ -245,8 +245,10 @@ async function computeGitStatus(folderPath: string): Promise<GitStatus> {
       behind: repo.behind,
       upstream: repo.upstream
     }
-  } catch {
-    return { isRepository: false, branch: null }
+  } catch (err) {
+    // A stats failure (e.g. numstat timeout in a huge repo) is not "not a
+    // repository" — keep the repo and branch visible and surface the error.
+    return { isRepository: true, branch: repo.branch, error: gitErrorMessage(err) }
   }
 }
 

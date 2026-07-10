@@ -271,8 +271,12 @@ export function killAgent(id: string): void {
 
 /** Persist a session's nickname in the daemon so it survives an app restart. */
 export function updateSessionNickname(id: string, nickname: string): void {
-  patchPersistedSession(id, { nickname: nickname.trim() || undefined })
-  daemonClient.updateMeta(id, { nickname })
+  const trimmed = nickname.trim()
+  patchPersistedSession(id, { nickname: trimmed || undefined })
+  // '' is the daemon's delete marker (JSON.stringify would drop an undefined
+  // from the frame) — send the same trimmed value both places so the two
+  // stores can't diverge and trip the restart-time reconcile.
+  daemonClient.updateMeta(id, { nickname: trimmed })
 }
 
 // Resizes arrive at pointer-drag rate (divider drags, window resizing); the

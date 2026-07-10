@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
+import { ipcErrorMessage as errorText } from '../ipcError'
 import { Button, Input, Modal } from './ui'
 import type {
   CustomMemoryPreset,
@@ -11,10 +12,6 @@ import type {
 
 interface Props {
   onPresetsChanged: (state: PresetsState) => void
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 const PROVIDER_UI = {
