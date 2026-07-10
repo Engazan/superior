@@ -14,6 +14,7 @@ import {
   searchFiles,
   writeFilePreview
 } from '../services/fs.service'
+import { isWithinWorkspaceFolder } from '../services/workspace.service'
 import { openFileTarget } from '../services/file-opener.service'
 
 export function registerFsIpc(): void {
@@ -40,9 +41,13 @@ export function registerFsIpc(): void {
   )
 
   // Open a file with the OS default app (also covers "download"/save for PDFs
-  // and other binaries we don't render in-app). Returns '' on success.
+  // and other binaries we don't render in-app). Returns '' on success. Gated by
+  // the same containment rule as every other fs entry point — the renderer
+  // shows untrusted repo content and must not launch arbitrary disk paths.
   ipcMain.handle(IPC.SHELL_OPEN_PATH, (_event, filePath: string): Promise<string> =>
-    shell.openPath(filePath)
+    isWithinWorkspaceFolder(filePath)
+      ? shell.openPath(filePath)
+      : Promise.resolve('Path is outside the opened workspace folders.')
   )
 
   // Terminal file links: validate a path-like token against the workspace

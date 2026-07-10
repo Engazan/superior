@@ -1,4 +1,4 @@
-import { dialog } from 'electron'
+import { dialog, safeStorage } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
@@ -26,30 +26,77 @@ function storeFile(): string {
   return userDataFile('integrations.json')
 }
 
-function isIntegration(v: unknown): v is Integration {
-  const o = v as Partial<Integration>
+/** On-disk shape: the token is stored OS-keychain-encrypted (`tokenEnc`) when
+ * the platform supports it; plaintext `token` remains only as the fallback for
+ * systems without a keyring, and as the pre-encryption legacy format. */
+interface StoredIntegration extends Omit<Integration, 'token'> {
+  token?: string
+  tokenEnc?: string
+}
+
+function isStoredIntegration(v: unknown): v is StoredIntegration {
+  const o = v as Partial<StoredIntegration>
   return (
     !!o &&
     typeof o.id === 'string' &&
     PROVIDERS.includes(o.provider as IntegrationProvider) &&
     typeof o.name === 'string' &&
     typeof o.baseUrl === 'string' &&
-    typeof o.token === 'string'
+    (typeof o.token === 'string' || typeof o.tokenEnc === 'string')
   )
 }
 
+function canEncrypt(): boolean {
+  try {
+    return safeStorage.isEncryptionAvailable()
+  } catch {
+    return false
+  }
+}
+
+function decryptToken(row: StoredIntegration): string {
+  if (row.tokenEnc) {
+    try {
+      return safeStorage.decryptString(Buffer.from(row.tokenEnc, 'base64'))
+    } catch {
+      return '' // keychain unavailable — surfaces as 'unauthorized' in the UI
+    }
+  }
+  return row.token ?? ''
+}
+
+function toStored(i: Integration): StoredIntegration {
+  const { token, ...rest } = i
+  if (token && canEncrypt()) {
+    return { ...rest, tokenEnc: safeStorage.encryptString(token).toString('base64') }
+  }
+  return { ...rest, token }
+}
+
 function read(): IntegrationsState {
-  const parsed = readJsonFile<IntegrationsState | null>(storeFile(), null, (p) => {
-    const obj = p as Partial<IntegrationsState>
-    return obj && Array.isArray(obj.integrations)
-      ? { integrations: obj.integrations.filter(isIntegration) }
-      : null
-  })
-  return parsed ?? { integrations: [] }
+  const rows =
+    readJsonFile<StoredIntegration[] | null>(storeFile(), null, (p) => {
+      const obj = p as { integrations?: unknown[] }
+      return obj && Array.isArray(obj.integrations)
+        ? obj.integrations.filter(isStoredIntegration)
+        : null
+    }) ?? []
+  const state: IntegrationsState = {
+    integrations: rows.map((r) => ({
+      id: r.id,
+      provider: r.provider,
+      name: r.name,
+      baseUrl: r.baseUrl,
+      token: decryptToken(r)
+    }))
+  }
+  // One-time upgrade: a store carrying plaintext tokens is rewritten encrypted.
+  if (canEncrypt() && rows.some((r) => r.token)) save(state)
+  return state
 }
 
 function save(state: IntegrationsState): void {
-  writeJsonFile(storeFile(), state, 'integrations')
+  writeJsonFile(storeFile(), { integrations: state.integrations.map(toStored) }, 'integrations')
 }
 
 export function listIntegrations(): IntegrationsState {
@@ -228,21 +275,16 @@ export async function listRepos(integrationId: string): Promise<RepoListResult> 
   }
 }
 
-/** Embed the token into a clone URL so a private repo can be cloned non-interactively. */
-function authedCloneUrl(integration: Integration, cloneUrl: string): string {
-  try {
-    const u = new URL(cloneUrl)
-    if (integration.provider === 'gitlab') {
-      u.username = 'oauth2'
-      u.password = integration.token
-    } else {
-      u.username = integration.token
-      u.password = ''
-    }
-    return u.toString()
-  } catch {
-    return cloneUrl
-  }
+/**
+ * Basic-auth header for git-over-HTTP, wire-identical to the user:pass form
+ * each forge documents (token as username for GitHub/Gitea, oauth2:token for
+ * GitLab) — but delivered via environment config instead of the URL, so the
+ * token never appears in argv, .git/config or git's error output.
+ */
+function cloneAuthHeader(integration: Integration): string {
+  const cred =
+    integration.provider === 'gitlab' ? `oauth2:${integration.token}` : `${integration.token}:`
+  return `Authorization: Basic ${Buffer.from(cred).toString('base64')}`
 }
 
 /** Render a git clone failure into a code/message, redacting any leaked token. */
@@ -256,13 +298,16 @@ function cloneErrorMessage(err: unknown): string {
 
 /**
  * Clone a forge repo into a user-picked parent directory and register the
- * result as a folder. The token is used for the clone but then stripped from
- * the stored remote so it never lands in .git/config.
+ * result as a folder. The token travels via ephemeral git config from the
+ * environment (git ≥ 2.31) — never in argv or the URL — so nothing
+ * credentialed can land in `ps` output, .git/config or error text.
  */
 export async function cloneRepository(args: CloneArgs): Promise<CloneResult> {
   const integration = read().integrations.find((i) => i.id === args.integrationId)
   if (!integration) return { error: 'unknown-integration' }
-  if (!args.cloneUrl) return { error: 'invalid-repo' }
+  // http(s) only: a crafted value like `--upload-pack=<cmd>` or an exotic
+  // scheme must never reach git as anything but a URL (see also `--` below).
+  if (!args.cloneUrl || !/^https?:\/\//i.test(args.cloneUrl)) return { error: 'invalid-repo' }
 
   const picked = await dialog.showOpenDialog({
     title: 'Choose where to clone',
@@ -271,16 +316,28 @@ export async function cloneRepository(args: CloneArgs): Promise<CloneResult> {
   if (picked.canceled || picked.filePaths.length === 0) return { canceled: true }
   const parent = picked.filePaths[0]
 
-  const repoName = (args.fullName.split('/').pop() || 'repo').replace(/\.git$/, '')
-  const dest = path.join(parent, repoName)
+  const repoName =
+    path.basename((args.fullName.split('/').pop() || 'repo').replace(/\.git$/, '').trim()) || 'repo'
+  const dest = path.resolve(parent, repoName)
+  // A crafted fullName ('..', 'a\..\b') must not escape the picked parent.
+  if (repoName === '.' || repoName === '..' || path.dirname(dest) !== path.resolve(parent)) {
+    return { error: 'invalid-repo' }
+  }
   if (fs.existsSync(dest) && fs.readdirSync(dest).length > 0) {
     return { error: 'dest-exists' }
   }
 
   try {
-    await execFileAsync('git', ['clone', authedCloneUrl(integration, args.cloneUrl), dest], {
+    await execFileAsync('git', ['clone', '--', args.cloneUrl, dest], {
       timeout: 300_000,
-      windowsHide: true
+      windowsHide: true,
+      env: {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: '0', // fail fast on bad auth, never prompt
+        GIT_CONFIG_COUNT: '1',
+        GIT_CONFIG_KEY_0: 'http.extraHeader',
+        GIT_CONFIG_VALUE_0: cloneAuthHeader(integration)
+      }
     })
   } catch (err) {
     // Best-effort cleanup of a partial clone so a retry isn't blocked.
@@ -290,16 +347,6 @@ export async function cloneRepository(args: CloneArgs): Promise<CloneResult> {
       /* ignore */
     }
     return { error: cloneErrorMessage(err) }
-  }
-
-  // Replace the credentialed remote with the clean URL so no token is persisted.
-  try {
-    await execFileAsync('git', ['-C', dest, 'remote', 'set-url', 'origin', args.cloneUrl], {
-      timeout: 5000,
-      windowsHide: true
-    })
-  } catch {
-    /* non-fatal: the clone already succeeded */
   }
 
   return { state: addFolderByPath(dest) }
