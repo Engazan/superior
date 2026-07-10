@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
+import { RefreshIcon } from './ui'
 import type { FsEntry } from '../types'
 
 interface Props {
@@ -291,19 +292,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
           aria-label={t('files.refresh')}
           className="shrink-0 rounded p-1 text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
         >
-          <svg
-            className="block h-3.5 w-3.5"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
-            <path d="M13.5 2v3.5H10" />
-          </svg>
+          <RefreshIcon className="block h-3.5 w-3.5" />
         </button>
       </div>
 

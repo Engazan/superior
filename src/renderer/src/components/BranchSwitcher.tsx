@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
-import { useDismiss } from './ui'
+import { BranchIcon, useDismiss } from './ui'
 import type { BranchInfo } from '../types'
 
 interface Props {
@@ -10,26 +10,6 @@ interface Props {
   currentBranch: string
   /** Called after a successful switch so the title bar re-reads git status. */
   onSwitched: () => void
-}
-
-function BranchIcon(): JSX.Element {
-  return (
-    <svg
-      className="block h-3.5 w-3.5 shrink-0"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="4" cy="3.5" r="1.75" />
-      <circle cx="4" cy="12.5" r="1.75" />
-      <circle cx="12" cy="5.5" r="1.75" />
-      <path d="M4 5.25v5.5M10.25 5.5H9A5 5 0 0 0 4 10.5" />
-    </svg>
-  )
 }
 
 function Caret(): JSX.Element {
@@ -256,7 +236,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
         aria-expanded={open}
         className="flex h-7 min-w-0 max-w-64 items-center gap-1.5 rounded px-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
-        <BranchIcon />
+        <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{currentBranch}</span>
         <Caret />
       </button>

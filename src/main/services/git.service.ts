@@ -87,8 +87,6 @@ interface RepoState {
   /** Commits ahead of / behind the upstream (0/0 without an upstream). */
   ahead: number
   behind: number
-  /** True when the index differs from HEAD (something is staged). */
-  hasStaged: boolean
   error?: string
 }
 
@@ -99,8 +97,7 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
     untracked: [],
     upstream: null,
     ahead: 0,
-    behind: 0,
-    hasStaged: false
+    behind: 0
   }
   try {
     // -z: NUL-terminated entries so untracked paths with any characters survive.
@@ -111,7 +108,6 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
     let upstream: string | null = null
     let ahead = 0
     let behind = 0
-    let hasStaged = false
     const untracked: string[] = []
     const tokens = raw.split('\0')
     for (let i = 0; i < tokens.length; i++) {
@@ -128,10 +124,8 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
           behind = Number(m[2])
         }
       } else if (tok.startsWith('? ')) untracked.push(tok.slice(2))
-      else if (tok.startsWith('1 ') || tok.startsWith('2 ')) {
-        // '1 XY ...' / '2 XY ...': X = staged column, Y = unstaged column.
-        if (tok[2] !== '.') hasStaged = true
-        if (tok.startsWith('2 ')) i++ // rename entry: its origin path is the next token
+      else if (tok.startsWith('2 ')) {
+        i++ // rename entry: its origin path is the next token
       }
     }
     const hasCommits = oid !== '' && oid !== '(initial)'
@@ -141,7 +135,7 @@ async function readRepoState(folderPath: string): Promise<RepoState> {
         : hasCommits
           ? `detached@${oid.slice(0, 7)}`
           : 'HEAD'
-    return { isRepository: true, branch, hasCommits, untracked, upstream, ahead, behind, hasStaged }
+    return { isRepository: true, branch, hasCommits, untracked, upstream, ahead, behind }
   } catch (err) {
     const e = err as NodeJS.ErrnoException
     if (e.code === 'ENOENT') {

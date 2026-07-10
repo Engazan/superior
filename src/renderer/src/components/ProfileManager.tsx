@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import {
   Button,
-  COLOR_SWATCHES,
+  ColorSwatchPicker,
   IconButton,
   Input,
   Modal,
@@ -204,41 +204,12 @@ export function ProfileManager({
               style={{ top: colorPicker.y, left: colorPicker.x }}
               className="solid-surface fixed z-[60] w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
             >
-              <div className="flex flex-wrap items-center gap-1.5">
-                {COLOR_SWATCHES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => {
-                      onUpdateColor(p.id, c)
-                      setColorPicker(null)
-                    }}
-                    title={c}
-                    aria-label={c}
-                    className={`h-7 w-7 rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                      p.color?.toLowerCase() === c.toLowerCase()
-                        ? 'border-accent ring-1 ring-accent'
-                        : 'border-edge'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-                <label
-                  title={t('form.colorCustom')}
-                  className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-edge"
-                  style={{ backgroundColor: p.color ?? 'transparent' }}
-                >
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-fgdim">
-                    +
-                  </span>
-                  <input
-                    type="color"
-                    value={p.color ?? '#888888'}
-                    onChange={(e) => onUpdateColor(p.id, e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                </label>
-              </div>
+              <ColorSwatchPicker
+                color={p.color ?? null}
+                none={false}
+                onChange={(c) => onUpdateColor(p.id, c)}
+                onSwatchPick={() => setColorPicker(null)}
+              />
               <button
                 type="button"
                 onClick={() => {

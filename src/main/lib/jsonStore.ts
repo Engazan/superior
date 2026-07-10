@@ -43,6 +43,48 @@ export function readJsonFile<T>(
 }
 
 /**
+ * A persisted list of id-keyed items stored as `{ [key]: T[] }` in a userData
+ * JSON file. Consolidates the read/save/upsert/delete-by-id pattern the list
+ * stores (prompts, layout presets) used to copy-paste. Stores with extra
+ * top-level fields or custom read-time normalization keep their own code.
+ */
+export function createJsonListStore<T extends { id: string }>(
+  file: string,
+  key: string,
+  label: string
+): {
+  read(): T[]
+  save(items: T[]): void
+  upsert(item: T): T[]
+  remove(id: string): T[]
+} {
+  const target = (): string => userDataFile(file)
+  const read = (): T[] =>
+    readJsonFile<T[] | null>(target(), null, (p) => {
+      const obj = p as Record<string, unknown>
+      return obj && Array.isArray(obj[key]) ? (obj[key] as T[]) : null
+    }) ?? []
+  const save = (items: T[]): void => writeJsonFile(target(), { [key]: items }, label)
+  return {
+    read,
+    save,
+    upsert(item: T): T[] {
+      const items = read()
+      const idx = items.findIndex((x) => x.id === item.id)
+      if (idx >= 0) items[idx] = item
+      else items.push(item)
+      save(items)
+      return items
+    },
+    remove(id: string): T[] {
+      const items = read().filter((x) => x.id !== id)
+      save(items)
+      return items
+    }
+  }
+}
+
+/**
  * Pretty-print `value` to `file`, logging (never throwing) on failure. Writes to
  * a temp file and atomically renames it over the target so a crash or a
  * concurrent read never observes a half-written (and thus corrupt) file.

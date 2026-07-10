@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { DiffFileView } from './DiffFileView'
-import { BranchIcon, Button, IconButton, useToast } from './ui'
+import { BranchIcon, Button, IconButton, RefreshIcon, useToast } from './ui'
 import type { GitDiff, GitDiffFile } from '../types'
 
 interface Props {
@@ -227,19 +227,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
           aria-label={t('changes.refresh')}
           className="shrink-0 rounded p-0.5 text-fgmuted transition hover:bg-hover hover:text-fg"
         >
-          <svg
-            className="block h-3.5 w-3.5"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
-            <path d="M13.5 2v3.5H10" />
-          </svg>
+          <RefreshIcon className="block h-3.5 w-3.5" />
         </button>
       </div>
 

@@ -71,6 +71,27 @@ export function TrashIcon(props: IconProps): JSX.Element {
   )
 }
 
+export function RefreshIcon(props: IconProps): JSX.Element {
+  // 16-grid drawing kept from the original ChangesView/FilesView glyph.
+  return (
+    <svg
+      width={props.size ?? 14}
+      height={props.size ?? 14}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+      aria-hidden
+    >
+      <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
+      <path d="M13.5 2v3.5H10" />
+    </svg>
+  )
+}
+
 export function BranchIcon(props: IconProps): JSX.Element {
   // 16-grid drawing kept from the original BranchSwitcher/ChangesView glyph.
   return (

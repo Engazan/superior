@@ -2,6 +2,7 @@ import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { BranchSwitcher } from './BranchSwitcher'
+import { BranchIcon } from './ui'
 import { useI18n } from '../i18n'
 import { useShortcutTitle } from '../shortcuts'
 import { barTint } from '../tint'
@@ -42,26 +43,6 @@ interface Props {
   onManageProfiles: () => void
   /** Hex tint of the active profile; tints the strip when set. */
   tintColor?: string | null
-}
-
-function BranchIcon(): JSX.Element {
-  return (
-    <svg
-      className="block h-3.5 w-3.5 shrink-0"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="4" cy="3.5" r="1.75" />
-      <circle cx="4" cy="12.5" r="1.75" />
-      <circle cx="12" cy="5.5" r="1.75" />
-      <path d="M4 5.25v5.5M10.25 5.5H9A5 5 0 0 0 4 10.5" />
-    </svg>
-  )
 }
 
 /**
@@ -128,7 +109,7 @@ export function TitleBar({
                       />
                     ) : (
                       <>
-                        <BranchIcon />
+                        <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
                         <span className="truncate" title={gitStatus.branch ?? 'HEAD'}>
                           {gitStatus.branch ?? 'HEAD'}
                         </span>
@@ -148,7 +129,7 @@ export function TitleBar({
                     title={gitStatus?.error ?? t('titlebar.initGitTitle')}
                     className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
                   >
-                    <BranchIcon />
+                    <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
                     <span>
                       {gitStatus?.error ? t('titlebar.gitUnavailable') : t('titlebar.initGit')}
                     </span>

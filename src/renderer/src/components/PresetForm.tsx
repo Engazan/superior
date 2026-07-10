@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { BUILTIN_ICONS } from '@shared/icons'
 import { useI18n } from '../i18n'
-import { Button, COLOR_SWATCHES, Input, Modal } from './ui'
+import { Button, ColorSwatchPicker, Input, Modal } from './ui'
 import type { PresetIconType, TerminalPreset } from '../types'
 
 interface Props {
@@ -156,48 +156,7 @@ export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JS
           {/* Color — tints the top bar while a session from this preset is active. */}
           <div>
             <label className="mb-1 block text-xs font-medium text-fgdim">{t('form.color')}</label>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setColor(null)}
-                className={`rounded-md border px-2 py-1 text-xs ${
-                  color === null
-                    ? 'border-accent bg-bar text-fg'
-                    : 'border-edge text-fgdim hover:bg-hover'
-                }`}
-              >
-                {t('form.colorNone')}
-              </button>
-              {COLOR_SWATCHES.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  title={c}
-                  className={`h-7 w-7 rounded-md border ${
-                    color?.toLowerCase() === c.toLowerCase()
-                      ? 'border-accent ring-1 ring-accent'
-                      : 'border-edge'
-                  }`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-              <label
-                title={t('form.colorCustom')}
-                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-md border border-edge"
-                style={{ backgroundColor: color ?? 'transparent' }}
-              >
-                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-fgdim">
-                  +
-                </span>
-                <input
-                  type="color"
-                  value={color ?? '#888888'}
-                  onChange={(e) => setColor(e.target.value)}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-              </label>
-            </div>
+            <ColorSwatchPicker color={color} onChange={setColor} />
           </div>
         </div>
     </Modal>

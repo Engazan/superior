@@ -35,10 +35,4 @@ export class RingBuffer {
     for (let i = this.head; i < this.chunks.length; i++) out += this.chunks[i]!.data
     return out
   }
-
-  clear(): void {
-    this.chunks = []
-    this.head = 0
-    this.size = 0
-  }
 }
