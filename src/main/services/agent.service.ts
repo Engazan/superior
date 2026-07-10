@@ -275,10 +275,23 @@ export function updateSessionNickname(id: string, nickname: string): void {
   daemonClient.updateMeta(id, { nickname })
 }
 
-/** Persist the latest terminal size and forward it to the live daemon session. */
+// Resizes arrive at pointer-drag rate (divider drags, window resizing); the
+// daemon must see each one live, but persisting each would synchronously
+// rewrite terminal-sessions.json ~60×/s per terminal.
+const pendingResizePersists = new Map<string, NodeJS.Timeout>()
+const RESIZE_PERSIST_DELAY_MS = 250
+
+/** Forward a resize to the live daemon session; persist the size debounced. */
 export function resizeAgent(id: string, cols: number, rows: number): void {
-  patchPersistedSession(id, { cols, rows })
   daemonClient.resize(id, cols, rows)
+  clearTimeout(pendingResizePersists.get(id))
+  pendingResizePersists.set(
+    id,
+    setTimeout(() => {
+      pendingResizePersists.delete(id)
+      patchPersistedSession(id, { cols, rows })
+    }, RESIZE_PERSIST_DELAY_MS)
+  )
 }
 
 /** UI status for an exit code: user-interrupt/TERM codes read as a clean exit. */

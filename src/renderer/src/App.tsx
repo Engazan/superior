@@ -138,7 +138,13 @@ export default function App(): JSX.Element {
     setError
   )
   // Per-workspace +/- line counts shown beside each name in the sidebar.
-  const workspaceGitStats = useWorkspaceGitStats(ws.workspaces, ws.folders)
+  // Scoped to the active profile: the sidebar renders only its folders, and
+  // hidden profiles' repos must not be spawning git subprocesses every 3s.
+  const visibleWorkspaces = useMemo(() => {
+    const paths = new Set(ws.visibleFolders.map((f) => f.path))
+    return ws.workspaces.filter((w) => paths.has(w.folderPath))
+  }, [ws.workspaces, ws.visibleFolders])
+  const workspaceGitStats = useWorkspaceGitStats(visibleWorkspaces, ws.visibleFolders)
 
   // Initialize the terminal data/exit bus once on mount.
   useEffect(() => {

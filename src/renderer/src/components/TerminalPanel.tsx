@@ -127,6 +127,11 @@ export function TerminalPanel({
   const shortcutTitle = useShortcutTitle()
   const containerRef = useRef<HTMLDivElement>(null)
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
+  // Live layout while a divider drag is in flight. Only the release commits it
+  // upstream (state + IPC write) — per-move commits would persist the tab
+  // layout over IPC on every pointer event (see usePreviewPane for the same
+  // persist-on-release pattern).
+  const [dragLayout, setDragLayout] = useState<GridLayout | null>(null)
   // Stable identity so memoized TerminalViews don't re-render on every panel render.
   // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
   // "error" dot for Ctrl+C would cry wolf and erode the real-crash signal.
@@ -160,7 +165,10 @@ export function TerminalPanel({
   // Grid: map the first MAX_GRID sessions to their slot rectangles.
   const gridCells = tabSessions.slice(0, MAX_GRID)
   const dist = distribute(gridCells.length)
-  const layout = matchesDist(gridLayout, dist) ? (gridLayout as GridLayout) : uniformLayout(dist)
+  const committedLayout = matchesDist(gridLayout, dist)
+    ? (gridLayout as GridLayout)
+    : uniformLayout(dist)
+  const layout = dragLayout && matchesDist(dragLayout, dist) ? dragLayout : committedLayout
   const rects = gridRects(dist, layout)
   const dividers = gridDividers(dist, layout)
   const gridIndex = new Map(gridCells.map((s, i) => [s.id, i] as const))
@@ -190,16 +198,20 @@ export function TerminalPanel({
     const el = containerRef.current
     if (!el) return
     setResizing(d.axis)
+    let latest: GridLayout | null = null
     const move = (ev: PointerEvent): void => {
       const box = el.getBoundingClientRect()
       const fraction =
         d.axis === 'v'
           ? (ev.clientX - box.left) / box.width
           : (ev.clientY - box.top) / box.height
-      onGridLayoutChange(applyDividerDrag(layout, d, fraction, !ev.altKey))
+      latest = applyDividerDrag(layout, d, fraction, !ev.altKey)
+      setDragLayout(latest)
     }
     const up = (): void => {
       setResizing(null)
+      if (latest) onGridLayoutChange(latest)
+      setDragLayout(null)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
     }

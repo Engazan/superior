@@ -252,7 +252,10 @@ async function computeGitStatus(folderPath: string): Promise<GitStatus> {
 
 // Several renderer pollers (title bar, sidebar badges) ask for the same dir on
 // the same 3s cadence; a short-lived cache turns those into one git run.
-const STATUS_CACHE_MS = 1500
+// Long enough that the two renderer pollers on the same dir (title-bar status
+// and sidebar stats, both on a 3s cadence but phase-shifted) share one compute
+// per tick; mutations bypass staleness via invalidateGitStatus.
+const STATUS_CACHE_MS = 2500
 const statusCache = new Map<string, { at: number; promise: Promise<GitStatus> }>()
 
 /** Drop the cached status for a dir after a mutation (checkout, init, …). */
