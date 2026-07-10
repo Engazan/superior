@@ -140,10 +140,17 @@ function storeFile(): string {
 // re-reading the file each time was a sync fs hit on the main thread.
 let cached: AppSettings | null = null
 
+/** JSON may be syntactically valid yet still be an unusable primitive or array. */
+function isSettingsRecord(value: unknown): value is Partial<AppSettings> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
 /** Read persisted settings, falling back to defaults for any missing/invalid field. */
 export function getSettings(): AppSettings {
   if (cached) return cached
-  const parsed = readJsonFile<Partial<AppSettings>>(storeFile(), {})
+  const parsed = readJsonFile<Partial<AppSettings>>(storeFile(), {}, (value) =>
+    isSettingsRecord(value) ? value : null
+  )
   cached = {
     theme: THEMES.includes(parsed.theme as ThemeMode) ? (parsed.theme as ThemeMode) : DEFAULTS.theme,
     language: LANGUAGES.includes(parsed.language as Language)

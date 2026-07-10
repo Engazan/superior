@@ -75,6 +75,7 @@ export const sk: Record<MessageKey, string> = {
   'changes.empty': 'Žiadne zmeny',
   'changes.binary': 'Binárny súbor',
   'changes.tooLarge': 'Súbor je príliš veľký na zobrazenie',
+  'changes.truncated': 'Zobrazuje sa len prvých 500 nesledovaných súborov.',
   'changes.refresh': 'Obnoviť',
   'changes.staged': 'Staged',
   'changes.unstaged': 'Zmeny',

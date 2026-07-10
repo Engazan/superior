@@ -75,6 +75,7 @@ export const pl: Record<MessageKey, string> = {
   'changes.empty': 'Brak zmian',
   'changes.binary': 'Plik binarny',
   'changes.tooLarge': 'Plik zbyt duży do wyświetlenia',
+  'changes.truncated': 'Wyświetlono tylko pierwsze 500 nieśledzonych plików.',
   'changes.refresh': 'Odśwież',
   'changes.staged': 'Staged',
   'changes.unstaged': 'Zmiany',

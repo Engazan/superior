@@ -474,17 +474,26 @@ export function updateProfile(id: string, patch: ProfileUpdate): WorkspaceState 
  * always be one). If the active profile is removed, another becomes active.
  */
 export async function removeProfile(id: string): Promise<WorkspaceState> {
+  const initial = readState()
+  if (initial.profiles.length <= 1 || !initial.profiles.some((p) => p.id === id)) {
+    return normalize(initial)
+  }
+  const doomedPaths = new Set(initial.folders.filter((f) => f.profileId === id).map((f) => f.path))
+  const doomed = initial.workspaces.filter((w) => doomedPaths.has(w.folderPath) && w.worktreePath)
+  await Promise.allSettled(
+    doomed.map((w) => removeWorktree(w.folderPath, w.worktreePath as string, { force: true }))
+  )
+  // Worktree teardown awaits network/disk work. Reload instead of saving the
+  // pre-await snapshot so a concurrently added folder or profile isn't lost.
   const state = readState()
   if (state.profiles.length <= 1 || !state.profiles.some((p) => p.id === id)) {
     return normalize(state)
   }
-  const doomedPaths = new Set(state.folders.filter((f) => f.profileId === id).map((f) => f.path))
-  const doomed = state.workspaces.filter((w) => doomedPaths.has(w.folderPath) && w.worktreePath)
-  await Promise.allSettled(
-    doomed.map((w) => removeWorktree(w.folderPath, w.worktreePath as string, { force: true }))
+  const currentDoomedPaths = new Set(
+    state.folders.filter((f) => f.profileId === id).map((f) => f.path)
   )
   state.folders = state.folders.filter((f) => f.profileId !== id)
-  state.workspaces = state.workspaces.filter((w) => !doomedPaths.has(w.folderPath))
+  state.workspaces = state.workspaces.filter((w) => !currentDoomedPaths.has(w.folderPath))
   state.profiles = state.profiles.filter((p) => p.id !== id)
   if (state.activeProfileId === id) state.activeProfileId = state.profiles[0]?.id ?? null
   const next = normalize(state)
@@ -503,13 +512,15 @@ export function setActiveProfile(id: string): WorkspaceState {
 
 /** Remove a folder and all of its workspaces, tearing down any worktrees. */
 export async function removeFolder(folderPath: string): Promise<WorkspaceState> {
-  const state = readState()
+  const initial = readState()
   // Best-effort: drop app-managed worktrees of this folder's workspaces so they
   // don't leak. Folder removal is a deliberate destructive action, so force.
-  const doomed = state.workspaces.filter((w) => w.folderPath === folderPath && w.worktreePath)
+  const doomed = initial.workspaces.filter((w) => w.folderPath === folderPath && w.worktreePath)
   await Promise.allSettled(
     doomed.map((w) => removeWorktree(folderPath, w.worktreePath as string, { force: true }))
   )
+  // Do not overwrite changes made while the asynchronous worktree cleanup ran.
+  const state = readState()
   state.folders = state.folders.filter((f) => f.path !== folderPath)
   state.workspaces = state.workspaces.filter((w) => w.folderPath !== folderPath)
   const next = normalize(state)
@@ -596,8 +607,8 @@ export function addWorkspace(folderPath: string, name: string): WorkspaceState {
  * @throws a WORKTREE_ERROR code or raw git error (handled by the IPC layer).
  */
 export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<WorkspaceState> {
-  const state = readState()
-  const folder = state.folders.find((f) => f.path === args.folderPath)
+  const initial = readState()
+  const folder = initial.folders.find((f) => f.path === args.folderPath)
   if (!folder || !isLocalFolder(folder)) {
     throw new Error('worktree:invalid-folder')
   }
@@ -609,6 +620,13 @@ export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<Works
   )
 
   try {
+    // Worktree creation can take minutes. Re-read state before persisting so a
+    // concurrent folder/profile edit is retained rather than overwritten.
+    const state = readState()
+    const currentFolder = state.folders.find((f) => f.path === args.folderPath)
+    if (!currentFolder || !isLocalFolder(currentFolder)) {
+      throw new Error('worktree:invalid-folder')
+    }
     const ws: Workspace = {
       ...makeWorkspace(args.folderPath, args.name.trim() || branch),
       worktreePath,
@@ -656,15 +674,18 @@ export function setWorkspaceStartupLayout(id: string, layoutId: string | null): 
  * intact (the UI confirms, then retries with force).
  */
 export async function removeWorkspace(id: string, force = false): Promise<WorkspaceState> {
-  const state = readState()
-  const removed = state.workspaces.find((w) => w.id === id)
+  const initial = readState()
+  const removed = initial.workspaces.find((w) => w.id === id)
   // Tear the worktree down first; if it fails (dirty + !force), don't mutate state.
   if (removed?.worktreePath) {
     await removeWorktree(removed.folderPath, removed.worktreePath, { force })
   }
+  // Preserve mutations made while removing a worktree from disk.
+  const state = readState()
+  const currentRemoved = state.workspaces.find((w) => w.id === id)
   state.workspaces = state.workspaces.filter((w) => w.id !== id)
   if (state.activeWorkspaceId === id) {
-    const sameFolder = state.workspaces.filter((w) => w.folderPath === removed?.folderPath)
+    const sameFolder = state.workspaces.filter((w) => w.folderPath === currentRemoved?.folderPath)
     state.activeWorkspaceId = sameFolder.length
       ? sameFolder[sameFolder.length - 1].id
       : null

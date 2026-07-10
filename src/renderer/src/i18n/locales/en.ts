@@ -73,6 +73,7 @@ export const en = {
   'changes.empty': 'No changes',
   'changes.binary': 'Binary file',
   'changes.tooLarge': 'File too large to display',
+  'changes.truncated': 'Only the first 500 untracked files are shown.',
   'changes.refresh': 'Refresh',
   'changes.staged': 'Staged',
   'changes.unstaged': 'Changes',

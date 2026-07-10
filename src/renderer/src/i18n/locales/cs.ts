@@ -75,6 +75,7 @@ export const cs: Record<MessageKey, string> = {
   'changes.empty': 'Žádné změny',
   'changes.binary': 'Binární soubor',
   'changes.tooLarge': 'Soubor je příliš velký k zobrazení',
+  'changes.truncated': 'Zobrazuje se jen prvních 500 nesledovaných souborů.',
   'changes.refresh': 'Obnovit',
   'changes.staged': 'Staged',
   'changes.unstaged': 'Změny',

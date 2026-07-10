@@ -19,6 +19,7 @@ import type { Rect } from '../gridLayout'
 import type { AgentSession } from '../types'
 
 const FULL_RECT: Rect = { top: 0, left: 0, width: 100, height: 100 }
+const MAX_PASTED_IMAGE_BYTES = 10 * 1024 * 1024
 
 const STATUS_DOT: Record<AgentSession['status'], string> = {
   running: 'bg-status',
@@ -336,6 +337,10 @@ export const TerminalView = memo(function TerminalView({
       if (!imageFile) return // plain-text paste — let xterm handle it
       e.preventDefault()
       e.stopPropagation()
+      if (imageFile.size > MAX_PASTED_IMAGE_BYTES) {
+        toastRef.current.error(tRef.current('terminal.imagePasteFailed'))
+        return
+      }
       const ext = imageFile.type.split('/')[1]?.split('+')[0] || 'png'
       imageFile
         .arrayBuffer()

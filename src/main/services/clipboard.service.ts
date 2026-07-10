@@ -14,6 +14,8 @@ const IMAGE_DIR = join(tmpdir(), 'superior-pasted-images')
 // Keep the temp dir from growing without bound across a long session: newest
 // files win, anything past this count is pruned on the next paste.
 const MAX_KEPT = 50
+/** Keep a pasted screenshot useful without letting an IPC payload consume unbounded RAM/disk. */
+export const MAX_CLIPBOARD_IMAGE_BYTES = 10 * 1024 * 1024
 
 const EXT_RE = /^[a-z0-9]+$/i
 
@@ -22,6 +24,9 @@ export async function saveClipboardImage(
   bytes: Uint8Array,
   ext: string
 ): Promise<{ path: string }> {
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength > MAX_CLIPBOARD_IMAGE_BYTES) {
+    throw new Error('Clipboard image is too large.')
+  }
   await fs.mkdir(IMAGE_DIR, { recursive: true })
   await pruneOldImages()
   const safeExt = EXT_RE.test(ext) ? ext.toLowerCase() : 'png'

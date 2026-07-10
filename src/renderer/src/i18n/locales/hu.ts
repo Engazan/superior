@@ -75,6 +75,7 @@ export const hu: Record<MessageKey, string> = {
   'changes.empty': 'Nincsenek változások',
   'changes.binary': 'Bináris fájl',
   'changes.tooLarge': 'A fájl túl nagy a megjelenítéshez',
+  'changes.truncated': 'Csak az első 500 nem követett fájl látható.',
   'changes.refresh': 'Frissítés',
   'changes.staged': 'Staged',
   'changes.unstaged': 'Változások',

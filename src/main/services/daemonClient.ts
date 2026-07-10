@@ -179,7 +179,12 @@ function scheduleReattach(): void {
 function setupSocket(s: net.Socket): void {
   const decoder = new FrameDecoder<ServerMessage>()
   s.on('data', (chunk) => {
-    for (const msg of decoder.push(chunk)) onServerMessage(msg)
+    try {
+      for (const msg of decoder.push(chunk)) onServerMessage(msg)
+    } catch (err) {
+      console.error('[daemon] malformed server frame:', err)
+      s.destroy()
+    }
   })
   s.on('close', () => {
     if (sock === s) sock = null

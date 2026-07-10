@@ -232,6 +232,11 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {diff.truncated && (
+          <div className="border-b border-warnBorder bg-warnBg/60 px-3 py-2 text-[11px] text-warn">
+            {t('changes.truncated')}
+          </div>
+        )}
         {totals.files === 0 ? (
           <div className="px-3 py-4 text-[11px] text-fgmuted">{t('changes.empty')}</div>
         ) : (

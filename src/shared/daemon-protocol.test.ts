@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   FrameDecoder,
+  MAX_DAEMON_FRAME_BYTES,
   daemonSocketPath,
   encodeDataFrame,
   encodeFrame,
@@ -40,6 +41,14 @@ describe('frame codec', () => {
     const out: ServerMessage[] = []
     for (const byte of wire) out.push(...dec.push(Buffer.from([byte])))
     expect(out).toEqual(msgs)
+  })
+
+  it('rejects an oversized declared frame before buffering its payload', () => {
+    const header = Buffer.alloc(4)
+    header.writeUInt32BE(MAX_DAEMON_FRAME_BYTES + 1, 0)
+    const dec = new FrameDecoder<ServerMessage>()
+
+    expect(() => dec.push(header)).toThrow('Daemon frame exceeds')
   })
 })
 

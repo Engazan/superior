@@ -675,6 +675,8 @@ export interface GitDiff {
   staged: GitDiffFile[]
   /** Combined totals across staged + unstaged. */
   totals: { files: number; additions: number; deletions: number }
+  /** True when the untracked-file detail hit its safety cap. */
+  truncated?: boolean
   /** Commits ahead of / behind the upstream; absent without an upstream. */
   ahead?: number
   behind?: number

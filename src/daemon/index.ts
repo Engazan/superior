@@ -354,6 +354,7 @@ function onConnection(socket: net.Socket): void {
       for (const msg of conn.decoder.push(chunk)) handle(conn, msg)
     } catch (err) {
       log(`handler error: ${(err as Error).stack ?? err}`)
+      socket.destroy()
     }
   })
   socket.on('drain', () => {

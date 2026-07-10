@@ -111,6 +111,18 @@ const EMPTY_READ: FileReadResult = {
   isBinary: false
 }
 
+/** A renderer request must never turn the preview bridge into an unbounded read. */
+const MAX_PREVIEW_BYTES = 10 * 1024 * 1024
+
+function normalizeReadOptions(value: unknown): Required<FileReadOptions> {
+  const raw = value && typeof value === 'object' ? (value as Partial<FileReadOptions>) : {}
+  const maxBytes =
+    typeof raw.maxBytes === 'number' && Number.isFinite(raw.maxBytes)
+      ? Math.min(MAX_PREVIEW_BYTES, Math.max(0, Math.floor(raw.maxBytes)))
+      : 0
+  return { maxBytes, asBase64: raw.asBase64 === true, read: raw.read === true }
+}
+
 /**
  * Read a file for preview without ever modifying it. Reads at most
  * `opts.maxBytes`; for binary/base64 reads larger than the limit nothing is
@@ -122,6 +134,7 @@ export async function readFilePreview(
   opts: FileReadOptions
 ): Promise<FileReadResult> {
   if (!isWithinWorkspaceFolder(filePath)) return { ...EMPTY_READ, error: OUTSIDE_WORKSPACE }
+  const options = normalizeReadOptions(opts)
   let size: number
   let mtimeMs: number
   try {
@@ -135,25 +148,29 @@ export async function readFilePreview(
     return { ...EMPTY_READ, error: (err as Error).message }
   }
 
-  if (!opts.read) {
-    return { ...EMPTY_READ, size, mtimeMs, truncated: size > opts.maxBytes }
+  if (!options.read) {
+    return { ...EMPTY_READ, size, mtimeMs, truncated: size > options.maxBytes }
   }
 
   // Base64 (images): only when the whole file fits, otherwise fall back.
-  if (opts.asBase64) {
-    if (size > opts.maxBytes) {
+  if (options.asBase64) {
+    if (size > options.maxBytes) {
       return { ...EMPTY_READ, size, mtimeMs, truncated: true }
     }
     try {
       const fh = await open(filePath, 'r')
       try {
-        const buf = await fh.readFile()
+        // Read exactly the validated size: the file can grow after stat, but a
+        // preview request must still remain bounded by its approved allocation.
+        const buf = Buffer.alloc(size)
+        const { bytesRead } = await fh.read(buf, 0, size, 0)
+        const slice = buf.subarray(0, bytesRead)
         return {
           size,
           mtimeMs,
           truncated: false,
           encoding: 'base64',
-          content: buf.toString('base64'),
+          content: slice.toString('base64'),
           isBinary: true
         }
       } finally {
@@ -165,7 +182,7 @@ export async function readFilePreview(
   }
 
   // Text: read at most maxBytes; mark truncated when the file is larger.
-  const toRead = Math.min(size, opts.maxBytes)
+  const toRead = Math.min(size, options.maxBytes)
   try {
     const fh = await open(filePath, 'r')
     try {
@@ -175,7 +192,7 @@ export async function readFilePreview(
       return {
         size,
         mtimeMs,
-        truncated: size > opts.maxBytes,
+        truncated: size > options.maxBytes,
         encoding: 'utf8',
         content: slice.toString('utf8'),
         isBinary: slice.includes(0)

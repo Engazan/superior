@@ -84,6 +84,8 @@ export function daemonSocketPath(userData: string): string {
 // so the hot path skips JSON entirely.
 const DATA_FRAME_KIND = 0x01
 const FLAG_REPLAY = 0x01
+/** Reject malformed local-socket frames before their declared length can exhaust memory. */
+export const MAX_DAEMON_FRAME_BYTES = 8 * 1024 * 1024
 
 /** Encode a message as a length-prefixed (4-byte BE) JSON frame. */
 export function encodeFrame(msg: ClientMessage | ServerMessage): Buffer {
@@ -151,6 +153,11 @@ export class FrameDecoder<T extends ClientMessage | ServerMessage> {
     while (this.size >= 4) {
       if (this.chunks[0].length < 4) this.compact()
       const len = this.chunks[0].readUInt32BE(0)
+      if (len > MAX_DAEMON_FRAME_BYTES) {
+        this.chunks = []
+        this.size = 0
+        throw new Error(`Daemon frame exceeds ${MAX_DAEMON_FRAME_BYTES} bytes.`)
+      }
       if (this.size < 4 + len) break
       if (this.chunks[0].length < 4 + len) this.compact()
       const first = this.chunks[0]

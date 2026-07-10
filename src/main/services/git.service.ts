@@ -1,7 +1,5 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 import type {
   BranchSwitchResult,
   GitActionResult,
@@ -13,6 +11,7 @@ import type {
 } from '@shared/types'
 import { isWithinWorkspaceFolder } from './workspace.service'
 import { parseUnifiedDiff } from './git.diff'
+import { readUntrackedFile } from './git.untracked'
 
 const execFileAsync = promisify(execFile)
 
@@ -211,15 +210,11 @@ async function getDiffStats(
 
 /** Line count of an untracked file, treated as all-additions (0 for binary/oversized). */
 async function countUntrackedLines(folderPath: string, rel: string): Promise<number> {
-  try {
-    const buf = await readFile(join(folderPath, rel))
-    if (buf.includes(0) || buf.byteLength > MAX_UNTRACKED_BYTES) return 0
-    const rows = buf.toString('utf-8').split('\n')
-    if (rows.length && rows[rows.length - 1] === '') rows.pop()
-    return rows.length
-  } catch {
-    return 0
-  }
+  const buf = await readUntrackedFile(folderPath, rel)
+  if (!buf || buf.includes(0)) return 0
+  const rows = buf.toString('utf-8').split('\n')
+  if (rows.length && rows[rows.length - 1] === '') rows.pop()
+  return rows.length
 }
 
 async function computeGitStatus(folderPath: string): Promise<GitStatus> {
@@ -371,9 +366,10 @@ export async function initGit(folderPath: string): Promise<GitStatus> {
   }
 }
 
-// Untracked files are read directly and shown as all-additions; skip anything
-// bigger than this so a stray large/binary file can't bloat the diff payload.
-const MAX_UNTRACKED_BYTES = 512 * 1024
+// A detailed diff should remain responsive even in a repo with an accidentally
+// unignored build output or dependency tree. The status summary still reports
+// the full changed-file count; this only bounds the rendered detail.
+const MAX_UNTRACKED_DIFF_FILES = 500
 
 const emptyTotals = { files: 0, additions: 0, deletions: 0 }
 
@@ -389,12 +385,11 @@ async function untrackedEntry(folderPath: string, rel: string): Promise<GitDiffF
     truncated: false,
     hunks: []
   }
+  const buf = await readUntrackedFile(folderPath, rel)
+  if (!buf) return { ...base, binary: true, truncated: true }
+  const binary = buf.includes(0)
+  if (binary) return { ...base, binary: true, truncated: true }
   try {
-    const buf = await readFile(join(folderPath, rel))
-    const binary = buf.includes(0)
-    if (binary || buf.byteLength > MAX_UNTRACKED_BYTES) {
-      return { ...base, binary, truncated: true }
-    }
     const rows = buf.toString('utf-8').split('\n')
     if (rows.length && rows[rows.length - 1] === '') rows.pop()
     const lines: GitDiffLine[] = rows.map((content, i) => ({
@@ -460,8 +455,10 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
     // Build untracked entries with bounded concurrency instead of serially, so a
     // large untracked set doesn't stall the diff (or open an unbounded number of
     // file handles at once).
-    const untracked = await mapLimit(repo.untracked, UNTRACKED_READ_CONCURRENCY, (rel) =>
-      untrackedEntry(folderPath, rel)
+    const untracked = await mapLimit(
+      repo.untracked.slice(0, MAX_UNTRACKED_DIFF_FILES),
+      UNTRACKED_READ_CONCURRENCY,
+      (rel) => untrackedEntry(folderPath, rel)
     )
     files.push(...untracked)
 
@@ -479,6 +476,7 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
       files,
       staged,
       totals,
+      truncated: repo.untracked.length > MAX_UNTRACKED_DIFF_FILES || undefined,
       ahead: repo.ahead,
       behind: repo.behind,
       upstream: repo.upstream

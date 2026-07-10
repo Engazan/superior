@@ -148,6 +148,7 @@ export function setPresetActive(id: string, active: boolean): PresetsState {
 }
 
 const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
+const MAX_PRESET_IMAGE_BYTES = 2 * 1024 * 1024
 const MIME: Record<string, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
@@ -167,6 +168,8 @@ export async function pickPresetImage(): Promise<{ dataUrl: string } | null> {
   if (result.canceled || result.filePaths.length === 0) return null
 
   const file = result.filePaths[0]
+  const info = await fs.promises.stat(file)
+  if (!info.isFile() || info.size > MAX_PRESET_IMAGE_BYTES) return null
   const ext = path.extname(file).slice(1).toLowerCase()
   const mime = MIME[ext] ?? 'application/octet-stream'
   const base64 = (await fs.promises.readFile(file)).toString('base64')
