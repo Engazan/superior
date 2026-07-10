@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer as electronIpcRenderer } from 'electron'
+import type { IpcInvokeArgs, IpcInvokeChannel, IpcInvokeResult } from '@shared/ipc-contract'
 import {
   IPC,
   type AgentDataEvent,
@@ -63,6 +64,20 @@ import {
   type WorktreeAddArgs,
   type WorktreeAddResult
 } from '@shared/types'
+
+// Keep the public preload surface explicit, while checking every invoke against
+// the shared channel payload/result contract used by main-process handlers.
+const ipcRenderer = {
+  invoke<Channel extends IpcInvokeChannel>(
+    channel: Channel,
+    ...args: IpcInvokeArgs<Channel>
+  ): Promise<IpcInvokeResult<Channel>> {
+    return electronIpcRenderer.invoke(channel, ...args) as Promise<IpcInvokeResult<Channel>>
+  },
+  send: electronIpcRenderer.send.bind(electronIpcRenderer),
+  on: electronIpcRenderer.on.bind(electronIpcRenderer),
+  removeListener: electronIpcRenderer.removeListener.bind(electronIpcRenderer)
+}
 
 const api = {
   /** Host platform, e.g. 'darwin' | 'win32' | 'linux'. */

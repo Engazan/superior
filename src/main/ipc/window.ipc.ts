@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import { IPC } from '@shared/types'
+import { handleWithEvent } from './handle'
 
 /**
  * Register the global window-control handlers once. Each handler resolves the
@@ -21,7 +22,7 @@ export function registerWindowIpc(): void {
     BrowserWindow.fromWebContents(event.sender)?.close()
   })
 
-  ipcMain.handle(IPC.WINDOW_IS_MAXIMIZED, (event): boolean => {
+  handleWithEvent(IPC.WINDOW_IS_MAXIMIZED, (event): boolean => {
     return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
   })
 

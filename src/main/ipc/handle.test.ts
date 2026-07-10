@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { IPC } from '@shared/types'
 
 const electron = vi.hoisted(() => ({ handle: vi.fn() }))
 
@@ -12,11 +13,15 @@ describe('IPC handle helper', () => {
   })
 
   it('forwards invoke arguments without exposing the Electron event', () => {
-    handle('test:increment', (value: number) => value + 1)
+    let killedId: string | undefined
+    handle(IPC.AGENT_KILL, (id: string): void => {
+      killedId = id
+    })
 
     expect(electron.handle).toHaveBeenCalledOnce()
     const [, registeredListener] = electron.handle.mock.calls[0]
 
-    expect(registeredListener({} as never, 41)).toBe(42)
+    registeredListener({} as never, 'session-1')
+    expect(killedId).toBe('session-1')
   })
 })
