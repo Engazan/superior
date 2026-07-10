@@ -1,10 +1,13 @@
 import { app } from 'electron'
-import { spawnSync } from 'child_process'
+import { execFile } from 'child_process'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
+import { promisify } from 'util'
 import type { ShellCommandInstallResult, ShellCommandStatus } from '@shared/types'
 import { isValidWorkspaceDir, canonicalPath } from './workspace.service'
+
+const execFileAsync = promisify(execFile)
 
 const isWindows = process.platform === 'win32'
 
@@ -96,29 +99,26 @@ start "" "${appExecPath()}" --path "%TARGET%"
 /**
  * Is the command both written to disk and resolvable as `superior` in the user's
  * shell? `resolvable` is what actually matters for the user — the file can exist
- * while its directory is missing from PATH.
+ * while its directory is missing from PATH. Async on purpose: probing a login
+ * shell can take seconds under slow dotfiles (nvm & co.), and a sync spawn here
+ * would freeze the whole main process (UI and all other IPC) for that long.
  */
-export function shellCommandStatus(): ShellCommandStatus {
+export async function shellCommandStatus(): Promise<ShellCommandStatus> {
   const target = installPath()
   const installed = fileExists(target)
 
+  // A non-zero exit (command not found) rejects — that simply means unresolvable.
   let resolvable = false
   try {
-    if (isWindows) {
-      const shell = process.env.COMSPEC || 'cmd.exe'
-      const res = spawnSync(shell, ['/d', '/s', '/c', `where ${COMMAND_NAME}`], {
-        encoding: 'utf-8',
-        timeout: 5000
-      })
-      resolvable = res.status === 0 && !!(res.stdout || '').trim()
-    } else {
-      const shell = process.env.SHELL || '/bin/bash'
-      const res = spawnSync(shell, ['-l', '-c', `command -v ${COMMAND_NAME} 2>/dev/null`], {
-        encoding: 'utf-8',
-        timeout: 5000
-      })
-      resolvable = res.status === 0 && !!(res.stdout || '').trim()
-    }
+    const [shell, args] = isWindows
+      ? [process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', `where ${COMMAND_NAME}`]]
+      : [process.env.SHELL || '/bin/bash', ['-l', '-c', `command -v ${COMMAND_NAME} 2>/dev/null`]]
+    const { stdout } = await execFileAsync(shell, args, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      windowsHide: true
+    })
+    resolvable = !!stdout.trim()
   } catch {
     resolvable = false
   }
@@ -140,7 +140,7 @@ function fileExists(file: string): boolean {
  * added to the shell env file the app's login shell sources (matching how CLI
  * tools are exposed); on Windows the user PATH is extended via PowerShell.
  */
-export function installShellCommand(): ShellCommandInstallResult {
+export async function installShellCommand(): Promise<ShellCommandInstallResult> {
   const target = installPath()
   try {
     fs.mkdirSync(path.dirname(target), { recursive: true })
@@ -152,11 +152,11 @@ export function installShellCommand(): ShellCommandInstallResult {
 
   const dir = path.dirname(target)
   let pathNote: string | undefined
-  if (!shellCommandStatus().resolvable) {
-    pathNote = isWindows ? ensureWindowsPath(dir) : ensurePosixPath(dir)
+  if (!(await shellCommandStatus()).resolvable) {
+    pathNote = isWindows ? await ensureWindowsPath(dir) : ensurePosixPath(dir)
   }
 
-  return { ok: true, path: target, pathNote, resolvable: shellCommandStatus().resolvable }
+  return { ok: true, path: target, pathNote, resolvable: (await shellCommandStatus()).resolvable }
 }
 
 /**
@@ -191,7 +191,7 @@ function ensurePosixPath(dir: string): string | undefined {
 }
 
 /** Append `dir` to the persistent user PATH (survives reboots) via PowerShell. */
-function ensureWindowsPath(dir: string): string | undefined {
+async function ensureWindowsPath(dir: string): Promise<string | undefined> {
   const ps = [
     `$p=[Environment]::GetEnvironmentVariable('Path','User');`,
     `if (($p -split ';') -notcontains '${dir}') {`,
@@ -199,8 +199,11 @@ function ensureWindowsPath(dir: string): string | undefined {
     `}`
   ].join(' ')
   try {
-    const res = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 8000 })
-    return res.status === 0 ? 'PATH' : undefined
+    await execFileAsync('powershell', ['-NoProfile', '-Command', ps], {
+      timeout: 8000,
+      windowsHide: true
+    })
+    return 'PATH'
   } catch {
     return undefined
   }

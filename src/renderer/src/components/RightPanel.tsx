@@ -79,7 +79,10 @@ export function RightPanel({
       if (show) setLoading(true)
       const result = await window.api.getGitDiff(folderPath)
       if (token !== reqRef.current) return // superseded by a newer fetch
-      setDiff(result)
+      // Keep the previous object when nothing changed: React then bails out of
+      // the update entirely, so an idle 3s poll stops re-rendering every hunk
+      // row of a large diff (thousands of elements) for no visual change.
+      setDiff((prev) => (prev && JSON.stringify(prev) === JSON.stringify(result) ? prev : result))
       setLoading(false)
     },
     [folderPath]

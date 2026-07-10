@@ -123,6 +123,8 @@ interface Tracker {
   createdAt: number
   /** Resolved transcript dir for this cwd, cached once it exists. */
   projectDir: string | null
+  /** When the encoding-mismatch fallback sweep last ran (0 = never). */
+  lastProjectScanAt: number
   /** The transcript file we're tailing, and how far we've consumed it. */
   filePath: string | null
   /** Basename of the transcript = Claude's session id, used to find the status file. */
@@ -235,6 +237,11 @@ function readStatus(t: Tracker): void {
   ensureStatusWatch(t, file)
 }
 
+// The encoding-mismatch fallback readdirs + stats every project dir; while the
+// direct path is missing (e.g. `claude` launched but no message sent yet) the
+// 3s poll would rerun that sweep every tick. Rescan at most this often.
+const PROJECT_SCAN_INTERVAL_MS = 15_000
+
 /** Resolve the transcript dir for this tracker's cwd, caching it once present. */
 function projectDirFor(t: Tracker): string | null {
   if (t.projectDir && safeExists(t.projectDir)) return t.projectDir
@@ -245,7 +252,10 @@ function projectDirFor(t: Tracker): string | null {
     return direct
   }
   // Encoding mismatch fallback: find the subdir whose newest transcript reports
-  // exactly this cwd. Only runs while the direct path is missing.
+  // exactly this cwd. Only runs while the direct path is missing, throttled.
+  const now = Date.now()
+  if (now - t.lastProjectScanAt < PROJECT_SCAN_INTERVAL_MS) return null
+  t.lastProjectScanAt = now
   try {
     for (const name of fs.readdirSync(root)) {
       const dir = path.join(root, name)
@@ -290,13 +300,20 @@ function newestJsonl(dir: string): string | null {
 }
 
 function firstLineCwd(file: string): string | null {
+  // Only the first line matters; transcripts grow to tens of MB, so read just
+  // the first 8KB instead of the whole file.
+  let fd: number | null = null
   try {
-    const head = fs.readFileSync(file, 'utf-8').slice(0, 8192)
-    const line = head.split('\n', 1)[0]
+    fd = fs.openSync(file, 'r')
+    const buf = Buffer.alloc(8192)
+    const n = fs.readSync(fd, buf, 0, buf.length, 0)
+    const line = buf.toString('utf-8', 0, n).split('\n', 1)[0]
     const obj = JSON.parse(line) as { cwd?: string }
     return obj.cwd ?? null
   } catch {
     return null
+  } finally {
+    if (fd !== null) fs.closeSync(fd)
   }
 }
 
@@ -465,6 +482,7 @@ export function startUsageTracking(args: {
     configDir,
     createdAt: args.createdAt,
     projectDir: null,
+    lastProjectScanAt: 0,
     filePath: null,
     sessionId: null,
     offset: 0,

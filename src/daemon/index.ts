@@ -117,6 +117,12 @@ function flush(session: Session): void {
     session.flushTimer = null
   }
   if (!session.pending) return
+  // Nobody attached (app closed, daemon holding the session): the bytes are
+  // already in the ring buffer — don't build a frame just to drop it.
+  if (session.attached.size === 0) {
+    session.pending = ''
+    return
+  }
   const frame = encodeDataFrame(session.id, session.pending)
   session.pending = ''
   for (const conn of session.attached) sendData(conn, session, frame)

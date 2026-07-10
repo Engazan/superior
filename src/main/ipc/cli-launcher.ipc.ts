@@ -3,6 +3,9 @@ import { IPC, type ShellCommandInstallResult, type ShellCommandStatus } from '@s
 import { installShellCommand, shellCommandStatus } from '../services/cli-launcher.service'
 
 export function registerCliLauncherIpc(): void {
-  ipcMain.handle(IPC.SHELL_COMMAND_STATUS, (): ShellCommandStatus => shellCommandStatus())
-  ipcMain.handle(IPC.SHELL_COMMAND_INSTALL, (): ShellCommandInstallResult => installShellCommand())
+  ipcMain.handle(IPC.SHELL_COMMAND_STATUS, (): Promise<ShellCommandStatus> => shellCommandStatus())
+  ipcMain.handle(
+    IPC.SHELL_COMMAND_INSTALL,
+    (): Promise<ShellCommandInstallResult> => installShellCommand()
+  )
 }
