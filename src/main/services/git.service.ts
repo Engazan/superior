@@ -438,9 +438,19 @@ export async function getGitDiff(folderPath: string): Promise<GitDiff> {
     // Two separate diffs so the UI can offer stage/unstage per section:
     // staged = index vs HEAD (works before the first commit too), unstaged =
     // worktree vs index. Untracked files belong to the unstaged side.
+    // quotePath=false keeps non-ASCII filenames as raw UTF-8 instead of octal
+    // escapes, so the parser (and stage/unstage) sees the real paths.
     const [stagedRaw, unstagedRaw] = await Promise.all([
-      gitRaw(folderPath, ['diff', '--cached', '--no-color', '--no-ext-diff', '-M']),
-      gitRaw(folderPath, ['diff', '--no-color', '--no-ext-diff', '-M'])
+      gitRaw(folderPath, [
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--cached',
+        '--no-color',
+        '--no-ext-diff',
+        '-M'
+      ]),
+      gitRaw(folderPath, ['-c', 'core.quotePath=false', 'diff', '--no-color', '--no-ext-diff', '-M'])
     ])
     const staged = parseUnifiedDiff(stagedRaw)
     const files = parseUnifiedDiff(unstagedRaw)
@@ -584,6 +594,8 @@ export async function getCommitDiff(folderPath: string, hash: string): Promise<G
   if (!/^[0-9a-f]{7,40}$/i.test(hash)) return []
   try {
     const raw = await gitRaw(folderPath, [
+      '-c',
+      'core.quotePath=false',
       'show',
       hash,
       '--no-color',
