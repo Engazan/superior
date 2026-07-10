@@ -169,7 +169,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       // Only now do surviving daemon sessions count — gates workspace auto-launch.
       setSessionsRestored(true)
     })().catch((err) => console.error('[restore] failed:', err))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only; see newTabRef
+     
   }, [])
 
   // Point the active session at the most recent session of a workspace's active tab.

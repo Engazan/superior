@@ -646,6 +646,8 @@ export default function App(): JSX.Element {
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
+    // `ws` methods are read at event time; the curated list holds the real triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     shortcuts,
     view,

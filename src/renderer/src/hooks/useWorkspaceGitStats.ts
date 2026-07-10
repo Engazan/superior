@@ -92,7 +92,7 @@ export function useWorkspaceGitStats(
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', onVisible)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [key])
 
   return stats

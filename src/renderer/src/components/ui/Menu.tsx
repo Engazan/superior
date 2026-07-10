@@ -81,7 +81,7 @@ export function Menu({ items, anchor, onClose }: Props): JSX.Element {
       window.removeEventListener('mousedown', onDown)
       window.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [onClose, layer])
 
   // Focus the first item so keyboard users land inside the menu; restore focus
   // to the opener when the menu closes so keyboard flow isn't dropped.

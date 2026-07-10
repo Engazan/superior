@@ -136,10 +136,6 @@ function makeRemoteFolder(target: RemoteWorkspaceTarget, profileId: string, name
   }
 }
 
-function isRemoteFolder(folder: Folder | undefined): boolean {
-  return folder?.kind === 'remote'
-}
-
 function isLocalFolder(folder: Folder | undefined): boolean {
   return folder?.kind !== 'remote'
 }
