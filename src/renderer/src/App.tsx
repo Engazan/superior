@@ -10,7 +10,7 @@ import { insertIntoTerminal } from './terminalInput'
 import type { Command } from './commands'
 import { TooltipLayer } from './components/TooltipLayer'
 import { useConfirm, useToast } from './components/ui'
-import type { FsEntry, Integration } from './types'
+import type { FsEntry } from './types'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, formatChord, isRecordingShortcut } from './shortcuts'
@@ -23,6 +23,8 @@ import { usePreviewPane } from './hooks/usePreviewPane'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 import { useTaskQueue } from './hooks/useTaskQueue'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
+import { useAppUiState } from './hooks/useAppUiState'
+import { useIntegrations } from './hooks/useIntegrations'
 import {
   setActivitySessions,
   setActivityActiveWorkspace,
@@ -53,8 +55,6 @@ const OpenProjectModal = lazy(() =>
   import('./components/OpenProjectModal').then(({ OpenProjectModal }) => ({ default: OpenProjectModal }))
 )
 
-type View = 'main' | 'settings'
-
 function DeferredPanel(): React.JSX.Element {
   return <div className="flex min-h-0 flex-1" aria-busy="true" />
 }
@@ -72,41 +72,35 @@ export default function App(): React.JSX.Element {
     toast.error(error)
     setError(null)
   }, [error, toast])
-  const [view, setView] = useState<View>('main')
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  // Right-hand panel: fully hidden by default, toggled from the title bar.
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
-  // Avoid loading the Git/file/task feature bundle until it is first requested,
-  // then keep it mounted so closing the panel preserves its selected tab, tree
-  // expansion and cached diff just as before.
-  const [rightPanelLoaded, setRightPanelLoaded] = useState(false)
-  useEffect(() => {
-    if (rightSidebarOpen) setRightPanelLoaded(true)
-  }, [rightSidebarOpen])
-  // Quick-launch preset picker overlay (opened by shortcut).
-  const [launcherOpen, setLauncherOpen] = useState(false)
-  // Find-in-terminal overlay (⌘F), targeting the active session.
-  const [searchOpen, setSearchOpen] = useState(false)
-  // Command palette (⌘K) + the prompt picker it can spawn.
-  const [paletteOpen, setPaletteOpen] = useState(false)
-  const [palettePromptsOpen, setPalettePromptsOpen] = useState(false)
-  // "Manage profiles" modal, opened from the title-bar profile switcher.
-  const [profileManagerOpen, setProfileManagerOpen] = useState(false)
-  // "Open / clone project" modal, opened from the sidebar.
-  const [projectModalOpen, setProjectModalOpen] = useState(false)
-  // Set when "Add integration" was clicked inside the project modal, so leaving
-  // settings returns to the modal instead of abandoning the clone flow.
-  const [, setResumeProjectModal] = useState(false)
-
-  // Saved git-forge integrations — drives the clone tab of the project modal.
-  const [integrations, setIntegrations] = useState<Integration[]>([])
-  const reloadIntegrations = useCallback(() => {
-    window.api.listIntegrations().then((s) => setIntegrations(s.integrations))
-  }, [])
-  useEffect(() => {
-    reloadIntegrations()
-  }, [reloadIntegrations])
+  const {
+    view,
+    setView,
+    settingsSection,
+    setSettingsSection,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    rightSidebarOpen,
+    setRightSidebarOpen,
+    rightPanelLoaded,
+    rightPanelWidth,
+    rightResizing,
+    startRightResize,
+    launcherOpen,
+    setLauncherOpen,
+    searchOpen,
+    setSearchOpen,
+    paletteOpen,
+    setPaletteOpen,
+    palettePromptsOpen,
+    setPalettePromptsOpen,
+    profileManagerOpen,
+    setProfileManagerOpen,
+    projectModalOpen,
+    setProjectModalOpen,
+    setResumeProjectModal,
+    closeSettings
+  } = useAppUiState()
+  const { integrations, reloadIntegrations } = useIntegrations()
 
   const presetsApi = usePresets()
   const { presets } = presetsApi
@@ -179,44 +173,6 @@ export default function App(): React.JSX.Element {
     ensureBus()
   }, [])
 
-  // Right-panel width in px, drag-resizable via the divider on its left edge.
-  const [rightPanelWidth, setRightPanelWidth] = useState(384)
-  const [rightResizing, setRightResizing] = useState(false)
-  const startRightResize = useCallback((e: React.PointerEvent): void => {
-    e.preventDefault()
-    setRightResizing(true)
-    let latest: number | null = null
-    const move = (ev: PointerEvent): void => {
-      latest = Math.min(560, Math.max(280, Math.round(window.innerWidth - ev.clientX)))
-      setRightPanelWidth(latest)
-    }
-    const up = (): void => {
-      setRightResizing(false)
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-      if (latest !== null) void window.api.setUiState({ rightPanelWidth: latest })
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-  }, [])
-
-  // Restore the persisted sidebar layout once on mount; only after that do we
-  // start persisting changes, so the initial defaults don't overwrite the store.
-  const uiLoaded = useRef(false)
-  useEffect(() => {
-    window.api.getSettings().then((s) => {
-      setSidebarCollapsed(s.ui.sidebarCollapsed)
-      setRightSidebarOpen(s.ui.rightSidebarOpen)
-      if (typeof s.ui.rightPanelWidth === 'number') setRightPanelWidth(s.ui.rightPanelWidth)
-      uiLoaded.current = true
-    })
-  }, [])
-
-  // Persist the sidebar layout whenever it changes (after the initial restore).
-  useEffect(() => {
-    if (!uiLoaded.current) return
-    window.api.setUiState({ sidebarCollapsed, rightSidebarOpen })
-  }, [sidebarCollapsed, rightSidebarOpen])
 
   // Tint the title bar + sidebar with the active profile's color, so the
   // switched-to profile is recognizable at a glance. (Terminal preset colors
@@ -312,21 +268,11 @@ export default function App(): React.JSX.Element {
   const openPresets = useCallback(() => {
     setSettingsSection('presets')
     setView('settings')
-  }, [])
+  }, [setSettingsSection, setView])
 
-  // Single exit path from settings — shared by the Back button, the ⌘, toggle
-  // and Escape — so the interrupted "clone from git" flow always resumes.
-  const closeSettings = useCallback(() => {
-    setView('main')
-    setResumeProjectModal((resume) => {
-      if (resume) setProjectModalOpen(true)
-      return false
-    })
-  }, [])
-
-  const openProjectModal = useCallback(() => setProjectModalOpen(true), [])
+  const openProjectModal = useCallback(() => setProjectModalOpen(true), [setProjectModalOpen])
   // Stable reference — Sidebar is memoized, an inline arrow would defeat it.
-  const expandSidebar = useCallback(() => setSidebarCollapsed(false), [])
+  const expandSidebar = useCallback(() => setSidebarCollapsed(false), [setSidebarCollapsed])
 
   // The palette memo rebuilds only on its listed deps, but the run callbacks
   // fire much later — route their ws calls through the latest instance so a
