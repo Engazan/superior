@@ -91,7 +91,7 @@ export const Sidebar = memo(function Sidebar({
   onRenameWorkspace,
   onRemoveWorkspace,
   onSelectWorkspace
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
   // Live activity signals, subscribed here (not in App) so per-chunk terminal
@@ -352,7 +352,7 @@ export const Sidebar = memo(function Sidebar({
             onClick={onOpenProject}
             title={t('sidebar.openProject')}
             aria-label={t('sidebar.openProject')}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
           >
             +
           </button>
@@ -383,7 +383,7 @@ export const Sidebar = memo(function Sidebar({
                     title={folderTitle(folder)}
                     aria-label={folderLabel(folder)}
                     style={folderTint(folder.color)}
-                    className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
                   >
                     <FolderGlyph folder={folder} />
                     {folderBusy ? (
@@ -416,7 +416,7 @@ export const Sidebar = memo(function Sidebar({
                         }}
                         title={`${folderLabel(folder)} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
                         style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                        className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                        className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                           active
                             ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder'
                             : attn
@@ -480,7 +480,7 @@ export const Sidebar = memo(function Sidebar({
             onClick={onOpenSettings}
             title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
             aria-label={t('sidebar.settings')}
-            className="mx-auto flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="mx-auto flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
           >
             <GearIcon size={18} />
           </button>
@@ -498,7 +498,7 @@ export const Sidebar = memo(function Sidebar({
       <div className="border-b border-edge px-2 py-2">
         <button
           onClick={onOpenProject}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           <span className="flex h-5 w-5 items-center justify-center text-base leading-none text-accent">
             +
@@ -513,7 +513,7 @@ export const Sidebar = memo(function Sidebar({
             <p className="text-xs leading-5 text-fgmuted">{t('sidebar.noWorkspaces')}</p>
             <button
               onClick={onOpenProject}
-              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               {t('sidebar.openProject')}
             </button>
@@ -557,7 +557,7 @@ export const Sidebar = memo(function Sidebar({
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
                     title={folderTitle(folder)}
-                    className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                    className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
@@ -577,7 +577,7 @@ export const Sidebar = memo(function Sidebar({
                         e.stopPropagation()
                         startAdd(folder.path)
                       }}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
                       aria-label={t('sidebar.addWorkspace')}
                       title={t('sidebar.addWorkspace')}
                     >
@@ -604,7 +604,7 @@ export const Sidebar = memo(function Sidebar({
                         e.stopPropagation()
                         setFolderMenu({ path: folder.path, anchor: e.currentTarget })
                       }}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
                       aria-label={t('menu.folderActions')}
                       title={t('menu.folderActions')}
                       aria-haspopup="menu"
@@ -644,7 +644,7 @@ export const Sidebar = memo(function Sidebar({
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-4 pr-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-4 pr-2 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : attn
@@ -672,7 +672,7 @@ export const Sidebar = memo(function Sidebar({
                                     if (e.key === 'Enter') commitRename()
                                     else if (e.key === 'Escape') setEditingId(null)
                                   }}
-                                  className="min-w-0 flex-1 select-text rounded border border-edge bg-panel px-1.5 py-0.5 text-sm text-fg focus:border-accent focus:outline-none"
+                                  className="min-w-0 flex-1 select-text rounded-sm border border-edge bg-panel px-1.5 py-0.5 text-sm text-fg focus:border-accent focus:outline-hidden"
                                 />
                               ) : (
                                 // Two-line row: name on top; branch + diff stat on a
@@ -781,7 +781,7 @@ export const Sidebar = memo(function Sidebar({
             ) : update.progress.phase === 'downloaded' ? (
               <button
                 onClick={update.installAndRestart}
-                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 {t('update.restart')}
               </button>
@@ -789,14 +789,14 @@ export const Sidebar = memo(function Sidebar({
               <button
                 onClick={() => window.api.openReleasePage(update.info?.releaseUrl ?? '')}
                 title={t('update.failed')}
-                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 {t('update.openPage')}
               </button>
             ) : (
               <button
                 onClick={update.startDownload}
-                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 {t('update.action')}
               </button>
@@ -808,7 +808,7 @@ export const Sidebar = memo(function Sidebar({
         <button
           onClick={onOpenSettings}
           title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           <span className="flex h-5 w-5 items-center justify-center">
             <GearIcon size={17} />

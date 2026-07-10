@@ -18,7 +18,7 @@ const TONE: Record<Tone, { pill: string; dot: string }> = {
 }
 
 /** A small tonal status chip (replaces the per-file emerald/amber/rose pills). */
-export function StatusPill({ tone, dot, children }: Props): JSX.Element {
+export function StatusPill({ tone, dot, children }: Props): React.JSX.Element {
   const c = TONE[tone]
   return (
     <span

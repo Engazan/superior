@@ -15,7 +15,7 @@ interface Props {
   onRefresh: () => void
 }
 
-function PlusMark(): JSX.Element {
+function PlusMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
       <path d="M12 5v14M5 12h14" />
@@ -23,7 +23,7 @@ function PlusMark(): JSX.Element {
   )
 }
 
-function MinusMark(): JSX.Element {
+function MinusMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
       <path d="M5 12h14" />
@@ -42,7 +42,7 @@ function SectionHead({
   count: number
   actionLabel: string
   onAction: () => void
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <div className="flex items-center justify-between bg-bar px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
       <span>
@@ -51,7 +51,7 @@ function SectionHead({
       {count > 0 && (
         <button
           onClick={onAction}
-          className="rounded px-1.5 py-0.5 normal-case tracking-normal text-fgdim transition hover:bg-hover hover:text-fg"
+          className="rounded-sm px-1.5 py-0.5 normal-case tracking-normal text-fgdim transition hover:bg-hover hover:text-fg"
         >
           {actionLabel}
         </button>
@@ -65,7 +65,7 @@ function SectionHead({
 const AUTO_COLLAPSE_LINES = 400
 const AUTO_COLLAPSE_FILES = 20
 
-export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JSX.Element {
+export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): React.JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const [message, setMessage] = useState('')
@@ -145,7 +145,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
     onRefresh()
   }
 
-  const stageAction = (file: GitDiffFile): JSX.Element => (
+  const stageAction = (file: GitDiffFile): React.JSX.Element => (
     <IconButton
       size="sm"
       label={t('changes.stage')}
@@ -154,7 +154,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
       <PlusMark />
     </IconButton>
   )
-  const unstageAction = (file: GitDiffFile): JSX.Element => (
+  const unstageAction = (file: GitDiffFile): React.JSX.Element => (
     <IconButton
       size="sm"
       label={t('changes.unstage')}
@@ -193,7 +193,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
           <Button
             variant="secondary"
             size="sm"
-            className="!h-6 shrink-0 !px-1.5 !text-[11px]"
+            className="h-6! shrink-0 px-1.5! text-[11px]!"
             loading={syncing === 'pull'}
             disabled={syncing !== null}
             onClick={() => void doSync('pull')}
@@ -206,7 +206,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
           <Button
             variant="secondary"
             size="sm"
-            className="!h-6 shrink-0 !px-1.5 !text-[11px]"
+            className="h-6! shrink-0 px-1.5! text-[11px]!"
             loading={syncing === 'push'}
             disabled={syncing !== null}
             onClick={() => void doSync('push')}
@@ -225,7 +225,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
           onClick={onRefresh}
           title={t('changes.refresh')}
           aria-label={t('changes.refresh')}
-          className="shrink-0 rounded p-0.5 text-fgmuted transition hover:bg-hover hover:text-fg"
+          className="shrink-0 rounded-sm p-0.5 text-fgmuted transition hover:bg-hover hover:text-fg"
         >
           <RefreshIcon className="block h-3.5 w-3.5" />
         </button>
@@ -288,7 +288,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): JS
           rows={2}
           aria-label={t('changes.commitPlaceholder')}
           placeholder={t('changes.commitPlaceholder')}
-          className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         />
         <Button
           size="sm"

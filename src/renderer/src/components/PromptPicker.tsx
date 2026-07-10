@@ -16,7 +16,7 @@ interface Props {
  * Enter inserts into the active terminal (Shift+Enter inserts and submits),
  * Escape closes. Prompts load fresh on every open so settings edits show up.
  */
-export function PromptPicker({ onPick, onClose }: Props): JSX.Element {
+export function PromptPicker({ onPick, onClose }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [prompts, setPrompts] = useState<Prompt[] | null>(null)
   const [query, setQuery] = useState('')
@@ -63,7 +63,7 @@ export function PromptPicker({ onPick, onClose }: Props): JSX.Element {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 pt-28"
+      className="fixed inset-0 z-100 flex items-start justify-center bg-black/40 pt-28"
       onClick={onClose}
     >
       <div
@@ -90,7 +90,7 @@ export function PromptPicker({ onPick, onClose }: Props): JSX.Element {
             }
           }}
           placeholder={t('prompts.pickerPlaceholder')}
-          className="border-b border-edge bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-fgmuted focus:outline-none"
+          className="border-b border-edge bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-fgmuted focus:outline-hidden"
         />
 
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">

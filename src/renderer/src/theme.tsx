@@ -19,7 +19,7 @@ function systemTheme(): ResolvedTheme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }): JSX.Element {
+export function ThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [mode, setModeState] = useState<ThemeMode>('system')
   const [resolved, setResolved] = useState<ResolvedTheme>('dark')
 

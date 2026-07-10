@@ -26,12 +26,12 @@ const SIZE: Record<Size, string> = {
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   { variant = 'primary', size = 'md', loading, disabled, className = '', children, ...rest },
   ref
-): JSX.Element {
+): React.JSX.Element {
   return (
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
       {...rest}
     >
       {loading && (

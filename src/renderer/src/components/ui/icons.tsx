@@ -10,7 +10,7 @@ interface IconProps {
   className?: string
 }
 
-function base(props: IconProps, strokeWidth = 1.5): JSX.Element['props'] {
+function base(props: IconProps, strokeWidth = 1.5): React.JSX.Element['props'] {
   return {
     width: props.size ?? 14,
     height: props.size ?? 14,
@@ -25,7 +25,7 @@ function base(props: IconProps, strokeWidth = 1.5): JSX.Element['props'] {
   }
 }
 
-export function CloseIcon(props: IconProps): JSX.Element {
+export function CloseIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.8)}>
       <path d="M18 6 6 18M6 6l12 12" />
@@ -33,7 +33,7 @@ export function CloseIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function PencilIcon(props: IconProps): JSX.Element {
+export function PencilIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props)}>
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -45,7 +45,7 @@ export function PencilIcon(props: IconProps): JSX.Element {
 export function ChevronIcon({
   direction = 'down',
   ...props
-}: IconProps & { direction?: 'up' | 'down' | 'left' | 'right' }): JSX.Element {
+}: IconProps & { direction?: 'up' | 'down' | 'left' | 'right' }): React.JSX.Element {
   const rotate = { down: 0, left: 90, up: 180, right: 270 }[direction]
   return (
     <svg {...base(props, 2)} style={rotate ? { transform: `rotate(${rotate}deg)` } : undefined}>
@@ -54,7 +54,7 @@ export function ChevronIcon({
   )
 }
 
-export function PlusIcon(props: IconProps): JSX.Element {
+export function PlusIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 2)}>
       <path d="M12 5v14M5 12h14" />
@@ -62,7 +62,7 @@ export function PlusIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function TrashIcon(props: IconProps): JSX.Element {
+export function TrashIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props)}>
       <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
@@ -71,7 +71,7 @@ export function TrashIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function RefreshIcon(props: IconProps): JSX.Element {
+export function RefreshIcon(props: IconProps): React.JSX.Element {
   // 16-grid drawing kept from the original ChangesView/FilesView glyph.
   return (
     <svg
@@ -92,7 +92,7 @@ export function RefreshIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function BranchIcon(props: IconProps): JSX.Element {
+export function BranchIcon(props: IconProps): React.JSX.Element {
   // 16-grid drawing kept from the original BranchSwitcher/ChangesView glyph.
   return (
     <svg
@@ -115,7 +115,7 @@ export function BranchIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function ProfileIcon(props: IconProps): JSX.Element {
+export function ProfileIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.7)}>
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -124,7 +124,7 @@ export function ProfileIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function FolderIcon(props: IconProps): JSX.Element {
+export function FolderIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.6)}>
       <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
@@ -132,7 +132,7 @@ export function FolderIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function GripIcon(props: IconProps): JSX.Element {
+export function GripIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 2)}>
       <circle cx="9" cy="6" r="0.5" />
@@ -145,7 +145,7 @@ export function GripIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function KebabIcon(props: IconProps): JSX.Element {
+export function KebabIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 2)}>
       <circle cx="12" cy="5" r="0.6" />
@@ -155,7 +155,7 @@ export function KebabIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function SearchIcon(props: IconProps): JSX.Element {
+export function SearchIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.8)}>
       <circle cx="11" cy="11" r="7" />
@@ -164,7 +164,7 @@ export function SearchIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function CheckIcon(props: IconProps): JSX.Element {
+export function CheckIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 2.2)}>
       <path d="M20 6 9 17l-5-5" />
@@ -172,7 +172,7 @@ export function CheckIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function ExternalLinkIcon(props: IconProps): JSX.Element {
+export function ExternalLinkIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props)}>
       <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -180,7 +180,7 @@ export function ExternalLinkIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function GearIcon(props: IconProps): JSX.Element {
+export function GearIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.7)}>
       <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
@@ -189,7 +189,7 @@ export function GearIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function PromptIcon(props: IconProps): JSX.Element {
+export function PromptIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.7)}>
       <path d="M4 6h16M4 12h10M4 18h7" />
@@ -197,7 +197,7 @@ export function PromptIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function BroadcastIcon(props: IconProps): JSX.Element {
+export function BroadcastIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 1.7)}>
       <circle cx="12" cy="12" r="2" />
@@ -206,7 +206,7 @@ export function BroadcastIcon(props: IconProps): JSX.Element {
   )
 }
 
-export function RestartIcon(props: IconProps): JSX.Element {
+export function RestartIcon(props: IconProps): React.JSX.Element {
   return (
     <svg
       width={props.size ?? 14}

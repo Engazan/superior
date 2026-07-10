@@ -14,7 +14,7 @@ interface Props {
  * workspaces, presets, prompts, panels, git — grouped by section, driven
  * entirely by the keyboard (↑↓ move, Enter runs, Escape closes).
  */
-export function CommandPalette({ commands, onClose }: Props): JSX.Element {
+export function CommandPalette({ commands, onClose }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -57,13 +57,13 @@ export function CommandPalette({ commands, onClose }: Props): JSX.Element {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 pt-24"
+      className="fixed inset-0 z-100 flex items-start justify-center bg-black/40 pt-24"
       onClick={onClose}
     >
       <div
         ref={panelRef}
         onClick={(e) => e.stopPropagation()}
-        className="solid-surface flex max-h-[26rem] w-[28rem] flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
+        className="solid-surface flex max-h-104 w-md flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >
         <input
           autoFocus
@@ -84,7 +84,7 @@ export function CommandPalette({ commands, onClose }: Props): JSX.Element {
             }
           }}
           placeholder={t('palette.placeholder')}
-          className="border-b border-edge bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-fgmuted focus:outline-none"
+          className="border-b border-edge bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-fgmuted focus:outline-hidden"
         />
 
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">

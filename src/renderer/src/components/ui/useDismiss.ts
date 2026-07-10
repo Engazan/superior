@@ -16,7 +16,7 @@ interface Options {
  * ignores the modal's Escape.
  */
 export function useDismiss(
-  ref: RefObject<HTMLElement>,
+  ref: RefObject<HTMLElement | null>,
   active: boolean,
   onDismiss: () => void,
   { outside = true, escape = true }: Options = {}

@@ -38,7 +38,7 @@ function remainingColor(remaining: number): string {
 }
 
 /** A small donut depleting as the limit is used up (full ring = 100% remaining). */
-function Donut({ remaining }: { remaining: number }): JSX.Element {
+function Donut({ remaining }: { remaining: number }): React.JSX.Element {
   const r = 5
   const c = 2 * Math.PI * r
   const filled = (Math.max(0, Math.min(100, remaining)) / 100) * c
@@ -141,7 +141,7 @@ function primaryReadout(
  * context) and reveals the full breakdown on hover. Renders nothing until usage
  * arrives — i.e. only for sessions running a Claude CLI.
  */
-export function UsageBadge({ sessionId }: { sessionId: string }): JSX.Element | null {
+export function UsageBadge({ sessionId }: { sessionId: string }): React.JSX.Element | null {
   const usage = useUsage(sessionId)
   const { t } = useI18n()
   const { usagePrimary } = useUsagePrimary()
@@ -151,7 +151,7 @@ export function UsageBadge({ sessionId }: { sessionId: string }): JSX.Element | 
 
   return (
     <span
-      className="flex shrink-0 items-center gap-1 rounded border border-edge bg-panel/50 px-1.5 py-0.5 font-mono text-[10px] text-fgmuted"
+      className="flex shrink-0 items-center gap-1 rounded-sm border border-edge bg-panel/50 px-1.5 py-0.5 font-mono text-[10px] text-fgmuted"
       title={tooltip(usage, t)}
     >
       {donut !== null && <Donut remaining={donut} />}

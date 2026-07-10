@@ -27,7 +27,7 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
-export function I18nProvider({ children }: { children: ReactNode }): JSX.Element {
+export function I18nProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [lang, setLangState] = useState<Language>('en')
 
   useEffect(() => {

@@ -35,10 +35,10 @@ function ProviderLogo({
 }: {
   provider: IntegrationProvider
   className?: string
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <span
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-lg border border-edge bg-panel shadow-sm ${className}`}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-lg border border-edge bg-panel shadow-xs ${className}`}
       title={providerLabel(provider)}
     >
       <img
@@ -60,7 +60,7 @@ function IntegrationForm({
   initial: Integration
   onSave: (integration: Integration) => void
   onCancel: () => void
-}): JSX.Element {
+}): React.JSX.Element {
   const { t } = useI18n()
   const [draft, setDraft] = useState<Integration>(initial)
   const [test, setTest] = useState<TestState>({ phase: 'idle' })
@@ -195,7 +195,7 @@ function IntegrationForm({
   )
 }
 
-export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): JSX.Element {
+export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const toast = useToast()

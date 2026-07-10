@@ -74,7 +74,7 @@ const readOnlyChrome = EditorView.theme({
  * the parent seeds it via `content` and reads edits back through `onChange`, so
  * a re-render with the same `content` never tears the editor down mid-edit.
  */
-export function CodeFilePreview({ content, language, wrap, editable, onChange }: Props): JSX.Element {
+export function CodeFilePreview({ content, language, wrap, editable, onChange }: Props): React.JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

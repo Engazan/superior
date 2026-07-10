@@ -122,7 +122,7 @@ export function TerminalPanel({
   onAddTab,
   onCloseTab,
   onRenameTab
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -295,7 +295,7 @@ export function TerminalPanel({
                     e.preventDefault()
                     setTabMenu({ id: tab.id, name: tab.name, x: e.clientX, y: e.clientY })
                   }}
-                  className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                  className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                     active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
                   }`}
                 >
@@ -311,7 +311,7 @@ export function TerminalPanel({
                         if (e.key === 'Enter') commitRename()
                         else if (e.key === 'Escape') setEditingTab(null)
                       }}
-                      className="w-24 min-w-0 rounded border border-edge bg-panel px-1 py-0.5 text-xs text-fg focus:border-fgdim focus:outline-none"
+                      className="w-24 min-w-0 rounded-sm border border-edge bg-panel px-1 py-0.5 text-xs text-fg focus:border-fgdim focus:outline-hidden"
                     />
                   ) : (
                     <span className="whitespace-nowrap" title={t('tab.rename')}>
@@ -338,7 +338,7 @@ export function TerminalPanel({
           <div className="flex shrink-0 items-center px-1">
             <button
               onClick={onAddTab}
-              className="rounded px-2 py-1 text-sm text-fgdim transition hover:bg-hover hover:text-fg"
+              className="rounded-sm px-2 py-1 text-sm text-fgdim transition hover:bg-hover hover:text-fg"
               aria-label={t('tab.new')}
               title={t('tab.new')}
             >
@@ -388,7 +388,7 @@ export function TerminalPanel({
               }
             }}
             placeholder={t('broadcast.placeholder', { n: broadcastTargets.length })}
-            className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warn/50"
+            className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-warn/50"
           />
           <IconButton size="sm" label={t('broadcast.exit')} onClick={() => setBroadcastMode(false)}>
             <CloseIcon size={12} />
@@ -598,7 +598,7 @@ export function TerminalPanel({
  * attention color = a terminal finished and hasn't been seen, pulsing green =
  * output streaming, steady green = running-idle, grey = all exited.
  */
-function TabActivityDot({ cells }: { cells: AgentSession[] }): JSX.Element {
+function TabActivityDot({ cells }: { cells: AgentSession[] }): React.JSX.Element {
   const { t } = useI18n()
   const busy = useBusySessions()
   const attention = useAttentionSessions()

@@ -7,7 +7,7 @@ interface Props {
 }
 
 /** Fallback for binaries, PDFs and oversized files: a note plus open-raw. */
-export function UnsupportedFilePreview({ reason, onOpenRaw }: Props): JSX.Element {
+export function UnsupportedFilePreview({ reason, onOpenRaw }: Props): React.JSX.Element {
   const { t } = useI18n()
   return (
     <div className="grid h-full place-items-center p-6 text-center">
@@ -29,7 +29,7 @@ export function UnsupportedFilePreview({ reason, onOpenRaw }: Props): JSX.Elemen
         {reason && <div className="max-w-xs text-xs text-fgmuted">{reason}</div>}
         <button
           onClick={onOpenRaw}
-          className="mt-1 rounded border border-edge px-3 py-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg"
+          className="mt-1 rounded-sm border border-edge px-3 py-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg"
         >
           {t('preview.openRaw')}
         </button>

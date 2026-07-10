@@ -99,7 +99,7 @@ interface ShortcutsContextValue {
 
 const ShortcutsContext = createContext<ShortcutsContextValue | null>(null)
 
-export function ShortcutsProvider({ children }: { children: ReactNode }): JSX.Element {
+export function ShortcutsProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [shortcuts, setShortcuts] = useState<ShortcutMap>({ ...DEFAULT_SHORTCUTS })
 
   // Load the persisted bindings once.

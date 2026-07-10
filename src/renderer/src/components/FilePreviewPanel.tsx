@@ -34,7 +34,7 @@ function prettyJson(text: string): string {
   }
 }
 
-export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): JSX.Element {
+export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const shortcutTitle = useShortcutTitle()
@@ -205,7 +205,7 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): JSX.E
     return () => window.removeEventListener('keydown', onKey, true)
   }, [editable, shortcuts.saveFile, save])
 
-  const renderBody = (): JSX.Element => {
+  const renderBody = (): React.JSX.Element => {
     if (loading || !data) {
       return <div className="grid h-full place-items-center text-xs text-fgmuted">{t('preview.loading')}</div>
     }
@@ -289,7 +289,7 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): JSX.E
             onClick={() => void save()}
             disabled={!dirty || saving}
             title={shortcutTitle(t('common.save'), 'saveFile')}
-            className="shrink-0 rounded border border-edge px-2 py-1 text-xs font-medium text-fg transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            className="shrink-0 rounded-sm border border-edge px-2 py-1 text-xs font-medium text-fg transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             {t('common.save')}
           </button>
@@ -326,7 +326,7 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): JSX.E
   )
 }
 
-function TruncatedWarning({ onOpenRaw }: { onOpenRaw: () => void }): JSX.Element {
+function TruncatedWarning({ onOpenRaw }: { onOpenRaw: () => void }): React.JSX.Element {
   const { t } = useI18n()
   return (
     <div className="flex shrink-0 items-center justify-between gap-3 border-b border-warnBorder bg-warnBg/60 px-3 py-1.5 text-[11px] text-warn">

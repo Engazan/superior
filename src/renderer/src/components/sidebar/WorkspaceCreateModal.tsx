@@ -24,7 +24,7 @@ function TypeSelector({
   value: WorkspaceCreateKind
   onChange: (value: WorkspaceCreateKind) => void
   allowBranch: boolean
-}): JSX.Element {
+}): React.JSX.Element {
   const { t } = useI18n()
   const options = (
     [
@@ -45,7 +45,7 @@ function TypeSelector({
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(kind)}
-              className={`rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+              className={`rounded-lg border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                 selected
                   ? 'border-accent bg-accentBg/70'
                   : 'border-edge bg-bar hover:border-fgmuted hover:bg-hover'
@@ -75,7 +75,7 @@ export function WorkspaceCreateModal({
   onCancel,
   onCreateStandard,
   onCreateWorktree
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const [kind, setKind] = useState<WorkspaceCreateKind>('standard')
   const allowBranch = folder.kind !== 'remote'
@@ -208,7 +208,7 @@ export function WorkspaceCreateModal({
                       role="radio"
                       aria-checked={selected}
                       onClick={() => setMode(value)}
-                      className={`rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                      className={`rounded-lg border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                         selected
                           ? 'border-accent bg-accentBg/70'
                           : 'border-edge bg-bar hover:border-fgmuted hover:bg-hover'

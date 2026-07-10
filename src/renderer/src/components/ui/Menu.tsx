@@ -27,7 +27,7 @@ interface Props {
  * rendered, viewport-clamped, with arrow-key roving focus and Escape/outside
  * dismissal.
  */
-export function Menu({ items, anchor, onClose }: Props): JSX.Element {
+export function Menu({ items, anchor, onClose }: Props): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const layer = useOverlayLayer()
@@ -96,7 +96,7 @@ export function Menu({ items, anchor, onClose }: Props): JSX.Element {
       ref={ref}
       role="menu"
       style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0, visibility: 'hidden' }}
-      className="solid-surface fixed z-[100] min-w-40 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl"
+      className="solid-surface fixed z-100 min-w-40 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl"
     >
       {items.map((item, i) =>
         item === 'separator' ? (
@@ -110,7 +110,7 @@ export function Menu({ items, anchor, onClose }: Props): JSX.Element {
               onClose()
               item.onSelect()
             }}
-            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 ${
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-40 ${
               item.tone === 'danger'
                 ? 'text-danger hover:bg-dangerBg focus-visible:bg-dangerBg'
                 : 'text-fg hover:bg-hover focus-visible:bg-hover'

@@ -117,7 +117,7 @@ const FILE_OPENER_OPTIONS: {
 ]
 
 /** Small brand badge (or a monitor glyph for the OS default). */
-function EditorBadge({ opener }: { opener: FileOpener }): JSX.Element {
+function EditorBadge({ opener }: { opener: FileOpener }): React.JSX.Element {
   const opt = FILE_OPENER_OPTIONS.find((o) => o.value === opener)
   if (!opt?.color || !opt.monogram) {
     return (
@@ -140,7 +140,7 @@ function EditorBadge({ opener }: { opener: FileOpener }): JSX.Element {
     <span
       aria-hidden
       style={{ backgroundColor: opt.color }}
-      className="grid h-4 w-4 shrink-0 place-items-center rounded text-[7px] font-bold leading-none text-white ring-1 ring-inset ring-white/20"
+      className="grid h-4 w-4 shrink-0 place-items-center rounded-sm text-[7px] font-bold leading-none text-white ring-1 ring-inset ring-white/20"
     >
       {opt.monogram}
     </span>
@@ -154,7 +154,7 @@ function FileOpenerSelect({
 }: {
   value: FileOpener
   onChange: (next: FileOpener) => void
-}): JSX.Element {
+}): React.JSX.Element {
   const { t } = useI18n()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const labelOf = (opener: FileOpener): string =>
@@ -170,7 +170,7 @@ function FileOpenerSelect({
         aria-expanded={anchor !== null}
         aria-label={t('fileOpener.title')}
         onClick={(e) => setAnchor((cur) => (cur ? null : e.currentTarget))}
-        className="flex h-8 w-56 items-center gap-2 rounded-md border border-edge bg-bar px-2.5 text-sm text-fg transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        className="flex h-8 w-56 items-center gap-2 rounded-md border border-edge bg-bar px-2.5 text-sm text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
       >
         <EditorBadge opener={value} />
         <span className="min-w-0 flex-1 truncate text-left">{labelOf(value)}</span>
@@ -203,7 +203,7 @@ function FileOpenerSelect({
   )
 }
 
-function AppearanceSection(): JSX.Element {
+function AppearanceSection(): React.JSX.Element {
   const { mode, setMode } = useTheme()
   const { lang, setLang, t } = useI18n()
   const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
@@ -354,7 +354,7 @@ export function SettingsView({
   workspaces,
   folders,
   onKillSession
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const [section, setSectionState] = useState<SettingsSection>(initialSection)
   // Report section changes up so the app can reopen settings where you left off.
@@ -407,7 +407,7 @@ export function SettingsView({
         <div className="border-b border-edge px-2 py-2">
           <button
             onClick={onBack}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <span className="text-base leading-none text-accent">‹</span>
             {t('settings.back')}

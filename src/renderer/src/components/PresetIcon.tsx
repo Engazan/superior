@@ -7,7 +7,7 @@ interface Props {
 }
 
 /** Renders a preset's icon — an emoji/character or a custom image. */
-export function PresetIcon({ iconType, icon, className }: Props): JSX.Element {
+export function PresetIcon({ iconType, icon, className }: Props): React.JSX.Element {
   if (iconType === 'image' && icon) {
     return <img src={icon} alt="" className={`object-contain ${className ?? 'h-4 w-4'}`} />
   }

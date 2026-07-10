@@ -10,7 +10,7 @@ import type { CliToolId, CliToolStatus } from '../types'
  * resolvable in the login shell this app spawns. When a CLI is installed but
  * invisible to that shell, a one-click fix adds it to the shell's env file.
  */
-export function CliToolsHealth(): JSX.Element {
+export function CliToolsHealth(): React.JSX.Element {
   const { t } = useI18n()
   const [tools, setTools] = useState<CliToolStatus[] | null>(null)
   const [busyId, setBusyId] = useState<CliToolId | null>(null)

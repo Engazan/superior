@@ -24,7 +24,7 @@ const SEARCH_DECORATIONS = {
  * closes and returns focus to the terminal. Shows a live "3/17" match counter
  * so an empty result is distinguishable from a single one.
  */
-export function TerminalSearchOverlay({ sessionId, onClose }: Props): JSX.Element {
+export function TerminalSearchOverlay({ sessionId, onClose }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<{ index: number; count: number } | null>(null)
@@ -83,7 +83,7 @@ export function TerminalSearchOverlay({ sessionId, onClose }: Props): JSX.Elemen
           : `${Math.max(result.index + 1, 1)}/${result.count}`
 
   return (
-    <div className="solid-surface fixed right-6 top-16 z-[90] flex items-center gap-1 rounded-lg border border-edge bg-panel p-1.5 shadow-xl">
+    <div className="solid-surface fixed right-6 top-16 z-90 flex items-center gap-1 rounded-lg border border-edge bg-panel p-1.5 shadow-xl">
       <input
         ref={inputRef}
         autoFocus
@@ -95,7 +95,7 @@ export function TerminalSearchOverlay({ sessionId, onClose }: Props): JSX.Elemen
           else if (e.key === 'Escape') close()
         }}
         placeholder={t('search.placeholder')}
-        className="h-7 w-48 rounded-md border border-edge bg-bar px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        className="h-7 w-48 rounded-md border border-edge bg-bar px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
       />
       {counter !== null && (
         <span

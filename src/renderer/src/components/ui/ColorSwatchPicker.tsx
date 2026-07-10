@@ -19,7 +19,7 @@ export function ColorSwatchPicker({
   onChange,
   none = true,
   onSwatchPick
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -46,7 +46,7 @@ export function ColorSwatchPicker({
           }}
           title={c}
           aria-label={c}
-          className={`h-7 w-7 rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+          className={`h-7 w-7 rounded-md border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
             color?.toLowerCase() === c.toLowerCase()
               ? 'border-accent ring-1 ring-accent'
               : 'border-edge'

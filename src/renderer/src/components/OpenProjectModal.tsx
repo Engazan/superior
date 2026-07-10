@@ -27,7 +27,7 @@ export function OpenProjectModal({
   onAddRemote,
   onAddIntegration,
   onClose
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const titleId = useId()
   const [source, setSource] = useState<Source>('local')
@@ -272,7 +272,7 @@ export function OpenProjectModal({
                 value={integrationId}
                 onChange={(e) => setIntegrationId(e.target.value)}
                 disabled={!!cloningId}
-                className="w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:ring-2 focus:ring-accentBorder disabled:opacity-60"
+                className="w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-hidden transition focus:border-accent focus:ring-2 focus:ring-accentBorder disabled:opacity-60"
               >
                 {integrations.map((it) => (
                   <option key={it.id} value={it.id}>

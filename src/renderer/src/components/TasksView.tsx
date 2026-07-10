@@ -35,7 +35,7 @@ function errorMessage(t: TFunction, raw: string): string {
   }
 }
 
-function CrossMark(): JSX.Element {
+function CrossMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
       <path d="M6 6l12 12M18 6L6 18" />
@@ -43,7 +43,7 @@ function CrossMark(): JSX.Element {
   )
 }
 
-function StopMark(): JSX.Element {
+function StopMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <rect x="6" y="6" width="12" height="12" rx="1.5" />
@@ -51,7 +51,7 @@ function StopMark(): JSX.Element {
   )
 }
 
-function JumpMark(): JSX.Element {
+function JumpMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M7 17L17 7M9 7h8v8" />
@@ -59,7 +59,7 @@ function JumpMark(): JSX.Element {
   )
 }
 
-function RetryMark(): JSX.Element {
+function RetryMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20 12a8 8 0 1 1-2.3-5.6" />
@@ -68,7 +68,7 @@ function RetryMark(): JSX.Element {
   )
 }
 
-function ArrowMark({ up }: { up: boolean }): JSX.Element {
+function ArrowMark({ up }: { up: boolean }): React.JSX.Element {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {up ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M5 12l7 7 7-7" />}
@@ -76,7 +76,7 @@ function ArrowMark({ up }: { up: boolean }): JSX.Element {
   )
 }
 
-function BranchMark(): JSX.Element {
+function BranchMark(): React.JSX.Element {
   return (
     <svg className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <circle cx="6" cy="6" r="2.5" />
@@ -88,7 +88,7 @@ function BranchMark(): JSX.Element {
 }
 
 /** The per-status dot shown at the start of every task row. */
-function StatusDot({ status }: { status: AgentTask['status'] }): JSX.Element {
+function StatusDot({ status }: { status: AgentTask['status'] }): React.JSX.Element {
   const cls =
     status === 'running'
       ? 'bg-accent animate-pulse'
@@ -101,7 +101,7 @@ function StatusDot({ status }: { status: AgentTask['status'] }): JSX.Element {
 }
 
 /** Section header row matching the Changes view's group style. */
-function GroupHead({ label, count }: { label: string; count: number }): JSX.Element {
+function GroupHead({ label, count }: { label: string; count: number }): React.JSX.Element {
   return (
     <div className="bg-bar px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
       {label} ({count})
@@ -115,7 +115,7 @@ function GroupHead({ label, count }: { label: string; count: number }): JSX.Elem
  * the previous task's terminal exits (for interactive CLIs, when you quit
  * them; presets like `claude -p` run headless and advance on their own).
  */
-export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.Element {
+export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [prompt, setPrompt] = useState('')
   const activePresets = useMemo(() => presets.filter((p) => p.active), [presets])
@@ -175,13 +175,13 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
     }
   }
 
-  const row = (task: AgentTask, queueIndex?: number, queueLength?: number): JSX.Element => {
+  const row = (task: AgentTask, queueIndex?: number, queueLength?: number): React.JSX.Element => {
     const preset = presetOf(task)
     return (
       <div key={task.id} className="group flex items-start gap-2 border-b border-edge/50 px-2 py-2">
         <StatusDot status={task.status} />
         <div className="min-w-0 flex-1">
-          <div className="break-words text-xs text-fg" title={task.prompt}>
+          <div className="wrap-break-word text-xs text-fg" title={task.prompt}>
             {task.prompt.length > 160 ? `${task.prompt.slice(0, 160)}…` : task.prompt}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-fgmuted">
@@ -200,7 +200,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
             </span>
           </div>
           {task.status === 'failed' && task.error && (
-            <div className="mt-0.5 break-words text-[10px] text-danger" title={task.error}>
+            <div className="mt-0.5 wrap-break-word text-[10px] text-danger" title={task.error}>
               {errorMessage(t, task.error)}
             </div>
           )}
@@ -261,7 +261,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
         {finished.length > 0 && (
           <button
             onClick={() => void queue.clearFinished(folderPath)}
-            className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-fgdim transition hover:bg-hover hover:text-fg"
+            className="shrink-0 rounded-sm px-1.5 py-0.5 text-[11px] text-fgdim transition hover:bg-hover hover:text-fg"
           >
             {t('tasks.clearFinished')}
           </button>
@@ -269,7 +269,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
         <Button
           variant="secondary"
           size="sm"
-          className="!h-6 shrink-0 !px-1.5 !text-[11px]"
+          className="h-6! shrink-0 px-1.5! text-[11px]!"
           onClick={() => void queue.setPaused(!queue.paused)}
         >
           {queue.paused ? t('tasks.resume') : t('tasks.pause')}
@@ -313,13 +313,13 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
           }}
           rows={2}
           placeholder={t('tasks.promptPlaceholder')}
-          className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         />
         <div className="flex items-center gap-2">
           <Select
             value={effectivePresetId}
             onChange={(e) => setPresetId(e.target.value)}
-            className="!h-7 flex-1 !text-xs"
+            className="h-7! flex-1 text-xs!"
           >
             {activePresets.length === 0 && <option value="">{t('launcher.noPresets')}</option>}
             {activePresets.map((p) => (
@@ -336,7 +336,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): JSX.
               type="checkbox"
               checked={useWorktree}
               onChange={(e) => setUseWorktree(e.target.checked)}
-              className="h-3.5 w-3.5 accent-[var(--c-accent-solid)]"
+              className="h-3.5 w-3.5 accent-(--c-accent-solid)"
             />
             {t('tasks.worktree')}
           </label>

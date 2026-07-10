@@ -10,7 +10,7 @@ interface Props {
   onManage: () => void
 }
 
-function ProfileGlyph(): JSX.Element {
+function ProfileGlyph(): React.JSX.Element {
   return (
     <svg
       className="block h-3.5 w-3.5 shrink-0"
@@ -28,7 +28,7 @@ function ProfileGlyph(): JSX.Element {
   )
 }
 
-function Chevron(): JSX.Element {
+function Chevron(): React.JSX.Element {
   return (
     <svg
       className="block h-3 w-3 shrink-0 text-fgmuted"
@@ -45,7 +45,7 @@ function Chevron(): JSX.Element {
   )
 }
 
-function CheckGlyph(): JSX.Element {
+function CheckGlyph(): React.JSX.Element {
   return (
     <svg
       className="block h-3.5 w-3.5 shrink-0 text-accent"
@@ -67,7 +67,7 @@ function CheckGlyph(): JSX.Element {
  * to pick a profile (each profile owns its own folders) plus a "Manage profiles…"
  * entry that opens the management modal.
  */
-export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage }: Props): JSX.Element {
+export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -112,7 +112,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         aria-label={t('profile.switch')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-7 max-w-[14rem] items-center gap-1.5 rounded-md border border-edge bg-bar/60 px-2.5 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex h-7 max-w-56 items-center gap-1.5 rounded-md border border-edge bg-bar/60 px-2.5 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ProfileGlyph />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
@@ -137,7 +137,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
                 setOpen(false)
                 onSelect(p.id)
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-none"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-hidden"
             >
               <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                 {p.id === activeProfileId && <CheckGlyph />}
@@ -152,7 +152,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
               setOpen(false)
               onManage()
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:outline-none"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:outline-hidden"
           >
             <svg
               className="block h-3.5 w-3.5 shrink-0"

@@ -13,7 +13,7 @@ interface Props {
   onPickImage: () => Promise<{ dataUrl: string } | null>
 }
 
-export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): JSX.Element {
+export function PresetForm({ preset, onSave, onCancel, onPickImage }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState(preset?.name ?? '')
   const [nickname, setNickname] = useState(preset?.nickname ?? '')

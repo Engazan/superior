@@ -15,7 +15,7 @@ interface Props {
 }
 
 /** A "+" trigger that opens a dropdown of active presets plus a "Manage presets…" item. */
-export function PresetMenu({ presets, disabled, dropUp, onSelect, onManage }: Props): JSX.Element {
+export function PresetMenu({ presets, disabled, dropUp, onSelect, onManage }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)

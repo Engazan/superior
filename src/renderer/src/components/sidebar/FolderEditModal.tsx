@@ -13,7 +13,7 @@ interface Props {
  * Edit a folder's visuals: a custom display name, uploaded icon and row tint.
  * The folder's path is immutable and shown read-only for reference.
  */
-export function FolderEditModal({ folder, onCancel, onSave }: Props): JSX.Element {
+export function FolderEditModal({ folder, onCancel, onSave }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState(folder.displayName ?? '')
   // undefined = leave icon untouched; string = new icon; null = clear icon.

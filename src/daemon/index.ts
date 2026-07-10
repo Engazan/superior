@@ -351,6 +351,9 @@ function onConnection(socket: net.Socket): void {
 
   socket.on('data', (chunk) => {
     try {
+      // Frames include arbitrary terminal bytes, so a socket configured with a
+      // text encoding would corrupt the protocol. Reject it explicitly.
+      if (typeof chunk === 'string') throw new Error('client socket received decoded data')
       for (const msg of conn.decoder.push(chunk)) handle(conn, msg)
     } catch (err) {
       log(`handler error: ${(err as Error).stack ?? err}`)

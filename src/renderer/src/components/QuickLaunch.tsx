@@ -18,7 +18,7 @@ interface Props {
  * Centered overlay for adding a terminal. Presets are pickable by mouse or by
  * Ctrl+1…Ctrl+9; Escape dismisses. Rendered into <body> so it floats above the grid.
  */
-export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Props): JSX.Element {
+export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Props): React.JSX.Element {
   const { t } = useI18n()
   const items = presets.slice(0, 9)
 
@@ -47,7 +47,7 @@ export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Pro
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 pt-28"
+      className="fixed inset-0 z-100 flex items-start justify-center bg-black/40 pt-28"
       onClick={onClose}
     >
       <div
@@ -65,7 +65,7 @@ export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Pro
                 onClose()
                 onManagePresets()
               }}
-              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               {t('terminal.managePresets')}
             </button>
@@ -79,9 +79,9 @@ export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Pro
                     onSelect(p)
                     onClose()
                   }}
-                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-none"
+                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-hidden"
                 >
-                  <kbd className="flex h-5 shrink-0 items-center justify-center rounded border border-edge bg-bar px-1.5 font-mono text-[10px] text-fgdim">
+                  <kbd className="flex h-5 shrink-0 items-center justify-center rounded-sm border border-edge bg-bar px-1.5 font-mono text-[10px] text-fgdim">
                     {formatChord(`ctrl+${i + 1}`)}
                   </kbd>
                   <PresetIcon iconType={p.iconType} icon={p.icon} className="h-4 w-4 text-base" />

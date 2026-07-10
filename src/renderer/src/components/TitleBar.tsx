@@ -70,7 +70,7 @@ export function TitleBar({
   onSelectProfile,
   onManageProfiles,
   tintColor
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
   const showGit = showToggle && (gitLoading || gitStatus !== null)
@@ -127,7 +127,7 @@ export function TitleBar({
                     onClick={onInitGit}
                     disabled={gitLoading || !!gitStatus?.error}
                     title={gitStatus?.error ?? t('titlebar.initGitTitle')}
-                    className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
+                    className="flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
                   >
                     <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
                     <span>
@@ -169,7 +169,7 @@ export function TitleBar({
                 : t('terminal.noWorkspace')
             }
             aria-label={t('terminal.addTerminal')}
-            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+            className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <svg
               className="block h-[16px] w-[16px]"
@@ -193,7 +193,7 @@ export function TitleBar({
             aria-expanded={rightOpen}
             title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
             aria-label={t('common.toggleRightSidebar')}
-            className="group app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+            className="group app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
           >
             <svg
               className="block h-[15px] w-[15px] transition-transform duration-150 group-active:scale-90"

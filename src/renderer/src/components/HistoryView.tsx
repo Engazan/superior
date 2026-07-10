@@ -30,7 +30,7 @@ function relativeTime(tsSeconds: number, locale: string, justNow: string): strin
  * PAGE_SIZE commits at a time with an explicit "load more" row, so truncation
  * is visible instead of silent.
  */
-export function HistoryView({ folderPath, refreshToken }: Props): JSX.Element {
+export function HistoryView({ folderPath, refreshToken }: Props): React.JSX.Element {
   const { t, lang } = useI18n()
   const [log, setLog] = useState<GitLogEntry[] | null>(null)
   const [logError, setLogError] = useState(false)
@@ -124,7 +124,7 @@ export function HistoryView({ folderPath, refreshToken }: Props): JSX.Element {
             <button
               onClick={() => toggle(entry.hash)}
               aria-expanded={open}
-              className="flex w-full items-start gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+              className="flex w-full items-start gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
             >
               <span className="mt-0.5 shrink-0 text-fgmuted">
                 <ChevronIcon size={10} direction={open ? 'down' : 'right'} />
@@ -165,7 +165,7 @@ export function HistoryView({ folderPath, refreshToken }: Props): JSX.Element {
         <button
           onClick={loadMore}
           disabled={loadingMore}
-          className="w-full px-3 py-2 text-center text-[11px] font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+          className="w-full px-3 py-2 text-center text-[11px] font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
         >
           {loadingMore ? t('history.loading') : t('history.loadMore', { n: String(log.length) })}
         </button>

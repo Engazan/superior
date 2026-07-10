@@ -19,7 +19,7 @@ const PROVIDER_UI = {
   codex: { label: 'Codex', directoryPrefix: '.codex-', iconId: 'codex' }
 } as const
 
-export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
+export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [items, setItems] = useState<CustomMemoryPreset[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,7 +135,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-fg">{item.aliasName}</span>
-                    <span className="rounded bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
+                    <span className="rounded-sm bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
                       {PROVIDER_UI[item.provider].label}
                     </span>
                   </div>
@@ -219,9 +219,9 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): JSX.Element {
                         role="radio"
                         aria-checked={selected}
                         onClick={() => setProvider(value)}
-                        className={`flex items-center gap-3 rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        className={`flex items-center gap-3 rounded-lg border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                           selected
-                            ? 'border-accent bg-accentBg text-fg shadow-sm'
+                            ? 'border-accent bg-accentBg text-fg shadow-xs'
                             : 'border-edge bg-bar text-fgdim hover:border-fgmuted hover:bg-hover hover:text-fg'
                         }`}
                       >

@@ -40,7 +40,7 @@ interface Pending {
   resolve: (ok: boolean) => void
 }
 
-export function ConfirmProvider({ children }: { children: ReactNode }): JSX.Element {
+export function ConfirmProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const { t } = useI18n()
   const [pending, setPending] = useState<Pending | null>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)

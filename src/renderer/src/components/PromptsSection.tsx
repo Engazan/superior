@@ -16,7 +16,7 @@ import {
 import type { Prompt } from '../types'
 
 /** Settings section managing the saved prompt/snippet library. */
-export function PromptsSection(): JSX.Element {
+export function PromptsSection(): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const toast = useToast()
@@ -99,7 +99,7 @@ function PromptForm({
   prompt: Prompt | null
   onSave: (prompt: Prompt) => Promise<void>
   onCancel: () => void
-}): JSX.Element {
+}): React.JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState(prompt?.name ?? '')
   const [text, setText] = useState(prompt?.text ?? '')
@@ -148,7 +148,7 @@ function PromptForm({
             onChange={(e) => setText(e.target.value)}
             rows={8}
             placeholder={t('prompts.textPlaceholder')}
-            className="w-full resize-y rounded-md border border-edge bg-bar px-2.5 py-2 text-sm text-fg placeholder:text-fgmuted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="w-full resize-y rounded-md border border-edge bg-bar px-2.5 py-2 text-sm text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
           />
         </div>
       </div>

@@ -33,7 +33,7 @@ const STATUS_DOT: Record<AgentSession['status'], string> = {
  * finished and awaits input (attention color), and which merely runs idle.
  * A separate subscriber component so busy churn re-renders only the dot.
  */
-function CellStatusDot({ session }: { session: AgentSession }): JSX.Element {
+function CellStatusDot({ session }: { session: AgentSession }): React.JSX.Element {
   const { t } = useI18n()
   const busy = useBusySessions()
   const attention = useAttentionSessions()
@@ -197,7 +197,7 @@ export const TerminalView = memo(function TerminalView({
   onSetNickname,
   onToggleMaximize,
   onExit
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const r = rect ?? FULL_RECT
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -561,7 +561,7 @@ export const TerminalView = memo(function TerminalView({
                     onBlur={commitNick}
                     placeholder={t('terminal.nicknamePlaceholder')}
                     size={12}
-                    className="w-28 max-w-full shrink-0 rounded border border-edge bg-panel px-1 py-0.5 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-none"
+                    className="w-28 max-w-full shrink-0 rounded-sm border border-edge bg-panel px-1 py-0.5 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-hidden"
                   />
                 </>
               ) : (
@@ -667,7 +667,7 @@ export const TerminalView = memo(function TerminalView({
               e.stopPropagation()
               onRestart(session.id)
             }}
-            className={`solid-surface absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border px-3 py-1 text-xs shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+            className={`solid-surface absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border px-3 py-1 text-xs shadow-lg transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
               session.status === 'error'
                 ? 'border-dangerBorder bg-panel text-danger hover:text-fg'
                 : 'border-edge bg-panel text-fgdim hover:text-fg'

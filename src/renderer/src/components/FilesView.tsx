@@ -12,7 +12,7 @@ interface Props {
   selectedPath: string | null
 }
 
-function Chevron({ open }: { open: boolean }): JSX.Element {
+function Chevron({ open }: { open: boolean }): React.JSX.Element {
   return (
     <svg
       className={`block h-3 w-3 shrink-0 text-fgmuted transition-transform ${open ? 'rotate-90' : ''}`}
@@ -29,7 +29,7 @@ function Chevron({ open }: { open: boolean }): JSX.Element {
   )
 }
 
-function FolderIcon(): JSX.Element {
+function FolderIcon(): React.JSX.Element {
   return (
     <svg
       className="block h-3.5 w-3.5 shrink-0 text-accent"
@@ -46,7 +46,7 @@ function FolderIcon(): JSX.Element {
   )
 }
 
-function FileIcon(): JSX.Element {
+function FileIcon(): React.JSX.Element {
   return (
     <svg
       className="block h-3.5 w-3.5 shrink-0 text-fgmuted"
@@ -72,7 +72,7 @@ interface NodeProps {
 }
 
 /** A single tree row; directories fetch their children lazily on first expand. */
-function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.Element {
+function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): React.JSX.Element {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState<FsEntry[] | null>(null)
@@ -108,7 +108,7 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): JSX.El
         onClick={() => void activate()}
         title={entry.name}
         aria-expanded={entry.isDirectory ? open : undefined}
-        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
           selected ? 'bg-accentBg text-accent' : 'text-fgdim'
         }`}
         style={{ paddingLeft: depth * 12 + 8 }}
@@ -157,7 +157,7 @@ function SearchRow({
   rootPath: string
   selected: boolean
   onOpenFile: (file: FsEntry) => void
-}): JSX.Element {
+}): React.JSX.Element {
   const rel = entry.path.startsWith(rootPath) ? entry.path.slice(rootPath.length + 1) : entry.path
   const dir = rel.slice(0, rel.length - entry.name.length).replace(/\/$/, '')
   return (
@@ -177,7 +177,7 @@ function SearchRow({
   )
 }
 
-export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.Element {
+export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [entries, setEntries] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -262,7 +262,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-1.5 border-b border-edge p-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-edge bg-panel px-2 py-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-sm border border-edge bg-panel px-2 py-1">
           <svg className="h-3.5 w-3.5 shrink-0 text-fgmuted" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <circle cx="7" cy="7" r="4.5" />
             <path d="m10.5 10.5 3 3" />
@@ -271,7 +271,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('files.search')}
-            className="min-w-0 flex-1 bg-transparent text-xs text-fg placeholder:text-fgmuted focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-xs text-fg placeholder:text-fgmuted focus:outline-hidden"
           />
           {searchActive && (
             <button
@@ -290,7 +290,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): JSX.
           onClick={() => setRefreshToken((n) => n + 1)}
           title={t('files.refresh')}
           aria-label={t('files.refresh')}
-          className="shrink-0 rounded p-1 text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="shrink-0 rounded-sm p-1 text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           <RefreshIcon className="block h-3.5 w-3.5" />
         </button>

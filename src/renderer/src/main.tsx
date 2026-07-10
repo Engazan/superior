@@ -12,7 +12,7 @@ import './index.css'
 const SPLASH_DURATION_MS = 1000
 const SPLASH_FADE_MS = 250
 
-function StartupScreen(): JSX.Element {
+function StartupScreen(): React.JSX.Element {
   const [appReady, setAppReady] = useState(false)
   const [splashVisible, setSplashVisible] = useState(true)
 

@@ -12,7 +12,7 @@ interface UsagePrimaryContextValue {
 
 const UsagePrimaryContext = createContext<UsagePrimaryContextValue | null>(null)
 
-export function UsagePrimaryProvider({ children }: { children: ReactNode }): JSX.Element {
+export function UsagePrimaryProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [usagePrimary, setState] = useState<UsagePrimary>(DEFAULT_USAGE_PRIMARY)
 
   // Load the persisted choice once.

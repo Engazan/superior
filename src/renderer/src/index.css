@@ -1,8 +1,24 @@
-@import '@xterm/xterm/css/xterm.css';
+@import '@xterm/xterm/css/xterm.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* Semantic color tokens. Swapped by the .light / .dark class on <html>. */
 :root,
@@ -56,6 +72,35 @@
   --c-warn: #b45309;
   --c-warn-bg: #fef3c7;
   --c-warn-border: #fde68a;
+}
+
+/* Keep the semantic Tailwind palette coupled to the same runtime CSS tokens
+   that powered the v3 config. `inline` preserves theme switching because the
+   generated utilities resolve the variables at render time. */
+@theme inline {
+  --color-bar: var(--c-bar);
+  --color-panel: var(--c-panel);
+  --color-edge: var(--c-edge);
+  --color-hover: var(--c-hover);
+  --color-fg: var(--c-fg);
+  --color-fg2: var(--c-fg2);
+  --color-fgdim: var(--c-fgdim);
+  --color-fgmuted: var(--c-fgmuted);
+  --color-accent: var(--c-accent);
+  --color-accentBg: var(--c-accent-bg);
+  --color-accentBorder: var(--c-accent-border);
+  --color-accentSolid: var(--c-accent-solid);
+  --color-accentSolidHover: var(--c-accent-solid-hover);
+  --color-status: var(--c-status);
+  --color-statusBg: var(--c-status-bg);
+  --color-statusBorder: var(--c-status-border);
+  --color-danger: var(--c-danger);
+  --color-dangerSolid: var(--c-danger-solid);
+  --color-dangerBg: var(--c-danger-bg);
+  --color-dangerBorder: var(--c-danger-border);
+  --color-warn: var(--c-warn);
+  --color-warnBg: var(--c-warn-bg);
+  --color-warnBorder: var(--c-warn-border);
 }
 
 html,

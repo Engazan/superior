@@ -23,7 +23,7 @@ export function DaemonsSection({
   sessions,
   loading,
   onRefresh
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const toast = useToast()
@@ -124,7 +124,7 @@ export function DaemonsSection({
                 <span className="w-16 shrink-0 text-right">
                   <button
                     onClick={() => void kill(s)}
-                    className="rounded-md px-2 py-0.5 text-xs text-danger transition hover:bg-dangerBg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
+                    className="rounded-md px-2 py-0.5 text-xs text-danger transition hover:bg-dangerBg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-danger/50"
                   >
                     {t('daemons.kill')}
                   </button>

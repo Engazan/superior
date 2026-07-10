@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 
-function MinimizeIcon(): JSX.Element {
+function MinimizeIcon(): React.JSX.Element {
   return (
     <svg
       className="block h-3 w-3 -translate-y-px"
@@ -14,7 +14,7 @@ function MinimizeIcon(): JSX.Element {
   )
 }
 
-function MaximizeIcon(): JSX.Element {
+function MaximizeIcon(): React.JSX.Element {
   return (
     <svg
       className="block h-3 w-3 -translate-y-px"
@@ -27,7 +27,7 @@ function MaximizeIcon(): JSX.Element {
   )
 }
 
-function RestoreIcon(): JSX.Element {
+function RestoreIcon(): React.JSX.Element {
   return (
     <svg
       className="block h-3 w-3 -translate-y-px"
@@ -41,7 +41,7 @@ function RestoreIcon(): JSX.Element {
   )
 }
 
-function CloseIcon(): JSX.Element {
+function CloseIcon(): React.JSX.Element {
   return (
     <svg
       className="block h-3 w-3 -translate-y-px"
@@ -59,7 +59,7 @@ function CloseIcon(): JSX.Element {
   )
 }
 
-export function WindowControls(): JSX.Element {
+export function WindowControls(): React.JSX.Element {
   const { t } = useI18n()
   const [maximized, setMaximized] = useState(false)
 
@@ -69,7 +69,7 @@ export function WindowControls(): JSX.Element {
   }, [])
 
   const btn =
-    'app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent'
+    'app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent'
 
   return (
     <div className="flex h-full items-stretch">
@@ -90,7 +90,7 @@ export function WindowControls(): JSX.Element {
         {maximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
-        className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-dangerSolid hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-danger"
+        className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-dangerSolid hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-danger"
         onClick={() => window.api.windowClose()}
         aria-label={t('window.close')}
         title={t('window.close')}

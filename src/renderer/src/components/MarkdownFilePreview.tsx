@@ -31,7 +31,7 @@ type MarkdownProps = ComponentProps<typeof ReactMarkdown>
 // past this size the open-jank costs more than colored code blocks are worth.
 const HIGHLIGHT_MAX_BYTES = 200 * 1024
 
-export function MarkdownFilePreview({ content }: Props): JSX.Element {
+export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [raw, setRaw] = useState(false)
 

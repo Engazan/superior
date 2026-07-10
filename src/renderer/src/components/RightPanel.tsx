@@ -48,7 +48,7 @@ export function RightPanel({
   onOpenFile,
   selectedPath,
   width
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('changes')
 
@@ -127,7 +127,7 @@ export function RightPanel({
   )
 
   const tabClass = (active: boolean): string =>
-    `flex min-w-0 flex-1 items-center justify-center gap-1.5 truncate px-2 py-2 text-xs font-medium transition border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+    `flex min-w-0 flex-1 items-center justify-center gap-1.5 truncate px-2 py-2 text-xs font-medium transition border-b-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
       active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
     }`
 

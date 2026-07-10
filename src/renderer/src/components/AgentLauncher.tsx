@@ -41,13 +41,13 @@ interface Props {
 const COUNTS = Array.from({ length: Math.min(MAX_GRID, 8) }, (_, i) => i + 1)
 
 /** Tiny tile diagram mirroring the real grid arrangement for a terminal count. */
-function CountDiagram({ n }: { n: number }): JSX.Element {
+function CountDiagram({ n }: { n: number }): React.JSX.Element {
   return (
     <div className="flex h-7 w-9 flex-col gap-0.5">
       {distribute(n).map((cols, r) => (
         <div key={r} className="flex flex-1 gap-0.5">
           {Array.from({ length: cols }).map((_, c) => (
-            <span key={c} className="flex-1 rounded-sm bg-current" />
+            <span key={c} className="flex-1 rounded-xs bg-current" />
           ))}
         </div>
       ))}
@@ -72,7 +72,7 @@ export function AgentLauncher({
   onDeleteLayoutPreset,
   onStart,
   onManagePresets
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const confirm = useConfirm()
@@ -228,7 +228,7 @@ export function AgentLauncher({
               <select
                 value={id}
                 onChange={(e) => setSlot(i, e.target.value)}
-                className="min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg focus:border-fgdim focus:outline-none"
+                className="min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg focus:border-fgdim focus:outline-hidden"
               >
                 {active.map((pr) => (
                   <option key={pr.id} value={pr.id}>
@@ -241,7 +241,7 @@ export function AgentLauncher({
                 value={nicks[i] ?? ''}
                 onChange={(e) => setNick(i, e.target.value)}
                 placeholder={p?.nickname || t('launcher.nicknamePlaceholder')}
-                className="w-24 shrink-0 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-none"
+                className="w-24 shrink-0 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-hidden"
               />
             </div>
           )
@@ -365,7 +365,7 @@ export function AgentLauncher({
                   onChange={(e) =>
                     onSetStartupLayout(e.target.checked ? selectedLayoutId : null)
                   }
-                  className="h-3.5 w-3.5 accent-[var(--c-accent-solid)]"
+                  className="h-3.5 w-3.5 accent-(--c-accent-solid)"
                 />
                 {t('launcher.launchOnOpen')}
               </label>
@@ -393,7 +393,7 @@ export function AgentLauncher({
                     type="checkbox"
                     checked={launchOnOpen}
                     onChange={(e) => setLaunchOnOpen(e.target.checked)}
-                    className="h-3.5 w-3.5 accent-[var(--c-accent-solid)]"
+                    className="h-3.5 w-3.5 accent-(--c-accent-solid)"
                   />
                   {t('launcher.launchOnOpen')}
                 </label>

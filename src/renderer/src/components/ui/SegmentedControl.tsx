@@ -28,7 +28,7 @@ export function SegmentedControl<T extends string>({
   size = 'md',
   fill,
   wrap
-}: Props<T>): JSX.Element {
+}: Props<T>): React.JSX.Element {
   const pad = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-1.5 text-sm'
 
   // Proper radiogroup keyboard model: one Tab stop (the checked option),
@@ -62,8 +62,8 @@ export function SegmentedControl<T extends string>({
             tabIndex={active ? 0 : -1}
             onKeyDown={onKeyDown}
             onClick={() => onChange(opt.value)}
-            className={`${fill ? 'flex-1' : ''} rounded-md font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${pad} ${
-              active ? 'bg-edge text-fg shadow-sm' : 'text-fgdim hover:text-fg'
+            className={`${fill ? 'flex-1' : ''} rounded-md font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${pad} ${
+              active ? 'bg-edge text-fg shadow-xs' : 'text-fgdim hover:text-fg'
             }`}
           >
             {opt.label}

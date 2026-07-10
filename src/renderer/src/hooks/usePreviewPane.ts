@@ -8,7 +8,7 @@ interface PreviewPaneApi {
   /** Preview width as a fraction (0.2–0.8) of the main area. */
   previewWidth: number
   /** Attach to the row that wraps the terminal + preview for the resize math. */
-  previewRowRef: React.RefObject<HTMLDivElement>
+  previewRowRef: React.RefObject<HTMLDivElement | null>
   /** Pointer-down on the divider: drag to set the preview width. */
   startPreviewResize: (e: React.PointerEvent) => void
 }

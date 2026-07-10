@@ -49,7 +49,7 @@ const TONE_STYLE: Record<Tone, { bar: string; ring: string }> = {
   info: { bar: 'bg-accent', ring: 'border-accentBorder' }
 }
 
-export function ToastProvider({ children }: { children: ReactNode }): JSX.Element {
+export function ToastProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [toasts, setToasts] = useState<Toast[]>([])
   const nextId = useRef(1)
   const timers = useRef(new Map<number, number>())
@@ -103,7 +103,7 @@ export function ToastProvider({ children }: { children: ReactNode }): JSX.Elemen
   )
 }
 
-function ToastViewport({ onDismiss }: { onDismiss: (id: number) => void }): JSX.Element | null {
+function ToastViewport({ onDismiss }: { onDismiss: (id: number) => void }): React.JSX.Element | null {
   const { t } = useI18n()
   const toasts = useContext(ToastListContext)
   // The live region stays mounted permanently — content inserted together with
@@ -111,7 +111,7 @@ function ToastViewport({ onDismiss }: { onDismiss: (id: number) => void }): JSX.
   return createPortal(
     <div
       aria-live="polite"
-      className="fixed bottom-4 right-4 z-[200] flex w-80 flex-col gap-2"
+      className="fixed bottom-4 right-4 z-200 flex w-80 flex-col gap-2"
     >
       {toasts.map((toast) => {
         const style = TONE_STYLE[toast.tone]
@@ -125,13 +125,13 @@ function ToastViewport({ onDismiss }: { onDismiss: (id: number) => void }): JSX.
             className={`solid-surface flex items-start gap-2.5 overflow-hidden rounded-lg border bg-panel py-2.5 pl-0 pr-2 shadow-xl ${style.ring}`}
           >
             <span className={`w-1 self-stretch ${style.bar}`} aria-hidden />
-            <span className="min-w-0 flex-1 break-words py-0.5 text-sm text-fg">
+            <span className="min-w-0 flex-1 wrap-break-word py-0.5 text-sm text-fg">
               {toast.message}
             </span>
             <button
               onClick={() => onDismiss(toast.id)}
               aria-label={t('common.dismiss')}
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               <CloseIcon size={12} />
             </button>

@@ -24,7 +24,7 @@ interface Props {
   onClose: () => void
 }
 
-function PaletteGlyph(): JSX.Element {
+function PaletteGlyph(): React.JSX.Element {
   return (
     <svg
       className="h-4 w-4 text-fgmuted"
@@ -59,7 +59,7 @@ export function ProfileManager({
   onUpdateColor,
   onRemove,
   onClose
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const toast = useToast()
@@ -202,7 +202,7 @@ export function ProfileManager({
               ref={pickerRef}
               role="menu"
               style={{ top: colorPicker.y, left: colorPicker.x }}
-              className="solid-surface fixed z-[60] w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
+              className="solid-surface fixed z-60 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
             >
               <ColorSwatchPicker
                 color={p.color ?? null}
@@ -216,7 +216,7 @@ export function ProfileManager({
                   onUpdateColor(p.id, null)
                   setColorPicker(null)
                 }}
-                className="mt-2 w-full rounded-md border border-edge px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                className="mt-2 w-full rounded-md border border-edge px-2 py-1 text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
               >
                 {t('form.colorNone')}
               </button>

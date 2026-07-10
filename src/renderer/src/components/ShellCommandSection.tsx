@@ -8,7 +8,7 @@ import type { ShellCommandStatus } from '../types'
  * from a terminal (`superior .`). Mirrors VS Code's "install 'code' command":
  * one click writes a launcher and ensures its directory is on PATH.
  */
-export function ShellCommandSection(): JSX.Element {
+export function ShellCommandSection(): React.JSX.Element {
   const { t } = useI18n()
   const [status, setStatus] = useState<ShellCommandStatus | null>(null)
   const [busy, setBusy] = useState(false)

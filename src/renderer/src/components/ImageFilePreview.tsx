@@ -7,7 +7,7 @@ interface Props {
 }
 
 /** Native image preview. The data URL is read-only; the file is never written. */
-export function ImageFilePreview({ dataUrl, alt }: Props): JSX.Element {
+export function ImageFilePreview({ dataUrl, alt }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [failed, setFailed] = useState(false)
   if (failed) {

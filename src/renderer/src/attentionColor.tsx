@@ -12,7 +12,7 @@ interface AttentionColorContextValue {
 
 const AttentionColorContext = createContext<AttentionColorContextValue | null>(null)
 
-export function AttentionColorProvider({ children }: { children: ReactNode }): JSX.Element {
+export function AttentionColorProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [attentionColor, setColorState] = useState<string>(DEFAULT_ATTENTION_COLOR)
 
   // Load the persisted choice once.

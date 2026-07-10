@@ -26,7 +26,7 @@ const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
 ]
 
 /** Rebindable keyboard shortcuts. Click a chord to record a new key combination. */
-export function KeyboardSection(): JSX.Element {
+export function KeyboardSection(): React.JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const { shortcuts, setShortcut, resetShortcut } = useShortcuts()
@@ -105,7 +105,7 @@ export function KeyboardSection(): JSX.Element {
             )}
             <button
               onClick={() => setRecordingFor(recordingFor === 'global' ? null : 'global')}
-              className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+              className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                 recordingFor === 'global'
                   ? 'border-statusBorder bg-statusBg text-status'
                   : 'border-edge text-fg hover:bg-hover'
@@ -137,7 +137,7 @@ export function KeyboardSection(): JSX.Element {
                 <span className="min-w-0 flex-1 truncate text-fg">{t(labelKey)}</span>
                 <button
                   onClick={() => setRecordingFor(isRecording ? null : id)}
-                  className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                  className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                     isRecording
                       ? 'border-statusBorder bg-statusBg text-status'
                       : 'border-edge text-fg hover:bg-hover'

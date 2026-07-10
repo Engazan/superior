@@ -17,7 +17,7 @@ interface Props {
   /** backdrop mousedown + Escape close the modal (default true) */
   dismissable?: boolean
   /** element focused on mount; falls back to the first focusable in the panel */
-  initialFocusRef?: RefObject<HTMLElement>
+  initialFocusRef?: RefObject<HTMLElement | null>
   /** accessible close-button label (i18n'd by the caller) */
   closeLabel?: string
   children: ReactNode
@@ -45,7 +45,7 @@ export function Modal({
   initialFocusRef,
   closeLabel,
   children
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const titleId = useId()
   const descId = useId()
@@ -109,7 +109,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-6 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-6 backdrop-blur-xs"
       onMouseDown={(e) => {
         if (dismissable && e.target === e.currentTarget) onClose()
       }}

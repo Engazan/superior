@@ -52,7 +52,7 @@ export function PresetsSection({
   onToggleActive,
   onPickImage,
   onPresetsChanged
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const toast = useToast()
@@ -176,7 +176,7 @@ export function PresetsSection({
                         moveBy(p.id, 1)
                       }
                     }}
-                    className="cursor-grab select-none px-2 py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                    className="cursor-grab select-none px-2 py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                     title={t('presets.dragReorder')}
                     aria-label={t('presets.dragReorder')}
                   >

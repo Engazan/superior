@@ -11,7 +11,7 @@ interface Props {
  * The one settings-section header: title left, actions right, description
  * below. Replaces the per-section drift of h2 margins and header layouts.
  */
-export function SectionHeader({ title, description, actions }: Props): JSX.Element {
+export function SectionHeader({ title, description, actions }: Props): React.JSX.Element {
   return (
     <header className="mb-4">
       <div className="flex items-center justify-between gap-4">

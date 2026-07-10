@@ -180,6 +180,10 @@ function setupSocket(s: net.Socket): void {
   const decoder = new FrameDecoder<ServerMessage>()
   s.on('data', (chunk) => {
     try {
+      // This binary protocol must not be decoded by net.Socket. Node's newer
+      // typings correctly model a string here when an encoding is configured;
+      // reject that unexpected state rather than corrupting terminal bytes.
+      if (typeof chunk === 'string') throw new Error('daemon socket received decoded data')
       for (const msg of decoder.push(chunk)) onServerMessage(msg)
     } catch (err) {
       console.error('[daemon] malformed server frame:', err)

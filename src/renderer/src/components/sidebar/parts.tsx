@@ -40,14 +40,14 @@ export function folderTint(color: string | null | undefined): CSSProperties | un
 }
 
 /** A folder's custom icon when set, else the default folder glyph. `size` is px. */
-export function FolderGlyph({ folder, size = 14 }: { folder: Folder; size?: number }): JSX.Element {
+export function FolderGlyph({ folder, size = 14 }: { folder: Folder; size?: number }): React.JSX.Element {
   if (folder.icon) {
     return (
       <img
         src={folder.icon}
         alt=""
         aria-hidden
-        className="shrink-0 rounded-sm object-cover"
+        className="shrink-0 rounded-xs object-cover"
         style={{ width: size, height: size }}
       />
     )
@@ -56,7 +56,7 @@ export function FolderGlyph({ folder, size = 14 }: { folder: Folder; size?: numb
   return <FolderIcon className="shrink-0" />
 }
 
-function RemoteGlyph({ size }: { size: number }): JSX.Element {
+function RemoteGlyph({ size }: { size: number }): React.JSX.Element {
   return (
     <svg
       width={size}
@@ -77,7 +77,7 @@ function RemoteGlyph({ size }: { size: number }): JSX.Element {
   )
 }
 
-export function RunningBadge({ count, title }: { count: number; title: string }): JSX.Element {
+export function RunningBadge({ count, title }: { count: number; title: string }): React.JSX.Element {
   return (
     <span
       title={title}
@@ -99,7 +99,7 @@ export function DiffStat({
 }: {
   stat: WorkspaceGitStat
   title: string
-}): JSX.Element | null {
+}): React.JSX.Element | null {
   if (!stat.isRepository || (stat.additions === 0 && stat.deletions === 0)) return null
   return (
     <span
@@ -113,7 +113,7 @@ export function DiffStat({
 }
 
 /** Download-style glyph for the "update available" affordance. */
-export function UpdateGlyph({ className }: { className?: string }): JSX.Element {
+export function UpdateGlyph({ className }: { className?: string }): React.JSX.Element {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -139,7 +139,7 @@ export function WorkingSpinner({
 }: {
   title?: string
   className?: string
-}): JSX.Element {
+}): React.JSX.Element {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -155,7 +155,7 @@ export function WorkingSpinner({
 }
 
 /** Small branch chip shown under a worktree-backed workspace's name. */
-export function BranchBadge({ branch, title }: { branch: string; title: string }): JSX.Element {
+export function BranchBadge({ branch, title }: { branch: string; title: string }): React.JSX.Element {
   return (
     <span
       title={title}
@@ -167,7 +167,7 @@ export function BranchBadge({ branch, title }: { branch: string; title: string }
   )
 }
 
-export function RemoteBadge({ title }: { title: string }): JSX.Element {
+export function RemoteBadge({ title }: { title: string }): React.JSX.Element {
   return (
     <span
       title={title}
@@ -178,7 +178,7 @@ export function RemoteBadge({ title }: { title: string }): JSX.Element {
   )
 }
 
-export function WorkspaceGlyph(): JSX.Element {
+export function WorkspaceGlyph(): React.JSX.Element {
   return (
     <svg
       width="17"

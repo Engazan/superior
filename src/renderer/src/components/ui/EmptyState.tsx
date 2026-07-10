@@ -9,7 +9,7 @@ interface Props {
 }
 
 /** Centered dashed-border card for empty lists. */
-export function EmptyState({ icon, title, description, action }: Props): JSX.Element {
+export function EmptyState({ icon, title, description, action }: Props): React.JSX.Element {
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-edge px-4 py-8 text-center">
       {icon && <span className="text-fgmuted">{icon}</span>}

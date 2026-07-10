@@ -22,7 +22,7 @@ const OPEN_DELAY = 350
 const GAP = 8
 const VIEWPORT_PAD = 6
 
-export function TooltipLayer(): JSX.Element | null {
+export function TooltipLayer(): React.JSX.Element | null {
   const [tip, setTip] = useState<Tip | null>(null)
   const [visible, setVisible] = useState(false)
   // Horizontal shift applied to keep the bubble inside the viewport; the arrow
@@ -139,7 +139,7 @@ export function TooltipLayer(): JSX.Element | null {
     <div
       ref={bubbleRef}
       role="tooltip"
-      className={`solid-surface pointer-events-none fixed z-[100] max-w-[min(22rem,90vw)] rounded-md border border-edge bg-panel px-2 py-1 text-xs font-medium leading-snug text-fg shadow-xl transition-opacity duration-100 ${
+      className={`solid-surface pointer-events-none fixed z-100 max-w-[min(22rem,90vw)] rounded-md border border-edge bg-panel px-2 py-1 text-xs font-medium leading-snug text-fg shadow-xl transition-opacity duration-100 ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{

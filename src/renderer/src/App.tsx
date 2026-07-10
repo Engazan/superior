@@ -38,7 +38,7 @@ import {
 
 type View = 'main' | 'settings'
 
-export default function App(): JSX.Element {
+export default function App(): React.JSX.Element {
   const { t } = useI18n()
   const { shortcuts } = useShortcuts()
   const toast = useToast()

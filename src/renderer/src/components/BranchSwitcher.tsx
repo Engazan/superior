@@ -12,7 +12,7 @@ interface Props {
   onSwitched: () => void
 }
 
-function Caret(): JSX.Element {
+function Caret(): React.JSX.Element {
   return (
     <svg
       className="block h-2.5 w-2.5 shrink-0 text-fgmuted"
@@ -29,7 +29,7 @@ function Caret(): JSX.Element {
   )
 }
 
-function GroupCaret({ open }: { open: boolean }): JSX.Element {
+function GroupCaret({ open }: { open: boolean }): React.JSX.Element {
   return (
     <svg
       className={`block h-2.5 w-2.5 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`}
@@ -64,7 +64,7 @@ function checkoutName(b: BranchInfo): string {
  * "Stash & switch" choice (recoverable via `git stash pop`); branches already
  * checked out in another worktree are listed but disabled.
  */
-export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JSX.Element {
+export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [branches, setBranches] = useState<BranchInfo[] | null>(null)
@@ -180,7 +180,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
     }
   }
 
-  const renderRow = (b: BranchInfo): JSX.Element => {
+  const renderRow = (b: BranchInfo): React.JSX.Element => {
     const target = checkoutName(b)
     const blockedElsewhere = b.isCheckedOut && !b.isCurrent
     const disabled = b.isCurrent || blockedElsewhere || busy !== null
@@ -208,7 +208,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
     )
   }
 
-  const renderGroup = (key: string, label: string, items: BranchInfo[]): JSX.Element => {
+  const renderGroup = (key: string, label: string, items: BranchInfo[]): React.JSX.Element => {
     // While searching, keep every group open so matches are never hidden.
     const isOpen = !collapsed.has(key) || query.trim().length > 0
     return (
@@ -234,7 +234,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
         aria-label={t('branch.switch')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-7 min-w-0 max-w-64 items-center gap-1.5 rounded px-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex h-7 min-w-0 max-w-64 items-center gap-1.5 rounded-sm px-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{currentBranch}</span>
@@ -249,7 +249,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('branch.search')}
-              className="w-full rounded border border-edge bg-bar px-2 py-1 text-xs text-fg outline-none placeholder:text-fgmuted focus:border-accent"
+              className="w-full rounded-sm border border-edge bg-bar px-2 py-1 text-xs text-fg outline-hidden placeholder:text-fgmuted focus:border-accent"
               autoComplete="off"
             />
           </div>
@@ -292,14 +292,14 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): JS
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setConflict(null)}
-                  className="rounded px-2 py-1 text-fgdim transition hover:bg-hover hover:text-fg"
+                  className="rounded-sm px-2 py-1 text-fgdim transition hover:bg-hover hover:text-fg"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => void doSwitch(conflict, true)}
                   disabled={busy !== null}
-                  className="rounded bg-warn px-2 py-1 font-medium text-bar transition hover:opacity-90 disabled:opacity-50"
+                  className="rounded-sm bg-warn px-2 py-1 font-medium text-bar transition hover:opacity-90 disabled:opacity-50"
                 >
                   {t('branch.stashAndSwitch')}
                 </button>

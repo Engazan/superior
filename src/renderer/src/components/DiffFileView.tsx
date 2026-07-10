@@ -34,7 +34,7 @@ export function DiffFileView({
   open: openProp,
   onToggleOpen,
   action
-}: Props): JSX.Element {
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const [openState, setOpenState] = useState(defaultOpen)
   const open = openProp ?? openState
@@ -49,7 +49,7 @@ export function DiffFileView({
         <button
           onClick={toggle}
           aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
           title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
         >
           <span className={`shrink-0 font-mono font-semibold ${meta.className}`}>{meta.letter}</span>
@@ -72,7 +72,7 @@ export function DiffFileView({
             {file.binary ? t('changes.binary') : t('changes.tooLarge')}
           </div>
         ) : (
-          <div className="overflow-x-auto bg-panel font-mono text-[11px] leading-[1.5]">
+          <div className="overflow-x-auto bg-panel font-mono text-[11px] leading-normal">
             {file.hunks.map((hunk, hi) => (
               // content-visibility lets the browser skip layout/paint of
               // off-screen hunks — a cheap stand-in for real virtualization on
