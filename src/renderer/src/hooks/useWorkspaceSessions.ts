@@ -105,42 +105,72 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
 
   // Restore folders/workspaces, then reattach surviving daemon sessions.
   useEffect(() => {
-    ;(async () => {
-      const ws = await window.api.listWorkspaces()
-      setProfiles(ws.profiles)
-      setActiveProfileId(ws.activeProfileId)
-      setFolders(ws.folders)
-      setWorkspaces(ws.workspaces)
-      setActiveWorkspaceId(ws.activeWorkspaceId)
+    let active = true
+    let retryTimer: number | undefined
+    let notified = false
+    const restore = async (): Promise<void> => {
+      try {
+        const ws = await window.api.listWorkspaces()
+        if (!active) return
+        setProfiles(ws.profiles)
+        setActiveProfileId(ws.activeProfileId)
+        setFolders(ws.folders)
+        setWorkspaces(ws.workspaces)
+        setActiveWorkspaceId(ws.activeWorkspaceId)
 
-      const [restored, tabsState] = await Promise.all([
-        window.api.restoreSessions(),
-        window.api.getTabs()
-      ])
+        const [sessionsResult, tabsResult] = await Promise.allSettled([
+          window.api.restoreSessions(),
+          window.api.getTabs()
+        ])
+        if (!active) return
+        const restored = sessionsResult.status === 'fulfilled' ? sessionsResult.value : []
+        const tabsState = tabsResult.status === 'fulfilled' ? tabsResult.value : {}
+        const restoreErrors = [sessionsResult, tabsResult]
+          .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+          .map((result) => ipcErrorMessage(result.reason))
+        if (restoreErrors.length) setError(restoreErrors.join(' · '))
 
-      // Keep only sessions whose workspace still exists; kill orphans.
-      const validIds = new Set(ws.workspaces.map((w) => w.id))
-      const live = restored.filter((s) => {
-        if (validIds.has(s.workspaceId)) return true
-        window.api.killAgent(s.id)
-        return false
-      })
+        // Keep only sessions whose workspace still exists; kill orphans.
+        const validIds = new Set(ws.workspaces.map((w) => w.id))
+        const live = restored.filter((s) => {
+          if (validIds.has(s.workspaceId)) return true
+          void window.api.killAgent(s.id).catch((err) => setError(ipcErrorMessage(err)))
+          return false
+        })
 
-      // Adopt persisted tabs for surviving workspaces, then pin each session to
-      // a valid tab. Fresh tabs are seeded and persisted by the tabs domain.
-      const restoredTabs = restoreTabs(validIds, tabsState, live)
-      const pinned = restoredTabs.sessions
-      setSessions(pinned)
+        // Adopt persisted tabs for surviving workspaces, then pin each session to
+        // a valid tab. Fresh tabs are seeded and persisted by the tabs domain.
+        const restoredTabs = restoreTabs(validIds, tabsState, live)
+        const pinned = restoredTabs.sessions
+        setSessions(pinned)
 
-      const active = ws.activeWorkspaceId
-      const tab = active ? restoredTabs.tabsByWs[active]?.activeTabId : undefined
-      const inActive = pinned.filter((s) => s.workspaceId === active && s.tabId === tab)
-      setActiveSessionId(inActive.length ? inActive[inActive.length - 1].id : null)
-      // Only now do surviving daemon sessions count — gates workspace auto-launch.
-      setSessionsRestored(true)
-    })().catch((err) => console.error('[restore] failed:', err))
-     
-  }, [restoreTabs])
+        const restoredActiveWorkspace = ws.activeWorkspaceId
+        const tab = restoredActiveWorkspace
+          ? restoredTabs.tabsByWs[restoredActiveWorkspace]?.activeTabId
+          : undefined
+        const inActive = pinned.filter(
+          (s) => s.workspaceId === restoredActiveWorkspace && s.tabId === tab
+        )
+        setActiveSessionId(inActive.length ? inActive[inActive.length - 1].id : null)
+        // Only now do surviving daemon sessions count — gates workspace auto-launch.
+        setSessionsRestored(true)
+      } catch (err) {
+        if (!active) return
+        if (!notified) {
+          notified = true
+          setError(ipcErrorMessage(err))
+        }
+        // Without workspace state it is unsafe to reconcile tasks against an
+        // empty session list. Retry instead of declaring a destructive default.
+        retryTimer = window.setTimeout(() => void restore(), 2_000)
+      }
+    }
+    void restore()
+    return () => {
+      active = false
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer)
+    }
+  }, [restoreTabs, setError])
 
   // Point the active session at the most recent session of a workspace's active tab.
   const focusWorkspaceSession = useCallback(

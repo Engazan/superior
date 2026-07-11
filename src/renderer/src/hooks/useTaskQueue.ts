@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '../components/ui'
 import { useI18n } from '../i18n'
 import { taskExitOutcome } from '../taskExit'
+import { ipcErrorMessage } from '../ipcError'
 import type {
   AgentSession,
   AgentTask,
@@ -128,11 +129,33 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
   )
 
   useEffect(() => {
-    window.api.listTasks().then((state) => {
-      adopt(state)
-      setLoaded(true)
-    })
-  }, [adopt])
+    let active = true
+    let retryTimer: number | undefined
+    let attempts = 0
+    let notified = false
+    const load = (): void => {
+      window.api.listTasks()
+        .then((state) => {
+          if (!active) return
+          adopt(state)
+          setLoaded(true)
+        })
+        .catch((err) => {
+          if (!active) return
+          if (!notified) {
+            notified = true
+            toast.error(ipcErrorMessage(err))
+          }
+          attempts += 1
+          retryTimer = window.setTimeout(load, Math.min(250 * 2 ** attempts, 5_000))
+        })
+    }
+    load()
+    return () => {
+      active = false
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer)
+    }
+  }, [adopt, toast])
 
   // Reconcile tasks stored as 'running' by a previous app run: a task whose
   // session survived in the daemon keeps running (its exit is caught below);

@@ -8,6 +8,7 @@ import { AttentionColorProvider } from './attentionColor'
 import { UsagePrimaryProvider } from './usagePrimary'
 import { ConfirmProvider, ToastProvider, useToast } from './components/ui'
 import { ipcErrorInfo } from './ipcError'
+import { AppErrorBoundary } from './components/AppErrorBoundary'
 import './index.css'
 
 const SPLASH_DURATION_MS = 1000
@@ -70,19 +71,21 @@ if (!container) throw new Error('Root element #root not found')
 // StrictMode intentionally omitted: its dev-only double-mount would create and
 // dispose duplicate xterm instances and can drop the first chunk of pty output.
 createRoot(container).render(
-  <I18nProvider>
-    <ThemeProvider>
-      <ShortcutsProvider>
-        <AttentionColorProvider>
-          <UsagePrimaryProvider>
-            <ToastProvider>
-              <ConfirmProvider>
-                <StartupScreen />
-              </ConfirmProvider>
-            </ToastProvider>
-          </UsagePrimaryProvider>
-        </AttentionColorProvider>
-      </ShortcutsProvider>
-    </ThemeProvider>
-  </I18nProvider>
+  <AppErrorBoundary>
+    <I18nProvider>
+      <ThemeProvider>
+        <ShortcutsProvider>
+          <AttentionColorProvider>
+            <UsagePrimaryProvider>
+              <ToastProvider>
+                <ConfirmProvider>
+                  <StartupScreen />
+                </ConfirmProvider>
+              </ToastProvider>
+            </UsagePrimaryProvider>
+          </AttentionColorProvider>
+        </ShortcutsProvider>
+      </ThemeProvider>
+    </I18nProvider>
+  </AppErrorBoundary>
 )
