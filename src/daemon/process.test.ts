@@ -14,11 +14,20 @@ import {
   type ServerMessage
 } from '@shared/daemon-protocol'
 
+// A cold `tsx` start plus node-pty's first native `fork` is sub-second on a
+// developer machine but can take many seconds on a shared, throttled CI runner
+// while the rest of the suite competes for the same few cores. Budget for that
+// worst case — an unresponsive daemon still fails fast because a crash or an
+// `error` reply settles the wait immediately (see waitFor / the child `exit`
+// handler) rather than burning the whole timeout.
+const CONNECT_TIMEOUT_MS = 15_000
+const MESSAGE_TIMEOUT_MS = 20_000
+
 interface Harness {
   child: ChildProcess
   socket: net.Socket
   send(message: ClientMessage): void
-  waitFor(predicate: (message: ServerMessage) => boolean): Promise<ServerMessage>
+  waitFor(predicate: (message: ServerMessage) => boolean, description?: string): Promise<ServerMessage>
 }
 
 const cleanup: Array<() => void | Promise<void>> = []
@@ -28,7 +37,7 @@ afterEach(async () => {
 })
 
 async function connectWithRetry(socketPath: string): Promise<net.Socket> {
-  const deadline = Date.now() + 8_000
+  const deadline = Date.now() + CONNECT_TIMEOUT_MS
   while (Date.now() < deadline) {
     try {
       return await new Promise<net.Socket>((resolve, reject) => {
@@ -58,8 +67,15 @@ async function startHarness(): Promise<Harness> {
       socketPath,
       logPath
     ],
-    { cwd: path.resolve('.'), stdio: 'ignore' }
+    // Keep stderr so a native node-pty/libuv abort (which never reaches the
+    // daemon's log file) is still attached to a failing assertion.
+    { cwd: path.resolve('.'), stdio: ['ignore', 'ignore', 'pipe'] }
   )
+  let stderr = ''
+  child.stderr?.on('data', (chunk) => {
+    stderr += chunk.toString()
+  })
+
   cleanup.push(async () => {
     if (child.exitCode === null) {
       const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()))
@@ -78,16 +94,67 @@ async function startHarness(): Promise<Harness> {
   })
   const decoder = new FrameDecoder<ServerMessage>()
   const queued: ServerMessage[] = []
-  const waiters: Array<{
+  interface Waiter {
     predicate: (message: ServerMessage) => boolean
+    description: string
     resolve: (message: ServerMessage) => void
-  }> = []
+    reject: (error: Error) => void
+    timer: NodeJS.Timeout
+  }
+  const waiters: Waiter[] = []
+  let daemonExit: { code: number | null; signal: NodeJS.Signals | null } | null = null
+
+  // Fold everything we know about the daemon into a wait failure: the message
+  // types already received (an `error` reply to a rejected spawn shows here), the
+  // tail of the daemon's own log, and any native stderr. Turns the otherwise
+  // opaque "timed out" into an actionable CI failure.
+  const diagnostic = (reason: string): string => {
+    const received = queued.length ? JSON.stringify(queued) : 'none'
+    let logTail = ''
+    try {
+      logTail = fs.readFileSync(logPath, 'utf8').trim().split('\n').slice(-20).join('\n')
+    } catch {
+      /* the daemon may not have written its log yet */
+    }
+    const exit = daemonExit
+      ? ` Daemon exited (code=${daemonExit.code}, signal=${daemonExit.signal}).`
+      : ''
+    return [
+      reason + '.' + exit,
+      `Received: ${received}`,
+      logTail && `Daemon log:\n${logTail}`,
+      stderr.trim() && `Daemon stderr:\n${stderr.trim()}`
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+
+  const settleWaiter = (waiter: Waiter): void => {
+    clearTimeout(waiter.timer)
+    const index = waiters.indexOf(waiter)
+    if (index >= 0) waiters.splice(index, 1)
+  }
+
   socket.on('data', (chunk) => {
     if (typeof chunk === 'string') throw new Error('Daemon test socket unexpectedly decoded data.')
     for (const message of decoder.push(chunk)) {
-      const index = waiters.findIndex((waiter) => waiter.predicate(message))
-      if (index >= 0) waiters.splice(index, 1)[0].resolve(message)
-      else queued.push(message)
+      const waiter = waiters.find((w) => w.predicate(message))
+      if (waiter) {
+        settleWaiter(waiter)
+        waiter.resolve(message)
+      } else {
+        queued.push(message)
+      }
+    }
+  })
+
+  // A daemon that dies mid-request never sends the awaited reply; fail the
+  // pending wait now instead of blocking until its timeout.
+  child.on('exit', (code, signal) => {
+    daemonExit = { code, signal }
+    for (const waiter of waiters.splice(0)) {
+      clearTimeout(waiter.timer)
+      waiter.reject(new Error(diagnostic(`Daemon exited while waiting for ${waiter.description}`)))
     }
   })
 
@@ -95,17 +162,24 @@ async function startHarness(): Promise<Harness> {
     child,
     socket,
     send: (message) => socket.write(encodeFrame(message)),
-    waitFor(predicate) {
+    waitFor(predicate, description = 'a daemon message') {
       const index = queued.findIndex(predicate)
       if (index >= 0) return Promise.resolve(queued.splice(index, 1)[0])
+      if (daemonExit) {
+        return Promise.reject(new Error(diagnostic(`Daemon already exited; cannot wait for ${description}`)))
+      }
       return new Promise((resolve, reject) => {
-        const waiter = { predicate, resolve }
+        const waiter: Waiter = {
+          predicate,
+          description,
+          resolve,
+          reject,
+          timer: setTimeout(() => {
+            settleWaiter(waiter)
+            reject(new Error(diagnostic(`Timed out waiting for ${description}`)))
+          }, MESSAGE_TIMEOUT_MS)
+        }
         waiters.push(waiter)
-        setTimeout(() => {
-          const pending = waiters.indexOf(waiter)
-          if (pending >= 0) waiters.splice(pending, 1)
-          reject(new Error('Timed out waiting for daemon message.'))
-        }, 8_000)
       })
     }
   }
@@ -138,20 +212,24 @@ describe('daemon process lifecycle', () => {
       }
     })
 
-    await expect(harness.waitFor((message) => message.t === 'spawned' && message.id === id))
-      .resolves.toMatchObject({ t: 'spawned', id })
+    await expect(
+      harness.waitFor((message) => message.t === 'spawned' && message.id === id, 'spawned')
+    ).resolves.toMatchObject({ t: 'spawned', id })
 
     harness.send({ t: 'kill', id, requestId })
     await expect(
       harness.waitFor(
-        (message) => message.t === 'killed' && message.id === id && message.requestId === requestId
+        (message) => message.t === 'killed' && message.id === id && message.requestId === requestId,
+        'killed'
       )
     ).resolves.toEqual({ t: 'killed', id, requestId })
-    await expect(harness.waitFor((message) => message.t === 'exit' && message.id === id))
-      .resolves.toMatchObject({ t: 'exit', id })
+    await expect(
+      harness.waitFor((message) => message.t === 'exit' && message.id === id, 'exit')
+    ).resolves.toMatchObject({ t: 'exit', id })
 
     harness.send({ t: 'list' })
-    await expect(harness.waitFor((message) => message.t === 'sessions'))
-      .resolves.toEqual({ t: 'sessions', list: [] })
-  }, 20_000)
+    await expect(
+      harness.waitFor((message) => message.t === 'sessions', 'sessions')
+    ).resolves.toEqual({ t: 'sessions', list: [] })
+  }, 60_000)
 })
