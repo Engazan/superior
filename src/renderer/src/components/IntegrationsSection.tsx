@@ -71,7 +71,10 @@ function IntegrationForm({
   }
 
   const urlRequired = draft.provider !== 'github'
-  const canSave = draft.name.trim() && draft.token.trim() && (!urlRequired || draft.baseUrl.trim())
+  const canSave =
+    draft.name.trim() &&
+    (draft.token.trim() || draft.hasToken) &&
+    (!urlRequired || draft.baseUrl.trim())
 
   const runTest = async (): Promise<void> => {
     setTest({ phase: 'testing' })

@@ -178,8 +178,8 @@ export function getSettings(): AppSettings {
 }
 
 function save(settings: AppSettings): void {
-  cached = settings
   writeJsonFile(storeFile(), settings, 'settings')
+  cached = settings
 }
 
 /** Persist the theme mode and return the updated settings. */

@@ -7,7 +7,13 @@ const electron = vi.hoisted(() => ({ getPath: vi.fn() }))
 
 vi.mock('electron', () => ({ app: { getPath: electron.getPath } }))
 
-import { createJsonListStore, readJsonFile, userDataFile, writeJsonFile } from './jsonStore'
+import {
+  createJsonListStore,
+  PersistenceError,
+  readJsonFile,
+  userDataFile,
+  writeJsonFile
+} from './jsonStore'
 
 describe('jsonStore', () => {
   let userData: string
@@ -51,5 +57,22 @@ describe('jsonStore', () => {
     expect(store.upsert({ id: 'a', value: 2 })).toEqual([{ id: 'a', value: 2 }])
     expect(store.upsert({ id: 'b', value: 3 })).toHaveLength(2)
     expect(store.remove('a')).toEqual([{ id: 'b', value: 3 }])
+  })
+
+  it('throws a typed error and removes the temp file when persistence fails', () => {
+    const file = path.join(userData, 'state.json')
+    fs.mkdirSync(`${file}.tmp`)
+
+    expect(() => writeJsonFile(file, { ready: true }, 'test state')).toThrow(PersistenceError)
+    expect(fs.existsSync(`${file}.tmp`)).toBe(true)
+    expect(fs.existsSync(file)).toBe(false)
+  })
+
+  it('does not report a list mutation as successful when its write fails', () => {
+    const store = createJsonListStore<{ id: string; value: number }>('items.json', 'items', 'items')
+    fs.mkdirSync(path.join(userData, 'items.json.tmp'))
+
+    expect(() => store.upsert({ id: 'a', value: 1 })).toThrow(PersistenceError)
+    expect(store.read()).toEqual([])
   })
 })

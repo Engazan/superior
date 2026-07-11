@@ -9,7 +9,7 @@ import {
 } from '@shared/types'
 import type { DaemonSession, DirectSpawn } from '@shared/daemon-protocol'
 import { daemonClient } from './daemonClient'
-import { isValidWorkspaceDir } from './workspace.service'
+import { isValidWorkspaceDir, isWithinWorkspaceFolder } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
 import { ensureClaudeStatusline, restoreAllClaudeStatuslines } from './statusline.service'
 import { getSettings } from './settings.service'
@@ -41,7 +41,7 @@ function cleanLaunchTarget(args: StartAgentArgs): AgentLaunchTarget | { error: s
   const target = args.launchTarget ?? { kind: 'local' as const, cwd: args.cwd }
   if (target.kind === 'local') {
     if (!target.cwd) return { error: 'No workspace selected. Open a folder first.' }
-    if (!isValidWorkspaceDir(target.cwd)) {
+    if (!isValidWorkspaceDir(target.cwd) || !isWithinWorkspaceFolder(target.cwd)) {
       return { error: 'Workspace folder is invalid or no longer exists.' }
     }
     return target
@@ -171,9 +171,12 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
   // before this async continuation runs and nothing matches it yet. Capture it
   // and return the session in its real final state instead of a phantom
   // 'running' that no later exit event will ever correct.
-  const earlyExit: { exitCode: number | null } = { exitCode: null }
+  const earlyExit: { seen: boolean; exitCode: number | null } = { seen: false, exitCode: null }
   const offEarlyExit = daemonClient.onExit((e) => {
-    if (e.id === id) earlyExit.exitCode = e.exitCode
+    if (e.id === id) {
+      earlyExit.seen = true
+      earlyExit.exitCode = e.exitCode
+    }
   })
   try {
     const { pid } = await daemonClient.spawn({
@@ -202,7 +205,7 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
 
     // Surface live token/cost usage when this command runs a Claude CLI (no-op
     // otherwise). Skipped for an already-dead session: its stop already fired.
-    if (usageEnabled && local && exited === null) {
+    if (usageEnabled && local && !earlyExit.seen) {
       startUsageTracking({ id, cwd: local.cwd, command, createdAt })
     }
 
@@ -217,9 +220,9 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
       color: args.color,
       workspaceId,
       tabId,
-      status: exited === null ? 'running' : exitStatus(exited),
-      pid: exited === null ? pid : undefined,
-      exitCode: exited ?? undefined,
+      status: earlyExit.seen ? exitStatus(exited) : 'running',
+      pid: earlyExit.seen ? undefined : pid,
+      exitCode: earlyExit.seen ? exited : undefined,
       cols,
       rows,
       createdAt
@@ -264,9 +267,9 @@ export async function restoreSessions(): Promise<AgentSession[]> {
   return reconcilePersistedSessions(live)
 }
 
-export function killAgent(id: string): void {
+export async function killAgent(id: string): Promise<void> {
+  await daemonClient.kill(id)
   removePersistedSession(id)
-  daemonClient.kill(id)
 }
 
 /** Persist a session's nickname in the daemon so it survives an app restart. */
@@ -299,7 +302,8 @@ export function resizeAgent(id: string, cols: number, rows: number): void {
 }
 
 /** UI status for an exit code: user-interrupt/TERM codes read as a clean exit. */
-function exitStatus(exitCode: number): AgentStatus {
+function exitStatus(exitCode: number | null): AgentStatus {
+  if (exitCode === null) return 'error'
   return exitCode === 0 || exitCode === 130 || exitCode === 143 ? 'exited' : 'error'
 }
 

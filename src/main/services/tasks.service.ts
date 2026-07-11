@@ -13,10 +13,28 @@ function read(): TasksState {
   const parsed = readJsonFile<TasksState | null>(storeFile(), null, (p) => {
     const obj = p as Partial<TasksState>
     return obj && Array.isArray(obj.tasks)
-      ? { tasks: obj.tasks, paused: obj.paused === true }
+      ? { tasks: obj.tasks.filter(isTask), paused: obj.paused === true }
       : null
   })
   return parsed ?? { tasks: [], paused: false }
+}
+
+const TASK_STATUSES = new Set(['queued', 'running', 'done', 'failed', 'canceled'])
+
+function isTask(value: unknown): value is AgentTask {
+  if (!value || typeof value !== 'object') return false
+  const task = value as Record<string, unknown>
+  return (
+    typeof task.id === 'string' &&
+    typeof task.folderPath === 'string' &&
+    typeof task.prompt === 'string' &&
+    typeof task.presetId === 'string' &&
+    typeof task.useWorktree === 'boolean' &&
+    typeof task.status === 'string' &&
+    TASK_STATUSES.has(task.status) &&
+    typeof task.createdAt === 'number' &&
+    Number.isFinite(task.createdAt)
+  )
 }
 
 /**

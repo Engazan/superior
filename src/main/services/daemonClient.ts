@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import { randomUUID } from 'crypto'
 import * as net from 'net'
 import { join } from 'path'
 import { app, BrowserWindow } from 'electron'
@@ -34,7 +35,16 @@ const pendingSpawns = new Map<
   string,
   { resolve: (res: { pid?: number }) => void; reject: (err: Error) => void }
 >()
-const exitListeners = new Set<(event: { id: string; exitCode: number }) => void>()
+const pendingKills = new Map<
+  string,
+  { id: string; resolve: () => void; reject: (err: Error) => void }
+>()
+interface DaemonExit {
+  id: string
+  exitCode: number | null
+  reason?: 'interrupted'
+}
+const exitListeners = new Set<(event: DaemonExit) => void>()
 // Compatibility with a daemon started by an older app build that does not yet
 // tag attach snapshots as replay. The first data frame after attach is the
 // synchronous scrollback snapshot (or harmlessly treated as one if empty).
@@ -74,16 +84,29 @@ function broadcast(channel: string, payload: unknown): void {
 }
 
 /** Fan an exit out to the renderer and main-side listeners. */
-function deliverExit(id: string, exitCode: number): void {
+function deliverExit(id: string, exitCode: number | null, reason?: 'interrupted'): void {
   attachedIds.delete(id)
   toResume.delete(id)
   pendingReplay.delete(id)
   suppressReplay.delete(id)
   stopUsageTracking(id)
-  const message =
-    exitCode === 127 ? 'command not found. Is it installed and on your PATH?' : undefined
-  broadcast(IPC.AGENT_EXIT, { id, exitCode, message })
-  for (const listener of exitListeners) listener({ id, exitCode })
+  // Compatibility: an older daemon does not understand the explicit `killed`
+  // acknowledgement, but its real exit event still confirms that the process
+  // stopped. Resolve any matching request before broadcasting the exit.
+  for (const [requestId, pending] of pendingKills) {
+    if (pending.id === id) {
+      pendingKills.delete(requestId)
+      pending.resolve()
+    }
+  }
+  const message = exitCode === 127
+    ? 'command not found. Is it installed and on your PATH?'
+    : reason === 'interrupted'
+      ? 'Terminal daemon disconnected before the process result was known.'
+      : undefined
+  const event: DaemonExit = reason ? { id, exitCode, reason } : { id, exitCode }
+  broadcast(IPC.AGENT_EXIT, { ...event, message })
+  for (const listener of exitListeners) listener(event)
 }
 
 function onServerMessage(msg: ServerMessage): void {
@@ -118,6 +141,14 @@ function onServerMessage(msg: ServerMessage): void {
       }
       break
     }
+    case 'killed': {
+      const entry = pendingKills.get(msg.requestId)
+      if (entry) {
+        pendingKills.delete(msg.requestId)
+        entry.resolve()
+      }
+      break
+    }
     case 'error':
       if (msg.id && pendingSpawns.has(msg.id)) {
         pendingSpawns.get(msg.id)?.reject(new Error(msg.message || 'spawn failed'))
@@ -127,7 +158,7 @@ function onServerMessage(msg: ServerMessage): void {
         // is gone — it exited while unattached, under a daemon predating
         // exit-to-all-clients. Synthesize an exit (code unknowable) so the
         // terminal and the task queue don't wait forever.
-        deliverExit(msg.id, 0)
+        deliverExit(msg.id, null, 'interrupted')
       }
       break
   }
@@ -140,6 +171,10 @@ function flushPending(): void {
     reject(new Error('Terminal daemon disconnected.'))
   }
   pendingSpawns.clear()
+  for (const { reject } of pendingKills.values()) {
+    reject(new Error('Terminal daemon disconnected.'))
+  }
+  pendingKills.clear()
   for (const entry of pendingLists.splice(0)) {
     if (!entry.settled) {
       entry.settled = true
@@ -155,7 +190,7 @@ function flushPending(): void {
 function abandonAttached(): void {
   reattachAttempts = 0
   toResume.clear()
-  for (const id of [...attachedIds]) deliverExit(id, 0)
+  for (const id of [...attachedIds]) deliverExit(id, null, 'interrupted')
 }
 
 /** After a socket drop, restore streaming for mounted terminals. Bounded: give
@@ -344,11 +379,22 @@ export const daemonClient = {
   resize(id: string, cols: number, rows: number): void {
     post({ t: 'resize', id, cols, rows })
   },
-  kill(id: string): void {
-    post({ t: 'kill', id })
+  async kill(id: string): Promise<void> {
+    const s = await ensureDaemon()
+    const requestId = randomUUID()
+    const result = new Promise<void>((resolve, reject) => {
+      pendingKills.set(requestId, { id, resolve, reject })
+      setTimeout(() => {
+        if (pendingKills.delete(requestId)) {
+          reject(new Error('Timed out waiting for the terminal daemon to acknowledge the kill.'))
+        }
+      }, REQUEST_TIMEOUT_MS)
+    })
+    s.write(encodeFrame({ t: 'kill', id, requestId }))
+    return result
   },
 
-  onExit(listener: (event: { id: string; exitCode: number }) => void): () => void {
+  onExit(listener: (event: DaemonExit) => void): () => void {
     exitListeners.add(listener)
     return () => exitListeners.delete(listener)
   },

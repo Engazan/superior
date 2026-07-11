@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '../components/ui'
 import { useI18n } from '../i18n'
+import { taskExitOutcome } from '../taskExit'
 import type {
   AgentSession,
   AgentTask,
@@ -147,9 +148,10 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         const session = depsRef.current.sessions.find((s) => s.id === task.sessionId)
         if (session && session.status === 'running') continue
         const exitCode = session?.exitCode ?? null
+        const outcome = taskExitOutcome(exitCode)
         await persistTask({
           ...task,
-          status: exitCode !== null && exitCode !== 0 ? 'failed' : 'done',
+          ...outcome,
           exitCode,
           finishedAt: Date.now()
         })
@@ -164,11 +166,12 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
   // already-exited path in startTask.
   const finishTask = useCallback(
     (task: AgentTask, exitCode: number | null) => {
-      const failed = exitCode !== null && exitCode !== 0
+      const outcome = taskExitOutcome(exitCode)
+      const failed = outcome.status === 'failed'
       if (failed) toast.error(tRef.current('tasks.failedToast', { prompt: promptExcerpt(task.prompt) }))
       return persistTask({
         ...task,
-        status: failed ? 'failed' : 'done',
+        ...outcome,
         exitCode,
         finishedAt: Date.now()
       })

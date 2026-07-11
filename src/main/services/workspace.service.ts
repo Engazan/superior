@@ -173,29 +173,61 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isStoredProfile(value: unknown): value is Profile {
+  if (!isRecord(value)) return false
+  return typeof value.id === 'string' && typeof value.name === 'string' && finiteNumber(value.createdAt)
+}
+
+function isStoredFolder(value: unknown): value is Folder {
+  if (!isRecord(value)) return false
+  if (typeof value.path !== 'string' || typeof value.name !== 'string') return false
+  if (!finiteNumber(value.lastOpenedAt)) return false
+  if (value.kind === 'remote') {
+    return isRecord(value.remote) && typeof value.remote.host === 'string' && typeof value.remote.path === 'string'
+  }
+  return value.kind === undefined || value.kind === 'local'
+}
+
+function isStoredWorkspace(value: unknown): value is Workspace {
+  if (!isRecord(value)) return false
+  return (
+    typeof value.id === 'string' &&
+    typeof value.folderPath === 'string' &&
+    typeof value.name === 'string' &&
+    finiteNumber(value.createdAt)
+  )
+}
+
+function optionalStoredId(value: unknown): string | null {
+  return typeof value === 'string' ? value : null
+}
+
 /** Map a parsed workspaces.json (current or pre-folder shape) into state; null
- * for anything unrecognized, so the caller can fall back to legacy migration. */
-function parseStoredState(parsed: unknown): WorkspaceState | null {
+ * for anything unrecognized. Invalid array entries are discarded individually
+ * so one hand-edited/corrupt row cannot erase every otherwise valid workspace. */
+export function parseStoredState(parsed: unknown): WorkspaceState | null {
   if (!parsed || typeof parsed !== 'object') return null
   const obj = parsed as Record<string, unknown>
-  try {
-    if (Array.isArray(obj.folders)) {
-      return normalize({
-        profiles: Array.isArray(obj.profiles) ? (obj.profiles as Profile[]) : [],
-        activeProfileId: (obj.activeProfileId as string | null) ?? null,
-        folders: obj.folders as Folder[],
-        workspaces: Array.isArray(obj.workspaces) ? (obj.workspaces as Workspace[]) : [],
-        activeWorkspaceId: (obj.activeWorkspaceId as string | null) ?? null
-      })
-    }
-    // Old shape: { workspaces: [{ path, name }], activePath }
-    return migrateFolders(
-      Array.isArray(obj.workspaces) ? (obj.workspaces as Folder[]) : [],
-      (obj.activePath as string | null) ?? null
-    )
-  } catch {
-    return null // malformed entries — don't let one bad element break every read
+  if (Array.isArray(obj.folders)) {
+    return normalize({
+      profiles: Array.isArray(obj.profiles) ? obj.profiles.filter(isStoredProfile) : [],
+      activeProfileId: optionalStoredId(obj.activeProfileId),
+      folders: obj.folders.filter(isStoredFolder),
+      workspaces: Array.isArray(obj.workspaces) ? obj.workspaces.filter(isStoredWorkspace) : [],
+      activeWorkspaceId: optionalStoredId(obj.activeWorkspaceId)
+    })
   }
+  // Old shape: { workspaces: [{ path, name }], activePath }
+  if (!Array.isArray(obj.workspaces)) return null
+  return migrateFolders(obj.workspaces.filter(isStoredFolder), optionalStoredId(obj.activePath))
 }
 
 /**
@@ -300,8 +332,8 @@ function normalize(state: WorkspaceState): WorkspaceState {
 }
 
 function saveState(state: WorkspaceState): void {
-  cachedAllowedRoots = computeAllowedRoots(state)
   writeJsonFile(storeFile(), state, 'workspace')
+  cachedAllowedRoots = computeAllowedRoots(state)
 }
 
 /** Return all saved folders + workspaces and the active selection. */

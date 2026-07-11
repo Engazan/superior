@@ -84,10 +84,24 @@ export function createJsonListStore<T extends { id: string }>(
   }
 }
 
+export class PersistenceError extends Error {
+  readonly code = 'persistence-failed'
+
+  constructor(
+    readonly label: string,
+    readonly file: string,
+    cause: unknown
+  ) {
+    super(`Failed to persist ${label}.`, { cause })
+    this.name = 'PersistenceError'
+  }
+}
+
 /**
- * Pretty-print `value` to `file`, logging (never throwing) on failure. Writes to
- * a temp file and atomically renames it over the target so a crash or a
- * concurrent read never observes a half-written (and thus corrupt) file.
+ * Pretty-print `value` to `file`. Writes to a temp file and atomically renames
+ * it over the target so a crash or concurrent read never observes a torn file.
+ * A failed write is never reported as success: callers must surface or handle
+ * the typed error before returning their mutated in-memory state to the UI.
  */
 export function writeJsonFile(file: string, value: unknown, label: string): void {
   const tmp = `${file}.tmp`
@@ -95,11 +109,11 @@ export function writeJsonFile(file: string, value: unknown, label: string): void
     fs.writeFileSync(tmp, JSON.stringify(value, null, 2), 'utf-8')
     fs.renameSync(tmp, file)
   } catch (err) {
-    console.error(`[${label}] failed to persist:`, err)
     try {
       fs.rmSync(tmp, { force: true })
     } catch {
       /* best effort */
     }
+    throw new PersistenceError(label, file, err)
   }
 }

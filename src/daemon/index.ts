@@ -335,6 +335,7 @@ function handle(conn: Conn, msg: ClientMessage): void {
       } catch {
         /* already gone */
       }
+      if (msg.requestId) send(conn, { t: 'killed', id: msg.id, requestId: msg.requestId })
       break
   }
 }

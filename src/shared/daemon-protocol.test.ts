@@ -15,6 +15,12 @@ describe('frame codec', () => {
     expect(dec.push(encodeFrame(msg))).toEqual([msg])
   })
 
+  it('round-trips a kill acknowledgement', () => {
+    const dec = new FrameDecoder<ServerMessage>()
+    const msg: ServerMessage = { t: 'killed', id: 'abc', requestId: 'request-1' }
+    expect(dec.push(encodeFrame(msg))).toEqual([msg])
+  })
+
   it('round-trips binary data frames, including the replay flag', () => {
     const dec = new FrameDecoder<ServerMessage>()
     const wild = 'output \x1b[31mred\x00\xff á 🚀\n'

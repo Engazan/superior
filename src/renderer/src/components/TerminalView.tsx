@@ -98,7 +98,7 @@ interface Props {
   /** set this terminal's user nickname (persisted); empty string clears it */
   onSetNickname: (id: string, nickname: string) => void
   onToggleMaximize: (id: string) => void
-  onExit: (id: string, exitCode: number) => void
+  onExit: (id: string, exitCode: number | null) => void
 }
 
 // Full 16-colour ANSI palettes so program output is colourful and on-theme:

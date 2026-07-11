@@ -136,7 +136,7 @@ export function TerminalPanel({
   // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
   // "error" dot for Ctrl+C would cry wolf and erode the real-crash signal.
   const handleExit = useCallback(
-    (id: string, exitCode: number) =>
+    (id: string, exitCode: number | null) =>
       onSessionUpdate(id, {
         status: exitCode === 0 || exitCode === 130 || exitCode === 143 ? 'exited' : 'error',
         exitCode

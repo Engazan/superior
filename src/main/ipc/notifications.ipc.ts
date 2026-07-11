@@ -15,6 +15,15 @@ interface FinishedPayload {
  */
 export function registerNotificationsIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.on(IPC.NOTIFY_FINISHED, (_event, payload: FinishedPayload) => {
+    if (
+      !payload ||
+      typeof payload.workspaceId !== 'string' ||
+      typeof payload.title !== 'string' ||
+      typeof payload.body !== 'string' ||
+      payload.workspaceId.length > 256 ||
+      payload.title.length > 500 ||
+      payload.body.length > 5_000
+    ) return
     if (!Notification.isSupported()) return
     const notification = new Notification({
       title: payload.title,
@@ -34,6 +43,7 @@ export function registerNotificationsIpc(getWindow: () => BrowserWindow | null):
   })
 
   ipcMain.on(IPC.APP_SET_BADGE, (_event, count: number) => {
+    if (!Number.isFinite(count)) return
     // Dock badge on macOS, taskbar badge on Linux; harmless no-op elsewhere.
     if (process.platform === 'darwin' || process.platform === 'linux') {
       app.setBadgeCount(Math.max(0, Math.floor(count)))

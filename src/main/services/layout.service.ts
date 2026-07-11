@@ -17,6 +17,38 @@ function isLegacy(value: unknown): value is LegacyWorkspaceLayout {
   return !!value && typeof value === 'object' && typeof (value as { mode?: unknown }).mode === 'string'
 }
 
+function isGridLayout(value: unknown): value is GridLayoutData {
+  if (!value || typeof value !== 'object') return false
+  const grid = value as Partial<GridLayoutData>
+  return (
+    Array.isArray(grid.rows) &&
+    grid.rows.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0) &&
+    Array.isArray(grid.cols) &&
+    grid.cols.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0)
+    )
+  )
+}
+
+function isWorkspaceTabs(value: unknown): value is WorkspaceTabs {
+  if (!value || typeof value !== 'object') return false
+  const tabs = value as Partial<WorkspaceTabs>
+  return (
+    Array.isArray(tabs.tabs) &&
+    typeof tabs.activeTabId === 'string' &&
+    tabs.tabs.every(
+      (tab) =>
+        !!tab &&
+        typeof tab === 'object' &&
+        typeof tab.id === 'string' &&
+        typeof tab.name === 'string' &&
+        (tab.gridLayout === undefined || isGridLayout(tab.gridLayout))
+    )
+  )
+}
+
 /** Collapse a legacy workspace layout into a single grid tab. */
 function migrateEntry(legacy: LegacyWorkspaceLayout): WorkspaceTabs {
   const id = randomUUID()
@@ -41,8 +73,8 @@ export function getTabs(): TabsState {
     if (isLegacy(value)) {
       state[wsId] = migrateEntry(value)
       migrated = true
-    } else if (value && typeof value === 'object') {
-      state[wsId] = value as WorkspaceTabs
+    } else if (isWorkspaceTabs(value)) {
+      state[wsId] = value
     }
   }
   if (migrated) save(state)

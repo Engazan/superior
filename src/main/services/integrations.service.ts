@@ -99,32 +99,47 @@ function save(state: IntegrationsState): void {
   writeJsonFile(storeFile(), { integrations: state.integrations.map(toStored) }, 'integrations')
 }
 
+function rendererState(state: IntegrationsState): IntegrationsState {
+  return {
+    integrations: state.integrations.map((integration) => ({
+      ...integration,
+      token: '',
+      hasToken: integration.token.length > 0
+    }))
+  }
+}
+
 export function listIntegrations(): IntegrationsState {
-  return read()
+  return rendererState(read())
 }
 
 /** Upsert an integration by id (adds when new, replaces when existing). */
 export function saveIntegration(integration: Integration): IntegrationsState {
   const state = read()
+  const existing = integration.id
+    ? state.integrations.find((item) => item.id === integration.id)
+    : undefined
+  const token = integration.token.trim() || existing?.token || ''
+  if (!token) throw new Error('An access token is required.')
   const clean: Integration = {
     id: integration.id || randomUUID(),
     provider: PROVIDERS.includes(integration.provider) ? integration.provider : 'gitea',
     name: integration.name.trim(),
     baseUrl: integration.baseUrl.trim().replace(/\/+$/, ''),
-    token: integration.token.trim()
+    token
   }
   const idx = state.integrations.findIndex((i) => i.id === clean.id)
   if (idx >= 0) state.integrations[idx] = clean
   else state.integrations.push(clean)
   save(state)
-  return state
+  return rendererState(state)
 }
 
 export function deleteIntegration(id: string): IntegrationsState {
   const state = read()
   state.integrations = state.integrations.filter((i) => i.id !== id)
   save(state)
-  return state
+  return rendererState(state)
 }
 
 /**

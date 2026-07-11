@@ -698,7 +698,10 @@ export interface AgentDataEvent {
 /** main -> renderer exit event payload */
 export interface AgentExitEvent {
   id: string
-  exitCode: number
+  /** Null when the daemon disappeared and the process result is unknowable. */
+  exitCode: number | null
+  /** Distinguishes an unknown/disconnected process from a real process exit. */
+  reason?: 'interrupted'
   /** friendly, user-facing message printed in the terminal (e.g. command-not-found) */
   message?: string
 }
@@ -763,6 +766,8 @@ export interface Integration {
   baseUrl: string
   /** Personal access token used for API calls and authenticated clones. */
   token: string
+  /** Renderer projection: true when main has a saved token; the token itself remains redacted. */
+  hasToken?: boolean
 }
 
 export interface IntegrationsState {

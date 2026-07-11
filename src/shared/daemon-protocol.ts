@@ -56,7 +56,7 @@ export type ClientMessage =
   | { t: 'update'; id: string; meta: Partial<DaemonSessionMeta> }
   | { t: 'input'; id: string; data: string }
   | { t: 'resize'; id: string; cols: number; rows: number }
-  | { t: 'kill'; id: string }
+  | { t: 'kill'; id: string; requestId?: string }
 
 /** Messages the daemon sends back to a client. */
 export type ServerMessage =
@@ -64,6 +64,7 @@ export type ServerMessage =
   | { t: 'exit'; id: string; exitCode: number; signal?: number }
   | { t: 'sessions'; list: DaemonSession[] }
   | { t: 'spawned'; id: string; pid?: number }
+  | { t: 'killed'; id: string; requestId: string }
   | { t: 'error'; message: string; id?: string }
 
 /** Default socket / pipe path for the daemon. */

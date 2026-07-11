@@ -29,6 +29,7 @@ export function registerWindowIpc(): void {
   // Toggle the macOS blur-behind (vibrancy) for the "transparent" theme.
   // No-op on other platforms.
   ipcMain.on(IPC.WINDOW_SET_VIBRANCY, (event, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') return
     if (process.platform !== 'darwin') return
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
