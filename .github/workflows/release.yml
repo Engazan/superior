@@ -22,6 +22,7 @@ jobs:
           - os: ubuntu-latest
             script: dist:linux
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -62,6 +63,9 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      - name: Verify platform artifacts
+        run: node build/verify-artifacts.cjs ${{ matrix.script }}
+
       # electron-updater reads the installer name from latest.yml. Keep this
       # check next to the Windows build so a mismatched published filename
       # cannot turn the in-app update into a failed/manual download.
@@ -99,11 +103,12 @@ jobs:
             dist/*.deb
             dist/*.yml
             dist/*.blockmap
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   publish:
     needs: release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -123,4 +128,4 @@ jobs:
             dist/*.deb
             dist/*.yml
             dist/*.blockmap
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true

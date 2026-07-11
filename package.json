@@ -9,6 +9,9 @@
     "email": "Engazan.eu@icloud.com"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "predev": "node node_modules/electron/install.js",
     "dev": "electron-vite dev",

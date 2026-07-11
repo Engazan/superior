@@ -42,7 +42,7 @@ for true-TTY process execution and `@xterm/xterm` for terminal rendering.
 ## Scripts
 
 ```bash
-npm install      # installs deps and rebuilds node-pty against Electron (postinstall)
+npm install      # installs dependencies (Node 22.12+)
 npm run dev      # launch the app in development (HMR)
 npm run build    # type-check + build main/preload/renderer into out/
 npm start        # preview the production build
@@ -54,13 +54,13 @@ npm run dist:linux  # package a Linux AppImage/deb
 ```
 
 Builds run per-platform on their native OS (CI uses a macOS/Windows/Linux matrix —
-see `.github/workflows/build.yml`). `node-pty` is a native module, so packaging on
+see `.github/workflows/ci.yml` and `release.yml`). `node-pty` is a native module, so packaging on
 Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `python3`.
 
 ## How it works
 
 - **Open from folder** → native directory picker (main process). The chosen path is
-  validated and persisted to `workspace.json` under the app's `userData` dir, then
+  validated and persisted to `workspaces.json` under the app's `userData` dir, then
   restored on next launch.
 - **Remote SSH workspace** → stores an SSH host/alias plus remote path and launches
   terminals through the system `ssh` client in that directory. Credentials, keys
@@ -75,12 +75,11 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
 ## Layout
 
 ```
-src/shared/types.ts          # Workspace, AgentType, AgentSession, IPC channels
-src/main/                    # Electron main: services + IPC
-  services/{workspace,agent,terminal}.service.ts
-  ipc/{workspace,agent}.ipc.ts
-src/preload/index.ts         # contextBridge -> window.api
-src/renderer/src/            # React UI (TopBar, WorkspaceSelector, AgentButtons, TerminalPanel/View)
+src/shared/                  # domain types, typed IPC contract, daemon protocol
+src/main/                    # Electron main process: services + IPC handlers
+src/daemon/                  # persistent PTY process and scrollback buffer
+src/preload/index.ts         # explicit contextBridge capabilities
+src/renderer/src/            # React UI, hooks, terminal and file/git views
 ```
 
 ## License

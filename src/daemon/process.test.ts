@@ -21,10 +21,10 @@ interface Harness {
   waitFor(predicate: (message: ServerMessage) => boolean): Promise<ServerMessage>
 }
 
-const cleanup: Array<() => void> = []
+const cleanup: Array<() => void | Promise<void>> = []
 
-afterEach(() => {
-  for (const dispose of cleanup.splice(0)) dispose()
+afterEach(async () => {
+  for (const dispose of cleanup.splice(0)) await dispose()
 })
 
 async function connectWithRetry(socketPath: string): Promise<net.Socket> {
@@ -60,13 +60,22 @@ async function startHarness(): Promise<Harness> {
     ],
     { cwd: path.resolve('.'), stdio: 'ignore' }
   )
-  cleanup.push(() => {
-    child.kill('SIGKILL')
+  cleanup.push(async () => {
+    if (child.exitCode === null) {
+      const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()))
+      child.kill()
+      await Promise.race([
+        exited,
+        new Promise<void>((resolve) => setTimeout(resolve, 2_000))
+      ])
+    }
     fs.rmSync(tmp, { recursive: true, force: true })
   })
 
   const socket = await connectWithRetry(socketPath)
-  cleanup.push(() => socket.destroy())
+  cleanup.push(() => {
+    socket.destroy()
+  })
   const decoder = new FrameDecoder<ServerMessage>()
   const queued: ServerMessage[] = []
   const waiters: Array<{
