@@ -12,6 +12,7 @@ import {
   type ServerMessage
 } from '@shared/daemon-protocol'
 import { RingBuffer } from './ringBuffer'
+import { BoundedLog } from './boundedLog'
 
 // argv: [node, daemonEntry, socketPath, logPath]
 const socketPath = process.argv[2]
@@ -29,21 +30,8 @@ const MAX_INPUT_BYTES = 1_000_000
 const FLUSH_MS = 8
 const FLUSH_THRESHOLD_BYTES = 65_536
 
-function log(msg: string): void {
-  if (!logPath) return
-  try {
-    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`)
-  } catch {
-    /* logging must never throw */
-  }
-}
-
-// Truncate an oversized log on startup.
-try {
-  if (logPath && fs.statSync(logPath).size > LOG_CAP_BYTES) fs.truncateSync(logPath)
-} catch {
-  /* no log yet */
-}
+const daemonLog = new BoundedLog(logPath, LOG_CAP_BYTES)
+const log = (message: string): void => daemonLog.write(message)
 
 interface Session {
   id: string
