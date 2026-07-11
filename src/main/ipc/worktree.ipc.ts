@@ -1,7 +1,7 @@
 import { IPC, type BranchInfo, type WorktreeAddArgs, type WorktreeAddResult } from '@shared/types'
 import { addWorktreeWorkspace, isWithinWorkspaceFolder } from '../services/workspace.service'
 import { isWorktreeDirty, listBranches } from '../services/worktree.service'
-import { gitErrorMessage } from '../services/git.service'
+import { gitErrorMessage } from '../services/git-runner'
 import { handle } from './handle'
 import { boundedString, isWorktreeAddArgs } from './validation'
 

@@ -1,5 +1,3 @@
-import { execFile } from 'child_process'
-import { promisify } from 'util'
 import type {
   BranchSwitchResult,
   GitActionResult,
@@ -12,63 +10,14 @@ import type {
 import { isWithinWorkspaceFolder } from './workspace.service'
 import { parseUnifiedDiff } from './git.diff'
 import { readUntrackedFile } from './git.untracked'
+import { gitErrorMessage, runGit, runGitLong, runGitRaw } from './git-runner'
 
-const execFileAsync = promisify(execFile)
-
-/**
- * Run a quick read-only git command in `dir` and return trimmed stdout.
- * Exported so sibling services (e.g. worktree.service) share one exec wrapper
- * with consistent timeout / windowsHide behavior. Rejects with the raw
- * child_process error (use {@link gitErrorMessage} to render it).
- * The tight 5s timeout is only safe for probes — mutating commands must go
- * through {@link runGitLong}.
- */
-export async function runGit(dir: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['-C', dir, ...args], {
-    encoding: 'utf-8',
-    timeout: 5000,
-    windowsHide: true
-  })
-  return stdout.trim()
-}
-
-/** Like {@link runGit} but returns raw stdout (no trim) and tolerates large output. */
-export async function runGitRaw(dir: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', ['-C', dir, ...args], {
-    encoding: 'utf-8',
-    timeout: 15000,
-    maxBuffer: 64 * 1024 * 1024,
-    windowsHide: true
-  })
-  return stdout
-}
-
-/**
- * For git commands that must not be killed after 5s: network-bound ones
- * (push/pull on a slow link) and mutating ones (checkout, stash, commit,
- * worktree add/remove — a slow hook or a large tree can exceed 5s, and a
- * SIGTERM mid-operation leaves the working tree half-switched).
- */
-export async function runGitLong(dir: string, args: string[]): Promise<void> {
-  await execFileAsync('git', ['-C', dir, ...args], {
-    encoding: 'utf-8',
-    timeout: 120_000,
-    maxBuffer: 8 * 1024 * 1024,
-    windowsHide: true
-  })
-}
+export { gitErrorMessage, runGit, runGitLong, runGitRaw } from './git-runner'
 
 // Local aliases keep the rest of this file terse.
 const git = runGit
 const gitRaw = runGitRaw
 const gitLong = runGitLong
-
-/** Render a git/child_process error into a user-facing message. */
-export function gitErrorMessage(err: unknown): string {
-  const e = err as NodeJS.ErrnoException & { stderr?: string }
-  if (e.code === 'ENOENT') return 'Git is not installed or is not available on PATH.'
-  return e.stderr?.trim() || e.message || 'Git command failed.'
-}
 
 /**
  * Everything the status/diff paths need from a single `git status` spawn:

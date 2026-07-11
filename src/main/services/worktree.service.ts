@@ -3,8 +3,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { WORKTREE_ERROR, type BranchInfo } from '@shared/types'
 import { userDataFile } from '../lib/jsonStore'
-import { canonicalPath } from './workspace.service'
-import { runGit, runGitLong, runGitRaw } from './git.service'
+import { canonicalPath } from './path.service'
+import { runGit, runGitLong, runGitRaw } from './git-runner'
 
 /**
  * Git-worktree lifecycle. Worktree checkouts are app-managed and live under

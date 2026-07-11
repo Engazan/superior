@@ -23,6 +23,11 @@ import {
   pruneWorktrees,
   removeWorktree
 } from './worktree.service'
+import { canonicalPath, isValidWorkspaceDir } from './path.service'
+
+// Compatibility facade for existing callers; the implementation lives below
+// the workspace aggregate so worktree/CLI utilities no longer depend on it.
+export { canonicalPath, isValidWorkspaceDir } from './path.service'
 
 const execFileAsync = promisify(execFile)
 
@@ -32,25 +37,6 @@ function storeFile(): string {
 
 function legacyFile(): string {
   return userDataFile('workspace.json')
-}
-
-/** True if the path exists and is a directory. */
-export function isValidWorkspaceDir(dir: string): boolean {
-  try {
-    return fs.statSync(dir).isDirectory()
-  } catch {
-    return false
-  }
-}
-
-/** Canonical absolute path with symlinks resolved; falls back to a plain resolve
- * for paths that don't exist yet (the subsequent read fails on its own). */
-export function canonicalPath(p: string): string {
-  try {
-    return fs.realpathSync(path.resolve(p))
-  } catch {
-    return path.resolve(p)
-  }
 }
 
 // Canonical roots the renderer may reach: opened folders PLUS the worktree

@@ -5,7 +5,7 @@ import * as os from 'os'
 import * as path from 'path'
 import { promisify } from 'util'
 import type { ShellCommandInstallResult, ShellCommandStatus } from '@shared/types'
-import { isValidWorkspaceDir, canonicalPath } from './workspace.service'
+import { canonicalPath, isValidWorkspaceDir } from './path.service'
 
 const execFileAsync = promisify(execFile)
 
