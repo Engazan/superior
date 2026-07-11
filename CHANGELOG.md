@@ -7,12 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-07-11
+
 ### Fixed
 
+- **Terminals survive a daemon restart.** After a daemon crash or a dropped
+  socket, mounted terminals silently stopped receiving output and hung on
+  "running" until an app restart. The client now re-attaches to its sessions
+  after reconnecting, sessions the new daemon no longer knows about become
+  restartable cells instead of frozen ones, and a `list` request that times out
+  during the outage no longer downgrades every live session — which previously
+  spawned duplicate agents on restart.
+- **Fast-failing commands always report their exit.** A command that died within
+  milliseconds (a typo'd binary, a missing CLI) could exit before anything
+  observed it, leaving the cell "running" forever and blocking that folder's task
+  queue. The daemon now fans the exit out to every client, synthesizes one for a
+  failed attach, and the task queue tracks in-flight state so it can still close
+  the task.
+- **Your profiles survive a corrupt store.** A corrupt `workspaces.json` was
+  treated like a missing one and replaced with an empty state that then
+  overwrote your profiles, folders and workspaces; it is now preserved as
+  `.corrupt` and read through a validator that tolerates malformed entries.
+- **Correct diffs for non-ASCII and spaced filenames.** Git's default path
+  quoting made a diff of `á.txt` arrive with an empty path — breaking
+  stage/unstage — and paths containing spaces or ` b/` were mis-split. Diffs now
+  run with quoting disabled, decode C-quoted paths, and resolve the header
+  ambiguity by preferring the split where both sides agree.
+- **No half-switched working tree on slow git hooks.** Checkout, stash, commit
+  and worktree operations shared a 5-second timeout that could `SIGTERM` them
+  mid-operation under a slow pre-commit hook or a large tree; mutating git
+  commands now get a 120-second budget, leaving the short timeout to read-only
+  probes.
+- **UI no longer stalls on shell probes.** Detecting shell command status ran a
+  login shell synchronously inside an IPC handler, freezing the whole main
+  process (and the UI) for up to five seconds under slow shell dotfiles; it now
+  probes asynchronously. The usage tracker also stopped reading entire
+  multi-megabyte transcripts synchronously on every poll.
+- **Lighter persistence and polling.** Divider drags and terminal resizes no
+  longer rewrite session and layout JSON on every pointer move (persisted once on
+  release, resizes debounced), git-status polling is scoped to the active
+  profile's folders instead of sweeping every repository ever added, and optional
+  renderer features load lazily so the window paints sooner.
+- **Windows daemon pipe isolation.** The daemon pipe name was derived from the
+  first eight bytes of the userData path — effectively `C:\Users` on every
+  machine — so all users and both dev and packaged installs collided on one pipe;
+  it now hashes the full path with SHA-256.
 - **Windows in-app updates.** The NSIS installer name now matches the filename
   in `latest.yml`, allowing the in-app updater to download and install Windows
   releases instead of requiring a manual download. The release workflow now
   verifies this before publishing.
+- **Overlay, window and focus fixes.** Escape and global chords now respect the
+  frontmost overlay (prompt picker, command palette, project and confirm modals)
+  instead of reaching through it and closing the terminal behind; the show/hide
+  hotkey and `superior <dir>` recover after the window is re-created on macOS;
+  the auto-stash flag is reported when a checkout fails; and several IPC loads no
+  longer spin forever on a rejected call.
+- **Stability and resource sweep.** Bounded a set of unbounded buffers (terminal
+  bus, usage store, transcript watchers, orphaned status files), stopped a
+  malformed `presets.json` entry from breaking the whole list, surfaced clean
+  error messages instead of Electron's raw invoke envelope, kept a valid repo
+  from being mislabeled "not a repository", and localized the in-terminal exit
+  notice.
+- **Hardened boundaries and startup.** The renderer recovers from a transient
+  startup failure through an error boundary and retry instead of a blank window,
+  IPC payloads are validated at the boundary, a failed persistence write is no
+  longer reported as success, and the daemon log is capped so it cannot grow
+  without bound.
+
+### Security
+
+- **Integration tokens encrypted at rest.** Forge tokens were stored in plaintext
+  in `integrations.json`; they now go through the OS keychain via Electron
+  `safeStorage`, with a one-time migration and a plaintext fallback only where no
+  keyring exists. Cloning was hardened alongside: the URL is scheme-checked and
+  passed after `--`, the token is delivered through ephemeral git config instead
+  of the argv-visible URL, the destination is kept inside the chosen parent
+  directory, and the shell-open and read-only worktree handlers now enforce the
+  same workspace-containment rule as every other entry point.
 
 ## [0.18.0] - 2026-07-09
 
