@@ -23,6 +23,7 @@
     "lint": "eslint src electron.vite.config.ts vitest.config.ts",
     "rebuild": "electron-builder install-app-deps",
     "build": "npm run typecheck && electron-vite build",
+    "check:bundle": "node build/verify-bundle-size.cjs",
     "pack": "npm run build && electron-builder --dir --publish never",
     "dist": "npm run build && electron-builder --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
