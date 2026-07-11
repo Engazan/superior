@@ -6,13 +6,15 @@ import { I18nProvider } from './i18n'
 import { ShortcutsProvider } from './shortcuts'
 import { AttentionColorProvider } from './attentionColor'
 import { UsagePrimaryProvider } from './usagePrimary'
-import { ConfirmProvider, ToastProvider } from './components/ui'
+import { ConfirmProvider, ToastProvider, useToast } from './components/ui'
+import { ipcErrorInfo } from './ipcError'
 import './index.css'
 
 const SPLASH_DURATION_MS = 1000
 const SPLASH_FADE_MS = 250
 
 function StartupScreen(): React.JSX.Element {
+  const toast = useToast()
   const [appReady, setAppReady] = useState(false)
   const [splashVisible, setSplashVisible] = useState(true)
 
@@ -28,6 +30,20 @@ function StartupScreen(): React.JSX.Element {
       window.clearTimeout(removeSplash)
     }
   }, [])
+
+  // Some UI preference/layout saves are intentionally fire-and-forget. If the
+  // disk rejects one, the typed IPC code must still become visible instead of
+  // degrading into a console-only unhandled rejection.
+  useEffect(() => {
+    const onUnhandled = (event: PromiseRejectionEvent): void => {
+      const info = ipcErrorInfo(event.reason)
+      if (info.code !== 'persistence-failed') return
+      event.preventDefault()
+      toast.error(info.message)
+    }
+    window.addEventListener('unhandledrejection', onUnhandled)
+    return () => window.removeEventListener('unhandledrejection', onUnhandled)
+  }, [toast])
 
   return (
     <>

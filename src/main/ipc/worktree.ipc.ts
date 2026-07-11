@@ -3,19 +3,23 @@ import { addWorktreeWorkspace, isWithinWorkspaceFolder } from '../services/works
 import { isWorktreeDirty, listBranches } from '../services/worktree.service'
 import { gitErrorMessage } from '../services/git.service'
 import { handle } from './handle'
+import { boundedString, isWorktreeAddArgs } from './validation'
 
 export function registerWorktreeIpc(): void {
   // Read-only git against renderer-supplied dirs — keep the same containment
   // rule the git/fs handlers enforce (WORKSPACE_ADD_WORKTREE validates its
   // folder against the store itself).
   handle(IPC.WORKTREE_LIST_BRANCHES, (folderPath: string): Promise<BranchInfo[]> =>
-    isWithinWorkspaceFolder(folderPath) ? listBranches(folderPath) : Promise.resolve([])
+    boundedString(folderPath) && isWithinWorkspaceFolder(folderPath)
+      ? listBranches(folderPath)
+      : Promise.resolve([])
   )
 
   handle(
     IPC.WORKSPACE_ADD_WORKTREE,
     async (args: WorktreeAddArgs): Promise<WorktreeAddResult> => {
       try {
+        if (!isWorktreeAddArgs(args)) return { error: 'worktree:invalid-folder' }
         return await addWorktreeWorkspace(args)
       } catch (err) {
         // Stable WORKTREE_ERROR codes and raw git stderr both surface here;
@@ -26,6 +30,8 @@ export function registerWorktreeIpc(): void {
   )
 
   handle(IPC.WORKTREE_IS_DIRTY, (worktreePath: string): Promise<boolean> =>
-    isWithinWorkspaceFolder(worktreePath) ? isWorktreeDirty(worktreePath) : Promise.resolve(false)
+    boundedString(worktreePath) && isWithinWorkspaceFolder(worktreePath)
+      ? isWorktreeDirty(worktreePath)
+      : Promise.resolve(false)
   )
 }

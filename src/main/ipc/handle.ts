@@ -1,5 +1,13 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron'
 import type { IpcInvokeArgs, IpcInvokeChannel, IpcInvokeResult } from '@shared/ipc-contract'
+import { PersistenceError } from '../lib/jsonStore'
+
+function ipcSafeError(err: unknown): Error {
+  if (err instanceof PersistenceError) {
+    return new Error(`${err.code}: ${err.message}`)
+  }
+  return err instanceof Error ? err : new Error('Unexpected IPC failure.')
+}
 
 /**
  * Registers an invoke handler that does not use Electron's event object.
@@ -13,7 +21,13 @@ export function handle<Channel extends IpcInvokeChannel>(
     | IpcInvokeResult<Channel>
     | Promise<IpcInvokeResult<Channel>>
 ): void {
-  ipcMain.handle(channel, (_event, ...args: IpcInvokeArgs<Channel>) => listener(...args))
+  ipcMain.handle(channel, async (_event, ...args: IpcInvokeArgs<Channel>) => {
+    try {
+      return await listener(...args)
+    } catch (err) {
+      throw ipcSafeError(err)
+    }
+  })
 }
 
 /** Registers an invoke handler that needs Electron's sender/event metadata. */
@@ -24,5 +38,11 @@ export function handleWithEvent<Channel extends IpcInvokeChannel>(
     ...args: IpcInvokeArgs<Channel>
   ) => IpcInvokeResult<Channel> | Promise<IpcInvokeResult<Channel>>
 ): void {
-  ipcMain.handle(channel, listener)
+  ipcMain.handle(channel, async (event, ...args: IpcInvokeArgs<Channel>) => {
+    try {
+      return await listener(event, ...args)
+    } catch (err) {
+      throw ipcSafeError(err)
+    }
+  })
 }

@@ -26,33 +26,48 @@ import {
 import { applyGlobalHotkey } from '../services/global-hotkey.service'
 import { syncUsageTracking } from '../services/agent.service'
 import { handle } from './handle'
+import { boundedString, invalidPayload, isRecord } from './validation'
+
+const THEMES = new Set(['light', 'dark', 'system', 'transparent', 'gradient', 'gradient-light'])
+const LANGUAGES = new Set(['en', 'sk', 'cs', 'pl', 'hu'])
+const FILE_OPENERS = new Set(['system', 'vscode', 'cursor', 'zed', 'sublime', 'phpstorm', 'webstorm'])
+const USAGE_PRIMARIES = new Set(['remaining', 'sevenDay', 'cost', 'tokens', 'context'])
 
 export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void {
   handle(IPC.SETTINGS_GET, (): AppSettings => getSettings())
 
-  handle(IPC.SETTINGS_SET_THEME, (theme: ThemeMode): AppSettings => setTheme(theme))
+  handle(IPC.SETTINGS_SET_THEME, (theme: ThemeMode): AppSettings =>
+    typeof theme === 'string' && THEMES.has(theme) ? setTheme(theme) : invalidPayload()
+  )
 
   handle(IPC.SETTINGS_SET_LANGUAGE, (language: Language): AppSettings =>
-    setLanguage(language)
+    typeof language === 'string' && LANGUAGES.has(language)
+      ? setLanguage(language)
+      : invalidPayload()
   )
 
   handle(IPC.SETTINGS_SET_SHORTCUTS, (shortcuts: ShortcutMap): AppSettings =>
-    setShortcuts(shortcuts)
+    isRecord(shortcuts) ? setShortcuts(shortcuts as ShortcutMap) : invalidPayload()
   )
 
-  handle(IPC.SETTINGS_SET_UI, (ui: Partial<UiState>): AppSettings => setUi(ui))
+  handle(IPC.SETTINGS_SET_UI, (ui: Partial<UiState>): AppSettings =>
+    isRecord(ui) ? setUi(ui) : invalidPayload()
+  )
 
   handle(IPC.SETTINGS_SET_FILE_OPENER, (opener: FileOpener): AppSettings =>
-    setFileOpener(opener)
+    typeof opener === 'string' && FILE_OPENERS.has(opener)
+      ? setFileOpener(opener)
+      : invalidPayload()
   )
 
   handle(IPC.SETTINGS_SET_ATTENTION_COLOR, (color: string): AppSettings =>
-    setAttentionColor(color)
+    boundedString(color, 32) ? setAttentionColor(color) : invalidPayload()
   )
 
   handle(
     IPC.SETTINGS_SET_USAGE_TRACKING,
     async (enabled: boolean): Promise<AppSettings> => {
+      if (typeof enabled !== 'boolean') return invalidPayload()
       const settings = setUsageTracking(enabled)
       await syncUsageTracking(settings.usageTracking)
       return settings
@@ -60,11 +75,13 @@ export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void
   )
 
   handle(IPC.SETTINGS_SET_USAGE_PRIMARY, (primary: UsagePrimary): AppSettings =>
-    setUsagePrimary(primary)
+    typeof primary === 'string' && USAGE_PRIMARIES.has(primary)
+      ? setUsagePrimary(primary)
+      : invalidPayload()
   )
 
   handle(IPC.SETTINGS_SET_NOTIFICATIONS, (enabled: boolean): AppSettings =>
-    setNotifications(enabled)
+    typeof enabled === 'boolean' ? setNotifications(enabled) : invalidPayload()
   )
 
   // Try to register first; only persist a chord that actually took effect.
@@ -74,6 +91,7 @@ export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void
   handle(
     IPC.SETTINGS_SET_GLOBAL_HOTKEY,
     (chord: string | null): GlobalHotkeyResult => {
+      if (chord !== null && !boundedString(chord, 256)) return invalidPayload()
       const error = applyGlobalHotkey(chord, getWindow)
       if (error) {
         // Fall back to the previously working registration (if any).

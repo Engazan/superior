@@ -27,6 +27,17 @@ import {
   updateProfile
 } from '../services/workspace.service'
 import { handle } from './handle'
+import {
+  boundedString,
+  boundedStringArray,
+  invalidPayload,
+  isFolderUpdate,
+  isNullableId,
+  isProfileUpdate,
+  isRecord,
+  isRemoteTarget,
+  validId
+} from './validation'
 
 export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
   // The initial state read waits for the startup worktree reconcile, so a
@@ -37,22 +48,33 @@ export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
     return listWorkspaces()
   })
 
-  handle(IPC.PROFILE_ADD, (name: string): WorkspaceState => addProfile(name))
+  handle(IPC.PROFILE_ADD, (name: string): WorkspaceState =>
+    boundedString(name, 1_000) ? addProfile(name) : invalidPayload()
+  )
 
   handle(
     IPC.PROFILE_RENAME,
-    (args: { id: string; name: string }): WorkspaceState => renameProfile(args.id, args.name)
+    (args: { id: string; name: string }): WorkspaceState =>
+      isRecord(args) && validId(args.id) && boundedString(args.name, 1_000)
+        ? renameProfile(args.id, args.name)
+        : invalidPayload()
   )
 
   handle(
     IPC.PROFILE_UPDATE,
     (args: { id: string; patch: ProfileUpdate }): WorkspaceState =>
-      updateProfile(args.id, args.patch)
+      isRecord(args) && validId(args.id) && isProfileUpdate(args.patch)
+        ? updateProfile(args.id, args.patch)
+        : invalidPayload()
   )
 
-  handle(IPC.PROFILE_REMOVE, (id: string): Promise<WorkspaceState> => removeProfile(id))
+  handle(IPC.PROFILE_REMOVE, (id: string): Promise<WorkspaceState> =>
+    validId(id) ? removeProfile(id) : Promise.reject(new Error('invalid-ipc-payload'))
+  )
 
-  handle(IPC.PROFILE_SET_ACTIVE, (id: string): WorkspaceState => setActiveProfile(id))
+  handle(IPC.PROFILE_SET_ACTIVE, (id: string): WorkspaceState =>
+    validId(id) ? setActiveProfile(id) : invalidPayload()
+  )
 
   handle(
     IPC.FOLDER_ADD,
@@ -69,7 +91,7 @@ export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
     IPC.FOLDER_ADD_REMOTE,
     (args: RemoteFolderAddArgs): WorkspaceState | { error: string } => {
       try {
-        return addRemoteFolder(args)
+        return isRemoteTarget(args) ? addRemoteFolder(args) : { error: 'invalid-ipc-payload' }
       } catch (err) {
         return { error: (err as Error).message }
       }
@@ -78,48 +100,62 @@ export function registerWorkspaceIpc(startupReady: Promise<unknown>): void {
 
   handle(
     IPC.REMOTE_WORKSPACE_TEST,
-    (args: RemoteWorkspaceTarget): Promise<RemoteFolderTestResult> => testRemoteFolder(args)
+    (args: RemoteWorkspaceTarget): Promise<RemoteFolderTestResult> =>
+      isRemoteTarget(args)
+        ? testRemoteFolder(args)
+        : Promise.resolve({ ok: false, error: 'invalid-ipc-payload' })
   )
 
   handle(IPC.FOLDER_REMOVE, (folderPath: string): Promise<WorkspaceState> =>
-    removeFolder(folderPath)
+    boundedString(folderPath) ? removeFolder(folderPath) : Promise.reject(new Error('invalid-ipc-payload'))
   )
 
   handle(IPC.FOLDER_REORDER, (orderedPaths: string[]): WorkspaceState =>
-    reorderFolders(orderedPaths)
+    boundedStringArray(orderedPaths) ? reorderFolders(orderedPaths) : invalidPayload()
   )
 
   handle(
     IPC.FOLDER_UPDATE,
     (args: { folderPath: string; patch: FolderUpdate }): WorkspaceState =>
-      updateFolder(args.folderPath, args.patch)
+      isRecord(args) && boundedString(args.folderPath) && isFolderUpdate(args.patch)
+        ? updateFolder(args.folderPath, args.patch)
+        : invalidPayload()
   )
 
   handle(
     IPC.WORKSPACE_ADD,
     (args: { folderPath: string; name: string }): WorkspaceState =>
-      addWorkspace(args.folderPath, args.name)
+      isRecord(args) && boundedString(args.folderPath) && boundedString(args.name, 1_000)
+        ? addWorkspace(args.folderPath, args.name)
+        : invalidPayload()
   )
 
   handle(
     IPC.WORKSPACE_RENAME,
     (args: { id: string; name: string }): WorkspaceState =>
-      renameWorkspace(args.id, args.name)
+      isRecord(args) && validId(args.id) && boundedString(args.name, 1_000)
+        ? renameWorkspace(args.id, args.name)
+        : invalidPayload()
   )
 
   handle(
     IPC.WORKSPACE_SET_STARTUP_LAYOUT,
     (args: { id: string; layoutId: string | null }): WorkspaceState =>
-      setWorkspaceStartupLayout(args.id, args.layoutId)
+      isRecord(args) && validId(args.id) && isNullableId(args.layoutId)
+        ? setWorkspaceStartupLayout(args.id, args.layoutId)
+        : invalidPayload()
   )
 
   handle(
     IPC.WORKSPACE_REMOVE,
     (args: { id: string; force?: boolean }): Promise<WorkspaceState> =>
-      removeWorkspace(args.id, args.force ?? false)
+      isRecord(args) && validId(args.id) &&
+      (args.force === undefined || typeof args.force === 'boolean')
+        ? removeWorkspace(args.id, args.force ?? false)
+        : Promise.reject(new Error('invalid-ipc-payload'))
   )
 
   handle(IPC.WORKSPACE_SET_ACTIVE, (id: string): WorkspaceState =>
-    setActiveWorkspace(id)
+    validId(id) ? setActiveWorkspace(id) : invalidPayload()
   )
 }

@@ -31,22 +31,37 @@ import {
 } from '../services/custom-memory.service'
 import { checkCliTools, fixCliTool } from '../services/cli-tools.service'
 import { handle } from './handle'
+import {
+  boundedString,
+  boundedStringArray,
+  invalidPayload,
+  isLayoutPreset,
+  isRecord,
+  isTerminalPreset,
+  validId
+} from './validation'
 
 export function registerPresetsIpc(): void {
   handle(IPC.PRESETS_LIST, (): PresetsState => listPresets())
 
-  handle(IPC.PRESETS_SAVE, (preset: TerminalPreset): PresetsState => savePreset(preset))
+  handle(IPC.PRESETS_SAVE, (preset: TerminalPreset): PresetsState =>
+    isTerminalPreset(preset) ? savePreset(preset) : invalidPayload()
+  )
 
-  handle(IPC.PRESETS_DELETE, (id: string): PresetsState => deletePreset(id))
+  handle(IPC.PRESETS_DELETE, (id: string): PresetsState =>
+    validId(id) ? deletePreset(id) : invalidPayload()
+  )
 
   handle(IPC.PRESETS_REORDER, (orderedIds: string[]): PresetsState =>
-    reorderPresets(orderedIds)
+    boundedStringArray(orderedIds) ? reorderPresets(orderedIds) : invalidPayload()
   )
 
   handle(
     IPC.PRESETS_SET_ACTIVE,
     (payload: { id: string; active: boolean }): PresetsState =>
-      setPresetActive(payload.id, payload.active)
+      isRecord(payload) && validId(payload.id) && typeof payload.active === 'boolean'
+        ? setPresetActive(payload.id, payload.active)
+        : invalidPayload()
   )
 
   handle(IPC.PRESETS_PICK_IMAGE, (): Promise<{ dataUrl: string } | null> =>
@@ -57,12 +72,13 @@ export function registerPresetsIpc(): void {
 
   handle(
     IPC.LAYOUT_PRESETS_SAVE,
-    (layout: LayoutPreset): LayoutPresetsState => saveLayoutPreset(layout)
+    (layout: LayoutPreset): LayoutPresetsState =>
+      isLayoutPreset(layout) ? saveLayoutPreset(layout) : invalidPayload()
   )
 
   handle(
     IPC.LAYOUT_PRESETS_DELETE,
-    (id: string): LayoutPresetsState => deleteLayoutPreset(id)
+    (id: string): LayoutPresetsState => validId(id) ? deleteLayoutPreset(id) : invalidPayload()
   )
 
   handle(IPC.CUSTOM_MEMORY_LIST, (): CustomMemoryPreset[] =>
@@ -73,19 +89,26 @@ export function registerPresetsIpc(): void {
     IPC.CUSTOM_MEMORY_CREATE,
     (
       payload: { provider: string; name: string }
-    ): CustomMemoryMutationResult => createCustomMemoryPreset(payload.provider, payload.name)
+    ): CustomMemoryMutationResult =>
+      isRecord(payload) &&
+      (payload.provider === 'claude' || payload.provider === 'codex') &&
+      boundedString(payload.name, 1_000)
+        ? createCustomMemoryPreset(payload.provider, payload.name)
+        : invalidPayload()
   )
 
   handle(
     IPC.CUSTOM_MEMORY_ADD_ALIAS,
     (directoryName: string): CustomMemoryPreset[] =>
-      addCustomMemoryAlias(directoryName)
+      boundedString(directoryName, 1_000) ? addCustomMemoryAlias(directoryName) : invalidPayload()
   )
 
   handle(
     IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET,
     (directoryName: string): CustomMemoryMutationResult =>
-      addCustomMemoryTerminalPreset(directoryName)
+      boundedString(directoryName, 1_000)
+        ? addCustomMemoryTerminalPreset(directoryName)
+        : invalidPayload()
   )
 
   handle(IPC.CLI_TOOLS_CHECK, (force?: boolean): Promise<CliToolStatus[]> =>
@@ -93,6 +116,8 @@ export function registerPresetsIpc(): void {
   )
 
   handle(IPC.CLI_TOOL_FIX, (id: CliToolId): Promise<CliToolFixResult> =>
-    fixCliTool(id)
+    id === 'claude' || id === 'codex'
+      ? fixCliTool(id)
+      : invalidPayload()
   )
 }
