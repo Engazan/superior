@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Exited terminals no longer pile up across restarts.** A finished terminal —
+  most often a `claude` that ended while the app was quit, so its exit went
+  unheard — was persisted as a restartable "dead cell" and restored on every
+  launch, accumulating beside the live terminal it was relaunched next to (one
+  running Claude becoming three, two of them exited). A dead cell now survives
+  exactly one launch to be restarted, then is pruned; live daemon sessions are
+  unaffected.
+
 ## [0.19.0] - 2026-07-11
 
 ### Fixed

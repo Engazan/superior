@@ -123,7 +123,12 @@ function staleRunningSession(session: AgentSession): AgentSession {
 
 /**
  * Merge the authoritative live daemon list with the last UI snapshot. Live PTYs
- * win; sessions missing from the daemon are kept as restartable dead cells.
+ * win. A session missing from the daemon survives as a restartable dead cell
+ * only if it was still `running` in the snapshot — a downgrade this pass grants
+ * exactly one run to restart it. An already-terminated cell the daemon no longer
+ * owns is dropped: keeping it would resurrect every finished terminal on each
+ * launch, so old dead cells pile up next to the live ones they were relaunched
+ * beside (a `claude` that exits while the app is quit is the common source).
  */
 export function reconcilePersistedSessions(live: AgentSession[]): AgentSession[] {
   const persisted = readSessions()
@@ -136,7 +141,7 @@ export function reconcilePersistedSessions(live: AgentSession[]): AgentSession[]
     if (running) {
       next.push(running)
       seen.add(stored.id)
-    } else {
+    } else if (stored.status === 'running') {
       next.push(staleRunningSession(stored))
     }
   }
