@@ -410,3 +410,50 @@ export const daemonClient = {
     }
   }
 }
+
+/**
+ * Kill the daemon (and its ptys), waiting until it actually exits. Used before
+ * an app update installs: the daemon runs the app's own executable, so a
+ * lingering instance keeps a Windows lock on the file the NSIS updater must
+ * overwrite ("Superior cannot be closed. Please close it manually…"). Clearing
+ * the attach set first stops the socket-close handler from respawning it, and a
+ * missing daemon is a no-op (never spawn one just to kill it). Bounded so a
+ * daemon that won't answer can't stall the update.
+ */
+export async function shutdownDaemon(timeoutMs = 3000): Promise<void> {
+  attachedIds.clear()
+  toResume.clear()
+  let s = sock
+  if (!s || s.destroyed) {
+    // Not currently attached; reach a still-alive daemon without spawning one.
+    try {
+      s = await tryConnect()
+    } catch {
+      return // nothing listening — no daemon to bring down
+    }
+  }
+  const target = s
+  await new Promise<void>((resolve) => {
+    let done = false
+    const finish = (): void => {
+      if (done) return
+      done = true
+      resolve()
+    }
+    target.once('close', finish)
+    target.once('error', finish)
+    const timer = setTimeout(finish, timeoutMs)
+    if (typeof timer.unref === 'function') timer.unref()
+    try {
+      target.write(encodeFrame({ t: 'shutdown' }))
+    } catch {
+      finish()
+    }
+  })
+  if (sock === target) sock = null
+  try {
+    target.destroy()
+  } catch {
+    /* already closed */
+  }
+}

@@ -22,6 +22,7 @@ import { registerGitIpc } from './ipc/git.ipc'
 import { registerFsIpc } from './ipc/fs.ipc'
 import { registerUpdateIpc } from './ipc/update.ipc'
 import { registerClipboardIpc } from './ipc/clipboard.ipc'
+import { isUpdatePending, releaseDaemonForUpdate } from './services/update.service'
 import { daemonClient } from './services/daemonClient'
 
 const isMac = process.platform === 'darwin'
@@ -210,7 +211,16 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  // A staged update installs on quit; on Windows the daemon runs the app's own
+  // executable and would keep the installer from replacing it. Take the daemon
+  // down first, then let the quit resume (isUpdatePending() flips off once the
+  // daemon is released, so the re-fired before-quit falls through).
+  if (isUpdatePending()) {
+    event.preventDefault()
+    void releaseDaemonForUpdate().finally(() => app.quit())
+    return
+  }
   // Detach from the daemon without killing sessions, so they persist.
   daemonClient.disconnect()
 })

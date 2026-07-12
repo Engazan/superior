@@ -41,6 +41,7 @@ export interface DirectSpawn {
 export type ClientMessage =
   | { t: 'hello' }
   | { t: 'list' }
+  | { t: 'shutdown' }
   | {
       t: 'spawn'
       id: string

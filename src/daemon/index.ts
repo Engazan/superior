@@ -231,6 +231,22 @@ function handle(conn: Conn, msg: ClientMessage): void {
     case 'list':
       send(conn, { t: 'sessions', list: listSessions() })
       break
+    case 'shutdown':
+      // The client is about to install an app update. On Windows the daemon runs
+      // the app's own executable, so it must exit to release the lock on the file
+      // the installer overwrites. Kill every pty and go down immediately —
+      // sessions can't outlive the binary they were spawned from anyway.
+      log('shutdown requested — killing sessions and exiting')
+      for (const s of sessions.values()) {
+        try {
+          s.proc.kill()
+        } catch {
+          /* already gone */
+        }
+      }
+      cleanupSocket()
+      process.exit(0)
+      break
     case 'spawn':
       cancelShutdown()
       try {

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows updates no longer stall on "Superior cannot be closed."** The
+  terminal daemon runs the app's own executable, so an instance left alive after
+  the window closed kept a lock on the file the NSIS updater has to replace — the
+  installer asked you to close the app manually and retry (which only worked once
+  the daemon idled out). The app now shuts the daemon down before installing an
+  update, on both the "restart to install" action and the install-on-quit path.
+
 ## [0.19.1] - 2026-07-12
 
 ### Fixed

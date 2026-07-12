@@ -1,8 +1,31 @@
 import { app, BrowserWindow, net, shell } from 'electron'
 import electronUpdater from 'electron-updater'
 import { IPC, type UpdateInfo, type UpdateProgress } from '@shared/types'
+import { shutdownDaemon } from './daemonClient'
 
 const { autoUpdater } = electronUpdater
+
+// Set once an update artifact is staged (installs on the next quit). Guards the
+// daemon teardown so the app quit path can release the executable lock too.
+let updateStaged = false
+let daemonReleased = false
+
+/** True while a downloaded update still needs the daemon brought down before it
+ *  can install (the daemon holds a Windows lock on the app executable). */
+export function isUpdatePending(): boolean {
+  return updateStaged && !daemonReleased
+}
+
+/**
+ * Bring the daemon down so its copy of the app executable stops locking the file
+ * the installer replaces. Idempotent — safe to call from both the explicit
+ * "restart to install" action and the app-quit auto-install path.
+ */
+export async function releaseDaemonForUpdate(): Promise<void> {
+  if (daemonReleased) return
+  daemonReleased = true
+  await shutdownDaemon().catch(() => undefined)
+}
 
 // The published repository whose GitHub releases we check against.
 const OWNER = 'Engazan'
@@ -89,6 +112,7 @@ export function initAutoUpdater(): void {
     sendStatus({ phase: 'downloading', percent: Math.round(p.percent) })
   })
   autoUpdater.on('update-downloaded', () => {
+    updateStaged = true
     sendStatus({ phase: 'downloaded' })
   })
   autoUpdater.on('update-not-available', () => {
@@ -126,5 +150,10 @@ export async function downloadUpdate(): Promise<void> {
 /** Quit and install a downloaded update, relaunching the app afterwards. */
 export function quitAndInstall(): void {
   // Defer past the IPC reply so the renderer call resolves before we tear down.
-  setImmediate(() => autoUpdater.quitAndInstall(false, true))
+  setImmediate(async () => {
+    // Release the daemon's lock on the app executable first, or the Windows
+    // installer stalls on "Superior cannot be closed" until the daemon idles out.
+    await releaseDaemonForUpdate()
+    autoUpdater.quitAndInstall(false, true)
+  })
 }

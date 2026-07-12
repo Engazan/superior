@@ -247,4 +247,53 @@ describe('daemon process lifecycle', () => {
       harness.waitFor((message) => message.t === 'sessions', 'sessions')
     ).resolves.toEqual({ t: 'sessions', list: [] })
   }, 60_000)
+
+  it('exits cleanly on shutdown even with a live session', async (ctx) => {
+    // The app sends `shutdown` before installing an update so the daemon stops
+    // holding a Windows lock on the shared executable — it must actually exit.
+    const harness = await startHarness()
+    const id = randomUUID()
+    harness.send({ t: 'hello' })
+    harness.send({
+      t: 'spawn',
+      id,
+      command: '',
+      direct: {
+        executable: process.execPath,
+        args: ['-e', 'setInterval(() => {}, 1000)']
+      },
+      cwd: os.tmpdir(),
+      cols: 80,
+      rows: 24,
+      meta: {
+        label: 'Test',
+        command: '',
+        cwd: os.tmpdir(),
+        workspaceId: 'workspace-test',
+        tabId: 'tab-test',
+        createdAt: Date.now()
+      }
+    })
+
+    const launch = await harness.waitFor(
+      (message) => (message.t === 'spawned' || message.t === 'error') && message.id === id,
+      'the spawn result'
+    )
+    if (launch.t === 'error') {
+      ctx.skip(`daemon could not spawn a PTY in this environment: ${launch.message}`)
+      return
+    }
+
+    const exited = new Promise<number | null>((resolve) =>
+      harness.child.once('exit', (code) => resolve(code))
+    )
+    harness.send({ t: 'shutdown' })
+    const code = await Promise.race([
+      exited,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('daemon did not exit after shutdown')), MESSAGE_TIMEOUT_MS)
+      )
+    ])
+    expect(code).toBe(0)
+  }, 60_000)
 })
