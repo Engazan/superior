@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.19.2] - 2026-07-17
 
 ### Fixed
 
@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   installer asked you to close the app manually and retry (which only worked once
   the daemon idled out). The app now shuts the daemon down before installing an
   update, on both the "restart to install" action and the install-on-quit path.
+- **Terminal search no longer crashes the renderer on old scrollback.** Match
+  decorations could make xterm dereference a missing marker and replace the
+  whole window with the error boundary. Search now uses the safe selection-only
+  path, contains stale-addon failures during terminal teardown, and routes find
+  shortcuts to an open file preview unless the terminal has focus.
+- **The profile switcher is truly centered.** Its position is pinned to the
+  title bar's midpoint, so changing Git status, branch text, panel controls or
+  window controls on either side can no longer shift it off center.
 
 ## [0.19.1] - 2026-07-12
 
