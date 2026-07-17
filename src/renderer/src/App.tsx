@@ -607,8 +607,11 @@ export default function App(): React.JSX.Element {
         setProfileManagerOpen((o) => !o)
       } else if (chord === shortcuts.searchTerminal) {
         if (view !== 'main' || !ws.activeSessionId) return
-        // Focus inside the file preview → ⌘F belongs to its own find panel.
-        if (document.activeElement?.closest('[data-preview-panel]')) return
+        // With a preview open, only a terminal-focused shortcut may open the
+        // terminal search. Opening a file from the right sidebar leaves focus
+        // on its result row, which previously misrouted Markdown find attempts
+        // into xterm instead of the preview.
+        if (preview.previewFile && !document.activeElement?.closest('[data-terminal-host]')) return
         e.preventDefault()
         e.stopPropagation()
         setSearchOpen(true)

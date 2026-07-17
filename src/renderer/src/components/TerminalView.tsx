@@ -678,7 +678,7 @@ export const TerminalView = memo(function TerminalView({
             </div>
           </div>
         )}
-        <div ref={hostRef} className="min-h-0 w-full flex-1" />
+        <div ref={hostRef} data-terminal-host className="min-h-0 w-full flex-1" />
 
         {/* Dead-terminal affordance: the "[press Enter to restart]" scrollback
             line scrolls away; this chip stays put so a dead cell never looks
