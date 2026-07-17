@@ -79,12 +79,10 @@ export function TitleBar({
   const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header
-      className="app-drag flex h-9 shrink-0 items-center border-b border-edge bg-bar transition-colors duration-200"
+      className="app-drag relative flex h-9 shrink-0 items-center border-b border-edge bg-bar transition-colors duration-200"
       style={tint}
     >
-      {/* LEFT — sidebar toggle + git status. flex-1 (equal to the right column)
-          so the center column stays pinned to the window's true center even as
-          this side's width changes (git appears/disappears, branch name, …). */}
+      {/* LEFT — sidebar toggle + git status. */}
       <div
         className={`flex h-full min-w-0 flex-1 items-center ${isMac ? 'pl-[68px]' : 'pl-1'}`}
         onDoubleClick={onMaximize}
@@ -141,9 +139,12 @@ export function TitleBar({
         )}
       </div>
 
-      {/* CENTER — profile switcher. shrink-0 with an auto width, centered between
-          the two equal-width side columns, so it never shifts. */}
-      <div className="flex h-full shrink-0 items-center justify-center" onDoubleClick={onMaximize}>
+      {/* CENTER — pin the profile switcher to the title bar's actual midpoint,
+          independently of the widths of the controls on either side. */}
+      <div
+        className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center"
+        onDoubleClick={onMaximize}
+      >
         {showToggle && (
           <ProfileSwitcher
             profiles={profiles}
@@ -154,8 +155,7 @@ export function TitleBar({
         )}
       </div>
 
-      {/* RIGHT — quick-launch + right-panel toggles + window controls. flex-1 to
-          mirror the left column; its content is right-aligned. */}
+      {/* RIGHT — quick-launch + right-panel toggles + window controls. */}
       <div className="flex h-full min-w-0 flex-1 items-center justify-end" onDoubleClick={onMaximize}>
         {/* Visible entry point for the quick-launch picker, so the feature is
             discoverable without knowing its shortcut. */}
