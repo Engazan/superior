@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.3] - 2026-07-20
+
+### Fixed
+
+- **The profile dropdown stays above terminal content.** The title bar now has
+  an explicit stacking layer, so the centered profile menu is fully visible
+  instead of being covered by terminals while remaining below global overlays.
+
 ## [0.19.2] - 2026-07-17
 
 ### Fixed
