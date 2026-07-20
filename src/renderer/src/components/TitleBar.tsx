@@ -79,7 +79,7 @@ export function TitleBar({
   const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header
-      className="app-drag relative flex h-9 shrink-0 items-center border-b border-edge bg-bar transition-colors duration-200"
+      className="app-drag relative z-40 flex h-9 shrink-0 items-center border-b border-edge bg-bar transition-colors duration-200"
       style={tint}
     >
       {/* LEFT — sidebar toggle + git status. */}
