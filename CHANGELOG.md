@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.4] - 2026-08-06
+
+### Added
+
+- **Faster workspace navigation.** The sidebar now supports workspace search,
+  favorites and recently visited workspaces, with clearer empty states and
+  more discoverable project actions.
+- **More helpful first-run and error states.** Opening a project now offers
+  clearer local, Git and SSH entry points, while failed Git repository loading
+  can be retried or redirected to integration settings.
+
+### Changed
+
+- **Clearer, calmer workspace sidebar.** Folder sections are visually grouped,
+  workspace details are easier to scan, and secondary actions appear on hover
+  instead of permanently competing with the project names.
+- **More usable settings and panels.** Settings content has improved spacing,
+  prompts and daemons can be filtered, the Files panel is the default right
+  panel, and key controls now expose stronger keyboard and screen-reader
+  semantics across the supported languages.
+- **Improved macOS title bar spacing.** The sidebar toggle now has a clearer
+  separation from the native window controls.
+
+### Fixed
+
+- **Queued Claude and Codex tasks now continue correctly.** Each queued prompt
+  runs in one-shot mode and exits after completing, so the next task starts
+  instead of remaining blocked behind an idle interactive process with an
+  active Cancel action.
+
 ## [0.19.3] - 2026-07-20
 
 ### Fixed
