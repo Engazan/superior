@@ -52,6 +52,9 @@ export function QuickLaunch({ presets, onSelect, onClose, onManagePresets }: Pro
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('terminal.addTerminal')}
         className="solid-surface w-80 overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >
         <div className="border-b border-edge px-3 py-2 text-xs font-semibold uppercase tracking-wide text-fgmuted">

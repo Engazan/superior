@@ -556,5 +556,22 @@ export const cs: Record<MessageKey, string> = {
   'terminal.hiddenSessions': '{n} dalších terminálů je skryto — mřížka je plná',
   'fileOpener.title': 'Otevírat soubory v',
   'fileOpener.desc': 'Editor použitý při Cmd/Ctrl kliknutí na cestu k souboru v terminálu.',
-  'fileOpener.system': 'Výchozí aplikace systému'
+  'fileOpener.system': 'Výchozí aplikace systému',
+  'sidebar.searchWorkspaces': 'Hledat workspace…',
+  'sidebar.filterFavorites': 'Oblíbené',
+  'sidebar.showAll': 'Všechny workspaces',
+  'sidebar.recentlyVisited': 'Nedávno otevřené',
+  'sidebar.noMatches': 'Hledání neodpovídá žádnému workspace.',
+  'sidebar.clearSearch': 'Vymazat hledání workspace',
+  'sidebar.favorite': 'Přidat do oblíbených',
+  'sidebar.unfavorite': 'Odebrat z oblíbených',
+  'terminal.noWorkspaceTitle': 'Začněte projektem',
+  'terminal.noWorkspaceDescription': 'Otevřete místní složku, naklonujte Git repozitář nebo se připojte přes SSH.',
+  'terminal.openLocal': 'Otevřít složku',
+  'terminal.cloneGit': 'Klonovat z Gitu',
+  'terminal.connectSsh': 'Připojit přes SSH',
+  'clone.retry': 'Zkusit znovu',
+  'clone.openIntegrationSettings': 'Otevřít nastavení integrace',
+  'rightPanel.tabListLabel': 'Nástroje projektu',
+  'tab.listLabel': 'Karty terminálů'
 }

@@ -424,11 +424,12 @@ export function SettingsView({
                   <li key={item.id}>
                     <button
                       onClick={() => setSection(item.id)}
+                      aria-current={section === item.id ? 'page' : undefined}
                       className={`relative flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition ${
                         section === item.id
                           ? 'bg-accentBg text-fg'
                           : 'text-fgdim hover:bg-hover hover:text-fg'
-                      }`}
+                      } focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent`}
                     >
                       {section === item.id && (
                         <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
@@ -449,35 +450,37 @@ export function SettingsView({
       </aside>
 
       {/* Settings content */}
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6">
-        {section === 'appearance' && <AppearanceSection />}
-        {section === 'integrations' && (
-          <IntegrationsSection onChanged={onIntegrationsChanged} />
-        )}
-        {section === 'presets' && (
-          <PresetsSection
-            presets={presets}
-            onSave={onSavePreset}
-            onDelete={onDeletePreset}
-            onReorder={onReorderPresets}
-            onToggleActive={onTogglePresetActive}
-            onPickImage={onPickPresetImage}
-            onPresetsChanged={onPresetsChanged}
-          />
-        )}
-        {section === 'prompts' && <PromptsSection />}
-        {section === 'daemons' && (
-          <DaemonsSection
-            workspaces={workspaces}
-            folders={folders}
-            onKill={onKillSession}
-            sessions={daemonSessions}
-            loading={!daemonsLoaded}
-            onRefresh={() => void refreshDaemons()}
-          />
-        )}
-        {section === 'keyboard' && <KeyboardSection />}
-        {section === 'shell' && <ShellCommandSection />}
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-6xl">
+          {section === 'appearance' && <AppearanceSection />}
+          {section === 'integrations' && (
+            <IntegrationsSection onChanged={onIntegrationsChanged} />
+          )}
+          {section === 'presets' && (
+            <PresetsSection
+              presets={presets}
+              onSave={onSavePreset}
+              onDelete={onDeletePreset}
+              onReorder={onReorderPresets}
+              onToggleActive={onTogglePresetActive}
+              onPickImage={onPickPresetImage}
+              onPresetsChanged={onPresetsChanged}
+            />
+          )}
+          {section === 'prompts' && <PromptsSection />}
+          {section === 'daemons' && (
+            <DaemonsSection
+              workspaces={workspaces}
+              folders={folders}
+              onKill={onKillSession}
+              sessions={daemonSessions}
+              loading={!daemonsLoaded}
+              onRefresh={() => void refreshDaemons()}
+            />
+          )}
+          {section === 'keyboard' && <KeyboardSection />}
+          {section === 'shell' && <ShellCommandSection />}
+        </div>
       </div>
     </div>
   )

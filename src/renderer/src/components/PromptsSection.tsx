@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useI18n } from '../i18n'
 import { usePrompts } from '../hooks/usePrompts'
 import {
@@ -22,6 +22,12 @@ export function PromptsSection(): React.JSX.Element {
   const toast = useToast()
   const { prompts, savePrompt, deletePrompt } = usePrompts()
   const [editing, setEditing] = useState<Prompt | 'new' | null>(null)
+  const [query, setQuery] = useState('')
+  const filteredPrompts = useMemo(() => {
+    const value = query.trim().toLowerCase()
+    if (!value) return prompts
+    return prompts.filter((prompt) => `${prompt.name} ${prompt.text}`.toLowerCase().includes(value))
+  }, [prompts, query])
 
   const remove = async (p: Prompt): Promise<void> => {
     const ok = await confirm({
@@ -37,18 +43,30 @@ export function PromptsSection(): React.JSX.Element {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <SectionHeader
         title={t('settings.prompts')}
         description={t('prompts.desc')}
         actions={<Button onClick={() => setEditing('new')}>{t('prompts.add')}</Button>}
       />
 
+      {prompts.length > 0 && (
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('prompts.pickerPlaceholder')}
+          aria-label={t('prompts.pickerPlaceholder')}
+          className="mb-3 max-w-md"
+        />
+      )}
+
       {prompts.length === 0 ? (
         <EmptyState title={t('prompts.empty')} />
+      ) : filteredPrompts.length === 0 ? (
+        <EmptyState title={t('palette.noResults')} />
       ) : (
         <ul className="divide-y divide-edge overflow-hidden rounded-lg border border-edge">
-          {prompts.map((p) => (
+          {filteredPrompts.map((p) => (
             <li key={p.id} className="flex items-center gap-3 px-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-fg">{p.name}</div>

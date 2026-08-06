@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { describeIntegrationError, providerLabel } from '../integrations'
 import { useOverlayLayer } from '../overlayStack'
@@ -16,6 +16,8 @@ interface Props {
   /** Navigate to the integrations settings so the user can add a forge. */
   onAddIntegration: () => void
   onClose: () => void
+  /** Optional tab selected by an empty-state action. */
+  initialSource?: Source
 }
 
 type Source = 'local' | 'git' | 'remote'
@@ -26,11 +28,12 @@ export function OpenProjectModal({
   onClone,
   onAddRemote,
   onAddIntegration,
-  onClose
+  onClose,
+  initialSource = 'local'
 }: Props): React.JSX.Element {
   const { t } = useI18n()
   const titleId = useId()
-  const [source, setSource] = useState<Source>('local')
+  const [source, setSource] = useState<Source>(initialSource)
   const [integrationId, setIntegrationId] = useState(integrations[0]?.id ?? '')
   const [repos, setRepos] = useState<RemoteRepo[]>([])
   const [loading, setLoading] = useState(false)
@@ -45,6 +48,7 @@ export function OpenProjectModal({
   const [remoteTesting, setRemoteTesting] = useState(false)
   const [remoteOk, setRemoteOk] = useState(false)
   const [remoteError, setRemoteError] = useState<string | null>(null)
+  const repoRequestRef = useRef(0)
 
   const hasIntegrations = integrations.length > 0
 
@@ -62,31 +66,30 @@ export function OpenProjectModal({
 
   // Load the selected integration's repositories whenever the git tab is active
   // and its integration changes.
-  useEffect(() => {
+  const loadRepositories = useCallback((): void => {
     if (source !== 'git' || !integrationId) return
-    let active = true
+    const request = ++repoRequestRef.current
     setLoading(true)
     setListError(null)
     setRepos([])
     setCloneError(null)
-    window.api
+    void window.api
       .listRepos(integrationId)
       .then((res) => {
-        if (!active) return
+        if (request !== repoRequestRef.current) return
         setLoading(false)
         if (res.error) setListError(res.error)
         else setRepos(res.repos)
       })
       .catch((err: Error) => {
         // A rejected IPC would otherwise leave the list on "Loading…" forever.
-        if (!active) return
+        if (request !== repoRequestRef.current) return
         setLoading(false)
         setListError(err.message)
       })
-    return () => {
-      active = false
-    }
   }, [source, integrationId])
+
+  useEffect(() => loadRepositories(), [loadRepositories])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -294,9 +297,17 @@ export function OpenProjectModal({
                 <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.loading')}</p>
               )}
               {!loading && listError && (
-                <p className="px-3 py-6 text-center text-sm text-danger">
-                  {describeIntegrationError(listError, t)}
-                </p>
+                <div className="flex flex-col items-center gap-3 px-3 py-8 text-center">
+                  <p className="max-w-sm text-sm text-danger">{describeIntegrationError(listError, t)}</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button size="sm" variant="secondary" onClick={loadRepositories}>
+                      {t('clone.retry')}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={onAddIntegration}>
+                      {t('clone.openIntegrationSettings')}
+                    </Button>
+                  </div>
+                </div>
               )}
               {!loading && !listError && filtered.length === 0 && (
                 <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.noRepos')}</p>

@@ -50,7 +50,7 @@ export function RightPanel({
   width
 }: Props): React.JSX.Element {
   const { t } = useI18n()
-  const [tab, setTab] = useState<Tab>('changes')
+  const [tab, setTab] = useState<Tab>('files')
 
   // Restore the last-open tab once; after that every switch persists, so users
   // who live in Tasks aren't dropped back on Changes each app run.
@@ -152,8 +152,12 @@ export function RightPanel({
   })
 
   return (
-    <aside style={{ width }} className="flex shrink-0 flex-col border-l border-edge bg-bar">
-      <div role="tablist" className="flex shrink-0 border-b border-edge">
+    <aside
+      style={{ width }}
+      className="flex shrink-0 flex-col border-l border-edge bg-bar"
+      aria-label={t('rightPanel.tabListLabel')}
+    >
+      <div role="tablist" aria-label={t('rightPanel.tabListLabel')} className="flex shrink-0 border-b border-edge">
         <button className={tabClass(tab === 'files')} {...tabA11y('files')}>
           {t('rightPanel.files')}
         </button>

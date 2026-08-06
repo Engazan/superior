@@ -73,7 +73,7 @@ interface Props {
   onLaunch: (preset: TerminalPreset) => void
   onManagePresets: () => void
   /** open the "Open / Clone project" modal (first-run empty state CTA) */
-  onOpenProject: () => void
+  onOpenProject: (source?: 'local' | 'git' | 'remote') => void
   /** persist a grid sizing change */
   onGridLayoutChange: (layout: GridLayout) => void
   /** switch the active tab */
@@ -269,7 +269,7 @@ export function TerminalPanel({
     <div className="flex min-h-0 flex-1 flex-col bg-panel">
       {/* Tab strip — one chip per grid tab. Hidden until the workspace has its first tab. */}
       {activeWorkspaceId && tabs.length > 0 && (
-        <div className="flex items-stretch border-b border-edge bg-bar">
+        <div role="tablist" aria-label={t('tab.listLabel')} className="flex items-stretch border-b border-edge bg-bar">
           <div className="flex min-w-0 items-stretch gap-px overflow-x-auto">
             {tabs.map((tab) => {
               const active = tab.id === activeTabId
@@ -445,10 +445,26 @@ export function TerminalPanel({
           ) : (
             // First-run empty state: a real path forward, not just a sentence.
             <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-              <p className="max-w-sm text-sm text-fgmuted">{t('terminal.noWorkspace')}</p>
-              <Button variant="primary" onClick={onOpenProject}>
-                {t('sidebar.openProject')}
-              </Button>
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-accentBg text-2xl text-accent ring-1 ring-inset ring-accentBorder">
+                +
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-fg">{t('terminal.noWorkspaceTitle')}</h2>
+                <p className="mt-1 max-w-md text-sm text-fgmuted">
+                  {t('terminal.noWorkspaceDescription')}
+                </p>
+              </div>
+              <div className="grid w-full max-w-xl gap-2 sm:grid-cols-3">
+                <Button variant="primary" onClick={() => onOpenProject('local')}>
+                  {t('terminal.openLocal')}
+                </Button>
+                <Button variant="secondary" onClick={() => onOpenProject('git')}>
+                  {t('terminal.cloneGit')}
+                </Button>
+                <Button variant="secondary" onClick={() => onOpenProject('remote')}>
+                  {t('terminal.connectSsh')}
+                </Button>
+              </div>
               <p className="text-xs text-fgmuted">
                 {shortcutTitle(t('keyboard.openPalette'), 'openPalette')}
               </p>

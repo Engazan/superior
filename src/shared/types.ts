@@ -69,6 +69,10 @@ export interface UiState {
   rightSidebarOpen: boolean
   /** Last-active right-panel tab, restored on reopen. */
   rightPanelTab?: RightPanelTab
+  /** Workspaces the user pinned in the sidebar. */
+  favoriteWorkspaceIds?: string[]
+  /** Recently visited workspaces, newest first. */
+  recentWorkspaceIds?: string[]
   /** File-preview pane width as a fraction of the row (clamped to 0.2–0.8). */
   previewWidth?: number
   /** Right panel width in px (clamped to 280–560). */

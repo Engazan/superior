@@ -556,5 +556,22 @@ export const pl: Record<MessageKey, string> = {
   'terminal.hiddenSessions': '{n} terminali ukrytych — siatka jest pełna',
   'fileOpener.title': 'Otwieraj pliki w',
   'fileOpener.desc': 'Edytor używany po kliknięciu ścieżki pliku w terminalu z Cmd/Ctrl.',
-  'fileOpener.system': 'Domyślna aplikacja systemu'
+  'fileOpener.system': 'Domyślna aplikacja systemu',
+  'sidebar.searchWorkspaces': 'Szukaj workspace…',
+  'sidebar.filterFavorites': 'Ulubione',
+  'sidebar.showAll': 'Wszystkie workspace’y',
+  'sidebar.recentlyVisited': 'Ostatnio odwiedzane',
+  'sidebar.noMatches': 'Brak workspace pasujących do wyszukiwania.',
+  'sidebar.clearSearch': 'Wyczyść wyszukiwanie workspace',
+  'sidebar.favorite': 'Dodaj do ulubionych',
+  'sidebar.unfavorite': 'Usuń z ulubionych',
+  'terminal.noWorkspaceTitle': 'Zacznij od projektu',
+  'terminal.noWorkspaceDescription': 'Otwórz lokalny folder, sklonuj repozytorium Git albo połącz się przez SSH.',
+  'terminal.openLocal': 'Otwórz folder',
+  'terminal.cloneGit': 'Klonuj z Git',
+  'terminal.connectSsh': 'Połącz przez SSH',
+  'clone.retry': 'Spróbuj ponownie',
+  'clone.openIntegrationSettings': 'Otwórz ustawienia integracji',
+  'rightPanel.tabListLabel': 'Narzędzia projektu',
+  'tab.listLabel': 'Karty terminali'
 }

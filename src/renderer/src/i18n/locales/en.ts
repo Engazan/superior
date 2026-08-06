@@ -189,12 +189,12 @@ export const en = {
   'tasks.noFolder': 'No project selected.',
   'tasks.empty': 'No tasks yet — queue one below.',
   'tasks.promptPlaceholder': 'What should the agent do?…',
-  'tasks.worktree': 'Fresh branch',
+  'tasks.worktree': 'Run in an isolated branch',
   'tasks.worktreeHint':
-    'Runs the task in a new isolated branch workspace (git worktree) instead of the current one.',
+    'Creates a separate branch for this task so your current files stay untouched.',
   'tasks.add': 'Add to queue',
   'tasks.hint':
-    'Runs “preset command + prompt”. The next task starts when the previous task’s terminal exits — quit the CLI to advance, or use a headless preset (e.g. claude -p) for a fully automatic queue.',
+    'The task uses the selected terminal preset and starts when the previous queued task finishes.',
   'tasks.pause': 'Pause',
   'tasks.resume': 'Resume',
   'tasks.paused': 'Queue paused',
@@ -552,7 +552,24 @@ export const en = {
   'terminal.hiddenSessions': '{n} more terminal(s) hidden — the grid is full',
   'fileOpener.title': 'Open files with',
   'fileOpener.desc': 'Editor used when you Cmd/Ctrl-click a file path in a terminal.',
-  'fileOpener.system': 'System default'
+  'fileOpener.system': 'System default',
+  'sidebar.searchWorkspaces': 'Search workspaces…',
+  'sidebar.filterFavorites': 'Favorites',
+  'sidebar.showAll': 'All workspaces',
+  'sidebar.recentlyVisited': 'Recently visited',
+  'sidebar.noMatches': 'No workspaces match this search.',
+  'sidebar.clearSearch': 'Clear workspace search',
+  'sidebar.favorite': 'Add to favorites',
+  'sidebar.unfavorite': 'Remove from favorites',
+  'terminal.noWorkspaceTitle': 'Start with a project',
+  'terminal.noWorkspaceDescription': 'Open a local folder, clone a Git repository, or connect over SSH.',
+  'terminal.openLocal': 'Open folder',
+  'terminal.cloneGit': 'Clone from Git',
+  'terminal.connectSsh': 'Connect via SSH',
+  'clone.retry': 'Try again',
+  'clone.openIntegrationSettings': 'Open integration settings',
+  'rightPanel.tabListLabel': 'Project tools',
+  'tab.listLabel': 'Terminal tabs'
 }
 
 export type MessageKey = keyof typeof en

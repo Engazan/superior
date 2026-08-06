@@ -116,6 +116,13 @@ function normalizeUi(raw: unknown): UiState {
     if (typeof obj.rightSidebarOpen === 'boolean') next.rightSidebarOpen = obj.rightSidebarOpen
     if (typeof obj.rightPanelTab === 'string' && RIGHT_PANEL_TABS.includes(obj.rightPanelTab))
       next.rightPanelTab = obj.rightPanelTab as UiState['rightPanelTab']
+    const normalizeIds = (value: unknown, limit: number): string[] | undefined => {
+      if (!Array.isArray(value)) return undefined
+      const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      return [...new Set(ids)].slice(0, limit)
+    }
+    next.favoriteWorkspaceIds = normalizeIds(obj.favoriteWorkspaceIds, 200)
+    next.recentWorkspaceIds = normalizeIds(obj.recentWorkspaceIds, 12)
     if (typeof obj.previewWidth === 'number' && Number.isFinite(obj.previewWidth))
       next.previewWidth = Math.min(0.8, Math.max(0.2, obj.previewWidth))
     if (typeof obj.rightPanelWidth === 'number' && Number.isFinite(obj.rightPanelWidth))

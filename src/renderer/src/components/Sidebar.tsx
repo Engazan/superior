@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useI18n } from '../i18n'
 import { panelTint } from '../tint'
 import { useAttentionColor } from '../attentionColor'
@@ -11,7 +11,8 @@ import {
   KebabIcon,
   Menu,
   PencilIcon,
-  PlusIcon,
+  SearchIcon,
+  StarIcon,
   TrashIcon,
   type MenuItem
 } from './ui'
@@ -109,6 +110,64 @@ export const Sidebar = memo(function Sidebar({
   const [wsMenu, setWsMenu] = useState<{ id: string; anchor: MenuAnchor } | null>(null)
   // The folder currently open in the edit dialog.
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
+  const [workspaceQuery, setWorkspaceQuery] = useState('')
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [favoriteWorkspaceIds, setFavoriteWorkspaceIds] = useState<Set<string>>(new Set())
+  const [recentWorkspaceIds, setRecentWorkspaceIds] = useState<string[]>([])
+
+  useEffect(() => {
+    void window.api.getSettings().then((settings) => {
+      setFavoriteWorkspaceIds(new Set(settings.ui.favoriteWorkspaceIds ?? []))
+      setRecentWorkspaceIds(settings.ui.recentWorkspaceIds ?? [])
+    })
+  }, [])
+
+  const persistWorkspaceUi = (favorites: Set<string>, recent: string[]): void => {
+    void window.api.setUiState({
+      favoriteWorkspaceIds: [...favorites],
+      recentWorkspaceIds: recent.slice(0, 12)
+    })
+  }
+
+  const selectWorkspace = (id: string): void => {
+    onSelectWorkspace(id)
+    setRecentWorkspaceIds((previous) => {
+      const next = [id, ...previous.filter((item) => item !== id)].slice(0, 12)
+      persistWorkspaceUi(favoriteWorkspaceIds, next)
+      return next
+    })
+  }
+
+  const toggleFavorite = (id: string): void => {
+    setFavoriteWorkspaceIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      persistWorkspaceUi(next, recentWorkspaceIds)
+      return next
+    })
+  }
+
+  const normalizedQuery = workspaceQuery.trim().toLowerCase()
+  const filteredWorkspaceIds = useMemo(() => {
+    const result = new Set<string>()
+    for (const workspace of workspaces) {
+      const folder = folders.find((item) => item.path === workspace.folderPath)
+      const haystack = `${workspace.name} ${workspace.branch ?? ''} ${folder?.name ?? ''} ${folder?.displayName ?? ''}`.toLowerCase()
+      if ((!normalizedQuery || haystack.includes(normalizedQuery)) && (!favoritesOnly || favoriteWorkspaceIds.has(workspace.id))) {
+        result.add(workspace.id)
+      }
+    }
+    return result
+  }, [workspaces, folders, normalizedQuery, favoritesOnly, favoriteWorkspaceIds])
+  const recentWorkspaces = useMemo(
+    () =>
+      recentWorkspaceIds
+        .map((id) => workspaces.find((workspace) => workspace.id === id))
+        .filter((workspace): workspace is Workspace => !!workspace && filteredWorkspaceIds.has(workspace.id))
+        .slice(0, 3),
+    [recentWorkspaceIds, workspaces, filteredWorkspaceIds]
+  )
   // Drag-to-reorder for folders, pointer-based (not HTML5 DnD): the list
   // reorders live while dragging so the drop position is always visible, and
   // Escape cancels. All tracking runs on window listeners registered at drag
@@ -373,7 +432,7 @@ export const Sidebar = memo(function Sidebar({
                       With no workspaces it expands the sidebar instead of no-oping. */}
                   <button
                     onClick={() => {
-                      if (folderWorkspaces[0]) onSelectWorkspace(folderWorkspaces[0].id)
+                      if (folderWorkspaces[0]) selectWorkspace(folderWorkspaces[0].id)
                       else onExpand()
                     }}
                     onContextMenu={(e) => {
@@ -409,7 +468,7 @@ export const Sidebar = memo(function Sidebar({
                     return (
                       <button
                         key={ws.id}
-                        onClick={() => onSelectWorkspace(ws.id)}
+                        onClick={() => selectWorkspace(ws.id)}
                         onContextMenu={(e) => {
                           e.preventDefault()
                           setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
@@ -505,6 +564,50 @@ export const Sidebar = memo(function Sidebar({
           </span>
           {t('sidebar.openProject')}
         </button>
+        <div className="mt-2 space-y-1.5">
+          <div className="relative">
+            <SearchIcon size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-fgmuted" />
+            <input
+              value={workspaceQuery}
+              onChange={(event) => setWorkspaceQuery(event.target.value)}
+              placeholder={t('sidebar.searchWorkspaces')}
+              aria-label={t('sidebar.searchWorkspaces')}
+              className="h-7 w-full rounded-md border border-edge bg-panel pl-7 pr-7 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+            />
+            {workspaceQuery && (
+              <button
+                type="button"
+                onClick={() => setWorkspaceQuery('')}
+                aria-label={t('sidebar.clearSearch')}
+                title={t('sidebar.clearSearch')}
+                className="absolute right-1 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setFavoritesOnly((value) => !value)}
+              aria-pressed={favoritesOnly}
+              className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${favoritesOnly ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'}`}
+            >
+              <StarIcon size={12} className={favoritesOnly ? 'fill-current' : ''} />
+              {t('sidebar.filterFavorites')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspaceQuery('')
+                setFavoritesOnly(false)
+              }}
+              className="rounded px-1.5 py-1 text-[11px] text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+            >
+              {t('sidebar.showAll')}
+            </button>
+          </div>
+        </div>
       </div>
 
       <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto py-2">
@@ -520,19 +623,47 @@ export const Sidebar = memo(function Sidebar({
           </div>
         ) : (
           <div className="space-y-3">
-            {displayFolders.map((folder) => {
-              const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
+            {!workspaceQuery && !favoritesOnly && recentWorkspaces.length > 0 && (
+              <div className="border-b border-edge px-3 pb-2">
+                <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fgmuted">
+                  {t('sidebar.recentlyVisited')}
+                </div>
+                <div className="space-y-0.5">
+                  {recentWorkspaces.map((workspace) => (
+                    <button
+                      key={workspace.id}
+                      type="button"
+                      onClick={() => selectWorkspace(workspace.id)}
+                      className="flex min-h-7 w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                    >
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                      <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {filteredWorkspaceIds.size === 0 ? (
+              <div className="px-3 py-8 text-center text-xs leading-5 text-fgmuted">
+                {t('sidebar.noMatches')}
+              </div>
+            ) : (
+            displayFolders.map((folder, folderIndex) => {
+              const folderWorkspaces = workspaces.filter(
+                (w) => w.folderPath === folder.path && filteredWorkspaceIds.has(w.id)
+              )
               const open = !folder.collapsed
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
               const beingDragged = folderDrag?.path === folder.path
+              if (folderWorkspaces.length === 0) return null
               return (
                 <div
                   key={folder.path}
                   data-folder-path={folder.path}
                   style={folderTint(folder.color)}
-                  className={`${folder.color ? 'rounded-lg p-1' : ''} ${
-                    beingDragged ? 'rounded-lg opacity-60 ring-1 ring-accentBorder' : ''
-                  }`}
+                  className={`pb-2 ${
+                    folderIndex > 0 ? 'border-t border-edge/65 pt-2' : ''
+                  } ${beingDragged ? 'opacity-60 ring-1 ring-accentBorder' : ''}`}
                 >
                   {/* Folder header — click to collapse / expand; the grip drags to reorder */}
                   <div
@@ -557,7 +688,7 @@ export const Sidebar = memo(function Sidebar({
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
                     title={folderTitle(folder)}
-                    className="group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                    className="group flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
@@ -568,21 +699,14 @@ export const Sidebar = memo(function Sidebar({
                     <span className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-fgdim">
                       {folderLabel(folder)}
                     </span>
+                    <span
+                      className="shrink-0 rounded-full bg-edge/70 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-fgmuted"
+                    >
+                      {folderWorkspaces.length}
+                    </span>
                     {!open && folderRunning > 0 && (
                       <RunningBadge count={folderRunning} title={t('sidebar.runningTerminals')} />
                     )}
-                    {/* Hover "+" — adds a workspace to this folder (also in the kebab menu). */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startAdd(folder.path)
-                      }}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
-                      aria-label={t('sidebar.addWorkspace')}
-                      title={t('sidebar.addWorkspace')}
-                    >
-                      <PlusIcon size={13} />
-                    </button>
                     {/* Drag handle — the drag itself runs on window listeners
                         (see beginFolderDrag), the list live-reorders under the pointer. */}
                     <span
@@ -592,7 +716,7 @@ export const Sidebar = memo(function Sidebar({
                       className={`flex h-5 w-4 shrink-0 touch-none items-center justify-center text-fgmuted transition ${
                         beingDragged
                           ? 'cursor-grabbing opacity-100'
-                          : 'cursor-grab opacity-0 group-hover:opacity-100'
+                          : 'cursor-grab opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
                       }`}
                     >
                       <GripIcon size={12} />
@@ -604,7 +728,7 @@ export const Sidebar = memo(function Sidebar({
                         e.stopPropagation()
                         setFolderMenu({ path: folder.path, anchor: e.currentTarget })
                       }}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
                       aria-label={t('menu.folderActions')}
                       title={t('menu.folderActions')}
                       aria-haspopup="menu"
@@ -615,7 +739,7 @@ export const Sidebar = memo(function Sidebar({
 
                   {/* Workspaces — indented under a tree guide line */}
                   {open && (
-                    <ul className="mt-0.5 space-y-0.5 border-l border-edge">
+                    <ul className="ml-2 mt-1 space-y-0.5 border-l-2 border-edge/70 py-0.5">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
                         const attn = attentionWorkspaceIds.has(ws.id)
@@ -625,12 +749,12 @@ export const Sidebar = memo(function Sidebar({
                               role="button"
                               tabIndex={0}
                               aria-current={active || undefined}
-                              onClick={() => onSelectWorkspace(ws.id)}
+                              onClick={() => selectWorkspace(ws.id)}
                               onKeyDown={(e) => {
                                 if (editingId === ws.id) return
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   e.preventDefault()
-                                  onSelectWorkspace(ws.id)
+                                  selectWorkspace(ws.id)
                                 } else if (e.key === 'F2') {
                                   e.preventDefault()
                                   startRename(ws)
@@ -644,7 +768,7 @@ export const Sidebar = memo(function Sidebar({
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-4 pr-2 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-3 pr-2 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : attn
@@ -721,24 +845,49 @@ export const Sidebar = memo(function Sidebar({
                                 <WorkingSpinner title={t('sidebar.workingTerminals')} />
                               )}
 
-                              {/* One kebab replaces the previous reveal/rename/remove trio;
-                                  always visible on the active row so the affordance is
-                                  discoverable, hover/focus reveals it elsewhere. */}
+                              {/* Keep the two lightweight row actions discoverable. */}
                               {editingId !== ws.id && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setWsMenu({ id: ws.id, anchor: e.currentTarget })
-                                  }}
-                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 ${
-                                    active ? 'opacity-100' : 'opacity-0'
-                                  }`}
-                                  aria-label={t('menu.workspaceActions')}
-                                  title={t('menu.workspaceActions')}
-                                  aria-haspopup="menu"
-                                >
-                                  <KebabIcon size={13} />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleFavorite(ws.id)
+                                    }}
+                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                                      favoriteWorkspaceIds.has(ws.id)
+                                        ? 'text-accent opacity-100'
+                                        : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                                    }`}
+                                    aria-label={
+                                      favoriteWorkspaceIds.has(ws.id)
+                                        ? t('sidebar.unfavorite')
+                                        : t('sidebar.favorite')
+                                    }
+                                    title={
+                                      favoriteWorkspaceIds.has(ws.id)
+                                        ? t('sidebar.unfavorite')
+                                        : t('sidebar.favorite')
+                                    }
+                                    aria-pressed={favoriteWorkspaceIds.has(ws.id)}
+                                  >
+                                    <StarIcon
+                                      size={12}
+                                      className={favoriteWorkspaceIds.has(ws.id) ? 'fill-current' : ''}
+                                    />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setWsMenu({ id: ws.id, anchor: e.currentTarget })
+                                    }}
+                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                                    aria-label={t('menu.workspaceActions')}
+                                    title={t('menu.workspaceActions')}
+                                    aria-haspopup="menu"
+                                  >
+                                    <KebabIcon size={13} />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </li>
@@ -749,7 +898,8 @@ export const Sidebar = memo(function Sidebar({
                   )}
                 </div>
               )
-            })}
+            })
+            )}
           </div>
         )}
       </nav>

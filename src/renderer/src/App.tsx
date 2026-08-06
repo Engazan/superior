@@ -97,6 +97,8 @@ export default function App(): React.JSX.Element {
     setProfileManagerOpen,
     projectModalOpen,
     setProjectModalOpen,
+    projectModalSource,
+    setProjectModalSource,
     setResumeProjectModal,
     closeSettings
   } = useAppUiState()
@@ -270,7 +272,13 @@ export default function App(): React.JSX.Element {
     setView('settings')
   }, [setSettingsSection, setView])
 
-  const openProjectModal = useCallback(() => setProjectModalOpen(true), [setProjectModalOpen])
+  const openProjectModal = useCallback(
+    (source: 'local' | 'git' | 'remote' = 'local') => {
+      setProjectModalSource(source)
+      setProjectModalOpen(true)
+    },
+    [setProjectModalSource, setProjectModalOpen]
+  )
   // Stable reference — Sidebar is memoized, an inline arrow would defeat it.
   const expandSidebar = useCallback(() => setSidebarCollapsed(false), [setSidebarCollapsed])
 
@@ -857,6 +865,7 @@ export default function App(): React.JSX.Element {
       {projectModalOpen && (
         <Suspense fallback={null}>
           <OpenProjectModal
+            initialSource={projectModalSource}
             integrations={integrations}
             onOpenFolder={ws.addFolder}
             onClone={ws.cloneRepository}

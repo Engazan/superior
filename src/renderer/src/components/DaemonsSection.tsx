@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
 import { Button, EmptyState, SectionHeader, useConfirm, useToast } from './ui'
@@ -30,14 +30,24 @@ export function DaemonsSection({
   // Optimistic removals: a kill disappears immediately, before the parent's
   // next poll confirms it.
   const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set())
-  const list = sessions.filter((s) => !hiddenIds.has(s.id))
+  const [query, setQuery] = useState('')
 
-  const workspaceLabel = (workspaceId: string): string => {
+  const workspaceLabel = useCallback((workspaceId: string): string => {
     const ws = workspaces.find((w) => w.id === workspaceId)
     if (!ws) return t('daemons.orphan')
     const folder = folders.find((f) => f.path === ws.folderPath)
     return folder ? `${folder.name} / ${ws.name}` : ws.name
-  }
+  }, [workspaces, folders, t])
+
+  const list = useMemo(() => {
+    const value = query.trim().toLowerCase()
+    return sessions
+      .filter((s) => !hiddenIds.has(s.id))
+      .filter((s) => {
+        if (!value) return true
+        return `${s.label} ${s.command} ${workspaceLabel(s.workspaceId)}`.toLowerCase().includes(value)
+      })
+  }, [sessions, hiddenIds, query, workspaceLabel])
 
   // Killing terminates a live process — always confirm first.
   const kill = async (s: AgentSession): Promise<void> => {
@@ -90,9 +100,18 @@ export function DaemonsSection({
       />
 
       {list.length === 0 ? (
-        <EmptyState title={loading ? t('daemons.loading') : t('daemons.empty')} />
+        <EmptyState title={query ? t('palette.noResults') : loading ? t('daemons.loading') : t('daemons.empty')} />
       ) : (
         <div className="overflow-hidden rounded-lg border border-edge">
+          <div className="border-b border-edge bg-bar p-2">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t('files.search')}
+              aria-label={t('files.search')}
+              className="h-8 w-full rounded-md border border-edge bg-panel px-2.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+            />
+          </div>
           <div className="flex items-center gap-3 border-b border-edge bg-bar px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
             <span className="min-w-0 flex-1">{t('daemons.colCommand')}</span>
             <span className="w-44 shrink-0">{t('daemons.colWorkspace')}</span>

@@ -164,6 +164,14 @@ export function SearchIcon(props: IconProps): React.JSX.Element {
   )
 }
 
+export function StarIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props)}>
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z" />
+    </svg>
+  )
+}
+
 export function CheckIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 2.2)}>

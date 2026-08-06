@@ -556,5 +556,22 @@ export const hu: Record<MessageKey, string> = {
   'terminal.hiddenSessions': '{n} további terminál rejtve — a rács megtelt',
   'fileOpener.title': 'Fájlok megnyitása ezzel',
   'fileOpener.desc': 'A terminálban Cmd/Ctrl-kattintással megnyitott fájlútvonalakhoz használt szerkesztő.',
-  'fileOpener.system': 'Rendszer alapértelmezése'
+  'fileOpener.system': 'Rendszer alapértelmezése',
+  'sidebar.searchWorkspaces': 'Workspace-ek keresése…',
+  'sidebar.filterFavorites': 'Kedvencek',
+  'sidebar.showAll': 'Minden workspace',
+  'sidebar.recentlyVisited': 'Legutóbb megnyitott',
+  'sidebar.noMatches': 'Nincs a keresésnek megfelelő workspace.',
+  'sidebar.clearSearch': 'Workspace-keresés törlése',
+  'sidebar.favorite': 'Hozzáadás a kedvencekhez',
+  'sidebar.unfavorite': 'Eltávolítás a kedvencekből',
+  'terminal.noWorkspaceTitle': 'Kezdj egy projekttel',
+  'terminal.noWorkspaceDescription': 'Nyiss meg egy helyi mappát, klónozz Git-tárolót, vagy csatlakozz SSH-n keresztül.',
+  'terminal.openLocal': 'Mappa megnyitása',
+  'terminal.cloneGit': 'Klónozás Gitből',
+  'terminal.connectSsh': 'Kapcsolódás SSH-n',
+  'clone.retry': 'Újrapróbálás',
+  'clone.openIntegrationSettings': 'Integrációs beállítások megnyitása',
+  'rightPanel.tabListLabel': 'Projekt eszközei',
+  'tab.listLabel': 'Terminállapok'
 }

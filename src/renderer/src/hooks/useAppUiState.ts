@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SettingsSection } from '../components/SettingsView'
 
 export type AppView = 'main' | 'settings'
+export type ProjectModalSource = 'local' | 'git' | 'remote'
 
 /**
  * Owns renderer-only shell state: views, overlays and persisted pane layout.
@@ -22,6 +23,7 @@ export function useAppUiState() {
   const [palettePromptsOpen, setPalettePromptsOpen] = useState(false)
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
+  const [projectModalSource, setProjectModalSource] = useState<ProjectModalSource>('local')
   const [, setResumeProjectModal] = useState(false)
 
   // Avoid loading the Git/file/task feature bundle until it is first requested,
@@ -102,6 +104,8 @@ export function useAppUiState() {
     setProfileManagerOpen,
     projectModalOpen,
     setProjectModalOpen,
+    projectModalSource,
+    setProjectModalSource,
     setResumeProjectModal,
     closeSettings
   }
