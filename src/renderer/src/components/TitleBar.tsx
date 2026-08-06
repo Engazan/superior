@@ -84,7 +84,7 @@ export function TitleBar({
     >
       {/* LEFT — sidebar toggle + git status. */}
       <div
-        className={`flex h-full min-w-0 flex-1 items-center ${isMac ? 'pl-[68px]' : 'pl-1'}`}
+        className={`flex h-full min-w-0 flex-1 items-center ${isMac ? 'pl-[84px]' : 'pl-1'}`}
         onDoubleClick={onMaximize}
       >
         {showToggle && (
