@@ -53,12 +53,40 @@ export interface TaskQueueApi {
 
 /** Quote a prompt as a single shell argument for the daemon's launch shell
  *  (`$SHELL -l -c …` on POSIX, `cmd.exe /c …` on Windows). */
-function quoteArg(text: string): string {
-  if (window.api.platform === 'win32') {
+function quoteArg(text: string, platform = window.api.platform): string {
+  if (platform === 'win32') {
     // cmd.exe: double quotes; literal " doubled, trailing \ would eat the close quote.
     return `"${text.replace(/"/g, '""').replace(/\\$/, '\\\\')}"`
   }
   return `'${text.replace(/'/g, `'\\''`)}'`
+}
+
+function hasFlag(command: string, flag: string): boolean {
+  return new RegExp(`(?:^|\\s)${flag}(?:\\s|$)`).test(command)
+}
+
+/**
+ * Build a command that represents exactly one queue item. Claude and Codex
+ * normally remain interactive after handling a prompt, so Tasks uses their
+ * one-shot modes and then advances when the process exits.
+ */
+export function buildTaskCommand(
+  command: string,
+  prompt: string,
+  platform = window.api.platform
+): string {
+  const trimmed = command.trim()
+  const quotedPrompt = quoteArg(prompt, platform)
+
+  if (/^codex(?:\s|$)/.test(trimmed) && !/^codex\s+exec(?:\s|$)/.test(trimmed)) {
+    return `codex exec${trimmed.slice('codex'.length)} ${quotedPrompt}`.trim()
+  }
+
+  if (/^claude(?:\s|$)/.test(trimmed) && !hasFlag(trimmed, '-p') && !hasFlag(trimmed, '--print')) {
+    return `${trimmed} --print ${quotedPrompt}`.trim()
+  }
+
+  return `${trimmed} ${quotedPrompt}`.trim()
 }
 
 /** Filesystem/ref-safe branch slug from a prompt's first words. */
@@ -287,7 +315,7 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         branch,
         startedAt: Date.now()
       }
-      const command = `${preset.command} ${quoteArg(task.prompt)}`.trim()
+      const command = buildTaskCommand(preset.command, task.prompt)
       const res = await depsRef.current.launchSessionIn({
         preset,
         workspaceId,
