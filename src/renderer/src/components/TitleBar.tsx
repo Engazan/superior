@@ -75,7 +75,11 @@ export function TitleBar({
   const shortcutTitle = useShortcutTitle()
   const showGit = showToggle && (gitLoading || gitStatus !== null)
   // Tint only on the main view; settings has no active profile chrome.
-  const tint = showToggle ? barTint(tintColor) : undefined
+  const profileTint = showToggle ? barTint(tintColor) : undefined
+  // The window chrome already has its own rounded outline. Keep only the
+  // profile-colored fill here; barTint's underline is for terminal topbars and
+  // looked like a stray rule across the bottom of the titlebar.
+  const tint = profileTint ? { backgroundColor: profileTint.backgroundColor } : undefined
   const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header

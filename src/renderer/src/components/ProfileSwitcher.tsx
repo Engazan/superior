@@ -115,6 +115,11 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         className="flex h-8 max-w-64 items-center gap-2 rounded-full border border-edge bg-panel px-3.5 text-fgdim shadow-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ProfileGlyph />
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10 bg-fgmuted shadow-xs"
+          style={active?.color ? { backgroundColor: active.color } : undefined}
+          aria-hidden
+        />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
           {t('profile.label')}
         </span>
@@ -142,6 +147,11 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
               <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                 {p.id === activeProfileId && <CheckGlyph />}
               </span>
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10 bg-fgmuted"
+                style={p.color ? { backgroundColor: p.color } : undefined}
+                aria-hidden
+              />
               <span className="truncate">{p.name}</span>
             </button>
           ))}

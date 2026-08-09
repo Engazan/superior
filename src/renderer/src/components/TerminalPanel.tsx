@@ -266,7 +266,7 @@ export function TerminalPanel({
 
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-panel/75">
+    <div className="flex min-h-0 flex-1 flex-col bg-transparent">
       {/* Tab strip — one chip per grid tab. Hidden until the workspace has its first tab. */}
       {activeWorkspaceId && tabs.length > 0 && (
         <div role="tablist" aria-label={t('tab.listLabel')} className="flex items-center border-b border-edge bg-panel/90 px-2 py-1.5">

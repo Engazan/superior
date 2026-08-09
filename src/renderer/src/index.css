@@ -254,6 +254,7 @@ body {
 .superior-titlebar {
   margin: 8px 8px 0;
   border: 1px solid color-mix(in srgb, var(--c-edge) 76%, white 24%);
+  border-bottom: 0;
   border-radius: 17px 17px 12px 12px;
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
 }
@@ -279,7 +280,7 @@ body {
 
 .superior-main {
   overflow: hidden;
-  background-color: color-mix(in srgb, var(--c-panel) 92%, transparent);
+  background-color: transparent;
 }
 
 .superior-terminal-cell {

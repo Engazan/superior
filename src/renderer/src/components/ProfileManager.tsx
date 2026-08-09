@@ -115,10 +115,11 @@ export function ProfileManager({
       onClose={onClose}
       closeLabel={t('window.close')}
     >
-      <div className="space-y-2">
+      <div className="space-y-2 py-1">
         {profiles.map((p) => (
-          <div key={p.id} className="flex items-center gap-2">
+          <div key={p.id} className="flex min-w-0 items-center gap-2">
             <Input
+              className="min-w-0 flex-1"
               value={draftFor(p)}
               onChange={(e) => setDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
               onBlur={() => commit(p)}
@@ -132,7 +133,18 @@ export function ProfileManager({
               aria-label={t('profile.name')}
             />
             {p.id === activeProfileId && (
-              <span className="shrink-0 rounded-md bg-accentBg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent ring-1 ring-inset ring-accentBorder">
+              <span
+                className="shrink-0 rounded-md bg-accentBg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent ring-1 ring-inset ring-accentBorder"
+                style={
+                  p.color
+                    ? {
+                        color: p.color,
+                        backgroundColor: `color-mix(in srgb, ${p.color} 12%, transparent)`,
+                        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${p.color} 45%, transparent)`
+                      }
+                    : undefined
+                }
+              >
                 {t('profile.active')}
               </span>
             )}
@@ -172,8 +184,9 @@ export function ProfileManager({
         ))}
       </div>
 
-      <div className="mt-4 flex items-center gap-2 border-t border-edge pt-4">
+      <div className="mt-4 flex min-w-0 items-center gap-2 border-t border-edge pt-4">
         <Input
+          className="min-w-0 flex-1"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => {
@@ -186,7 +199,12 @@ export function ProfileManager({
           autoComplete="off"
           aria-label={t('profile.add')}
         />
-        <Button variant="primary" disabled={!newName.trim()} onClick={submitNew}>
+        <Button
+          variant="primary"
+          className="shrink-0 whitespace-nowrap"
+          disabled={!newName.trim()}
+          onClick={submitNew}
+        >
           {t('profile.add')}
         </Button>
       </div>
