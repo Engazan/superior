@@ -154,10 +154,10 @@ export function RightPanel({
   return (
     <aside
       style={{ width }}
-      className="flex shrink-0 flex-col border-l border-edge bg-bar"
+      className="superior-right-panel flex shrink-0 flex-col overflow-hidden bg-bar"
       aria-label={t('rightPanel.tabListLabel')}
     >
-      <div role="tablist" aria-label={t('rightPanel.tabListLabel')} className="flex shrink-0 border-b border-edge">
+      <div role="tablist" aria-label={t('rightPanel.tabListLabel')} className="flex shrink-0 border-b border-edge bg-panel/75 p-1">
         <button className={tabClass(tab === 'files')} {...tabA11y('files')}>
           {t('rightPanel.files')}
         </button>

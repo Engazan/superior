@@ -33,7 +33,7 @@ export const IconButton = forwardRef<HTMLButtonElement, Props>(function IconButt
       ref={ref}
       aria-label={label}
       title={title ?? label}
-      className={`grid shrink-0 place-items-center rounded-md transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
+      className={`grid shrink-0 place-items-center rounded-full transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-40 ${VARIANT[variant]} ${SIZE[size]} ${className}`}
       {...rest}
     >
       {children}

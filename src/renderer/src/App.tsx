@@ -658,7 +658,7 @@ export default function App(): React.JSX.Element {
   ])
 
   return (
-    <div className="flex h-full flex-col bg-bar text-fg">
+    <div className="superior-app flex h-full flex-col text-fg">
       <TitleBar
         showToggle={view === 'main'}
         gitStatus={view === 'main' ? gitStatus : null}
@@ -684,7 +684,7 @@ export default function App(): React.JSX.Element {
         tintColor={activeProfileColor}
       />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="superior-workspace flex min-h-0 flex-1">
         {view === 'settings' ? (
           <Suspense fallback={<DeferredPanel />}>
             <SettingsView
@@ -729,7 +729,7 @@ export default function App(): React.JSX.Element {
               onSelectWorkspace={ws.selectWorkspace}
             />
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="superior-main flex min-h-0 min-w-0 flex-1 flex-col">
               <div ref={preview.previewRowRef} className="flex min-h-0 min-w-0 flex-1">
                 <div className="flex min-h-0 min-w-0 flex-1">
                   <TerminalPanel

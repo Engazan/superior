@@ -112,7 +112,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         aria-label={t('profile.switch')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-7 max-w-56 items-center gap-1.5 rounded-md border border-edge bg-bar/60 px-2.5 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex h-8 max-w-64 items-center gap-2 rounded-full border border-edge bg-panel px-3.5 text-fgdim shadow-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ProfileGlyph />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
@@ -126,7 +126,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         <div
           ref={menuRef}
           role="menu"
-          className="solid-surface absolute left-1/2 top-8 z-50 min-w-52 -translate-x-1/2 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg"
+          className="solid-surface absolute left-1/2 top-10 z-50 min-w-52 -translate-x-1/2 overflow-hidden rounded-xl border border-edge bg-panel py-1.5 shadow-xl"
         >
           {profiles.map((p) => (
             <button

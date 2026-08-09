@@ -14,7 +14,7 @@ export const Input = forwardRef<HTMLInputElement, Props>(function Input(
     <input
       ref={ref}
       aria-invalid={invalid || undefined}
-      className={`h-8 w-full rounded-md border bg-bar px-2.5 text-sm text-fg placeholder:text-fgmuted transition focus-visible:outline-hidden focus-visible:ring-2 ${
+      className={`h-8 w-full rounded-full border bg-bar px-3 text-sm text-fg placeholder:text-fgmuted transition focus-visible:outline-hidden focus-visible:ring-2 ${
         invalid
           ? 'border-dangerBorder focus-visible:ring-danger/50'
           : 'border-edge focus-visible:ring-accent/50'

@@ -23,55 +23,55 @@
 /* Semantic color tokens. Swapped by the .light / .dark class on <html>. */
 :root,
 .dark {
-  --c-bar: #181825;
-  --c-panel: #1e1e2e;
-  --c-edge: #313244;
-  --c-hover: #45475a;
-  --c-fg: #cdd6f4;
-  --c-fg2: #bac2de;
-  --c-fgdim: #9399b2;
-  --c-fgmuted: #6c7086;
-  --c-accent: #7dd3fc;
-  --c-accent-bg: #0c4a6e;
-  --c-accent-border: #075985;
-  --c-accent-solid: #0284c7;
-  --c-accent-solid-hover: #0369a1;
-  --c-status: #6ee7b7;
-  --c-status-bg: #064e3b;
-  --c-status-border: #047857;
-  --c-danger: #f87171;
-  --c-danger-solid: #dc2626;
-  --c-danger-bg: #450a0a;
-  --c-danger-border: #7f1d1d;
-  --c-warn: #fbbf24;
-  --c-warn-bg: #451a03;
-  --c-warn-border: #78350f;
+  --c-bar: #171624;
+  --c-panel: #211f31;
+  --c-edge: #3b374d;
+  --c-hover: #302d43;
+  --c-fg: #fff4df;
+  --c-fg2: #ded2bf;
+  --c-fgdim: #b8aa97;
+  --c-fgmuted: #8d8174;
+  --c-accent: #f29a78;
+  --c-accent-bg: #4b2d2b;
+  --c-accent-border: #875044;
+  --c-accent-solid: #d96f50;
+  --c-accent-solid-hover: #c65e42;
+  --c-status: #8fc5a4;
+  --c-status-bg: #183b2d;
+  --c-status-border: #326d52;
+  --c-danger: #ff8f86;
+  --c-danger-solid: #cf564e;
+  --c-danger-bg: #431f23;
+  --c-danger-border: #7e3b3e;
+  --c-warn: #f0c777;
+  --c-warn-bg: #43351d;
+  --c-warn-border: #765f2d;
 }
 
 .light {
-  --c-bar: #f2f3f5;
-  --c-panel: #ffffff;
-  --c-edge: #d7d9de;
-  --c-hover: #e6e8eb;
-  --c-fg: #1d1d1f;
-  --c-fg2: #3c4043;
-  --c-fgdim: #5f6368;
-  --c-fgmuted: #6b7280;
-  --c-accent: #0369a1;
-  --c-accent-bg: #e0f2fe;
-  --c-accent-border: #bae6fd;
-  --c-accent-solid: #0369a1;
-  --c-accent-solid-hover: #075985;
-  --c-status: #047857;
-  --c-status-bg: #d1fae5;
-  --c-status-border: #a7f3d0;
-  --c-danger: #b91c1c;
-  --c-danger-solid: #dc2626;
-  --c-danger-bg: #fee2e2;
-  --c-danger-border: #fecaca;
-  --c-warn: #b45309;
-  --c-warn-bg: #fef3c7;
-  --c-warn-border: #fde68a;
+  --c-bar: #f3e2c2;
+  --c-panel: #fff8e8;
+  --c-edge: #dfcba4;
+  --c-hover: #f1d8bd;
+  --c-fg: #302d4b;
+  --c-fg2: #5c554a;
+  --c-fgdim: #766b59;
+  --c-fgmuted: #a18e69;
+  --c-accent: #bf5f43;
+  --c-accent-bg: #f1d0bd;
+  --c-accent-border: #dfa086;
+  --c-accent-solid: #c96547;
+  --c-accent-solid-hover: #af5137;
+  --c-status: #357b5f;
+  --c-status-bg: #dbe7d2;
+  --c-status-border: #9fbea1;
+  --c-danger: #a23f3c;
+  --c-danger-solid: #bd5048;
+  --c-danger-bg: #f5d4cc;
+  --c-danger-border: #dda196;
+  --c-warn: #9a6819;
+  --c-warn-bg: #f4e2ae;
+  --c-warn-border: #d5b96d;
 }
 
 /* Keep the semantic Tailwind palette coupled to the same runtime CSS tokens
@@ -241,6 +241,92 @@ body {
   background: var(--c-bar);
   color: var(--c-fg);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Warm storefront-inspired application shell. The dot grid and soft colour
+ * blooms echo the supplied reference without introducing an image dependency;
+ * all functional surfaces still resolve through the semantic theme tokens.
+ */
+.superior-app {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 74% 88%, color-mix(in srgb, var(--c-status) 14%, transparent), transparent 28%),
+    radial-gradient(circle at 78% 12%, color-mix(in srgb, var(--c-accent) 12%, transparent), transparent 30%),
+    radial-gradient(circle, color-mix(in srgb, var(--c-fgmuted) 16%, transparent) 0.8px, transparent 0.9px),
+    var(--c-bar);
+  background-size: auto, auto, 12px 12px, auto;
+}
+
+.superior-app::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--c-edge) 82%, white 18%);
+  border-radius: 22px;
+  box-shadow:
+    0 24px 70px color-mix(in srgb, #171220 16%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
+}
+
+.superior-titlebar {
+  margin: 8px 8px 0;
+  border: 1px solid color-mix(in srgb, var(--c-edge) 76%, white 24%);
+  border-radius: 17px 17px 12px 12px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
+}
+
+.superior-workspace {
+  gap: 8px;
+  padding: 8px;
+}
+
+.superior-sidebar,
+.superior-main,
+.superior-right-panel {
+  border: 1px solid color-mix(in srgb, var(--c-edge) 82%, white 18%);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 34px color-mix(in srgb, #171220 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
+}
+
+.superior-sidebar {
+  background-color: color-mix(in srgb, var(--c-panel) 76%, var(--c-bar));
+}
+
+.superior-main {
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--c-panel) 92%, transparent);
+}
+
+.superior-terminal-cell {
+  padding: 4px;
+}
+
+.superior-terminal-surface {
+  border: 1px solid var(--c-edge);
+  border-radius: 13px;
+  box-shadow: 0 8px 22px color-mix(in srgb, #171220 12%, transparent);
+}
+
+.superior-brand-mark {
+  background: linear-gradient(145deg, var(--c-fg) 0 45%, var(--c-accent) 46% 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 30%, transparent);
+}
+
+@media (max-width: 760px) {
+  .superior-workspace {
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .superior-titlebar {
+    margin: 5px 5px 0;
+  }
 }
 
 .startup-splash {

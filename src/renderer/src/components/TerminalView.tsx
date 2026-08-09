@@ -127,10 +127,10 @@ const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
     brightWhite: '#a6adc8'
   },
   light: {
-    background: '#ffffff',
-    foreground: '#1d1d1f',
-    cursor: '#1d1d1f',
-    selectionBackground: '#b3d4fc',
+    background: '#fffaf0',
+    foreground: '#302d4b',
+    cursor: '#bf5f43',
+    selectionBackground: '#f1d0bd',
     black: '#5c5f77',
     red: '#d20f39',
     green: '#40a02b',
@@ -505,7 +505,7 @@ export const TerminalView = memo(function TerminalView({
 
   return (
     <div
-      className={`absolute ${
+      className={`superior-terminal-cell absolute ${
         animate
           ? 'transition-[top,left,width,height,opacity] duration-200 ease-out'
           : 'transition-opacity'
@@ -526,7 +526,7 @@ export const TerminalView = memo(function TerminalView({
       }}
     >
       <div
-        className="relative flex h-full w-full flex-col overflow-hidden"
+        className="superior-terminal-surface relative flex h-full w-full flex-col overflow-hidden"
         // xterm's bundled stylesheet defaults its scroll viewport to #000. The
         // canvas is row-aligned, so a fractional row at the bottom otherwise
         // exposes that black default in light terminals. Keep the viewport and
@@ -554,7 +554,7 @@ export const TerminalView = memo(function TerminalView({
                 ? `${t('terminal.focusHint')}: ${formatChord(`ctrl+${shortcutNumber}`)}`
                 : undefined
             }
-            className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-b border-edge px-2 py-1 text-xs ${
+            className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-b border-edge px-3 py-1.5 text-xs ${
               active ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
             }`}
           >

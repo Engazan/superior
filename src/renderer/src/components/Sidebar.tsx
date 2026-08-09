@@ -403,7 +403,7 @@ export const Sidebar = memo(function Sidebar({
     return (
       <aside
         style={panelTint(tintColor)}
-        className="flex w-14 shrink-0 select-none flex-col items-stretch overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out"
+        className="superior-sidebar flex w-14 shrink-0 select-none flex-col items-stretch overflow-hidden bg-bar transition-[width] duration-200 ease-out"
       >
         {overlays}
         <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
@@ -551,13 +551,24 @@ export const Sidebar = memo(function Sidebar({
   return (
     <aside
       style={panelTint(tintColor)}
-      className="flex w-56 shrink-0 select-none flex-col overflow-hidden border-r border-edge bg-bar transition-[width] duration-200 ease-out"
+      className="superior-sidebar flex w-64 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
     >
       {overlays}
-      <div className="border-b border-edge px-2 py-2">
+      <div className="border-b border-edge px-3 pb-3 pt-3">
+        <div className="mb-3 flex items-center gap-2.5 px-1">
+          <span className="superior-brand-mark grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-[11px] font-black tracking-[-0.08em] text-panel">
+            S/
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-black tracking-tight text-fg">Superior</div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-fgmuted">
+              Agent workspace
+            </div>
+          </div>
+        </div>
         <button
           onClick={onOpenProject}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="flex w-full items-center gap-2 rounded-full border border-accentBorder bg-accentBg px-3 py-2 text-sm font-bold text-accent transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           <span className="flex h-5 w-5 items-center justify-center text-base leading-none text-accent">
             +
@@ -572,7 +583,7 @@ export const Sidebar = memo(function Sidebar({
               onChange={(event) => setWorkspaceQuery(event.target.value)}
               placeholder={t('sidebar.searchWorkspaces')}
               aria-label={t('sidebar.searchWorkspaces')}
-              className="h-7 w-full rounded-md border border-edge bg-panel pl-7 pr-7 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+              className="h-8 w-full rounded-full border border-edge bg-panel pl-8 pr-7 text-xs text-fg shadow-xs placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
             />
             {workspaceQuery && (
               <button
@@ -768,7 +779,7 @@ export const Sidebar = memo(function Sidebar({
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 py-1 pl-3 pr-2 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                              className={`group relative mx-1 flex min-h-9 cursor-pointer items-center gap-2 rounded-lg py-1 pl-3 pr-2 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : attn

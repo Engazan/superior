@@ -266,10 +266,10 @@ export function TerminalPanel({
 
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-panel">
+    <div className="flex min-h-0 flex-1 flex-col bg-panel/75">
       {/* Tab strip — one chip per grid tab. Hidden until the workspace has its first tab. */}
       {activeWorkspaceId && tabs.length > 0 && (
-        <div role="tablist" aria-label={t('tab.listLabel')} className="flex items-stretch border-b border-edge bg-bar">
+        <div role="tablist" aria-label={t('tab.listLabel')} className="flex items-center border-b border-edge bg-panel/90 px-2 py-1.5">
           <div className="flex min-w-0 items-stretch gap-px overflow-x-auto">
             {tabs.map((tab) => {
               const active = tab.id === activeTabId
@@ -295,8 +295,8 @@ export function TerminalPanel({
                     e.preventDefault()
                     setTabMenu({ id: tab.id, name: tab.name, x: e.clientX, y: e.clientY })
                   }}
-                  className={`group flex cursor-pointer items-center gap-2 border-r border-edge px-3 py-2 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-                    active ? 'bg-panel text-fg' : 'text-fgdim hover:bg-panel/60'
+                  className={`group flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                    active ? 'bg-accentBg font-semibold text-fg shadow-xs ring-1 ring-inset ring-accentBorder' : 'text-fgdim hover:bg-hover'
                   }`}
                 >
                   {tabCells.length > 0 && <TabActivityDot cells={tabCells} />}
@@ -428,7 +428,7 @@ export function TerminalPanel({
       )}
 
       {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
-      <div ref={containerRef} className="relative min-h-0 flex-1">
+      <div ref={containerRef} className="relative min-h-0 flex-1 p-1">
         {tabSessions.length === 0 &&
           (activeWorkspaceId ? (
             <AgentLauncher
