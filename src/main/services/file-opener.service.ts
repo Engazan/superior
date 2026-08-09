@@ -1,6 +1,6 @@
 import { execFile } from 'child_process'
 import { shell } from 'electron'
-import type { FileLinkTarget, FileOpener } from '@shared/types'
+import type { FileLinkTarget, FileOpener, OpenFileTargetResult } from '@shared/types'
 import { getSettings } from './settings.service'
 import { isWithinWorkspaceFolder } from './workspace.service'
 
@@ -21,7 +21,7 @@ function safePosition(value: unknown): number | undefined {
  * scheme, so their CLI runs through the user's login shell (same trick the
  * CLI-tools health check uses). 'system' defers to the OS default app.
  */
-export async function openFileTarget(raw: FileLinkTarget): Promise<{ ok: boolean; error?: string }> {
+export async function openFileTarget(raw: FileLinkTarget): Promise<OpenFileTargetResult> {
   // The renderer sends targets verbatim; nothing forces them through
   // resolveFileLink first, so re-validate here: workspace containment for the
   // path, integers for the positions.
@@ -36,6 +36,8 @@ export async function openFileTarget(raw: FileLinkTarget): Promise<{ ok: boolean
   const opener = getSettings().fileOpener
   try {
     switch (opener) {
+      case 'superior':
+        return { ok: true, openInApp: true }
       case 'system': {
         const error = await shell.openPath(target.path)
         return error ? { ok: false, error } : { ok: true }

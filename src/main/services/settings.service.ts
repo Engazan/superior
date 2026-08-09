@@ -73,6 +73,7 @@ const THEMES: ThemeMode[] = ['light', 'dark', 'system', 'transparent', 'gradient
 const LANGUAGES: Language[] = ['en', 'sk', 'cs', 'pl', 'hu']
 const USAGE_PRIMARIES: UsagePrimary[] = ['remaining', 'sevenDay', 'cost', 'tokens', 'context']
 const FILE_OPENERS: FileOpener[] = [
+  'superior',
   'system',
   'vscode',
   'cursor',

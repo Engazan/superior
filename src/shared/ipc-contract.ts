@@ -16,6 +16,7 @@ import type {
   CustomMemoryProvider,
   FileLinkTarget,
   FileOpener,
+  OpenFileTargetResult,
   FileReadOptions,
   FileReadResult,
   FileWriteResult,
@@ -142,7 +143,7 @@ export interface IpcInvokeMap {
   >
   [IPC.FS_OPEN_FILE_TARGET]: Invocation<
     [target: FileLinkTarget],
-    { ok: boolean; error?: string }
+    OpenFileTargetResult
   >
 
   [IPC.SETTINGS_GET]: Invocation<[], AppSettings>

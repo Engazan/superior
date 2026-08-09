@@ -10,7 +10,8 @@ import { insertIntoTerminal } from './terminalInput'
 import type { Command } from './commands'
 import { TooltipLayer } from './components/TooltipLayer'
 import { useConfirm, useToast } from './components/ui'
-import type { FsEntry } from './types'
+import type { FileLinkTarget, FsEntry } from './types'
+import { fileLinkTargetToEntry } from './filePreview'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, formatChord, isRecordingShortcut } from './shortcuts'
@@ -132,6 +133,12 @@ export default function App(): React.JSX.Element {
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [confirm, t, preview.setPreviewFile]
+  )
+  const openTerminalFileInPreview = useCallback(
+    (target: FileLinkTarget) => {
+      void setPreviewFileGuarded(fileLinkTargetToEntry(target))
+    },
+    [setPreviewFileGuarded]
   )
   const ws = useWorkspaceSessions({ setError, t, presets })
   // The agent-task queue: persists in main, runs here (one task per folder at
@@ -753,6 +760,7 @@ export default function App(): React.JSX.Element {
                     gridLayout={activeTab?.gridLayout}
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
+                    onOpenFileTarget={openTerminalFileInPreview}
                     onToggleMaximize={ws.toggleMaximize}
                     onClose={ws.closeSession}
                     onRestart={ws.restartSession}

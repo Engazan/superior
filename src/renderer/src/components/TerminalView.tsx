@@ -16,7 +16,7 @@ import { CloseIcon, IconButton, PencilIcon, RestartIcon, useToast } from './ui'
 import { UsageBadge } from './UsageBadge'
 import { barTint } from '../tint'
 import type { Rect } from '../gridLayout'
-import type { AgentSession } from '../types'
+import type { AgentSession, FileLinkTarget } from '../types'
 
 const FULL_RECT: Rect = { top: 0, left: 0, width: 100, height: 100 }
 const MAX_PASTED_IMAGE_BYTES = 10 * 1024 * 1024
@@ -92,6 +92,8 @@ interface Props {
   animate: boolean
   /** the user picked this session (clicked its body or bar) */
   onSelect: (id: string) => void
+  /** open a terminal file link in Superior's built-in preview editor */
+  onOpenFileTarget: (target: FileLinkTarget) => void
   onClose: (id: string) => void
   /** re-run the session's original preset command in place */
   onRestart: (id: string) => void
@@ -172,6 +174,7 @@ function propsEqual(prev: Props, next: Props): boolean {
     prev.maximized === next.maximized &&
     prev.animate === next.animate &&
     prev.onSelect === next.onSelect &&
+    prev.onOpenFileTarget === next.onOpenFileTarget &&
     prev.onClose === next.onClose &&
     prev.onRestart === next.onRestart &&
     prev.onSetNickname === next.onSetNickname &&
@@ -192,6 +195,7 @@ export const TerminalView = memo(function TerminalView({
   maximized,
   animate,
   onSelect,
+  onOpenFileTarget,
   onClose,
   onRestart,
   onSetNickname,
@@ -213,6 +217,9 @@ export const TerminalView = memo(function TerminalView({
   // Keep the latest onSelect without re-running the creation effect.
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+
+  const onOpenFileTargetRef = useRef(onOpenFileTarget)
+  onOpenFileTargetRef.current = onOpenFileTarget
 
   // Live cwd + toast for the file-link provider (registered once per session).
   const toast = useToast()
@@ -297,6 +304,7 @@ export const TerminalView = memo(function TerminalView({
     // mod+click on a file path in the output opens it in the configured editor.
     const fileLinks = registerFileLinkProvider(term, {
       getCwd: () => workingDirRef.current,
+      onOpenInApp: (target) => onOpenFileTargetRef.current(target),
       onOpenError: (message) => toastRef.current.error(message)
     })
     term.open(host)

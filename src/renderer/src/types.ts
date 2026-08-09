@@ -35,6 +35,7 @@ export type {
   CustomMemoryProvider,
   FileLinkTarget,
   FileOpener,
+  OpenFileTargetResult,
   FileReadOptions,
   FileReadResult,
   Folder,

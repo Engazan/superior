@@ -112,6 +112,7 @@ export interface AppSettings {
 
 /** Editors a terminal file link can open in ('system' = OS default app). */
 export type FileOpener =
+  | 'superior'
   | 'system'
   | 'vscode'
   | 'cursor'
@@ -125,6 +126,14 @@ export interface FileLinkTarget {
   path: string
   line?: number
   column?: number
+}
+
+/** Result of opening a terminal file link. `openInApp` hands a validated path
+ * back to the renderer so Superior can use its built-in preview editor. */
+export interface OpenFileTargetResult {
+  ok: boolean
+  error?: string
+  openInApp?: boolean
 }
 
 /** Result of persisting + registering the global hotkey. */

@@ -5,7 +5,8 @@ import {
   type FileReadOptions,
   type FileReadResult,
   type FileWriteResult,
-  type FsListResult
+  type FsListResult,
+  type OpenFileTargetResult
 } from '@shared/types'
 import {
   listDir,
@@ -81,7 +82,7 @@ export function registerFsIpc(): void {
 
   handle(
     IPC.FS_OPEN_FILE_TARGET,
-    (target: FileLinkTarget): Promise<{ ok: boolean; error?: string }> =>
+    (target: FileLinkTarget): Promise<OpenFileTargetResult> =>
       isFileLinkTarget(target)
         ? openFileTarget(target)
         : Promise.resolve({ ok: false, error: 'Invalid file target.' })

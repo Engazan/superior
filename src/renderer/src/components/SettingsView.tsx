@@ -107,6 +107,7 @@ const FILE_OPENER_OPTIONS: {
   color?: string
   monogram?: string
 }[] = [
+  { value: 'superior', label: 'Superior', color: '#e67861', monogram: 'S' },
   { value: 'system', label: '' }, // label resolved via i18n at render time
   { value: 'vscode', label: 'Visual Studio Code', color: '#007acc', monogram: 'VS' },
   { value: 'cursor', label: 'Cursor', color: '#1a1a1a', monogram: 'C' },

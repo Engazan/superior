@@ -1,4 +1,14 @@
-import type { FsEntry } from './types'
+import type { FileLinkTarget, FsEntry } from './types'
+
+/** Convert a validated terminal link into the same entry shape used by the
+ * right-sidebar file tree, including Windows paths when running cross-platform. */
+export function fileLinkTargetToEntry(target: FileLinkTarget): FsEntry {
+  return {
+    name: target.path.split(/[\\/]/).pop() || target.path,
+    path: target.path,
+    isDirectory: false
+  }
+}
 
 /** Which preview surface a file should open in. */
 export type FilePreviewType = 'code' | 'markdown' | 'json' | 'image' | 'pdf' | 'unsupported'

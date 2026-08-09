@@ -48,6 +48,7 @@ import {
   type TasksState,
   type FileLinkTarget,
   type FileOpener,
+  type OpenFileTargetResult,
   type ShellCommandInstallResult,
   type ShellCommandStatus,
   type ShortcutMap,
@@ -278,7 +279,7 @@ const api = {
   },
 
   /** Open a resolved terminal file link in the configured editor. */
-  openFileTarget(target: FileLinkTarget): Promise<{ ok: boolean; error?: string }> {
+  openFileTarget(target: FileLinkTarget): Promise<OpenFileTargetResult> {
     return ipcRenderer.invoke(IPC.FS_OPEN_FILE_TARGET, target)
   },
 

@@ -30,7 +30,13 @@ import {
   type GridLayout,
   type Divider
 } from '../gridLayout'
-import type { AgentSession, LayoutPreset, TerminalPreset, WorkspaceTab } from '../types'
+import type {
+  AgentSession,
+  FileLinkTarget,
+  LayoutPreset,
+  TerminalPreset,
+  WorkspaceTab
+} from '../types'
 
 interface Props {
   /** All sessions across every workspace — kept mounted so buffers survive workspace switches. */
@@ -59,6 +65,8 @@ interface Props {
   gridLayout: GridLayout | undefined
   presets: TerminalPreset[]
   onSelect: (id: string) => void
+  /** open a terminal file link in Superior's built-in preview editor */
+  onOpenFileTarget: (target: FileLinkTarget) => void
   /** toggle a grid cell's maximized state */
   onToggleMaximize: (id: string) => void
   onClose: (id: string) => void
@@ -108,6 +116,7 @@ export function TerminalPanel({
   gridLayout,
   presets,
   onSelect,
+  onOpenFileTarget,
   onToggleMaximize,
   onClose,
   onRestart,
@@ -488,6 +497,7 @@ export function TerminalPanel({
               maximized={s.id === maxId}
               animate={!resizing}
               onSelect={onSelect}
+              onOpenFileTarget={onOpenFileTarget}
               onClose={onClose}
               onRestart={onRestart}
               onSetNickname={onSetNickname}
