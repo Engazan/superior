@@ -39,7 +39,10 @@ export function panelTint(color: string | null | undefined): CSSProperties | und
   if (!rgb) return undefined
   const [r, g, b] = rgb
   return {
-    backgroundColor: `rgba(${r}, ${g}, ${b}, 0.08)`,
+    // Let CSS blend the tint into the theme-specific sidebar surface. Applying
+    // a translucent background inline made the light sidebar show the app's
+    // dot grid through the entire panel.
+    '--profile-panel-tint': `rgb(${r} ${g} ${b})`,
     borderRightColor: `rgba(${r}, ${g}, ${b}, 0.5)`
-  }
+  } as CSSProperties
 }

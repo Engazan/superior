@@ -90,7 +90,7 @@ function createWindow(): BrowserWindow {
     // macOS: keep the native traffic lights (inset) with a custom draggable bar.
     // Other platforms: fully frameless with our own window controls.
     ...(isMac
-      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 12, y: 10 } }
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 18, y: 23 } }
       : { frame: false }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

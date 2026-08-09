@@ -25,6 +25,7 @@
 .dark {
   --c-bar: #171624;
   --c-panel: #211f31;
+  --c-sidebar: color-mix(in srgb, var(--c-panel) 76%, var(--c-bar));
   --c-edge: #3b374d;
   --c-hover: #302d43;
   --c-fg: #fff4df;
@@ -49,29 +50,30 @@
 }
 
 .light {
-  --c-bar: #f3e2c2;
-  --c-panel: #fff8e8;
-  --c-edge: #dfcba4;
-  --c-hover: #f1d8bd;
-  --c-fg: #302d4b;
-  --c-fg2: #5c554a;
-  --c-fgdim: #766b59;
-  --c-fgmuted: #a18e69;
-  --c-accent: #bf5f43;
-  --c-accent-bg: #f1d0bd;
-  --c-accent-border: #dfa086;
-  --c-accent-solid: #c96547;
-  --c-accent-solid-hover: #af5137;
-  --c-status: #357b5f;
-  --c-status-bg: #dbe7d2;
-  --c-status-border: #9fbea1;
-  --c-danger: #a23f3c;
-  --c-danger-solid: #bd5048;
-  --c-danger-bg: #f5d4cc;
-  --c-danger-border: #dda196;
-  --c-warn: #9a6819;
-  --c-warn-bg: #f4e2ae;
-  --c-warn-border: #d5b96d;
+  --c-bar: #edf1f7;
+  --c-panel: #ffffff;
+  --c-sidebar: #f6f8fb;
+  --c-edge: #d8dee8;
+  --c-hover: #e8edf5;
+  --c-fg: #202633;
+  --c-fg2: #465064;
+  --c-fgdim: #687386;
+  --c-fgmuted: #929bab;
+  --c-accent: #bd5845;
+  --c-accent-bg: #f9e5e0;
+  --c-accent-border: #e7b2a7;
+  --c-accent-solid: #c85e49;
+  --c-accent-solid-hover: #ae4e3c;
+  --c-status: #2f7658;
+  --c-status-bg: #e3f2e9;
+  --c-status-border: #a5ceb6;
+  --c-danger: #a33d42;
+  --c-danger-solid: #bd4c52;
+  --c-danger-bg: #f9e5e6;
+  --c-danger-border: #e5b0b3;
+  --c-warn: #8b641f;
+  --c-warn-bg: #fff3d4;
+  --c-warn-border: #dfc681;
 }
 
 /* Keep the semantic Tailwind palette coupled to the same runtime CSS tokens
@@ -127,6 +129,7 @@ body,
 .transparent.light {
   --c-bar: rgba(242, 243, 245, 0.55);
   --c-panel: rgba(255, 255, 255, 0.6);
+  --c-sidebar: color-mix(in srgb, var(--c-panel) 76%, var(--c-bar));
 }
 
 /*
@@ -187,6 +190,7 @@ body,
 .gradient-light {
   --c-bar: rgba(255, 255, 255, 0.55);
   --c-panel: rgba(255, 255, 255, 0.6);
+  --c-sidebar: #fbfcff;
   /* Bumped vs. the plain light theme — over the bright gradient backdrop the
      low-alpha borders/hover washes were barely perceptible. */
   --c-edge: rgba(0, 0, 0, 0.12);
@@ -295,7 +299,11 @@ body {
 }
 
 .superior-sidebar {
-  background-color: color-mix(in srgb, var(--c-panel) 76%, var(--c-bar));
+  background-color: color-mix(
+    in srgb,
+    var(--c-sidebar) 92%,
+    var(--profile-panel-tint, var(--c-sidebar))
+  );
 }
 
 .superior-main {

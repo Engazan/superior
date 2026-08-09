@@ -102,7 +102,7 @@ interface Props {
 }
 
 // Full 16-colour ANSI palettes so program output is colourful and on-theme:
-// Catppuccin Mocha for dark, Catppuccin Latte for light.
+// Catppuccin-derived ANSI palettes, paired with the app's dark/light surfaces.
 const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
   dark: {
     background: '#1e1e2e',
@@ -127,10 +127,10 @@ const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
     brightWhite: '#a6adc8'
   },
   light: {
-    background: '#fffaf0',
-    foreground: '#302d4b',
-    cursor: '#bf5f43',
-    selectionBackground: '#f1d0bd',
+    background: '#ffffff',
+    foreground: '#202633',
+    cursor: '#bd5845',
+    selectionBackground: '#f5d6cf',
     black: '#5c5f77',
     red: '#d20f39',
     green: '#40a02b',
@@ -540,7 +540,7 @@ export const TerminalView = memo(function TerminalView({
       >
         {/* Active-cell highlight, drawn above the terminal content so it stays visible. */}
         {highlight && (
-          <div className="pointer-events-none absolute inset-0 z-10 ring-2 ring-inset ring-accent" />
+          <div className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] ring-2 ring-inset ring-accent" />
         )}
         {/* Always-visible topbar; the terminal sits below it, never behind it. */}
         {showBar && (
