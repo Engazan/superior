@@ -11,7 +11,7 @@ interface Deps {
   sessions: AgentSession[]
   setSessions: Dispatch<SetStateAction<AgentSession[]>>
   setActiveSessionId: Dispatch<SetStateAction<string | null>>
-  setMaximizedId: Dispatch<SetStateAction<string | null>>
+  clearMaximizedTab: (tabId: string) => void
 }
 
 /**
@@ -24,7 +24,7 @@ export function useWorkspaceTabs({
   sessions,
   setSessions,
   setActiveSessionId,
-  setMaximizedId
+  clearMaximizedTab
 }: Deps) {
   const confirm = useConfirm()
   const [tabsByWs, setTabsByWs] = useState<TabsState>({})
@@ -122,10 +122,9 @@ export function useWorkspaceTabs({
         : { tabs: [tab], activeTabId: tab.id }
       setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
       void window.api.setTabs(workspaceId, next)
-      setMaximizedId(null)
       setActiveSessionId(null)
     },
-    [tabsByWs, newTab, setMaximizedId, setActiveSessionId]
+    [tabsByWs, newTab, setActiveSessionId]
   )
 
   // Switch a workspace's active tab and focus that tab's most recent terminal.
@@ -136,11 +135,10 @@ export function useWorkspaceTabs({
       const next: WorkspaceTabs = { ...tabs, activeTabId: tabId }
       setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
       void window.api.setTabs(workspaceId, next)
-      setMaximizedId(null)
       const inTab = sessions.filter((session) => session.workspaceId === workspaceId && session.tabId === tabId)
       setActiveSessionId(inTab.length ? inTab[inTab.length - 1].id : null)
     },
-    [tabsByWs, sessions, setMaximizedId, setActiveSessionId]
+    [tabsByWs, sessions, setActiveSessionId]
   )
 
   const renameTab = useCallback(
@@ -197,15 +195,15 @@ export function useWorkspaceTabs({
       const next: WorkspaceTabs = { tabs: remaining, activeTabId: nextActive }
       setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
       void window.api.setTabs(workspaceId, next)
+      clearMaximizedTab(tabId)
       if (closingActive) {
-        setMaximizedId(null)
         const inTab = sessions.filter(
           (session) => session.workspaceId === workspaceId && session.tabId === nextActive
         )
         setActiveSessionId(inTab.length ? inTab[inTab.length - 1].id : null)
       }
     },
-    [tabsByWs, sessions, confirm, t, setSessions, setMaximizedId, setActiveSessionId]
+    [tabsByWs, sessions, confirm, t, setSessions, clearMaximizedTab, setActiveSessionId]
   )
 
   return {

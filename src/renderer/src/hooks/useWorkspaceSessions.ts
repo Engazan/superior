@@ -4,6 +4,14 @@ import { useConfirm } from '../components/ui'
 import { type GridLayout } from '../gridLayout'
 import { type TFunction } from '../i18n'
 import { ipcErrorMessage } from '../ipcError'
+import {
+  clearMaximizedForTab,
+  maximizedForTab,
+  removeMaximizedSession,
+  replaceMaximizedSession,
+  toggleMaximizedForTab,
+  type MaximizedByTab
+} from '../maximizedSessions'
 import { useWorkspaceTabs } from './useWorkspaceTabs'
 import {
   WORKTREE_ERROR,
@@ -44,8 +52,12 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   // True once surviving daemon sessions were adopted (auto-launch waits for this).
   const [sessionsRestored, setSessionsRestored] = useState(false)
-  // A grid cell blown up to fill the panel (null = none).
-  const [maximizedId, setMaximizedId] = useState<string | null>(null)
+  // Each tab remembers its own maximized grid cell. Tab ids are globally unique,
+  // so this naturally scopes the state to both workspace and tab.
+  const [maximizedByTab, setMaximizedByTab] = useState<MaximizedByTab>({})
+  const clearMaximizedTab = useCallback((tabId: string) => {
+    setMaximizedByTab((current) => clearMaximizedForTab(current, tabId))
+  }, [])
   const {
     tabsByWs,
     activeTabId,
@@ -56,7 +68,9 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     selectTab,
     renameTab,
     closeTab
-  } = useWorkspaceTabs({ t, sessions, setSessions, setActiveSessionId, setMaximizedId })
+  } = useWorkspaceTabs({ t, sessions, setSessions, setActiveSessionId, clearMaximizedTab })
+
+  const maximizedId = maximizedForTab(maximizedByTab, activeTabId(activeWorkspaceId))
 
   // Only the active profile's folders are shown in the sidebar; workspaces are
   // grouped under folders, so filtering folders transitively scopes everything.
@@ -642,6 +656,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       void window.api.killAgent(id)
       setSessions((curr) => curr.map((s) => (s.id === id ? res.session : s)))
       setActiveSessionId((curr) => (curr === id ? res.session.id : curr))
+      setMaximizedByTab((current) => replaceMaximizedSession(current, id, res.session.id))
     },
     [sessions, activeLaunchTarget, t, setError]
   )
@@ -671,15 +686,21 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       window.api.killAgent(id)
       setSessions((prev) => prev.filter((s) => s.id !== id))
       setActiveSessionId((curr) => (curr === id ? fallback : curr))
+      setMaximizedByTab((current) => removeMaximizedSession(current, id))
     },
     [sessions, confirm, t]
   )
 
   // Toggle a grid cell's maximized state and focus it (per-cell button).
-  const toggleMaximize = useCallback((id: string) => {
-    setMaximizedId((cur) => (cur === id ? null : id))
-    setActiveSessionId(id)
-  }, [])
+  const toggleMaximize = useCallback(
+    (id: string) => {
+      const target = sessions.find((session) => session.id === id)
+      if (!target) return
+      setMaximizedByTab((current) => toggleMaximizedForTab(current, target.tabId, id))
+      setActiveSessionId(id)
+    },
+    [sessions]
+  )
 
   // Maximize/restore the focused grid cell (keyboard shortcut) within the active tab.
   const toggleMaximizeFocused = useCallback(() => {
@@ -690,7 +711,8 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     const id = cells.some((s) => s.id === activeSessionId)
       ? (activeSessionId as string)
       : cells[0].id
-    setMaximizedId((cur) => (cur === id ? null : id))
+    if (!tabId) return
+    setMaximizedByTab((current) => toggleMaximizedForTab(current, tabId, id))
     setActiveSessionId(id)
   }, [activeWorkspaceId, activeTabId, activeSessionId, sessions])
 
@@ -706,11 +728,11 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
       const current = list.findIndex((s) => s.id === activeSessionId)
       const base = current === -1 ? 0 : current
       const next = (base + direction + list.length) % list.length
-      setMaximizedId(null)
+      if (tabId) clearMaximizedTab(tabId)
       setActiveSessionId(list[next].id)
       return true
     },
-    [activeWorkspaceId, activeTabId, sessions, activeSessionId]
+    [activeWorkspaceId, activeTabId, sessions, activeSessionId, clearMaximizedTab]
   )
 
   // Step the active workspace to the previous (-1) or next (+1) workspace within
@@ -755,11 +777,11 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         (session) => session.workspaceId === activeWorkspaceId && session.tabId === tabId
       )[index]
       if (!target) return false
-      setMaximizedId(null)
+      if (tabId) clearMaximizedTab(tabId)
       setActiveSessionId(target.id)
       return true
     },
-    [activeWorkspaceId, activeTabId, sessions]
+    [activeWorkspaceId, activeTabId, sessions, clearMaximizedTab]
   )
 
   return {
