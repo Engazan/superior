@@ -684,7 +684,11 @@ export default function App(): React.JSX.Element {
         tintColor={activeProfileColor}
       />
 
-      <div className="superior-workspace flex min-h-0 flex-1">
+      <div
+        className={`superior-workspace flex min-h-0 flex-1 ${
+          rightSidebarOpen ? 'superior-workspace--right-open' : ''
+        }`}
+      >
         {view === 'settings' ? (
           <Suspense fallback={<DeferredPanel />}>
             <SettingsView

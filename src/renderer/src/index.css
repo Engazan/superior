@@ -272,6 +272,10 @@ body {
   padding: 8px 0 8px 8px;
 }
 
+.superior-workspace--right-open {
+  padding-right: 8px;
+}
+
 .superior-right-panel {
   border: 1px solid color-mix(in srgb, var(--c-edge) 82%, white 18%);
   border-radius: 16px;
