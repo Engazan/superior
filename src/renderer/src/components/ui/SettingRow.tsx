@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 /** Bordered card that stacks {@link SettingRow}s with automatic dividers. */
 export function SettingsCard({ children }: { children: ReactNode }): React.JSX.Element {
-  return <div className="divide-y divide-edge rounded-lg border border-edge">{children}</div>
+  return <div className="settings-island divide-y divide-edge">{children}</div>
 }
 
 interface RowProps {

@@ -254,7 +254,7 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
       {integrations.length === 0 && !editing && <EmptyState title={t('integrations.empty')} />}
 
       {integrations.length > 0 && (
-        <ul className="divide-y divide-edge overflow-hidden rounded-lg border border-edge">
+        <ul className="settings-island divide-y divide-edge">
           {integrations.map((it) => (
             <li key={it.id} className="flex items-center gap-3 px-3 py-2.5">
               <ProviderLogo provider={it.provider} className="h-9 w-9" />

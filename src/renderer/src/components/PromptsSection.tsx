@@ -65,7 +65,7 @@ export function PromptsSection(): React.JSX.Element {
       ) : filteredPrompts.length === 0 ? (
         <EmptyState title={t('palette.noResults')} />
       ) : (
-        <ul className="divide-y divide-edge overflow-hidden rounded-lg border border-edge">
+        <ul className="settings-island divide-y divide-edge">
           {filteredPrompts.map((p) => (
             <li key={p.id} className="flex items-center gap-3 px-3 py-2.5">
               <div className="min-w-0 flex-1">

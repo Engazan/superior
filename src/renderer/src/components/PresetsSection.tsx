@@ -125,7 +125,7 @@ export function PresetsSection({
         actions={<Button onClick={() => setEditing('new')}>{t('presets.add')}</Button>}
       />
 
-      <div className="overflow-hidden rounded-lg border border-edge">
+      <div className="settings-island">
         <table className="w-full text-sm">
           <thead className="bg-bar text-left text-xs text-fgdim">
             <tr>

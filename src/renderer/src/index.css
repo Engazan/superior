@@ -272,8 +272,27 @@ body {
   padding: 8px 0 8px 8px;
 }
 
-.superior-workspace--right-open {
+.superior-workspace--right-open,
+.superior-workspace--settings {
   padding-right: 8px;
+}
+
+.superior-settings-panel {
+  border: 1px solid color-mix(in srgb, var(--c-edge) 82%, white 18%);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 34px color-mix(in srgb, #080b10 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
+}
+
+.settings-island {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--c-edge) 88%, white 12%);
+  border-radius: 12px;
+  background: var(--c-bar);
+  box-shadow:
+    0 6px 18px color-mix(in srgb, #080b10 5%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 24%, transparent);
 }
 
 .superior-right-panel {

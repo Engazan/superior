@@ -102,7 +102,7 @@ export function DaemonsSection({
       {list.length === 0 ? (
         <EmptyState title={query ? t('palette.noResults') : loading ? t('daemons.loading') : t('daemons.empty')} />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-edge">
+        <div className="settings-island">
           <div className="border-b border-edge bg-bar p-2">
             <input
               value={query}

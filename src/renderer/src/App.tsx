@@ -694,7 +694,7 @@ export default function App(): React.JSX.Element {
       <div
         className={`superior-workspace flex min-h-0 flex-1 ${
           rightSidebarOpen ? 'superior-workspace--right-open' : ''
-        }`}
+        } ${view === 'settings' ? 'superior-workspace--settings' : ''}`}
       >
         {view === 'settings' ? (
           <Suspense fallback={<DeferredPanel />}>

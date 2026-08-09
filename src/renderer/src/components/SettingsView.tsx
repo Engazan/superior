@@ -253,109 +253,117 @@ function AppearanceSection(): React.JSX.Element {
     <div className="max-w-2xl">
       <SectionHeader title={t('settings.appearance')} description={t('appearance.desc')} />
 
-      <SettingsCard>
-        <SettingRow title={t('appearance.theme')} description={t('appearance.themeDesc')}>
-          <SegmentedControl
-            aria-label={t('appearance.theme')}
-            size="sm"
-            wrap
-            options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
-            value={mode}
-            onChange={setMode}
-          />
-        </SettingRow>
-
-        <SettingRow title={t('settings.language')} description={t('language.desc')}>
-          <SegmentedControl
-            aria-label={t('settings.language')}
-            size="sm"
-            options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
-            value={lang}
-            onChange={setLang}
-          />
-        </SettingRow>
-
-        <SettingRow
-          title={t('appearance.sidebarWorkspaceTools')}
-          description={t('appearance.sidebarWorkspaceToolsDesc')}
-        >
-          <Toggle
-            checked={sidebarWorkspaceTools === true}
-            onChange={toggleSidebarWorkspaceTools}
-            label={t('appearance.sidebarWorkspaceTools')}
-          />
-        </SettingRow>
-
-        <SettingRow
-          title={t('appearance.attentionColor')}
-          description={t('appearance.attentionColorDesc')}
-        >
-          {/* invisible (not unmounted) when at the default, so the hex label
-              and swatch don't shift when the button appears */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetAttentionColor}
-            className={isDefaultAttention ? 'invisible' : ''}
-            aria-hidden={isDefaultAttention || undefined}
-            tabIndex={isDefaultAttention ? -1 : undefined}
-          >
-            {t('appearance.resetColor')}
-          </Button>
-          <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
-          <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge">
-            <span
-              className="attention-pulse-dot h-5 w-5 rounded-full"
-              style={{ ['--attn' as string]: attentionColor }}
+      <div className="space-y-3">
+        <SettingsCard>
+          <SettingRow title={t('appearance.theme')} description={t('appearance.themeDesc')}>
+            <SegmentedControl
+              aria-label={t('appearance.theme')}
+              size="sm"
+              wrap
+              options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
+              value={mode}
+              onChange={setMode}
             />
-            <input
-              type="color"
-              value={attentionColor}
-              onChange={(e) => setAttentionColor(e.target.value)}
-              className="absolute inset-0 cursor-pointer opacity-0"
-              aria-label={t('appearance.attentionColor')}
-            />
-          </label>
-        </SettingRow>
-
-        <SettingRow title={t('fileOpener.title')} description={t('fileOpener.desc')}>
-          <FileOpenerSelect value={fileOpener} onChange={changeFileOpener} />
-        </SettingRow>
-
-        <SettingRow title={t('notify.setting')} description={t('notify.settingDesc')}>
-          <Toggle
-            checked={notifications === true}
-            onChange={toggleNotifications}
-            label={t('notify.setting')}
-          />
-        </SettingRow>
-
-        <SettingRow title={t('usage.tracking')} description={t('usage.trackingDesc')}>
-          <Toggle
-            checked={usageTracking === true}
-            onChange={toggleUsageTracking}
-            label={t('usage.tracking')}
-          />
-        </SettingRow>
-
-        {usageTracking === true && (
-          <SettingRow title={t('usage.primary')} description={t('usage.primaryDesc')}>
-            {/* Fixed-width wrapper — the Select itself is w-full by design. */}
-            <div className="w-56">
-              <Select
-                value={usagePrimary}
-                onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
-              >
-                {USAGE_PRIMARY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {t(opt.labelKey)}
-                  </option>
-                ))}
-              </Select>
-            </div>
           </SettingRow>
-        )}
-      </SettingsCard>
+
+          <SettingRow title={t('settings.language')} description={t('language.desc')}>
+            <SegmentedControl
+              aria-label={t('settings.language')}
+              size="sm"
+              options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
+              value={lang}
+              onChange={setLang}
+            />
+          </SettingRow>
+        </SettingsCard>
+
+        <SettingsCard>
+          <SettingRow
+            title={t('appearance.sidebarWorkspaceTools')}
+            description={t('appearance.sidebarWorkspaceToolsDesc')}
+          >
+            <Toggle
+              checked={sidebarWorkspaceTools === true}
+              onChange={toggleSidebarWorkspaceTools}
+              label={t('appearance.sidebarWorkspaceTools')}
+            />
+          </SettingRow>
+
+          <SettingRow
+            title={t('appearance.attentionColor')}
+            description={t('appearance.attentionColorDesc')}
+          >
+            {/* invisible (not unmounted) when at the default, so the hex label
+                and swatch don't shift when the button appears */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetAttentionColor}
+              className={isDefaultAttention ? 'invisible' : ''}
+              aria-hidden={isDefaultAttention || undefined}
+              tabIndex={isDefaultAttention ? -1 : undefined}
+            >
+              {t('appearance.resetColor')}
+            </Button>
+            <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
+            <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge">
+              <span
+                className="attention-pulse-dot h-5 w-5 rounded-full"
+                style={{ ['--attn' as string]: attentionColor }}
+              />
+              <input
+                type="color"
+                value={attentionColor}
+                onChange={(e) => setAttentionColor(e.target.value)}
+                className="absolute inset-0 cursor-pointer opacity-0"
+                aria-label={t('appearance.attentionColor')}
+              />
+            </label>
+          </SettingRow>
+        </SettingsCard>
+
+        <SettingsCard>
+          <SettingRow title={t('fileOpener.title')} description={t('fileOpener.desc')}>
+            <FileOpenerSelect value={fileOpener} onChange={changeFileOpener} />
+          </SettingRow>
+
+          <SettingRow title={t('notify.setting')} description={t('notify.settingDesc')}>
+            <Toggle
+              checked={notifications === true}
+              onChange={toggleNotifications}
+              label={t('notify.setting')}
+            />
+          </SettingRow>
+        </SettingsCard>
+
+        <SettingsCard>
+          <SettingRow title={t('usage.tracking')} description={t('usage.trackingDesc')}>
+            <Toggle
+              checked={usageTracking === true}
+              onChange={toggleUsageTracking}
+              label={t('usage.tracking')}
+            />
+          </SettingRow>
+
+          {usageTracking === true && (
+            <SettingRow title={t('usage.primary')} description={t('usage.primaryDesc')}>
+              {/* Fixed-width wrapper — the Select itself is w-full by design. */}
+              <div className="w-56">
+                <Select
+                  value={usagePrimary}
+                  onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
+                >
+                  {USAGE_PRIMARY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {t(opt.labelKey)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </SettingRow>
+          )}
+        </SettingsCard>
+      </div>
     </div>
   )
 }
@@ -422,9 +430,9 @@ export function SettingsView({
   ]
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 gap-2">
       {/* Settings sidebar */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-bar">
+      <aside className="superior-settings-panel flex w-56 shrink-0 flex-col overflow-hidden bg-bar">
         <div className="border-b border-edge px-2 py-2">
           <button
             onClick={onBack}
@@ -471,7 +479,7 @@ export function SettingsView({
       </aside>
 
       {/* Settings content */}
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6 lg:p-8">
+      <div className="superior-settings-panel min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6 lg:p-8">
         <div className="mx-auto w-full max-w-6xl">
           {section === 'appearance' && <AppearanceSection />}
           {section === 'integrations' && (

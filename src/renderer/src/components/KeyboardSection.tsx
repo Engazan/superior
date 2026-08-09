@@ -121,7 +121,7 @@ export function KeyboardSection(): React.JSX.Element {
         </SettingsCard>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-edge">
+      <div className="settings-island">
         <div className="flex items-center gap-3 border-b border-edge bg-bar px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
           <span className="min-w-0 flex-1">{t('keyboard.colAction')}</span>
           <span className="shrink-0">{t('keyboard.colShortcut')}</span>
