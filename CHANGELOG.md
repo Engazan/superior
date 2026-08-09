@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.5] - 2026-08-10
+
+### Added
+
+- **Open terminal file links inside Superior.** A new `Superior` choice under
+  “Open files with” sends validated Cmd/Ctrl-clicked paths to the built-in file
+  preview and editor, using the same flow as opening a file from the Files panel.
+- **Optional workspace tools in the sidebar.** Workspace search, favorites and
+  recently visited shortcuts can now be enabled from Appearance settings and
+  remain hidden by default for a calmer sidebar.
+
+### Changed
+
+- **A cohesive card-and-island interface.** The title bar, workspace sidebar,
+  terminal grid, right panel and Settings now share rounded floating surfaces,
+  consistent spacing and cleaner parent backgrounds. Settings navigation,
+  controls, tables and lists are split into distinct island panels.
+- **Refined light and dark themes.** The light palette is cleaner and less
+  yellow, the dark palette has stronger depth and contrast, and terminal chrome,
+  window controls and sidebar surfaces now fit both themes more consistently.
+
+### Fixed
+
+- **Maximized terminals are remembered per workspace tab.** Each tab can keep
+  one independent maximized terminal, so maximizing in another workspace or tab
+  no longer restores the previous one. Closing a tab cleans up only its state,
+  while restarting a terminal preserves its maximized state.
+- **Panel and terminal edge artifacts.** The right panel keeps its outer inset,
+  terminal cells sit flush against the intended edge, and stray parent, lower
+  panel and corner backgrounds no longer show through rounded terminal borders.
+- **Profile and window chrome interactions.** Focused profile fields and the Add
+  profile action no longer clip, profile accent changes apply immediately, and
+  window controls and top-bar separators align with the redesigned chrome.
+
 ## [0.19.4] - 2026-08-06
 
 ### Added
