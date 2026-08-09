@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useI18n } from '../i18n'
-import { panelTint } from '../tint'
 import { useAttentionColor } from '../attentionColor'
 import { useBusyWorkspaces, useAttentionWorkspaces } from '../activityStore'
 import {
@@ -38,8 +37,6 @@ import type { WorkspaceGitStat } from '../hooks/useWorkspaceGitStats'
 import type { Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
-  /** Hex tint of the active profile; washes the whole rail when set. */
-  tintColor?: string | null
   folders: Folder[]
   workspaces: Workspace[]
   activeWorkspaceId: string | null
@@ -73,7 +70,6 @@ interface Props {
 type MenuAnchor = HTMLElement | { x: number; y: number }
 
 export const Sidebar = memo(function Sidebar({
-  tintColor,
   folders,
   workspaces,
   activeWorkspaceId,
@@ -402,7 +398,6 @@ export const Sidebar = memo(function Sidebar({
   if (collapsed) {
     return (
       <aside
-        style={panelTint(tintColor)}
         className="superior-sidebar flex w-14 shrink-0 select-none flex-col items-stretch overflow-hidden bg-bar transition-[width] duration-200 ease-out"
       >
         {overlays}
@@ -550,22 +545,10 @@ export const Sidebar = memo(function Sidebar({
 
   return (
     <aside
-      style={panelTint(tintColor)}
       className="superior-sidebar flex w-64 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
     >
       {overlays}
       <div className="border-b border-edge px-3 pb-3 pt-3">
-        <div className="mb-3 flex items-center gap-2.5 px-1">
-          <span className="superior-brand-mark grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-[11px] font-black tracking-[-0.08em] text-panel">
-            S/
-          </span>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-black tracking-tight text-fg">Superior</div>
-            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-fgmuted">
-              Agent workspace
-            </div>
-          </div>
-        </div>
         <button
           onClick={onOpenProject}
           className="flex w-full items-center gap-2 rounded-full border border-accentBorder bg-accentBg px-3 py-2 text-sm font-bold text-accent transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"

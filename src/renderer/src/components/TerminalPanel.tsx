@@ -428,7 +428,7 @@ export function TerminalPanel({
       )}
 
       {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
-      <div ref={containerRef} className="relative min-h-0 flex-1 p-1">
+      <div ref={containerRef} className="relative min-h-0 flex-1 py-1 pl-1">
         {tabSessions.length === 0 &&
           (activeWorkspaceId ? (
             <AgentLauncher

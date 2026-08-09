@@ -105,26 +105,26 @@ interface Props {
 // Catppuccin-derived ANSI palettes, paired with the app's dark/light surfaces.
 const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
   dark: {
-    background: '#1e1e2e',
-    foreground: '#cdd6f4',
-    cursor: '#f5e0dc',
-    selectionBackground: '#585b70',
-    black: '#45475a',
-    red: '#f38ba8',
-    green: '#a6e3a1',
-    yellow: '#f9e2af',
-    blue: '#89b4fa',
-    magenta: '#f5c2e7',
-    cyan: '#94e2d5',
-    white: '#bac2de',
-    brightBlack: '#585b70',
-    brightRed: '#f38ba8',
-    brightGreen: '#a6e3a1',
-    brightYellow: '#f9e2af',
-    brightBlue: '#89b4fa',
-    brightMagenta: '#f5c2e7',
-    brightCyan: '#94e2d5',
-    brightWhite: '#a6adc8'
+    background: '#12171f',
+    foreground: '#e6ebf2',
+    cursor: '#f08a72',
+    selectionBackground: '#344052',
+    black: '#6b7687',
+    red: '#ff7f88',
+    green: '#7bd39b',
+    yellow: '#e8bf73',
+    blue: '#83adff',
+    magenta: '#d1a2f4',
+    cyan: '#6bcbd3',
+    white: '#cbd3df',
+    brightBlack: '#8c97a8',
+    brightRed: '#ff9aa1',
+    brightGreen: '#98e0b0',
+    brightYellow: '#f2d18f',
+    brightBlue: '#a2c1ff',
+    brightMagenta: '#dfb9f8',
+    brightCyan: '#8bdce1',
+    brightWhite: '#f4f7fb'
   },
   light: {
     background: '#ffffff',
@@ -199,6 +199,7 @@ export const TerminalView = memo(function TerminalView({
   onExit
 }: Props): React.JSX.Element {
   const r = rect ?? FULL_RECT
+  const flushRight = r.left + r.width >= 99.999
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -505,7 +506,7 @@ export const TerminalView = memo(function TerminalView({
 
   return (
     <div
-      className={`superior-terminal-cell absolute ${
+      className={`superior-terminal-cell absolute ${flushRight ? 'superior-terminal-cell--flush-right' : ''} ${
         animate
           ? 'transition-[top,left,width,height,opacity] duration-200 ease-out'
           : 'transition-opacity'

@@ -707,7 +707,6 @@ export default function App(): React.JSX.Element {
         ) : (
           <>
             <Sidebar
-              tintColor={activeProfileColor}
               folders={ws.visibleFolders}
               workspaces={ws.workspaces}
               activeWorkspaceId={ws.activeWorkspaceId}

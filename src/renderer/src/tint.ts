@@ -27,22 +27,3 @@ export function barTint(
     borderBottomColor: `rgba(${r}, ${g}, ${b}, 0.7)`
   }
 }
-
-/**
- * Tint for a full panel (the sidebar): a faint wash over the panel background
- * plus a saturated right border, so the active profile's color reads down the
- * whole rail without overpowering the content.
- */
-export function panelTint(color: string | null | undefined): CSSProperties | undefined {
-  if (!color) return undefined
-  const rgb = hexToRgb(color)
-  if (!rgb) return undefined
-  const [r, g, b] = rgb
-  return {
-    // Let CSS blend the tint into the theme-specific sidebar surface. Applying
-    // a translucent background inline made the light sidebar show the app's
-    // dot grid through the entire panel.
-    '--profile-panel-tint': `rgb(${r} ${g} ${b})`,
-    borderRightColor: `rgba(${r}, ${g}, ${b}, 0.5)`
-  } as CSSProperties
-}

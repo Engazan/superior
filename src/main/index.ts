@@ -84,7 +84,7 @@ function createWindow(): BrowserWindow {
     minWidth: 760,
     minHeight: 480,
     show: false,
-    backgroundColor: vibrant ? '#00000000' : '#181825',
+    backgroundColor: vibrant ? '#00000000' : '#0f131a',
     ...(vibrant ? { vibrancy: 'fullscreen-ui' as const } : {}),
     title: 'Superior',
     // macOS: keep the native traffic lights (inset) with a custom draggable bar.
