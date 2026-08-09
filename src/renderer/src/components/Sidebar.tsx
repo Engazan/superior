@@ -110,11 +110,13 @@ export const Sidebar = memo(function Sidebar({
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [favoriteWorkspaceIds, setFavoriteWorkspaceIds] = useState<Set<string>>(new Set())
   const [recentWorkspaceIds, setRecentWorkspaceIds] = useState<string[]>([])
+  const [workspaceToolsVisible, setWorkspaceToolsVisible] = useState(false)
 
   useEffect(() => {
     void window.api.getSettings().then((settings) => {
       setFavoriteWorkspaceIds(new Set(settings.ui.favoriteWorkspaceIds ?? []))
       setRecentWorkspaceIds(settings.ui.recentWorkspaceIds ?? [])
+      setWorkspaceToolsVisible(settings.ui.sidebarWorkspaceTools)
     })
   }, [])
 
@@ -558,50 +560,55 @@ export const Sidebar = memo(function Sidebar({
           </span>
           {t('sidebar.openProject')}
         </button>
-        <div className="mt-2 space-y-1.5">
-          <div className="relative">
-            <SearchIcon size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-fgmuted" />
-            <input
-              value={workspaceQuery}
-              onChange={(event) => setWorkspaceQuery(event.target.value)}
-              placeholder={t('sidebar.searchWorkspaces')}
-              aria-label={t('sidebar.searchWorkspaces')}
-              className="h-8 w-full rounded-full border border-edge bg-panel pl-8 pr-7 text-xs text-fg shadow-xs placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-            />
-            {workspaceQuery && (
+        {workspaceToolsVisible && (
+          <div className="mt-2 space-y-1.5">
+            <div className="relative">
+              <SearchIcon
+                size={13}
+                className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-fgmuted"
+              />
+              <input
+                value={workspaceQuery}
+                onChange={(event) => setWorkspaceQuery(event.target.value)}
+                placeholder={t('sidebar.searchWorkspaces')}
+                aria-label={t('sidebar.searchWorkspaces')}
+                className="h-8 w-full rounded-full border border-edge bg-panel pl-8 pr-7 text-xs text-fg shadow-xs placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+              />
+              {workspaceQuery && (
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceQuery('')}
+                  aria-label={t('sidebar.clearSearch')}
+                  title={t('sidebar.clearSearch')}
+                  className="absolute right-1 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setWorkspaceQuery('')}
-                aria-label={t('sidebar.clearSearch')}
-                title={t('sidebar.clearSearch')}
-                className="absolute right-1 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                onClick={() => setFavoritesOnly((value) => !value)}
+                aria-pressed={favoritesOnly}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${favoritesOnly ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'}`}
               >
-                ×
+                <StarIcon size={12} className={favoritesOnly ? 'fill-current' : ''} />
+                {t('sidebar.filterFavorites')}
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkspaceQuery('')
+                  setFavoritesOnly(false)
+                }}
+                className="rounded px-1.5 py-1 text-[11px] text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+              >
+                {t('sidebar.showAll')}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setFavoritesOnly((value) => !value)}
-              aria-pressed={favoritesOnly}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${favoritesOnly ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'}`}
-            >
-              <StarIcon size={12} className={favoritesOnly ? 'fill-current' : ''} />
-              {t('sidebar.filterFavorites')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setWorkspaceQuery('')
-                setFavoritesOnly(false)
-              }}
-              className="rounded px-1.5 py-1 text-[11px] text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-            >
-              {t('sidebar.showAll')}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto py-2">
@@ -617,7 +624,10 @@ export const Sidebar = memo(function Sidebar({
           </div>
         ) : (
           <div className="space-y-3">
-            {!workspaceQuery && !favoritesOnly && recentWorkspaces.length > 0 && (
+            {workspaceToolsVisible &&
+              !workspaceQuery &&
+              !favoritesOnly &&
+              recentWorkspaces.length > 0 && (
               <div className="border-b border-edge px-3 pb-2">
                 <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fgmuted">
                   {t('sidebar.recentlyVisited')}
@@ -842,33 +852,35 @@ export const Sidebar = memo(function Sidebar({
                               {/* Keep the two lightweight row actions discoverable. */}
                               {editingId !== ws.id && (
                                 <>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleFavorite(ws.id)
-                                    }}
-                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                                      favoriteWorkspaceIds.has(ws.id)
-                                        ? 'text-accent opacity-100'
-                                        : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-                                    }`}
-                                    aria-label={
-                                      favoriteWorkspaceIds.has(ws.id)
-                                        ? t('sidebar.unfavorite')
-                                        : t('sidebar.favorite')
-                                    }
-                                    title={
-                                      favoriteWorkspaceIds.has(ws.id)
-                                        ? t('sidebar.unfavorite')
-                                        : t('sidebar.favorite')
-                                    }
-                                    aria-pressed={favoriteWorkspaceIds.has(ws.id)}
-                                  >
-                                    <StarIcon
-                                      size={12}
-                                      className={favoriteWorkspaceIds.has(ws.id) ? 'fill-current' : ''}
-                                    />
-                                  </button>
+                                  {workspaceToolsVisible && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        toggleFavorite(ws.id)
+                                      }}
+                                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                                        favoriteWorkspaceIds.has(ws.id)
+                                          ? 'text-accent opacity-100'
+                                          : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                                      }`}
+                                      aria-label={
+                                        favoriteWorkspaceIds.has(ws.id)
+                                          ? t('sidebar.unfavorite')
+                                          : t('sidebar.favorite')
+                                      }
+                                      title={
+                                        favoriteWorkspaceIds.has(ws.id)
+                                          ? t('sidebar.unfavorite')
+                                          : t('sidebar.favorite')
+                                      }
+                                      aria-pressed={favoriteWorkspaceIds.has(ws.id)}
+                                    >
+                                      <StarIcon
+                                        size={12}
+                                        className={favoriteWorkspaceIds.has(ws.id) ? 'fill-current' : ''}
+                                      />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()

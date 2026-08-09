@@ -52,7 +52,8 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
 ]
 const DEFAULT_UI: UiState = {
   sidebarCollapsed: false,
-  rightSidebarOpen: false
+  rightSidebarOpen: false,
+  sidebarWorkspaceTools: false
 }
 /** Catppuccin peach — a warm "done" tint that reads against the dark UI. */
 const DEFAULT_ATTENTION_COLOR = '#fab387'
@@ -114,6 +115,8 @@ function normalizeUi(raw: unknown): UiState {
     const obj = raw as Record<string, unknown>
     if (typeof obj.sidebarCollapsed === 'boolean') next.sidebarCollapsed = obj.sidebarCollapsed
     if (typeof obj.rightSidebarOpen === 'boolean') next.rightSidebarOpen = obj.rightSidebarOpen
+    if (typeof obj.sidebarWorkspaceTools === 'boolean')
+      next.sidebarWorkspaceTools = obj.sidebarWorkspaceTools
     if (typeof obj.rightPanelTab === 'string' && RIGHT_PANEL_TABS.includes(obj.rightPanelTab))
       next.rightPanelTab = obj.rightPanelTab as UiState['rightPanelTab']
     const normalizeIds = (value: unknown, limit: number): string[] | undefined => {

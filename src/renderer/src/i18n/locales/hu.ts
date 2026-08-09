@@ -233,6 +233,9 @@ export const hu: Record<MessageKey, string> = {
   'appearance.theme': 'Téma',
   'appearance.themeDesc':
     'Válaszd ki az alkalmazás megjelenését. A rendszer az operációs rendszer beállítását követi.',
+  'appearance.sidebarWorkspaceTools': 'Munkaterület-eszközök az oldalsávban',
+  'appearance.sidebarWorkspaceToolsDesc':
+    'Munkaterület-keresés, kedvencek szűrő és legutóbb megnyitott elemek megjelenítése az oldalsávban.',
   'appearance.attentionColor': 'Figyelmeztető szín',
   'appearance.attentionColorDesc':
     'Az a szín, amellyel egy munkaterület füle villog, amikor egy terminálja befejezi a munkát, miközben máshol vagy.',

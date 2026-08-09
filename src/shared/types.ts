@@ -67,6 +67,8 @@ export type RightPanelTab = 'files' | 'changes' | 'history' | 'tasks'
 export interface UiState {
   sidebarCollapsed: boolean
   rightSidebarOpen: boolean
+  /** Show workspace search, favorites, and recent shortcuts in the sidebar. */
+  sidebarWorkspaceTools: boolean
   /** Last-active right-panel tab, restored on reopen. */
   rightPanelTab?: RightPanelTab
   /** Workspaces the user pinned in the sidebar. */

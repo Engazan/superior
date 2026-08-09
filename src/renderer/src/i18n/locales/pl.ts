@@ -233,6 +233,9 @@ export const pl: Record<MessageKey, string> = {
   'appearance.theme': 'Motyw',
   'appearance.themeDesc':
     'Wybierz wygląd aplikacji. System podąża za ustawieniem systemu operacyjnego.',
+  'appearance.sidebarWorkspaceTools': 'Narzędzia workspace w panelu bocznym',
+  'appearance.sidebarWorkspaceToolsDesc':
+    'Pokaż wyszukiwanie, filtr ulubionych i ostatnio odwiedzane workspace w panelu bocznym.',
   'appearance.attentionColor': 'Kolor powiadomienia',
   'appearance.attentionColorDesc':
     'Kolor, którym pulsuje karta przestrzeni roboczej, gdy jeden z jej terminali skończy pracę, a Ciebie nie ma.',

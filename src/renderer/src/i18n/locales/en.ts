@@ -229,6 +229,9 @@ export const en = {
   'appearance.desc': 'Theme, language, and how the app signals activity.',
   'appearance.theme': 'Theme',
   'appearance.themeDesc': 'Choose how the app looks. System follows your operating system setting.',
+  'appearance.sidebarWorkspaceTools': 'Sidebar workspace tools',
+  'appearance.sidebarWorkspaceToolsDesc':
+    'Show workspace search, favorites filters, and recently visited shortcuts in the sidebar.',
   'appearance.attentionColor': 'Attention color',
   'appearance.attentionColorDesc':
     "Color a workspace tab pulses with when one of its terminals finishes while you're elsewhere.",

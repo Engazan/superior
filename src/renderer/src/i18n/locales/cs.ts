@@ -233,6 +233,9 @@ export const cs: Record<MessageKey, string> = {
   'appearance.theme': 'Motiv',
   'appearance.themeDesc':
     'Vyberte, jak má aplikace vypadat. Systém se řídí nastavením operačního systému.',
+  'appearance.sidebarWorkspaceTools': 'Nástroje workspaců v bočním panelu',
+  'appearance.sidebarWorkspaceToolsDesc':
+    'Zobrazit vyhledávání, filtr oblíbených a naposledy navštívené workspaces v bočním panelu.',
   'appearance.attentionColor': 'Barva upozornění',
   'appearance.attentionColorDesc':
     'Barva, kterou bliká karta pracovního prostoru, když některý jeho terminál dokončí práci a vy jste jinde.',

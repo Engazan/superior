@@ -212,11 +212,13 @@ function AppearanceSection(): React.JSX.Element {
 
   const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean | null>(null)
+  const [sidebarWorkspaceTools, setSidebarWorkspaceTools] = useState<boolean | null>(null)
   const [fileOpener, setFileOpenerState] = useState<FileOpener>('system')
   useEffect(() => {
     window.api.getSettings().then((s) => {
       setUsageTracking(s.usageTracking)
       setNotifications(s.notifications)
+      setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools)
       setFileOpenerState(s.fileOpener)
     })
   }, [])
@@ -237,6 +239,13 @@ function AppearanceSection(): React.JSX.Element {
     if (next) primeUsageStore()
     else clearUsageStore()
     window.api.setUsageTracking(next).then((s) => setUsageTracking(s.usageTracking))
+  }
+
+  const toggleSidebarWorkspaceTools = (next: boolean): void => {
+    setSidebarWorkspaceTools(next)
+    window.api
+      .setUiState({ sidebarWorkspaceTools: next })
+      .then((s) => setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools))
   }
 
   return (
@@ -262,6 +271,17 @@ function AppearanceSection(): React.JSX.Element {
             options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
             value={lang}
             onChange={setLang}
+          />
+        </SettingRow>
+
+        <SettingRow
+          title={t('appearance.sidebarWorkspaceTools')}
+          description={t('appearance.sidebarWorkspaceToolsDesc')}
+        >
+          <Toggle
+            checked={sidebarWorkspaceTools === true}
+            onChange={toggleSidebarWorkspaceTools}
+            label={t('appearance.sidebarWorkspaceTools')}
           />
         </SettingRow>
 
