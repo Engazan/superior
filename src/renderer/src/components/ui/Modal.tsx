@@ -109,7 +109,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-6 backdrop-blur-xs"
+      className="fixed inset-0 z-150 flex items-center justify-center bg-black/55 p-6 backdrop-blur-xs"
       onMouseDown={(e) => {
         if (dismissable && e.target === e.currentTarget) onClose()
       }}

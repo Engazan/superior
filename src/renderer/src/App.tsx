@@ -16,6 +16,7 @@ import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
 import { useShortcuts, eventToChord, formatChord, isRecordingShortcut } from './shortcuts'
 import { overlayCount } from './overlayStack'
+import { advanceDoubleShift } from './doubleShift'
 import { useGitStatus } from './hooks/useGitStatus'
 import { useWorkspaceGitStats } from './hooks/useWorkspaceGitStats'
 import { usePresets } from './hooks/usePresets'
@@ -48,6 +49,11 @@ const FilePreviewPanel = lazy(() =>
 )
 const CommandPalette = lazy(() =>
   import('./components/CommandPalette').then(({ CommandPalette }) => ({ default: CommandPalette }))
+)
+const FileSearchPalette = lazy(() =>
+  import('./components/FileSearchPalette').then(({ FileSearchPalette }) => ({
+    default: FileSearchPalette
+  }))
 )
 const ProfileManager = lazy(() =>
   import('./components/ProfileManager').then(({ ProfileManager }) => ({ default: ProfileManager }))
@@ -90,6 +96,8 @@ export default function App(): React.JSX.Element {
     setLauncherOpen,
     searchOpen,
     setSearchOpen,
+    fileSearchOpen,
+    setFileSearchOpen,
     paletteOpen,
     setPaletteOpen,
     palettePromptsOpen,
@@ -109,6 +117,8 @@ export default function App(): React.JSX.Element {
   const { presets } = presetsApi
   const layoutPresets = useLayoutPresets()
   const preview = usePreviewPane()
+  const { setPreviewFile, showPreview, hidePreview } = preview
+  const currentPreviewPath = preview.previewFile?.path
   const confirm = useConfirm()
 
   // Unsaved-edit guard for the file preview: switching to another file or
@@ -120,7 +130,11 @@ export default function App(): React.JSX.Element {
     setPreviewDirty(dirty)
   }, [])
   const setPreviewFileGuarded = useCallback(
-    async (file: FsEntry | null) => {
+    async (file: FsEntry | null): Promise<boolean> => {
+      if (file && file.path === currentPreviewPath) {
+        showPreview()
+        return true
+      }
       if (previewDirtyRef.current) {
         const ok = await confirm({
           title: t('preview.unsavedTitle'),
@@ -128,14 +142,14 @@ export default function App(): React.JSX.Element {
           confirmLabel: t('preview.discard'),
           tone: 'danger'
         })
-        if (!ok) return
+        if (!ok) return false
         previewDirtyRef.current = false
         setPreviewDirty(false)
       }
-      preview.setPreviewFile(file)
+      setPreviewFile(file)
+      return true
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [confirm, t, preview.setPreviewFile]
+    [confirm, currentPreviewPath, setPreviewFile, showPreview, t]
   )
   const openTerminalFileInPreview = useCallback(
     (target: FileLinkTarget) => {
@@ -490,7 +504,6 @@ export default function App(): React.JSX.Element {
 
   // Stable tab handlers for the terminal panel (they close over the active workspace).
   const { activeWorkspaceId, selectTab, addTab, closeTab, renameTab } = ws
-  const { hidePreview } = preview
   const onSelectTab = useCallback(
     (id: string) => {
       hidePreview()
@@ -516,9 +529,37 @@ export default function App(): React.JSX.Element {
 
   // Global keyboard shortcuts. Capture phase so they win over a focused terminal;
   // suppressed while a binding is being recorded in settings.
+  const lastShiftAtRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (
+      view !== 'main' ||
+      launcherOpen ||
+      searchOpen ||
+      fileSearchOpen ||
+      paletteOpen ||
+      palettePromptsOpen ||
+      projectModalOpen ||
+      profileManagerOpen
+    ) {
+      lastShiftAtRef.current = null
+    }
+  }, [
+    view,
+    launcherOpen,
+    searchOpen,
+    fileSearchOpen,
+    paletteOpen,
+    palettePromptsOpen,
+    projectModalOpen,
+    profileManagerOpen
+  ])
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.repeat || isRecordingShortcut()) return
+      if (isRecordingShortcut()) {
+        lastShiftAtRef.current = null
+        return
+      }
       // While any overlay is open (palette, launcher, modals, menus…), global
       // chords must not reach through it — ⌘W behind a modal would kill the
       // focused terminal. Only "toggle palette closed" stays live; each overlay
@@ -526,11 +567,27 @@ export default function App(): React.JSX.Element {
       const appOverlayOpen =
         launcherOpen ||
         searchOpen ||
+        fileSearchOpen ||
         paletteOpen ||
         palettePromptsOpen ||
         projectModalOpen ||
         profileManagerOpen
       const anyOverlayOpen = appOverlayOpen || overlayCount() > 0
+
+      if (anyOverlayOpen || view !== 'main' || !ws.effectiveDir) {
+        lastShiftAtRef.current = null
+      } else if (!e.repeat) {
+        const doubleShift = advanceDoubleShift(lastShiftAtRef.current, e.key, performance.now())
+        lastShiftAtRef.current = doubleShift.lastShiftAt
+        if (doubleShift.triggered) {
+          e.preventDefault()
+          e.stopPropagation()
+          setFileSearchOpen(true)
+          return
+        }
+      }
+
+      if (e.repeat) return
       if (anyOverlayOpen) {
         const chord = eventToChord(e)
         if (chord && chord === shortcuts.openPalette && paletteOpen) {
@@ -655,6 +712,7 @@ export default function App(): React.JSX.Element {
     view,
     launcherOpen,
     searchOpen,
+    fileSearchOpen,
     paletteOpen,
     palettePromptsOpen,
     projectModalOpen,
@@ -663,6 +721,7 @@ export default function App(): React.JSX.Element {
     ws.activeWorkspaceId,
     ws.activeLaunchTarget,
     ws.activeSessionId,
+    ws.effectiveDir,
     ws.focusGridCell,
     ws.toggleMaximizeFocused,
     ws.closeSession,
@@ -860,6 +919,18 @@ export default function App(): React.JSX.Element {
           sessionId={ws.activeSessionId}
           onClose={() => setSearchOpen(false)}
         />
+      )}
+
+      {view === 'main' && fileSearchOpen && ws.effectiveDir && (
+        <Suspense fallback={null}>
+          <FileSearchPalette
+            folderPath={ws.effectiveDir}
+            onOpenFile={async (file) => {
+              if (await setPreviewFileGuarded(file)) setFileSearchOpen(false)
+            }}
+            onClose={() => setFileSearchOpen(false)}
+          />
+        </Suspense>
       )}
 
       {paletteOpen && (

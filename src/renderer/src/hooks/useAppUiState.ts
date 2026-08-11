@@ -19,6 +19,7 @@ export function useAppUiState() {
   const [rightResizing, setRightResizing] = useState(false)
   const [launcherOpen, setLauncherOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [fileSearchOpen, setFileSearchOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [palettePromptsOpen, setPalettePromptsOpen] = useState(false)
   const [profileManagerOpen, setProfileManagerOpen] = useState(false)
@@ -96,6 +97,8 @@ export function useAppUiState() {
     setLauncherOpen,
     searchOpen,
     setSearchOpen,
+    fileSearchOpen,
+    setFileSearchOpen,
     paletteOpen,
     setPaletteOpen,
     palettePromptsOpen,
