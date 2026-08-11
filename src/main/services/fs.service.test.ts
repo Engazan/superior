@@ -105,4 +105,27 @@ describe('filesystem preview service', () => {
       truncated: false
     })
   })
+
+  it('matches partial query words independently across the relative path', async () => {
+    const matching = path.join(root, 'src', 'app-langs', 'editor', 'configuration.json')
+    const missingSecondPart = path.join(root, 'src', 'app-langs', 'editor', 'settings.json')
+    fs.mkdirSync(path.dirname(matching), { recursive: true })
+    fs.writeFileSync(matching, '')
+    fs.writeFileSync(missingSecondPart, '')
+
+    await expect(searchFiles(root, 'langs configuration')).resolves.toEqual({
+      entries: [{ name: 'configuration.json', path: matching, isDirectory: false }],
+      truncated: false
+    })
+  })
+
+  it('normalizes case and repeated whitespace in multi-part queries', async () => {
+    const matching = path.join(root, 'LANGS', 'Configuration', 'schema.json')
+    fs.mkdirSync(path.dirname(matching), { recursive: true })
+    fs.writeFileSync(matching, '')
+
+    await expect(searchFiles(root, '  langs   configuration  ')).resolves.toMatchObject({
+      entries: [{ name: 'schema.json', path: matching, isDirectory: false }]
+    })
+  })
 })

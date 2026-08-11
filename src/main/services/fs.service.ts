@@ -47,14 +47,16 @@ const MAX_RESULTS = 300
 const MAX_VISITED = 50_000
 
 /**
- * Recursively find files whose name or relative path contains `query`
- * (case-insensitive). Caps results and files visited so huge trees stay fast;
- * `truncated` flags an early stop.
+ * Recursively find files whose relative path contains every whitespace-separated
+ * query part (case-insensitive). Parts may match independently anywhere in the
+ * path, so `langs configuration` can match `langs/app/configuration.json`.
+ * Caps results and files visited so huge trees stay fast; `truncated` flags an
+ * early stop.
  */
 export async function searchFiles(rootPath: string, query: string): Promise<FsListResult> {
   if (!isWithinWorkspaceFolder(rootPath)) return { entries: [], error: OUTSIDE_WORKSPACE }
-  const q = query.trim().toLowerCase()
-  if (!q) return { entries: [] }
+  const queryParts = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!queryParts.length) return { entries: [] }
 
   const results: FsEntry[] = []
   const stack: string[] = [rootPath]
@@ -81,8 +83,8 @@ export async function searchFiles(rootPath: string, query: string): Promise<FsLi
           break
         }
         const full = join(dir, d.name)
-        const rel = full.slice(rootPath.length + 1)
-        if (d.name.toLowerCase().includes(q) || rel.toLowerCase().includes(q)) {
+        const rel = full.slice(rootPath.length + 1).toLowerCase()
+        if (queryParts.every((part) => rel.includes(part))) {
           results.push({ name: d.name, path: full, isDirectory: false })
           if (results.length >= MAX_RESULTS) {
             truncated = true
