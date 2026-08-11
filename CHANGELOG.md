@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-08-11
+
+### Added
+
+- **File previews now open as workspace tabs.** Opening a file from the right
+  sidebar or a terminal link creates a file tab beside the terminal tabs instead
+  of splitting the main area. Switching back to a terminal keeps editor state and
+  unsaved changes intact, while closing or replacing a dirty file remains guarded.
+- **Fast project file search with double Shift.** Pressing Shift twice opens a
+  keyboard-first file finder with path previews, arrow-key navigation and direct
+  opening into a file tab. Multi-part queries match every partial term anywhere
+  in the relative path, so terms can belong to different folders or the filename.
+- **Project-wide content search.** Cmd/Ctrl+Shift+F searches bounded text files
+  across the active project and shows the file, relative path, line and column,
+  plus a highlighted context preview. Selecting a match opens the file tab and
+  reveals the matching line. The shortcut is configurable and the action is also
+  available from the command palette.
+
+### Changed
+
+- **Safer, bounded project searches.** Content search skips `.git`,
+  `node_modules`, binary files and oversized files, and caps visited files and
+  returned matches so large repositories cannot trigger unbounded reads.
+
 ## [0.19.5] - 2026-08-10
 
 ### Added
