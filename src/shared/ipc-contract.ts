@@ -15,6 +15,7 @@ import type {
   CustomMemoryPreset,
   CustomMemoryProvider,
   FileLinkTarget,
+  FileContentSearchResult,
   FileOpener,
   OpenFileTargetResult,
   FileReadOptions,
@@ -134,6 +135,10 @@ export interface IpcInvokeMap {
 
   [IPC.FS_LIST_DIR]: Invocation<[dirPath: string], FsListResult>
   [IPC.FS_SEARCH]: Invocation<[rootPath: string, query: string], FsListResult>
+  [IPC.FS_SEARCH_CONTENT]: Invocation<
+    [rootPath: string, query: string],
+    FileContentSearchResult
+  >
   [IPC.FS_READ_FILE]: Invocation<[filePath: string, options: FileReadOptions], FileReadResult>
   [IPC.FS_WRITE_FILE]: Invocation<[filePath: string, content: string], FileWriteResult>
   [IPC.SHELL_OPEN_PATH]: Invocation<[filePath: string], string>

@@ -22,6 +22,7 @@ const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
   { id: 'nextProfile', labelKey: 'keyboard.nextProfile' },
   { id: 'manageProfiles', labelKey: 'keyboard.manageProfiles' },
   { id: 'searchTerminal', labelKey: 'keyboard.searchTerminal' },
+  { id: 'searchFileContents', labelKey: 'keyboard.searchFileContents' },
   { id: 'openPalette', labelKey: 'keyboard.openPalette' }
 ]
 

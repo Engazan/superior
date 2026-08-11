@@ -24,6 +24,7 @@ import {
   type CustomMemoryProvider,
   type FileReadOptions,
   type FileReadResult,
+  type FileContentSearchResult,
   type FileWriteResult,
   type FolderUpdate,
   type GlobalHotkeyResult,
@@ -258,6 +259,10 @@ const api = {
 
   searchFiles(rootPath: string, query: string): Promise<FsListResult> {
     return ipcRenderer.invoke(IPC.FS_SEARCH, rootPath, query)
+  },
+
+  searchFileContents(rootPath: string, query: string): Promise<FileContentSearchResult> {
+    return ipcRenderer.invoke(IPC.FS_SEARCH_CONTENT, rootPath, query)
   },
 
   readFile(filePath: string, opts: FileReadOptions): Promise<FileReadResult> {

@@ -34,6 +34,8 @@ export type {
   CustomMemoryPreset,
   CustomMemoryProvider,
   FileLinkTarget,
+  FileContentMatch,
+  FileContentSearchResult,
   FileOpener,
   OpenFileTargetResult,
   FileReadOptions,

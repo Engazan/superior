@@ -3,6 +3,8 @@ import { isAbsolute, join, normalize, resolve, sep } from 'path'
 import { homedir } from 'os'
 import type {
   FileLinkTarget,
+  FileContentMatch,
+  FileContentSearchResult,
   FileReadOptions,
   FileReadResult,
   FileWriteResult,
@@ -45,6 +47,11 @@ export async function listDir(dirPath: string): Promise<FsListResult> {
 const SEARCH_IGNORED = new Set(['.git', 'node_modules'])
 const MAX_RESULTS = 300
 const MAX_VISITED = 50_000
+
+const CONTENT_MAX_RESULTS = 300
+const CONTENT_MAX_VISITED = 20_000
+const CONTENT_MAX_FILE_BYTES = 2 * 1024 * 1024
+const CONTENT_PREVIEW_LENGTH = 240
 
 /**
  * Recursively find files whose relative path contains every whitespace-separated
@@ -102,6 +109,128 @@ export async function searchFiles(rootPath: string, query: string): Promise<FsLi
     return { entries: results, truncated }
   } catch (err) {
     return { entries: [], error: (err as Error).message }
+  }
+}
+
+/** Build a bounded, single-line preview while retaining the match offset. */
+function contentMatchPreview(
+  line: string,
+  matchIndex: number,
+  matchLength: number
+): Pick<FileContentMatch, 'preview' | 'matchStart' | 'matchLength'> {
+  if (line.length <= CONTENT_PREVIEW_LENGTH) {
+    return { preview: line, matchStart: matchIndex, matchLength }
+  }
+
+  const context = Math.max(0, Math.floor((CONTENT_PREVIEW_LENGTH - matchLength) / 2))
+  const start = Math.max(0, Math.min(matchIndex - context, line.length - CONTENT_PREVIEW_LENGTH))
+  const end = Math.min(line.length, start + CONTENT_PREVIEW_LENGTH)
+  const leading = start > 0 ? '…' : ''
+  const trailing = end < line.length ? '…' : ''
+  return {
+    preview: `${leading}${line.slice(start, end)}${trailing}`,
+    matchStart: leading.length + matchIndex - start,
+    matchLength
+  }
+}
+
+/**
+ * Search bounded UTF-8 text files for a literal, case-insensitive query and
+ * return one result per matching line with enough context for an inline preview.
+ */
+export async function searchFileContents(
+  rootPath: string,
+  query: string
+): Promise<FileContentSearchResult> {
+  if (!isWithinWorkspaceFolder(rootPath)) return { matches: [], error: OUTSIDE_WORKSPACE }
+  const needle = query.trim().toLowerCase()
+  if (!needle) return { matches: [] }
+
+  const matches: FileContentMatch[] = []
+  const stack: string[] = [rootPath]
+  let visited = 0
+  let truncated = false
+
+  try {
+    while (
+      stack.length &&
+      matches.length < CONTENT_MAX_RESULTS &&
+      visited < CONTENT_MAX_VISITED
+    ) {
+      const dir = stack.pop() as string
+      let dirents
+      try {
+        dirents = await readdir(dir, { withFileTypes: true })
+      } catch {
+        continue
+      }
+
+      for (const entry of dirents) {
+        if (entry.isDirectory()) {
+          if (!SEARCH_IGNORED.has(entry.name)) stack.push(join(dir, entry.name))
+          continue
+        }
+        if (!entry.isFile()) continue
+        visited += 1
+        if (visited >= CONTENT_MAX_VISITED) {
+          truncated = true
+          break
+        }
+
+        const full = join(dir, entry.name)
+        let info
+        try {
+          info = await stat(full)
+        } catch {
+          continue
+        }
+        if (info.size > CONTENT_MAX_FILE_BYTES) continue
+
+        let buffer: Buffer
+        try {
+          const file = await open(full, 'r')
+          try {
+            // Read only the size already approved above. The file may grow
+            // between stat and read, but a search must remain bounded.
+            const allocation = Buffer.alloc(info.size)
+            const { bytesRead } = await file.read(allocation, 0, info.size, 0)
+            buffer = allocation.subarray(0, bytesRead)
+          } finally {
+            await file.close()
+          }
+        } catch {
+          continue
+        }
+        if (buffer.includes(0)) continue
+
+        const lines = buffer.toString('utf8').split(/\r?\n/)
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+          const line = lines[lineIndex]
+          const matchIndex = line.toLowerCase().indexOf(needle)
+          if (matchIndex < 0) continue
+          matches.push({
+            name: entry.name,
+            path: full,
+            line: lineIndex + 1,
+            column: matchIndex + 1,
+            ...contentMatchPreview(line, matchIndex, needle.length)
+          })
+          if (matches.length >= CONTENT_MAX_RESULTS) {
+            truncated = true
+            break
+          }
+        }
+        if (matches.length >= CONTENT_MAX_RESULTS) break
+      }
+    }
+
+    matches.sort((a, b) => {
+      const pathOrder = a.path.localeCompare(b.path)
+      return pathOrder !== 0 ? pathOrder : a.line - b.line
+    })
+    return { matches, truncated }
+  } catch (err) {
+    return { matches: [], error: (err as Error).message }
   }
 }
 

@@ -28,6 +28,7 @@ const DEFAULT_SHORTCUTS: ShortcutMap = {
   nextProfile: 'mod+shift+arrowright',
   manageProfiles: 'mod+shift+p',
   searchTerminal: 'mod+f',
+  searchFileContents: 'mod+shift+f',
   openPalette: 'mod+k'
 }
 const SHORTCUT_ACTIONS: ShortcutAction[] = [
@@ -48,6 +49,7 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'nextProfile',
   'manageProfiles',
   'searchTerminal',
+  'searchFileContents',
   'openPalette'
 ]
 const DEFAULT_UI: UiState = {

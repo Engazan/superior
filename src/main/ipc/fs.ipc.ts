@@ -2,6 +2,7 @@ import { shell } from 'electron'
 import {
   IPC,
   type FileLinkTarget,
+  type FileContentSearchResult,
   type FileReadOptions,
   type FileReadResult,
   type FileWriteResult,
@@ -12,6 +13,7 @@ import {
   listDir,
   readFilePreview,
   resolveFileLink,
+  searchFileContents,
   searchFiles,
   writeFilePreview
 } from '../services/fs.service'
@@ -35,6 +37,14 @@ export function registerFsIpc(): void {
       boundedString(rootPath) && boundedString(query, 10_000)
         ? searchFiles(rootPath, query)
         : Promise.resolve({ entries: [], error: 'Invalid search request.' })
+  )
+
+  handle(
+    IPC.FS_SEARCH_CONTENT,
+    (rootPath: string, query: string): Promise<FileContentSearchResult> =>
+      boundedString(rootPath) && boundedString(query, 10_000)
+        ? searchFileContents(rootPath, query)
+        : Promise.resolve({ matches: [], error: 'Invalid content search request.' })
   )
 
   handle(

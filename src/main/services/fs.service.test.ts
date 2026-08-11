@@ -9,7 +9,13 @@ vi.mock('./workspace.service', () => ({
   isWithinWorkspaceFolder: workspace.isWithinWorkspaceFolder
 }))
 
-import { listDir, readFilePreview, searchFiles, writeFilePreview } from './fs.service'
+import {
+  listDir,
+  readFilePreview,
+  searchFileContents,
+  searchFiles,
+  writeFilePreview
+} from './fs.service'
 
 describe('filesystem preview service', () => {
   let root: string
@@ -127,5 +133,47 @@ describe('filesystem preview service', () => {
     await expect(searchFiles(root, '  langs   configuration  ')).resolves.toMatchObject({
       entries: [{ name: 'schema.json', path: matching, isDirectory: false }]
     })
+  })
+
+  it('searches file contents and returns line previews with match positions', async () => {
+    const file = path.join(root, 'src', 'config.ts')
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, 'const first = true\nexport const Configuration = first\n')
+
+    await expect(searchFileContents(root, 'configuration')).resolves.toEqual({
+      matches: [
+        {
+          name: 'config.ts',
+          path: file,
+          line: 2,
+          column: 14,
+          preview: 'export const Configuration = first',
+          matchStart: 13,
+          matchLength: 13
+        }
+      ],
+      truncated: false
+    })
+  })
+
+  it('skips binary files during content search', async () => {
+    const file = path.join(root, 'binary.dat')
+    fs.writeFileSync(file, Buffer.from('before\0needle\0after'))
+
+    await expect(searchFileContents(root, 'needle')).resolves.toEqual({
+      matches: [],
+      truncated: false
+    })
+  })
+
+  it('bounds long content previews while keeping the match highlighted', async () => {
+    const file = path.join(root, 'long-line.txt')
+    fs.writeFileSync(file, `${'a'.repeat(400)}needle${'b'.repeat(400)}`)
+
+    const result = await searchFileContents(root, 'needle')
+    expect(result.matches).toHaveLength(1)
+    const match = result.matches[0]
+    expect(match.preview.length).toBeLessThanOrEqual(242)
+    expect(match.preview.slice(match.matchStart, match.matchStart + match.matchLength)).toBe('needle')
   })
 })

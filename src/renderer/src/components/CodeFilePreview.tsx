@@ -21,6 +21,9 @@ interface Props {
   content: string
   /** CodeMirror language extension, or null for plain text. */
   language: Extension | null
+  /** One-based line to select and scroll into view after the editor mounts. */
+  initialLine?: number
+  revealRequestId?: number
   /** Soft-wrap long lines (used for prose-ish content). */
   wrap?: boolean
   /** Allow editing the document. When false (default) the view is read-only. */
@@ -74,8 +77,17 @@ const readOnlyChrome = EditorView.theme({
  * the parent seeds it via `content` and reads edits back through `onChange`, so
  * a re-render with the same `content` never tears the editor down mid-edit.
  */
-export function CodeFilePreview({ content, language, wrap, editable, onChange }: Props): React.JSX.Element {
+export function CodeFilePreview({
+  content,
+  language,
+  initialLine,
+  revealRequestId,
+  wrap,
+  editable,
+  onChange
+}: Props): React.JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
+  const viewRef = useRef<EditorView | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
@@ -112,12 +124,18 @@ export function CodeFilePreview({ content, language, wrap, editable, onChange }:
       state: EditorState.create({ doc: content, extensions }),
       parent: host
     })
+    viewRef.current = view
 
     // Open the find panel on Cmd/Ctrl+F — but only when focus is inside this
     // preview. A window-wide capture here used to hijack ⌘F from the focused
     // terminal (its own scrollback search) for as long as any preview was open.
     const onKey = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.altKey &&
+        !e.shiftKey &&
+        (e.key === 'f' || e.key === 'F')
+      ) {
         if (!host.contains(document.activeElement)) return
         e.preventDefault()
         e.stopPropagation()
@@ -129,9 +147,18 @@ export function CodeFilePreview({ content, language, wrap, editable, onChange }:
 
     return () => {
       window.removeEventListener('keydown', onKey, true)
+      viewRef.current = null
       view.destroy()
     }
   }, [content, language, wrap, editable, onChange])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || !initialLine) return
+    const line = view.state.doc.line(Math.min(initialLine, view.state.doc.lines))
+    view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true })
+    view.focus()
+  }, [content, initialLine, revealRequestId])
 
   return <div ref={hostRef} className="h-full overflow-hidden" />
 }

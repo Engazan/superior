@@ -10,7 +10,7 @@ import { insertIntoTerminal } from './terminalInput'
 import type { Command } from './commands'
 import { TooltipLayer } from './components/TooltipLayer'
 import { useConfirm, useToast } from './components/ui'
-import type { FileLinkTarget, FsEntry } from './types'
+import type { FileContentMatch, FileLinkTarget, FsEntry } from './types'
 import { fileLinkTargetToEntry } from './filePreview'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
@@ -53,6 +53,11 @@ const CommandPalette = lazy(() =>
 const FileSearchPalette = lazy(() =>
   import('./components/FileSearchPalette').then(({ FileSearchPalette }) => ({
     default: FileSearchPalette
+  }))
+)
+const ContentSearchPalette = lazy(() =>
+  import('./components/ContentSearchPalette').then(({ ContentSearchPalette }) => ({
+    default: ContentSearchPalette
   }))
 )
 const ProfileManager = lazy(() =>
@@ -98,6 +103,8 @@ export default function App(): React.JSX.Element {
     setSearchOpen,
     fileSearchOpen,
     setFileSearchOpen,
+    contentSearchOpen,
+    setContentSearchOpen,
     paletteOpen,
     setPaletteOpen,
     palettePromptsOpen,
@@ -117,7 +124,7 @@ export default function App(): React.JSX.Element {
   const { presets } = presetsApi
   const layoutPresets = useLayoutPresets()
   const preview = usePreviewPane()
-  const { setPreviewFile, showPreview, hidePreview } = preview
+  const { setPreviewFile, hidePreview } = preview
   const currentPreviewPath = preview.previewFile?.path
   const confirm = useConfirm()
 
@@ -130,9 +137,9 @@ export default function App(): React.JSX.Element {
     setPreviewDirty(dirty)
   }, [])
   const setPreviewFileGuarded = useCallback(
-    async (file: FsEntry | null): Promise<boolean> => {
+    async (file: FsEntry | null, line?: number): Promise<boolean> => {
       if (file && file.path === currentPreviewPath) {
-        showPreview()
+        setPreviewFile(file, line)
         return true
       }
       if (previewDirtyRef.current) {
@@ -146,14 +153,14 @@ export default function App(): React.JSX.Element {
         previewDirtyRef.current = false
         setPreviewDirty(false)
       }
-      setPreviewFile(file)
+      setPreviewFile(file, line)
       return true
     },
-    [confirm, currentPreviewPath, setPreviewFile, showPreview, t]
+    [confirm, currentPreviewPath, setPreviewFile, t]
   )
   const openTerminalFileInPreview = useCallback(
     (target: FileLinkTarget) => {
-      void setPreviewFileGuarded(fileLinkTargetToEntry(target))
+      void setPreviewFileGuarded(fileLinkTargetToEntry(target), target.line)
     },
     [setPreviewFileGuarded]
   )
@@ -382,6 +389,14 @@ export default function App(): React.JSX.Element {
       const dir = ws.effectiveDir
       cmds.push(
         {
+          id: 'files:search-content',
+          title: t('keyboard.searchFileContents'),
+          keywords: 'find grep content text files project',
+          section: t('palette.sectionView'),
+          hint: formatChord(shortcuts.searchFileContents),
+          run: () => setContentSearchOpen(true)
+        },
+        {
           id: 'git:push',
           title: t('changes.push'),
           keywords: 'git push',
@@ -536,6 +551,7 @@ export default function App(): React.JSX.Element {
       launcherOpen ||
       searchOpen ||
       fileSearchOpen ||
+      contentSearchOpen ||
       paletteOpen ||
       palettePromptsOpen ||
       projectModalOpen ||
@@ -548,6 +564,7 @@ export default function App(): React.JSX.Element {
     launcherOpen,
     searchOpen,
     fileSearchOpen,
+    contentSearchOpen,
     paletteOpen,
     palettePromptsOpen,
     projectModalOpen,
@@ -568,6 +585,7 @@ export default function App(): React.JSX.Element {
         launcherOpen ||
         searchOpen ||
         fileSearchOpen ||
+        contentSearchOpen ||
         paletteOpen ||
         palettePromptsOpen ||
         projectModalOpen ||
@@ -687,6 +705,11 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         e.stopPropagation()
         setProfileManagerOpen((o) => !o)
+      } else if (chord === shortcuts.searchFileContents) {
+        if (view !== 'main' || !ws.effectiveDir) return
+        e.preventDefault()
+        e.stopPropagation()
+        setContentSearchOpen(true)
       } else if (chord === shortcuts.searchTerminal) {
         if (view !== 'main' || !ws.activeSessionId) return
         // With a preview open, only a terminal-focused shortcut may open the
@@ -713,6 +736,7 @@ export default function App(): React.JSX.Element {
     launcherOpen,
     searchOpen,
     fileSearchOpen,
+    contentSearchOpen,
     paletteOpen,
     palettePromptsOpen,
     projectModalOpen,
@@ -834,6 +858,8 @@ export default function App(): React.JSX.Element {
                         <Suspense fallback={<DeferredPanel />}>
                           <FilePreviewPanel
                             file={preview.previewFile}
+                            initialLine={preview.previewLine ?? undefined}
+                            revealRequestId={preview.previewRequestId}
                             active={preview.previewActive}
                             onClose={() => void setPreviewFileGuarded(null)}
                             onDirtyChange={onPreviewDirtyChange}
@@ -929,6 +955,23 @@ export default function App(): React.JSX.Element {
               if (await setPreviewFileGuarded(file)) setFileSearchOpen(false)
             }}
             onClose={() => setFileSearchOpen(false)}
+          />
+        </Suspense>
+      )}
+
+      {view === 'main' && contentSearchOpen && ws.effectiveDir && (
+        <Suspense fallback={null}>
+          <ContentSearchPalette
+            folderPath={ws.effectiveDir}
+            onOpenMatch={async (match: FileContentMatch) => {
+              const file: FsEntry = {
+                name: match.name,
+                path: match.path,
+                isDirectory: false
+              }
+              if (await setPreviewFileGuarded(file, match.line)) setContentSearchOpen(false)
+            }}
+            onClose={() => setContentSearchOpen(false)}
           />
         </Suspense>
       )}

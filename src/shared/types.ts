@@ -28,6 +28,7 @@ export type ShortcutAction =
   | 'nextProfile'
   | 'manageProfiles'
   | 'searchTerminal'
+  | 'searchFileContents'
   | 'openPalette'
 
 /**
@@ -642,6 +643,28 @@ export interface FsListResult {
   error?: string
 }
 
+/** One matching line returned by project-wide file-content search. */
+export interface FileContentMatch {
+  name: string
+  /** Absolute path to the matching file. */
+  path: string
+  /** One-based line and column of the first match on this line. */
+  line: number
+  column: number
+  /** Bounded single-line context around the match. */
+  preview: string
+  /** Match range inside `preview`, used by the renderer for highlighting. */
+  matchStart: number
+  matchLength: number
+}
+
+export interface FileContentSearchResult {
+  matches: FileContentMatch[]
+  /** Set when the result or visited-file limit stopped the search early. */
+  truncated?: boolean
+  error?: string
+}
+
 /** How to read a file for preview. */
 export interface FileReadOptions {
   /** Read at most this many bytes; content beyond it is not loaded. */
@@ -905,6 +928,7 @@ export const IPC = {
   GIT_SHOW_COMMIT: 'git:show-commit',
   FS_LIST_DIR: 'fs:list-dir',
   FS_SEARCH: 'fs:search',
+  FS_SEARCH_CONTENT: 'fs:search-content',
   FS_READ_FILE: 'fs:read-file',
   FS_WRITE_FILE: 'fs:write-file',
   FS_RESOLVE_FILE_LINK: 'fs:resolve-file-link',

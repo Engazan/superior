@@ -24,6 +24,9 @@ const MarkdownFilePreview = lazy(() =>
 
 interface Props {
   file: FsEntry
+  /** One-based source line to reveal after opening from a search result. */
+  initialLine?: number
+  revealRequestId?: number
   onClose: () => void
   /** False while the editor remains mounted behind a selected terminal tab. */
   active?: boolean
@@ -43,6 +46,8 @@ function prettyJson(text: string): string {
 
 export function FilePreviewPanel({
   file,
+  initialLine,
+  revealRequestId,
   onClose,
   active = true,
   onDirtyChange
@@ -272,6 +277,8 @@ export function FilePreviewPanel({
                   <CodeFilePreview
                     content={editorText ?? data.content}
                     language={language?.value ?? null}
+                    initialLine={initialLine}
+                    revealRequestId={revealRequestId}
                     editable={editable}
                     onChange={handleChange}
                   />

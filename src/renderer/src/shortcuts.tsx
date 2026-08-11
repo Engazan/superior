@@ -24,6 +24,7 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   nextProfile: 'mod+shift+arrowright',
   manageProfiles: 'mod+shift+p',
   searchTerminal: 'mod+f',
+  searchFileContents: 'mod+shift+f',
   openPalette: 'mod+k'
 }
 
