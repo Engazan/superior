@@ -127,8 +127,6 @@ function normalizeUi(raw: unknown): UiState {
     }
     next.favoriteWorkspaceIds = normalizeIds(obj.favoriteWorkspaceIds, 200)
     next.recentWorkspaceIds = normalizeIds(obj.recentWorkspaceIds, 12)
-    if (typeof obj.previewWidth === 'number' && Number.isFinite(obj.previewWidth))
-      next.previewWidth = Math.min(0.8, Math.max(0.2, obj.previewWidth))
     if (typeof obj.rightPanelWidth === 'number' && Number.isFinite(obj.rightPanelWidth))
       next.rightPanelWidth = Math.min(560, Math.max(280, Math.round(obj.rightPanelWidth)))
   }

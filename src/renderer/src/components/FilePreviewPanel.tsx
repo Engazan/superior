@@ -25,6 +25,8 @@ const MarkdownFilePreview = lazy(() =>
 interface Props {
   file: FsEntry
   onClose: () => void
+  /** False while the editor remains mounted behind a selected terminal tab. */
+  active?: boolean
   /** Reports the editor's unsaved-changes state up, so the owner can guard
       file switches and closes behind a confirm instead of dropping edits. */
   onDirtyChange?: (dirty: boolean) => void
@@ -39,7 +41,12 @@ function prettyJson(text: string): string {
   }
 }
 
-export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React.JSX.Element {
+export function FilePreviewPanel({
+  file,
+  onClose,
+  active = true,
+  onDirtyChange
+}: Props): React.JSX.Element {
   const { t } = useI18n()
   const confirm = useConfirm()
   const shortcutTitle = useShortcutTitle()
@@ -211,7 +218,7 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React
   // Save on the configured shortcut (⌘/Ctrl+S by default), even when focus is
   // inside the editor. Capture so it beats CodeMirror and the browser's own save.
   useEffect(() => {
-    if (!editable) return
+    if (!editable || !active) return
     const onKey = (e: KeyboardEvent): void => {
       if (e.repeat) return
       if (eventToChord(e) === shortcuts.saveFile) {
@@ -222,7 +229,7 @@ export function FilePreviewPanel({ file, onClose, onDirtyChange }: Props): React
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [editable, shortcuts.saveFile, save])
+  }, [active, editable, shortcuts.saveFile, save])
 
   const renderBody = (): React.JSX.Element => {
     if (loading || !data) {

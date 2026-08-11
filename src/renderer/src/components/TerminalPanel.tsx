@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
@@ -61,6 +61,13 @@ interface Props {
   tabs: WorkspaceTab[]
   /** the active tab within the active workspace */
   activeTabId: string | undefined
+  /** transient file-editor tab shown beside the terminal tabs */
+  previewFile: { name: string; path: string } | null
+  previewActive: boolean
+  previewDirty: boolean
+  previewContent: ReactNode
+  onSelectPreview: () => void
+  onClosePreview: () => void
   /** saved cell sizing for the active tab's grid (undefined → uniform) */
   gridLayout: GridLayout | undefined
   presets: TerminalPreset[]
@@ -113,6 +120,12 @@ export function TerminalPanel({
   maximizedId,
   tabs,
   activeTabId,
+  previewFile,
+  previewActive,
+  previewDirty,
+  previewContent,
+  onSelectPreview,
+  onClosePreview,
   gridLayout,
   presets,
   onSelect,
@@ -138,8 +151,7 @@ export function TerminalPanel({
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
   // Live layout while a divider drag is in flight. Only the release commits it
   // upstream (state + IPC write) — per-move commits would persist the tab
-  // layout over IPC on every pointer event (see usePreviewPane for the same
-  // persist-on-release pattern).
+  // layout over IPC on every pointer event.
   const [dragLayout, setDragLayout] = useState<GridLayout | null>(null)
   // Stable identity so memoized TerminalViews don't re-render on every panel render.
   // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
@@ -186,6 +198,7 @@ export function TerminalPanel({
   const maxId = gridCells.some((s) => s.id === maximizedId) ? maximizedId : null
 
   const layoutFor = (s: AgentSession): Layout => {
+    if (previewActive) return { visible: false, focused: false }
     if (s.workspaceId !== activeWorkspaceId || s.tabId !== activeTabId) {
       return { visible: false, focused: false }
     }
@@ -271,17 +284,16 @@ export function TerminalPanel({
   useEffect(() => {
     setBroadcastMode(false)
     setBroadcastExcluded(new Set())
-  }, [activeTabId, activeWorkspaceId])
-
+  }, [activeTabId, activeWorkspaceId, previewActive])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-transparent">
-      {/* Tab strip — one chip per grid tab. Hidden until the workspace has its first tab. */}
-      {activeWorkspaceId && tabs.length > 0 && (
+      {/* Terminal grids and the transient file editor share one tab strip. */}
+      {activeWorkspaceId && (tabs.length > 0 || previewFile) && (
         <div role="tablist" aria-label={t('tab.listLabel')} className="flex items-center border-b border-edge bg-panel/90 px-2 py-1.5">
           <div className="flex min-w-0 items-stretch gap-px overflow-x-auto">
             {tabs.map((tab) => {
-              const active = tab.id === activeTabId
+              const active = !previewActive && tab.id === activeTabId
               const editing = editingTab?.id === tab.id
               const tabCells = sessions.filter(
                 (s) => s.workspaceId === activeWorkspaceId && s.tabId === tab.id
@@ -343,6 +355,58 @@ export function TerminalPanel({
                 </div>
               )
             })}
+            {previewFile && (
+              <div
+                role="tab"
+                aria-selected={previewActive}
+                tabIndex={0}
+                onClick={onSelectPreview}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectPreview()
+                  }
+                }}
+                title={previewFile.path}
+                className={`group flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                  previewActive
+                    ? 'bg-accentBg font-semibold text-fg shadow-xs ring-1 ring-inset ring-accentBorder'
+                    : 'text-fgdim hover:bg-hover'
+                }`}
+              >
+                <svg
+                  className="h-3.5 w-3.5 shrink-0"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M3 1.75h6l4 4v8.5H3z" />
+                  <path d="M9 1.75v4h4" />
+                </svg>
+                <span className="max-w-48 truncate whitespace-nowrap">{previewFile.name}</span>
+                {previewDirty && (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                    aria-label={t('preview.unsaved')}
+                    title={t('preview.unsaved')}
+                  />
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onClosePreview()
+                  }}
+                  className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg focus-visible:opacity-100"
+                  aria-label={t('tab.close')}
+                  title={t('tab.close')}
+                >
+                  <CloseIcon size={11} />
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex shrink-0 items-center px-1">
             <button
@@ -360,7 +424,7 @@ export function TerminalPanel({
             <IconButton
               size="sm"
               label={t('prompts.insert')}
-              disabled={!activeSessionId}
+              disabled={previewActive || !activeSessionId}
               onClick={() => setPromptPickerOpen(true)}
             >
               <PromptIcon size={14} />
@@ -368,7 +432,7 @@ export function TerminalPanel({
             <IconButton
               size="sm"
               label={t('broadcast.toggle')}
-              disabled={gridCells.length === 0}
+              disabled={previewActive || gridCells.length === 0}
               className={broadcastMode ? '!text-warn' : ''}
               onClick={toggleBroadcast}
             >
@@ -379,7 +443,7 @@ export function TerminalPanel({
       )}
 
       {/* Broadcast bar — one line of input sent to every targeted cell. */}
-      {broadcastMode && (
+      {broadcastMode && !previewActive && (
         <div className="flex shrink-0 items-center gap-2 border-b border-warnBorder bg-warnBg/40 px-2 py-1.5">
           <BroadcastIcon size={13} className="shrink-0 text-warn" />
           <input
@@ -436,8 +500,28 @@ export function TerminalPanel({
         />
       )}
 
-      {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
-      <div ref={containerRef} className="relative min-h-0 flex-1 py-1 pl-1">
+      <div className="relative min-h-0 flex-1">
+        {/* The editor stays mounted behind terminal tabs so unsaved edits and
+            CodeMirror history survive tab switches. */}
+        {previewFile && (
+          <div
+            aria-hidden={!previewActive}
+            className={`absolute inset-0 flex min-h-0 flex-col ${
+              previewActive ? '' : 'invisible pointer-events-none'
+            }`}
+          >
+            {previewContent}
+          </div>
+        )}
+
+        {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
+        <div
+          ref={containerRef}
+          aria-hidden={previewActive}
+          className={`absolute inset-0 py-1 pl-1 ${
+            previewActive ? 'invisible pointer-events-none' : ''
+          }`}
+        >
         {tabSessions.length === 0 &&
           (activeWorkspaceId ? (
             <AgentLauncher
@@ -613,6 +697,7 @@ export function TerminalPanel({
             />
           </div>
         )}
+        </div>
       </div>
     </div>
   )

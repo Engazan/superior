@@ -112,10 +112,12 @@ export default function App(): React.JSX.Element {
   const confirm = useConfirm()
 
   // Unsaved-edit guard for the file preview: switching to another file or
-  // closing the pane while the editor is dirty asks before discarding.
+  // closing its tab while the editor is dirty asks before discarding.
   const previewDirtyRef = useRef(false)
+  const [previewDirty, setPreviewDirty] = useState(false)
   const onPreviewDirtyChange = useCallback((dirty: boolean) => {
     previewDirtyRef.current = dirty
+    setPreviewDirty(dirty)
   }, [])
   const setPreviewFileGuarded = useCallback(
     async (file: FsEntry | null) => {
@@ -128,6 +130,7 @@ export default function App(): React.JSX.Element {
         })
         if (!ok) return
         previewDirtyRef.current = false
+        setPreviewDirty(false)
       }
       preview.setPreviewFile(file)
     },
@@ -487,13 +490,20 @@ export default function App(): React.JSX.Element {
 
   // Stable tab handlers for the terminal panel (they close over the active workspace).
   const { activeWorkspaceId, selectTab, addTab, closeTab, renameTab } = ws
+  const { hidePreview } = preview
   const onSelectTab = useCallback(
-    (id: string) => activeWorkspaceId && selectTab(activeWorkspaceId, id),
-    [activeWorkspaceId, selectTab]
+    (id: string) => {
+      hidePreview()
+      if (activeWorkspaceId) selectTab(activeWorkspaceId, id)
+    },
+    [activeWorkspaceId, selectTab, hidePreview]
   )
   const onAddTab = useCallback(
-    () => activeWorkspaceId && addTab(activeWorkspaceId),
-    [activeWorkspaceId, addTab]
+    () => {
+      hidePreview()
+      if (activeWorkspaceId) addTab(activeWorkspaceId)
+    },
+    [activeWorkspaceId, addTab, hidePreview]
   )
   const onCloseTab = useCallback(
     (id: string) => activeWorkspaceId && closeTab(activeWorkspaceId, id),
@@ -740,7 +750,7 @@ export default function App(): React.JSX.Element {
             />
 
             <div className="superior-main flex min-h-0 min-w-0 flex-1 flex-col">
-              <div ref={preview.previewRowRef} className="flex min-h-0 min-w-0 flex-1">
+              <div className="flex min-h-0 min-w-0 flex-1">
                 <div className="flex min-h-0 min-w-0 flex-1">
                   <TerminalPanel
                     sessions={ws.sessions}
@@ -757,6 +767,23 @@ export default function App(): React.JSX.Element {
                     maximizedId={ws.maximizedId}
                     tabs={activeTabs?.tabs ?? []}
                     activeTabId={activeTabs?.activeTabId}
+                    previewFile={preview.previewFile}
+                    previewActive={preview.previewActive}
+                    previewDirty={previewDirty}
+                    previewContent={
+                      preview.previewFile ? (
+                        <Suspense fallback={<DeferredPanel />}>
+                          <FilePreviewPanel
+                            file={preview.previewFile}
+                            active={preview.previewActive}
+                            onClose={() => void setPreviewFileGuarded(null)}
+                            onDirtyChange={onPreviewDirtyChange}
+                          />
+                        </Suspense>
+                      ) : null
+                    }
+                    onSelectPreview={preview.showPreview}
+                    onClosePreview={() => void setPreviewFileGuarded(null)}
                     gridLayout={activeTab?.gridLayout}
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
@@ -777,33 +804,10 @@ export default function App(): React.JSX.Element {
                     onRenameTab={onRenameTab}
                   />
                 </div>
-
-                {preview.previewFile && (
-                  <>
-                    <div
-                      onPointerDown={preview.startPreviewResize}
-                      className="group flex w-1.5 shrink-0 cursor-col-resize items-stretch"
-                    >
-                      <span className="w-full bg-edge transition group-hover:bg-accent" />
-                    </div>
-                    <div
-                      className="flex min-h-0 min-w-[280px] shrink-0 flex-col"
-                      style={{ width: `${preview.previewWidth * 100}%` }}
-                    >
-                      <Suspense fallback={<DeferredPanel />}>
-                        <FilePreviewPanel
-                          file={preview.previewFile}
-                          onClose={() => void setPreviewFileGuarded(null)}
-                          onDirtyChange={onPreviewDirtyChange}
-                        />
-                      </Suspense>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
 
-            {/* Drag handle for the right panel — same pattern as the preview divider. */}
+            {/* Drag handle for resizing the right panel. */}
             {rightSidebarOpen && (
               <div
                 onPointerDown={startRightResize}
