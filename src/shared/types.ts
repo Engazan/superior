@@ -643,6 +643,14 @@ export interface FsListResult {
   error?: string
 }
 
+/** One source row in the fixed-height context shown for a content match. */
+export interface FileContentPreviewLine {
+  /** One-based source line, or null for padding near the start/end of a file. */
+  line: number | null
+  /** Bounded source text safe to send across IPC. */
+  text: string
+}
+
 /** One matching line returned by project-wide file-content search. */
 export interface FileContentMatch {
   name: string
@@ -656,6 +664,8 @@ export interface FileContentMatch {
   /** Match range inside `preview`, used by the renderer for highlighting. */
   matchStart: number
   matchLength: number
+  /** Ten rows with the matching source line fixed at index 3 (the fourth row). */
+  contextLines: FileContentPreviewLine[]
 }
 
 export interface FileContentSearchResult {

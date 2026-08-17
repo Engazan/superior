@@ -52,6 +52,8 @@ const CONTENT_MAX_RESULTS = 300
 const CONTENT_MAX_VISITED = 20_000
 const CONTENT_MAX_FILE_BYTES = 2 * 1024 * 1024
 const CONTENT_PREVIEW_LENGTH = 240
+const CONTENT_CONTEXT_LINES = 10
+const CONTENT_MATCH_CONTEXT_INDEX = 3
 
 /**
  * Recursively find files whose relative path contains every whitespace-separated
@@ -134,6 +136,32 @@ function contentMatchPreview(
   }
 }
 
+/** Bound a non-matching context row without shifting its source position. */
+function boundedContextLine(line: string): string {
+  if (line.length <= CONTENT_PREVIEW_LENGTH) return line
+  return `${line.slice(0, CONTENT_PREVIEW_LENGTH - 1)}…`
+}
+
+/**
+ * Build ten preview rows with the hit pinned to the fourth row. Missing source
+ * rows near the start/end of a file become explicit padding, keeping the UI
+ * stable and the match position deterministic.
+ */
+function contentContextLines(
+  lines: string[],
+  matchLineIndex: number,
+  matchPreview: string
+): FileContentMatch['contextLines'] {
+  return Array.from({ length: CONTENT_CONTEXT_LINES }, (_, contextIndex) => {
+    const sourceIndex = matchLineIndex - CONTENT_MATCH_CONTEXT_INDEX + contextIndex
+    if (sourceIndex < 0 || sourceIndex >= lines.length) return { line: null, text: '' }
+    return {
+      line: sourceIndex + 1,
+      text: sourceIndex === matchLineIndex ? matchPreview : boundedContextLine(lines[sourceIndex])
+    }
+  })
+}
+
 /**
  * Search bounded UTF-8 text files for a literal, case-insensitive query and
  * return one result per matching line with enough context for an inline preview.
@@ -208,12 +236,14 @@ export async function searchFileContents(
           const line = lines[lineIndex]
           const matchIndex = line.toLowerCase().indexOf(needle)
           if (matchIndex < 0) continue
+          const preview = contentMatchPreview(line, matchIndex, needle.length)
           matches.push({
             name: entry.name,
             path: full,
             line: lineIndex + 1,
             column: matchIndex + 1,
-            ...contentMatchPreview(line, matchIndex, needle.length)
+            ...preview,
+            contextLines: contentContextLines(lines, lineIndex, preview.preview)
           })
           if (matches.length >= CONTENT_MAX_RESULTS) {
             truncated = true

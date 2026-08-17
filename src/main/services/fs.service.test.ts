@@ -140,20 +140,41 @@ describe('filesystem preview service', () => {
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(file, 'const first = true\nexport const Configuration = first\n')
 
-    await expect(searchFileContents(root, 'configuration')).resolves.toEqual({
-      matches: [
-        {
-          name: 'config.ts',
-          path: file,
-          line: 2,
-          column: 14,
-          preview: 'export const Configuration = first',
-          matchStart: 13,
-          matchLength: 13
-        }
-      ],
+    const result = await searchFileContents(root, 'configuration')
+    expect(result).toMatchObject({
+      matches: [{
+        name: 'config.ts',
+        path: file,
+        line: 2,
+        column: 14,
+        preview: 'export const Configuration = first',
+        matchStart: 13,
+        matchLength: 13
+      }],
       truncated: false
     })
+    expect(result.matches[0].contextLines).toHaveLength(10)
+    expect(result.matches[0].contextLines[3]).toEqual({
+      line: 2,
+      text: 'export const Configuration = first'
+    })
+    expect(result.matches[0].contextLines.map((line) => line.line)).toEqual([
+      null, null, 1, 2, 3, null, null, null, null, null
+    ])
+  })
+
+  it('returns surrounding source with the match fixed on preview row four', async () => {
+    const file = path.join(root, 'context.ts')
+    const lines = Array.from({ length: 15 }, (_, index) =>
+      index === 7 ? 'const needle = true' : `const line${index + 1} = true`
+    )
+    fs.writeFileSync(file, lines.join('\n'))
+
+    const result = await searchFileContents(root, 'needle')
+    const context = result.matches[0].contextLines
+    expect(context).toHaveLength(10)
+    expect(context.map((line) => line.line)).toEqual([5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
+    expect(context[3]).toEqual({ line: 8, text: 'const needle = true' })
   })
 
   it('skips binary files during content search', async () => {

@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import type { Extension } from '@codemirror/state'
 import { useI18n } from '../i18n'
 import type { FileContentMatch } from '../types'
+import { loadCodeMirrorLanguage } from '../codeMirrorLanguage'
 import { useDismiss } from './ui'
+import { FileTypeIcon } from './FileTypeIcon'
+
+const CodeFilePreview = lazy(() =>
+  import('./CodeFilePreview').then(({ CodeFilePreview }) => ({ default: CodeFilePreview }))
+)
 
 interface Props {
   folderPath: string
@@ -16,20 +23,56 @@ function relativePath(filePath: string, rootPath: string): string {
     : filePath
 }
 
-function MatchPreview({ match }: { match: FileContentMatch }): React.JSX.Element {
-  const before = match.preview.slice(0, match.matchStart)
-  const hit = match.preview.slice(match.matchStart, match.matchStart + match.matchLength)
-  const after = match.preview.slice(match.matchStart + match.matchLength)
+function SourcePreview({ match, rootPath }: { match: FileContentMatch; rootPath: string }): React.JSX.Element {
+  const relative = relativePath(match.path, rootPath)
+  const content = useMemo(() => match.contextLines.map((line) => line.text).join('\n'), [match.contextLines])
+  const sourceLineNumbers = useMemo(() => match.contextLines.map((line) => line.line), [match.contextLines])
+  const [language, setLanguage] = useState<{ key: string; value: Extension | null } | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void loadCodeMirrorLanguage(match.name)
+      .then((value) => {
+        if (active) setLanguage({ key: match.name, value })
+      })
+      .catch(() => {
+        if (active) setLanguage({ key: match.name, value: null })
+      })
+    return () => {
+      active = false
+    }
+  }, [match.name])
+
   return (
-    <span className="block truncate font-mono text-xs text-fgdim">
-      {before}
-      <mark className="rounded-sm bg-warnBg px-0.5 text-fg">{hit}</mark>
-      {after}
-    </span>
+    <section className="shrink-0 border-t border-edge" aria-label={`${relative}:${match.line}`}>
+      <div className="flex h-9 items-center gap-2 border-b border-edge bg-bar px-3">
+        <FileTypeIcon name={match.name} size={16} />
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-fg">{relative}</span>
+        <span className="shrink-0 font-mono text-[11px] text-accent">
+          {match.line}:{match.column}
+        </span>
+      </div>
+      <div className="h-[200px] overflow-hidden bg-panel">
+        <Suspense fallback={<div className="h-full bg-panel" />}>
+          <CodeFilePreview
+            content={content}
+            language={language?.key === match.name ? language.value : null}
+            sourceLineNumbers={sourceLineNumbers}
+            highlightRange={{
+              line: 4,
+              from: match.matchStart,
+              to: match.matchStart + match.matchLength
+            }}
+            compact
+            searchable={false}
+          />
+        </Suspense>
+      </div>
+    </section>
   )
 }
 
-/** Project-wide literal content search with line previews. */
+/** Project-wide literal content search with five results and a fixed source preview. */
 export function ContentSearchPalette({
   folderPath,
   onOpenMatch,
@@ -95,10 +138,11 @@ export function ContentSearchPalette({
   const open = (match: FileContentMatch | undefined): void => {
     if (match) void onOpenMatch(match)
   }
+  const activeMatch = !searching ? results[index] : undefined
 
   return createPortal(
     <div
-      className="fixed inset-0 z-100 flex items-start justify-center bg-black/40 pt-20"
+      className="fixed inset-0 z-100 flex items-start justify-center bg-black/40 pt-16"
       onClick={onClose}
     >
       <div
@@ -107,9 +151,9 @@ export function ContentSearchPalette({
         aria-modal="true"
         aria-label={t('keyboard.searchFileContents')}
         onClick={(event) => event.stopPropagation()}
-        className="solid-surface flex max-h-128 w-2xl flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
+        className="solid-surface flex max-h-[calc(100vh-5rem)] w-3xl flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
       >
-        <div className="flex items-center gap-2 border-b border-edge px-3">
+        <div className="flex shrink-0 items-center gap-2 border-b border-edge px-3">
           <svg
             className="h-4 w-4 shrink-0 text-fgmuted"
             viewBox="0 0 16 16"
@@ -149,46 +193,45 @@ export function ContentSearchPalette({
           </span>
         </div>
 
-        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">
+        <div ref={listRef} className="h-[200px] shrink-0 overflow-y-auto">
           {searching && (
-            <div className="px-3 py-8 text-center text-sm text-fgmuted">{t('files.searching')}</div>
+            <div className="grid h-full place-items-center text-sm text-fgmuted">{t('files.searching')}</div>
           )}
           {!searching && searched && results.length === 0 && (
-            <div className="px-3 py-8 text-center text-sm text-fgmuted">
+            <div className="grid h-full place-items-center text-sm text-fgmuted">
               {t('contentSearch.noResults')}
             </div>
           )}
-          {!searching &&
-            results.map((match, resultIndex) => {
-              const relative = relativePath(match.path, folderPath)
-              return (
-                <button
-                  key={`${match.path}:${match.line}:${match.column}`}
-                  data-active={resultIndex === index || undefined}
-                  title={`${relative}:${match.line}:${match.column}`}
-                  onMouseEnter={() => setIndex(resultIndex)}
-                  onClick={() => open(match)}
-                  className={`flex w-full flex-col gap-1 px-3 py-2 text-left transition ${
-                    resultIndex === index ? 'bg-hover' : ''
-                  }`}
-                >
-                  <span className="flex w-full min-w-0 items-baseline gap-2">
-                    <span className="shrink-0 text-sm font-medium text-fg">{match.name}</span>
-                    <span className="min-w-0 flex-1 truncate text-xs text-fgmuted">{relative}</span>
-                    <span className="shrink-0 font-mono text-[11px] text-accent">
-                      {match.line}:{match.column}
-                    </span>
-                  </span>
-                  <MatchPreview match={match} />
-                </button>
-              )
-            })}
-          {!searching && truncated && (
-            <div className="px-3 py-1.5 text-[11px] text-fgmuted">
-              {t('contentSearch.truncated')}
-            </div>
-          )}
+          {!searching && results.map((match, resultIndex) => {
+            const relative = relativePath(match.path, folderPath)
+            return (
+              <button
+                key={`${match.path}:${match.line}:${match.column}`}
+                data-active={resultIndex === index || undefined}
+                title={`${relative}:${match.line}:${match.column}`}
+                onMouseEnter={() => setIndex(resultIndex)}
+                onClick={() => open(match)}
+                className={`flex h-10 w-full items-center gap-2 border-b border-edge/60 px-3 text-left transition ${
+                  resultIndex === index ? 'bg-hover' : ''
+                }`}
+              >
+                <FileTypeIcon name={match.name} size={16} />
+                <span className="shrink-0 text-sm font-medium text-fg">{match.name}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-fgmuted">{relative}</span>
+                <span className="shrink-0 font-mono text-[11px] text-accent">
+                  {match.line}:{match.column}
+                </span>
+              </button>
+            )
+          })}
         </div>
+
+        {!searching && truncated && (
+          <div className="shrink-0 border-t border-edge px-3 py-1 text-[11px] text-fgmuted">
+            {t('contentSearch.truncated')}
+          </div>
+        )}
+        {activeMatch && <SourcePreview match={activeMatch} rootPath={folderPath} />}
       </div>
     </div>,
     document.body
