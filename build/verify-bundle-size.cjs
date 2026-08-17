@@ -3,7 +3,9 @@ const path = require('node:path')
 
 const assetsDir = path.resolve('out', 'renderer', 'assets')
 const MAX_JS_CHUNK_BYTES = 1_550_000
-const MAX_TOTAL_JS_BYTES = 3_950_000
+// Common-language syntax parsers are emitted as lazy chunks. Keep a narrow
+// allowance for them while retaining the stricter per-chunk startup budget.
+const MAX_TOTAL_JS_BYTES = 4_300_000
 
 if (!fs.existsSync(assetsDir)) {
   throw new Error('Renderer assets are missing. Run the production build first.')
