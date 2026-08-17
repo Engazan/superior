@@ -10,18 +10,22 @@ const { autoUpdater } = electronUpdater
 let updateStaged = false
 let daemonReleased = false
 
-/** True while a downloaded update still needs the daemon brought down before it
- *  can install (the daemon holds a Windows lock on the app executable). */
+/** True while a downloaded Windows update still needs the daemon brought down
+ *  before it can install (the daemon holds a lock on the app executable). */
 export function isUpdatePending(): boolean {
-  return updateStaged && !daemonReleased
+  return process.platform === 'win32' && updateStaged && !daemonReleased
 }
 
 /**
- * Bring the daemon down so its copy of the app executable stops locking the file
- * the installer replaces. Idempotent — safe to call from both the explicit
- * "restart to install" action and the app-quit auto-install path.
+ * On Windows, bring the daemon down so its copy of the app executable stops
+ * locking the file the installer replaces. Idempotent — safe to call from both
+ * the explicit "restart to install" action and the app-quit auto-install path.
  */
 export async function releaseDaemonForUpdate(): Promise<void> {
+  // Squirrel.Mac and Linux updates do not need this Windows executable-lock
+  // workaround. Keep their detached daemon alive so its PTYs reconnect after
+  // the updated app launches.
+  if (process.platform !== 'win32') return
   if (daemonReleased) return
   daemonReleased = true
   await shutdownDaemon().catch(() => undefined)
