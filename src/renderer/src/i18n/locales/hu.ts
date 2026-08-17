@@ -351,6 +351,9 @@ export const hu: Record<MessageKey, string> = {
   'terminal.maximize': 'Teljes méret',
   'terminal.restore': 'Visszaállítás',
   'terminal.restart': 'Parancs újraindítása',
+  'terminal.restoreAll': 'Összes terminál visszaállítása',
+  'terminal.interruptedBanner':
+    'A rendszer leállítása miatt megszakadt terminálok: {count}. A parancsaik és az elrendezésük megmaradt.',
   'terminal.setNickname': 'Becenév beállítása',
   'terminal.focusHint': 'Fókusz',
   'terminal.nicknamePlaceholder': 'Becenév',

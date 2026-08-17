@@ -352,6 +352,9 @@ export const sk: Record<MessageKey, string> = {
   'terminal.maximize': 'Maximalizovať',
   'terminal.restore': 'Obnoviť',
   'terminal.restart': 'Znova spustiť príkaz',
+  'terminal.restoreAll': 'Obnoviť všetky terminály',
+  'terminal.interruptedBanner':
+    'Terminály prerušené vypnutím systému: {count}. Ich príkazy a rozloženie zostali uložené.',
   'terminal.setNickname': 'Nastaviť prezývku',
   'terminal.focusHint': 'Zamerať',
   'terminal.nicknamePlaceholder': 'Prezývka',

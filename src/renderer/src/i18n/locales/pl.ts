@@ -351,6 +351,9 @@ export const pl: Record<MessageKey, string> = {
   'terminal.maximize': 'Maksymalizuj',
   'terminal.restore': 'Przywróć',
   'terminal.restart': 'Uruchom polecenie ponownie',
+  'terminal.restoreAll': 'Przywróć wszystkie terminale',
+  'terminal.interruptedBanner':
+    'Terminale przerwane przez wyłączenie systemu: {count}. Ich polecenia i układ zostały zapisane.',
   'terminal.setNickname': 'Ustaw pseudonim',
   'terminal.focusHint': 'Fokus',
   'terminal.nicknamePlaceholder': 'Pseudonim',

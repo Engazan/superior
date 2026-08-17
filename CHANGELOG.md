@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-08-17
+
+### Added
+
+- **Syntax highlighting for source previews.** File previews now detect and
+  highlight PHP, JavaScript, TypeScript, JSON, HTML, CSS, Markdown, Python,
+  shell and other commonly used languages while keeping unsupported text files
+  readable through the same editor.
+- **Expressive file icons in the Files sidebar.** Common source, configuration,
+  document, archive and media formats now have recognizable type-specific icons
+  and colors instead of sharing one generic file glyph.
+- **One-click terminal recovery after a system shutdown.** When macOS or another
+  operating system stops previously running PTYs, Superior restores their tabs,
+  grid positions, names and launch metadata, then offers one action to restart
+  every interrupted terminal across all workspaces.
+
+### Changed
+
+- **More useful project-content search results.** Cmd/Ctrl+Shift+F now keeps five
+  result rows visible before scrolling and shows a separate ten-line,
+  syntax-highlighted source preview. The matching source line is fixed in the
+  fourth preview row, with its original line number and exact match highlighted.
+
+### Fixed
+
+- **Terminal sessions survive in-app updates on macOS and Linux.** The
+  Windows-only NSIS executable-lock workaround was shutting down the terminal
+  daemon on every platform and killing all of its PTYs. Non-Windows updates now
+  leave the detached daemon alive so the updated app reconnects to the same
+  running terminals; Windows keeps the required installer-lock handling.
+
 ## [0.20.0] - 2026-08-11
 
 ### Added

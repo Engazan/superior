@@ -348,6 +348,9 @@ export const en = {
   'terminal.maximize': 'Maximize',
   'terminal.restore': 'Restore',
   'terminal.restart': 'Restart command',
+  'terminal.restoreAll': 'Restore all terminals',
+  'terminal.interruptedBanner':
+    'Terminals interrupted by a system shutdown: {count}. Their commands and layout were saved.',
   'terminal.setNickname': 'Set nickname',
   'terminal.focusHint': 'Focus',
   'terminal.nicknamePlaceholder': 'Nickname',

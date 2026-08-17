@@ -12,11 +12,13 @@ import {
   IconButton,
   Menu,
   PencilIcon,
-  PromptIcon
+  PromptIcon,
+  RestartIcon
 } from './ui'
 import { useAttentionSessions, useBusySessions } from '../activityStore'
 import { useAttentionColor } from '../attentionColor'
 import { useI18n } from '../i18n'
+import { interruptedSessions } from '../interruptedSessions'
 import { useShortcutTitle } from '../shortcuts'
 import {
   gridRects,
@@ -78,7 +80,7 @@ interface Props {
   onToggleMaximize: (id: string) => void
   onClose: (id: string) => void
   /** re-run an exited session's original preset command in place */
-  onRestart: (id: string) => void
+  onRestart: (id: string) => Promise<void>
   onSessionUpdate: (id: string, patch: Partial<AgentSession>) => void
   /** set a terminal's user nickname (persisted); empty string clears it */
   onSetNickname: (id: string, nickname: string) => void
@@ -177,6 +179,23 @@ export function TerminalPanel({
   // while the bar is open participate by default instead of silently dropping out.
   const [broadcastMode, setBroadcastMode] = useState(false)
   const [broadcastExcluded, setBroadcastExcluded] = useState<Set<string>>(new Set())
+  const [restoringInterrupted, setRestoringInterrupted] = useState(false)
+
+  // A cold OS boot cannot preserve PTYs, but the persisted session snapshots
+  // retain everything needed to launch replacements into the same grid slots.
+  const interrupted = interruptedSessions(sessions)
+
+  const restoreAllInterrupted = async (): Promise<void> => {
+    if (restoringInterrupted) return
+    setRestoringInterrupted(true)
+    try {
+      // Restore sequentially so a large saved layout does not hammer the daemon
+      // with a burst of simultaneous process spawns.
+      for (const session of interrupted) await onRestart(session.id)
+    } finally {
+      setRestoringInterrupted(false)
+    }
+  }
 
   // Terminals of the active tab (active workspace + active tab), in creation order.
   const tabSessions = sessions.filter(
@@ -439,6 +458,27 @@ export function TerminalPanel({
               <BroadcastIcon size={14} />
             </IconButton>
           </div>
+        </div>
+      )}
+
+      {interrupted.length > 0 && (
+        <div
+          role="status"
+          className="flex shrink-0 items-center gap-3 border-b border-accentBorder bg-accentBg/60 px-3 py-2"
+        >
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-panel text-accent ring-1 ring-inset ring-accentBorder">
+            <RestartIcon size={14} />
+          </span>
+          <span className="min-w-0 flex-1 text-xs text-fg2">
+            {t('terminal.interruptedBanner', { count: interrupted.length })}
+          </span>
+          <Button
+            size="sm"
+            loading={restoringInterrupted}
+            onClick={() => void restoreAllInterrupted()}
+          >
+            {t('terminal.restoreAll')}
+          </Button>
         </div>
       )}
 

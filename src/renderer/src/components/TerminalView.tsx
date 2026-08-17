@@ -96,7 +96,7 @@ interface Props {
   onOpenFileTarget: (target: FileLinkTarget) => void
   onClose: (id: string) => void
   /** re-run the session's original preset command in place */
-  onRestart: (id: string) => void
+  onRestart: (id: string) => Promise<void>
   /** set this terminal's user nickname (persisted); empty string clears it */
   onSetNickname: (id: string, nickname: string) => void
   onToggleMaximize: (id: string) => void

@@ -351,6 +351,9 @@ export const cs: Record<MessageKey, string> = {
   'terminal.maximize': 'Maximalizovat',
   'terminal.restore': 'Obnovit',
   'terminal.restart': 'Spustit příkaz znovu',
+  'terminal.restoreAll': 'Obnovit všechny terminály',
+  'terminal.interruptedBanner':
+    'Terminály přerušené vypnutím systému: {count}. Jejich příkazy a rozložení zůstaly uložené.',
   'terminal.setNickname': 'Nastavit přezdívku',
   'terminal.focusHint': 'Zaměřit',
   'terminal.nicknamePlaceholder': 'Přezdívka',
