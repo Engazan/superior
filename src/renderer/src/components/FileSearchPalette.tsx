@@ -3,28 +3,12 @@ import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
 import type { FsEntry } from '../types'
 import { useDismiss } from './ui'
+import { FileTypeIcon } from './FileTypeIcon'
 
 interface Props {
   folderPath: string
   onOpenFile: (file: FsEntry) => void | Promise<void>
   onClose: () => void
-}
-
-function FileIcon(): React.JSX.Element {
-  return (
-    <svg
-      className="h-4 w-4 shrink-0 text-fgmuted"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M3 1.75h6l4 4v8.5H3z" />
-      <path d="M9 1.75v4h4" />
-    </svg>
-  )
 }
 
 function relativeParts(entry: FsEntry, rootPath: string): { relative: string; directory: string } {
@@ -170,7 +154,7 @@ export function FileSearchPalette({ folderPath, onOpenFile, onClose }: Props): R
                     resultIndex === index ? 'bg-hover text-fg' : 'text-fgdim'
                   }`}
                 >
-                  <FileIcon />
+                  <FileTypeIcon name={entry.name} size={16} />
                   <span className="min-w-0 flex-1 truncate text-fg">{entry.name}</span>
                   {directory && (
                     <span className="max-w-1/2 shrink truncate text-xs text-fgmuted">

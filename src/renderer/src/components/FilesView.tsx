@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { RefreshIcon } from './ui'
+import { FileTypeIcon, FolderTypeIcon } from './FileTypeIcon'
 import type { FsEntry } from '../types'
 
 interface Props {
@@ -25,41 +26,6 @@ function Chevron({ open }: { open: boolean }): React.JSX.Element {
       aria-hidden
     >
       <path d="M4.5 2.5 8 6l-3.5 3.5" />
-    </svg>
-  )
-}
-
-function FolderIcon(): React.JSX.Element {
-  return (
-    <svg
-      className="block h-3.5 w-3.5 shrink-0 text-accent"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M1.75 4.25h4l1.5 1.75h7v6.25a1 1 0 0 1-1 1H1.75a1 1 0 0 1-1-1V4.25Z" />
-    </svg>
-  )
-}
-
-function FileIcon(): React.JSX.Element {
-  return (
-    <svg
-      className="block h-3.5 w-3.5 shrink-0 text-fgmuted"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M9 1.75H4.25a1 1 0 0 0-1 1v10.5a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5.5L9 1.75Z" />
-      <path d="M9 1.75V5.5h3.75" />
     </svg>
   )
 }
@@ -114,7 +80,11 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): React.
         style={{ paddingLeft: depth * 12 + 8 }}
       >
         {entry.isDirectory ? <Chevron open={open} /> : <span className="w-3 shrink-0" />}
-        {entry.isDirectory ? <FolderIcon /> : <FileIcon />}
+        {entry.isDirectory ? (
+          <FolderTypeIcon name={entry.name} open={open} size={15} />
+        ) : (
+          <FileTypeIcon name={entry.name} size={15} />
+        )}
         <span className="min-w-0 flex-1 truncate">{entry.name}</span>
       </button>
 
@@ -168,7 +138,7 @@ function SearchRow({
         selected ? 'bg-accentBg text-accent' : 'text-fgdim'
       }`}
     >
-      <FileIcon />
+      <FileTypeIcon name={entry.name} size={15} />
       <span className="min-w-0 flex-1 truncate">
         <span className="text-fg">{entry.name}</span>
         {dir && <span className="text-fgmuted"> {dir}</span>}
