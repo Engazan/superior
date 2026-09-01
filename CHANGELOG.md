@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.1] - 2026-09-01
+
+### Changed
+
+- **A denser, clearer workspace sidebar.** Project groups and worktrees now use
+  compact rows, stronger hierarchy, full-width active states, right-aligned
+  counts and clearer activity indicators, with project actions appearing on
+  hover instead of reserving permanent space.
+- **More room for terminal content.** The separate workspace tab strip has been
+  removed, while the saved-prompt and broadcast controls now live in the window
+  top bar. Broadcast keeps its active-state feedback and both controls disable
+  themselves when the current view cannot use them.
+
 ## [0.21.0] - 2026-08-17
 
 ### Added
