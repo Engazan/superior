@@ -550,16 +550,20 @@ export const Sidebar = memo(function Sidebar({
       className="superior-sidebar flex w-64 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
     >
       {overlays}
-      <div className="border-b border-edge px-3 pb-3 pt-3">
-        <button
-          onClick={onOpenProject}
-          className="flex w-full items-center gap-2 rounded-full border border-accentBorder bg-accentBg px-3 py-2 text-sm font-bold text-accent transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          <span className="flex h-5 w-5 items-center justify-center text-base leading-none text-accent">
-            +
+      <div className="border-b border-edge/70 px-3 pb-3 pt-3">
+        <div className="flex h-9 items-center justify-between px-1">
+          <span className="text-[15px] font-bold tracking-[-0.01em] text-fg">
+            {t('palette.sectionWorkspaces')}
           </span>
-          {t('sidebar.openProject')}
-        </button>
+          <button
+            onClick={onOpenProject}
+            title={t('sidebar.openProject')}
+            aria-label={t('sidebar.openProject')}
+            className="grid h-8 w-8 place-items-center rounded-lg text-2xl font-light leading-none text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          >
+            <span aria-hidden className="-translate-y-px">+</span>
+          </button>
+        </div>
         {workspaceToolsVisible && (
           <div className="mt-2 space-y-1.5">
             <div className="relative">
@@ -611,7 +615,7 @@ export const Sidebar = memo(function Sidebar({
         )}
       </div>
 
-      <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto py-2">
+      <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
         {folders.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-3 py-8 text-center">
             <p className="text-xs leading-5 text-fgmuted">{t('sidebar.noWorkspaces')}</p>
@@ -623,7 +627,7 @@ export const Sidebar = memo(function Sidebar({
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {workspaceToolsVisible &&
               !workspaceQuery &&
               !favoritesOnly &&
@@ -658,6 +662,7 @@ export const Sidebar = memo(function Sidebar({
               )
               const open = !folder.collapsed
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
+              const folderActive = folderWorkspaces.some((w) => w.id === activeWorkspaceId)
               const beingDragged = folderDrag?.path === folder.path
               if (folderWorkspaces.length === 0) return null
               return (
@@ -665,8 +670,8 @@ export const Sidebar = memo(function Sidebar({
                   key={folder.path}
                   data-folder-path={folder.path}
                   style={folderTint(folder.color)}
-                  className={`pb-2 ${
-                    folderIndex > 0 ? 'border-t border-edge/65 pt-2' : ''
+                  className={`pb-1 ${
+                    folderIndex > 0 ? 'pt-1' : ''
                   } ${beingDragged ? 'opacity-60 ring-1 ring-accentBorder' : ''}`}
                 >
                   {/* Folder header — click to collapse / expand; the grip drags to reorder */}
@@ -692,19 +697,23 @@ export const Sidebar = memo(function Sidebar({
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
                     title={folderTitle(folder)}
-                    className="group flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-fgdim transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                    className={`group relative flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-0.5 text-fgdim transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                      folderActive ? 'bg-hover text-fg shadow-sm' : 'hover:bg-hover/70 hover:text-fg'
+                    }`}
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
                     </span>
-                    <span className="text-fgmuted">
-                      <FolderGlyph folder={folder} />
+                    <span className={folderActive ? 'text-fgdim' : 'text-fgmuted'}>
+                      <FolderGlyph folder={folder} size={15} />
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-fgdim">
+                    <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] ${
+                      folderActive ? 'text-fg' : 'text-fgdim'
+                    }`}>
                       {folderLabel(folder)}
                     </span>
                     <span
-                      className="shrink-0 rounded-full bg-edge/70 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-fgmuted"
+                      className="mr-1 shrink-0 px-1 text-[11px] font-semibold tabular-nums text-fgmuted transition group-hover:opacity-0 group-focus-within:opacity-0"
                     >
                       {folderWorkspaces.length}
                     </span>
@@ -713,40 +722,42 @@ export const Sidebar = memo(function Sidebar({
                     )}
                     {/* Drag handle — the drag itself runs on window listeners
                         (see beginFolderDrag), the list live-reorders under the pointer. */}
-                    <span
-                      title={t('sidebar.reorderFolder')}
-                      onClick={(e) => e.stopPropagation()}
-                      onPointerDown={beginFolderDrag(folder.path)}
-                      className={`flex h-5 w-4 shrink-0 touch-none items-center justify-center text-fgmuted transition ${
-                        beingDragged
-                          ? 'cursor-grabbing opacity-100'
-                          : 'cursor-grab opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-                      }`}
-                    >
-                      <GripIcon size={12} />
+                    <span className="absolute right-1 flex items-center bg-hover opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                      <span
+                        title={t('sidebar.reorderFolder')}
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={beginFolderDrag(folder.path)}
+                        className={`flex h-5 w-4 shrink-0 touch-none items-center justify-center text-fgmuted ${
+                          beingDragged ? 'cursor-grabbing' : 'cursor-grab'
+                        }`}
+                      >
+                        <GripIcon size={12} />
+                      </span>
+                      {/* One kebab replaces the previous pencil + ✕ pair; right-click
+                          opens the identical menu. */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setFolderMenu({ path: folder.path, anchor: e.currentTarget })
+                        }}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                        aria-label={t('menu.folderActions')}
+                        title={t('menu.folderActions')}
+                        aria-haspopup="menu"
+                      >
+                        <KebabIcon size={13} />
+                      </button>
                     </span>
-                    {/* One kebab replaces the previous pencil + ✕ pair; right-click
-                        opens the identical menu. */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setFolderMenu({ path: folder.path, anchor: e.currentTarget })
-                      }}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-                      aria-label={t('menu.folderActions')}
-                      title={t('menu.folderActions')}
-                      aria-haspopup="menu"
-                    >
-                      <KebabIcon size={13} />
-                    </button>
                   </div>
 
-                  {/* Workspaces — indented under a tree guide line */}
+                  {/* Workspaces — compact, indented rows under their project. */}
                   {open && (
-                    <ul className="ml-2 mt-1 space-y-0.5 border-l-2 border-edge/70 py-0.5">
+                    <ul className="mt-0.5 space-y-px py-0.5">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
                         const attn = attentionWorkspaceIds.has(ws.id)
+                        const busy = busyWorkspaceIds.has(ws.id)
+                        const runningCount = counts[ws.id] ?? 0
                         return (
                           <li key={ws.id}>
                             <div
@@ -772,23 +783,20 @@ export const Sidebar = memo(function Sidebar({
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative mx-1 flex min-h-9 cursor-pointer items-center gap-2 rounded-lg py-1 pl-3 pr-2 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 rounded-lg py-0.5 pl-10 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
-                                  ? 'bg-accentBg text-fg'
+                                  ? 'bg-hover text-fg shadow-sm'
                                   : attn
                                     ? 'attention-pulse text-fg'
-                                    : 'text-fg2 hover:bg-hover'
+                                    : 'text-fg2 hover:bg-hover/70'
                               }`}
                             >
                               <span
                                 style={attn ? { backgroundColor: attentionColor } : undefined}
-                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                                  active ? 'bg-accent' : attn ? '' : 'bg-fgmuted'
+                                className={`h-2 w-2 shrink-0 rounded-full shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-panel)_75%,transparent)] ${
+                                  busy ? 'bg-status' : active ? 'bg-accent' : attn ? '' : 'bg-fgmuted/70'
                                 }`}
                               />
-                              {active && (
-                                <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
-                              )}
                               {editingId === ws.id ? (
                                 <input
                                   autoFocus
@@ -811,8 +819,8 @@ export const Sidebar = memo(function Sidebar({
                                       e.stopPropagation()
                                       startRename(ws)
                                     }}
-                                    className={`truncate text-sm ${
-                                      active ? 'font-medium text-fg' : 'text-fg2'
+                                    className={`truncate text-[13px] leading-4 ${
+                                      active ? 'font-semibold text-fg' : 'font-medium text-fg2'
                                     }`}
                                     // The tooltip shows the workspace itself (its branch/
                                     // path live only on the collapsed rail otherwise);
@@ -845,7 +853,16 @@ export const Sidebar = memo(function Sidebar({
                                 </div>
                               )}
 
-                              {editingId !== ws.id && busyWorkspaceIds.has(ws.id) && (
+                              {editingId !== ws.id && runningCount > 0 && !busy && (
+                                <span
+                                  title={t('sidebar.runningTerminals')}
+                                  className="min-w-5 shrink-0 px-1 text-right text-xs font-semibold tabular-nums text-fgmuted"
+                                >
+                                  {runningCount}
+                                </span>
+                              )}
+
+                              {editingId !== ws.id && busy && (
                                 <WorkingSpinner title={t('sidebar.workingTerminals')} />
                               )}
 

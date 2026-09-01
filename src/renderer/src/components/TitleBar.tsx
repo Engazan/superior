@@ -2,7 +2,7 @@ import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { BranchSwitcher } from './BranchSwitcher'
-import { BranchIcon } from './ui'
+import { BranchIcon, BroadcastIcon, PromptIcon } from './ui'
 import { useI18n } from '../i18n'
 import { useShortcutTitle } from '../shortcuts'
 import { barTint } from '../tint'
@@ -28,6 +28,13 @@ interface Props {
   /** False when no workspace is active — launching can't work, so the button
       is disabled with an explanatory tooltip instead of opening a dead picker. */
   launcherEnabled: boolean
+  /** Open the saved-prompt picker for the focused terminal. */
+  onOpenPromptPicker: () => void
+  promptPickerEnabled: boolean
+  /** Toggle typing into all terminal cells in the active workspace. */
+  onToggleBroadcast: () => void
+  broadcastEnabled: boolean
+  broadcastActive: boolean
   /** Toggle the right-hand panel. Its button is pinned to the very right edge. */
   onToggleRight: () => void
   /** Current open state of the right panel, for aria-expanded. */
@@ -62,6 +69,11 @@ export function TitleBar({
   onBranchSwitched,
   onOpenLauncher,
   launcherEnabled,
+  onOpenPromptPicker,
+  promptPickerEnabled,
+  onToggleBroadcast,
+  broadcastEnabled,
+  broadcastActive,
   onToggleRight,
   rightOpen,
   sidebarCollapsed,
@@ -159,8 +171,34 @@ export function TitleBar({
         )}
       </div>
 
-      {/* RIGHT — quick-launch + right-panel toggles + window controls. */}
+      {/* RIGHT — terminal tools + quick-launch + right-panel toggle + window controls. */}
       <div className="flex h-full min-w-0 flex-1 items-center justify-end" onDoubleClick={onMaximize}>
+        {showToggle && (
+          <>
+            <button
+              onClick={onOpenPromptPicker}
+              disabled={!promptPickerEnabled}
+              title={t('prompts.insert')}
+              aria-label={t('prompts.insert')}
+              className="app-no-drag my-1.5 grid h-8 w-9 place-items-center rounded-full p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              <PromptIcon size={15} />
+            </button>
+            <button
+              onClick={onToggleBroadcast}
+              disabled={!broadcastEnabled}
+              aria-pressed={broadcastActive}
+              title={t('broadcast.toggle')}
+              aria-label={t('broadcast.toggle')}
+              className={`app-no-drag my-1.5 grid h-8 w-9 place-items-center rounded-full p-0 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent ${
+                broadcastActive ? 'bg-warnBg text-warn' : 'text-fgdim'
+              }`}
+            >
+              <BroadcastIcon size={15} />
+            </button>
+          </>
+        )}
+
         {/* Visible entry point for the quick-launch picker, so the feature is
             discoverable without knowing its shortcut. */}
         {showToggle && (

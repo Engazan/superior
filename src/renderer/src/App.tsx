@@ -124,17 +124,15 @@ export default function App(): React.JSX.Element {
   const { presets } = presetsApi
   const layoutPresets = useLayoutPresets()
   const preview = usePreviewPane()
-  const { setPreviewFile, hidePreview } = preview
+  const { setPreviewFile } = preview
   const currentPreviewPath = preview.previewFile?.path
   const confirm = useConfirm()
 
   // Unsaved-edit guard for the file preview: switching to another file or
   // closing its tab while the editor is dirty asks before discarding.
   const previewDirtyRef = useRef(false)
-  const [previewDirty, setPreviewDirty] = useState(false)
   const onPreviewDirtyChange = useCallback((dirty: boolean) => {
     previewDirtyRef.current = dirty
-    setPreviewDirty(dirty)
   }, [])
   const setPreviewFileGuarded = useCallback(
     async (file: FsEntry | null, line?: number): Promise<boolean> => {
@@ -151,7 +149,6 @@ export default function App(): React.JSX.Element {
         })
         if (!ok) return false
         previewDirtyRef.current = false
-        setPreviewDirty(false)
       }
       setPreviewFile(file, line)
       return true
@@ -187,6 +184,11 @@ export default function App(): React.JSX.Element {
   // The active workspace's tabs + its active tab (drives the terminal grid).
   const activeTabs = ws.activeWorkspaceId ? ws.tabsByWs[ws.activeWorkspaceId] : undefined
   const activeTab = activeTabs?.tabs.find((tb) => tb.id === activeTabs.activeTabId)
+  const activeTabSessionCount = ws.sessions.filter(
+    (session) =>
+      session.workspaceId === ws.activeWorkspaceId && session.tabId === activeTabs?.activeTabId
+  ).length
+  const [broadcastMode, setBroadcastMode] = useState(false)
   const { gitStatus, gitLoading, initializeGit, refresh: refreshGitStatus } = useGitStatus(
     ws.effectiveDir,
     ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null,
@@ -517,31 +519,6 @@ export default function App(): React.JSX.Element {
     t
   ])
 
-  // Stable tab handlers for the terminal panel (they close over the active workspace).
-  const { activeWorkspaceId, selectTab, addTab, closeTab, renameTab } = ws
-  const onSelectTab = useCallback(
-    (id: string) => {
-      hidePreview()
-      if (activeWorkspaceId) selectTab(activeWorkspaceId, id)
-    },
-    [activeWorkspaceId, selectTab, hidePreview]
-  )
-  const onAddTab = useCallback(
-    () => {
-      hidePreview()
-      if (activeWorkspaceId) addTab(activeWorkspaceId)
-    },
-    [activeWorkspaceId, addTab, hidePreview]
-  )
-  const onCloseTab = useCallback(
-    (id: string) => activeWorkspaceId && closeTab(activeWorkspaceId, id),
-    [activeWorkspaceId, closeTab]
-  )
-  const onRenameTab = useCallback(
-    (id: string, name: string) => activeWorkspaceId && renameTab(activeWorkspaceId, id, name),
-    [activeWorkspaceId, renameTab]
-  )
-
   // Global keyboard shortcuts. Capture phase so they win over a focused terminal;
   // suppressed while a binding is being recorded in settings.
   const lastShiftAtRef = useRef<number | null>(null)
@@ -774,6 +751,15 @@ export default function App(): React.JSX.Element {
         onOpenLauncher={() => {
           if (view === 'main' && ws.activeLaunchTarget) setLauncherOpen(true)
         }}
+        onOpenPromptPicker={() => setPalettePromptsOpen(true)}
+        promptPickerEnabled={
+          view === 'main' && !preview.previewActive && !!ws.activeSessionId
+        }
+        onToggleBroadcast={() => setBroadcastMode((active) => !active)}
+        broadcastEnabled={
+          view === 'main' && !preview.previewActive && activeTabSessionCount > 0
+        }
+        broadcastActive={broadcastMode}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
         rightOpen={rightSidebarOpen}
         sidebarCollapsed={sidebarCollapsed}
@@ -848,11 +834,9 @@ export default function App(): React.JSX.Element {
                     onDeleteLayoutPreset={layoutPresets.deleteLayout}
                     activeSessionId={ws.activeSessionId}
                     maximizedId={ws.maximizedId}
-                    tabs={activeTabs?.tabs ?? []}
                     activeTabId={activeTabs?.activeTabId}
                     previewFile={preview.previewFile}
                     previewActive={preview.previewActive}
-                    previewDirty={previewDirty}
                     previewContent={
                       preview.previewFile ? (
                         <Suspense fallback={<DeferredPanel />}>
@@ -867,8 +851,6 @@ export default function App(): React.JSX.Element {
                         </Suspense>
                       ) : null
                     }
-                    onSelectPreview={preview.showPreview}
-                    onClosePreview={() => void setPreviewFileGuarded(null)}
                     gridLayout={activeTab?.gridLayout}
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
@@ -883,10 +865,8 @@ export default function App(): React.JSX.Element {
                     onManagePresets={openPresets}
                     onOpenProject={openProjectModal}
                     onGridLayoutChange={ws.setGridLayout}
-                    onSelectTab={onSelectTab}
-                    onAddTab={onAddTab}
-                    onCloseTab={onCloseTab}
-                    onRenameTab={onRenameTab}
+                    broadcastMode={broadcastMode}
+                    onBroadcastModeChange={setBroadcastMode}
                   />
                 </div>
               </div>

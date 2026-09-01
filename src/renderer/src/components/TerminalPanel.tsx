@@ -2,21 +2,15 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
-import { PromptPicker } from './PromptPicker'
-import { insertIntoTerminal, wrapForPty } from '../terminalInput'
+import { wrapForPty } from '../terminalInput'
 import {
   Button,
   BroadcastIcon,
   CheckIcon,
   CloseIcon,
   IconButton,
-  Menu,
-  PencilIcon,
-  PromptIcon,
   RestartIcon
 } from './ui'
-import { useAttentionSessions, useBusySessions } from '../activityStore'
-import { useAttentionColor } from '../attentionColor'
 import { useI18n } from '../i18n'
 import { interruptedSessions } from '../interruptedSessions'
 import { useShortcutTitle } from '../shortcuts'
@@ -36,8 +30,7 @@ import type {
   AgentSession,
   FileLinkTarget,
   LayoutPreset,
-  TerminalPreset,
-  WorkspaceTab
+  TerminalPreset
 } from '../types'
 
 interface Props {
@@ -59,17 +52,12 @@ interface Props {
   activeSessionId: string | null
   /** the grid cell blown up to fill the whole panel, or null (owned by App so shortcuts can drive it) */
   maximizedId: string | null
-  /** the active workspace's tabs (each tab is a grid of terminals) */
-  tabs: WorkspaceTab[]
   /** the active tab within the active workspace */
   activeTabId: string | undefined
   /** transient file-editor tab shown beside the terminal tabs */
   previewFile: { name: string; path: string } | null
   previewActive: boolean
-  previewDirty: boolean
   previewContent: ReactNode
-  onSelectPreview: () => void
-  onClosePreview: () => void
   /** saved cell sizing for the active tab's grid (undefined → uniform) */
   gridLayout: GridLayout | undefined
   presets: TerminalPreset[]
@@ -93,14 +81,9 @@ interface Props {
   onOpenProject: (source?: 'local' | 'git' | 'remote') => void
   /** persist a grid sizing change */
   onGridLayoutChange: (layout: GridLayout) => void
-  /** switch the active tab */
-  onSelectTab: (id: string) => void
-  /** add a new (empty) tab */
-  onAddTab: () => void
-  /** close a tab (kills its terminals) */
-  onCloseTab: (id: string) => void
-  /** rename a tab */
-  onRenameTab: (id: string, name: string) => void
+  /** Broadcast mode is controlled from the window topbar. */
+  broadcastMode: boolean
+  onBroadcastModeChange: (active: boolean) => void
 }
 
 interface Layout {
@@ -120,14 +103,10 @@ export function TerminalPanel({
   onDeleteLayoutPreset,
   activeSessionId,
   maximizedId,
-  tabs,
   activeTabId,
   previewFile,
   previewActive,
-  previewDirty,
   previewContent,
-  onSelectPreview,
-  onClosePreview,
   gridLayout,
   presets,
   onSelect,
@@ -142,10 +121,8 @@ export function TerminalPanel({
   onManagePresets,
   onOpenProject,
   onGridLayoutChange,
-  onSelectTab,
-  onAddTab,
-  onCloseTab,
-  onRenameTab
+  broadcastMode,
+  onBroadcastModeChange
 }: Props): React.JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
@@ -166,18 +143,9 @@ export function TerminalPanel({
       }),
     [onSessionUpdate]
   )
-  // Inline tab rename: the tab being edited and its draft name.
-  const [editingTab, setEditingTab] = useState<{ id: string; name: string } | null>(null)
-  // Right-click context menu on a tab chip (Rename / Close).
-  const [tabMenu, setTabMenu] = useState<{ id: string; name: string; x: number; y: number } | null>(
-    null
-  )
-  // Saved-prompt picker overlay (inserts into the active terminal).
-  const [promptPickerOpen, setPromptPickerOpen] = useState(false)
   // Broadcast mode: one input bar typing into every running grid cell at once.
   // Stored as an *exclusion* set so cells launched or restarted (new session id)
   // while the bar is open participate by default instead of silently dropping out.
-  const [broadcastMode, setBroadcastMode] = useState(false)
   const [broadcastExcluded, setBroadcastExcluded] = useState<Set<string>>(new Set())
   const [restoringInterrupted, setRestoringInterrupted] = useState(false)
 
@@ -260,26 +228,6 @@ export function TerminalPanel({
     window.addEventListener('pointerup', up)
   }
 
-  const commitRename = (): void => {
-    if (!editingTab) return
-    const name = editingTab.name.trim()
-    if (name) onRenameTab(editingTab.id, name)
-    setEditingTab(null)
-  }
-
-  const insertPrompt = (text: string, submit: boolean): void => {
-    if (activeSessionId) insertIntoTerminal(activeSessionId, text, submit)
-  }
-
-  // Entering broadcast mode targets every running cell of the current grid.
-  const toggleBroadcast = (): void => {
-    setBroadcastMode((on) => {
-      if (on) return false
-      setBroadcastExcluded(new Set())
-      return true
-    })
-  }
-
   const toggleTarget = (id: string): void => {
     setBroadcastExcluded((prev) => {
       const next = new Set(prev)
@@ -301,166 +249,17 @@ export function TerminalPanel({
 
   // Switching tab/workspace invalidates the targeted cells — drop the mode.
   useEffect(() => {
-    setBroadcastMode(false)
+    onBroadcastModeChange(false)
     setBroadcastExcluded(new Set())
-  }, [activeTabId, activeWorkspaceId, previewActive])
+  }, [activeTabId, activeWorkspaceId, previewActive, onBroadcastModeChange])
+
+  // Every newly opened broadcast session starts with all running cells targeted.
+  useEffect(() => {
+    if (broadcastMode) setBroadcastExcluded(new Set())
+  }, [broadcastMode])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-transparent">
-      {/* Terminal grids and the transient file editor share one tab strip. */}
-      {activeWorkspaceId && (tabs.length > 0 || previewFile) && (
-        <div role="tablist" aria-label={t('tab.listLabel')} className="flex items-center border-b border-edge bg-panel/90 px-2 py-1.5">
-          <div className="flex min-w-0 items-stretch gap-px overflow-x-auto">
-            {tabs.map((tab) => {
-              const active = !previewActive && tab.id === activeTabId
-              const editing = editingTab?.id === tab.id
-              const tabCells = sessions.filter(
-                (s) => s.workspaceId === activeWorkspaceId && s.tabId === tab.id
-              )
-              return (
-                <div
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={active}
-                  tabIndex={0}
-                  onClick={() => onSelectTab(tab.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      onSelectTab(tab.id)
-                    }
-                  }}
-                  onDoubleClick={() => setEditingTab({ id: tab.id, name: tab.name })}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    setTabMenu({ id: tab.id, name: tab.name, x: e.clientX, y: e.clientY })
-                  }}
-                  className={`group flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-                    active ? 'bg-accentBg font-semibold text-fg shadow-xs ring-1 ring-inset ring-accentBorder' : 'text-fgdim hover:bg-hover'
-                  }`}
-                >
-                  {tabCells.length > 0 && <TabActivityDot cells={tabCells} />}
-                  {editing ? (
-                    <input
-                      autoFocus
-                      value={editingTab.name}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => setEditingTab({ id: tab.id, name: e.target.value })}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename()
-                        else if (e.key === 'Escape') setEditingTab(null)
-                      }}
-                      className="w-24 min-w-0 rounded-sm border border-edge bg-panel px-1 py-0.5 text-xs text-fg focus:border-fgdim focus:outline-hidden"
-                    />
-                  ) : (
-                    <span className="whitespace-nowrap" title={t('tab.rename')}>
-                      {tab.name}
-                    </span>
-                  )}
-                  {!editing && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onCloseTab(tab.id)
-                      }}
-                      className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg focus-visible:opacity-100"
-                      aria-label={t('tab.close')}
-                      title={t('tab.close')}
-                    >
-                      <CloseIcon size={11} />
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-            {previewFile && (
-              <div
-                role="tab"
-                aria-selected={previewActive}
-                tabIndex={0}
-                onClick={onSelectPreview}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    onSelectPreview()
-                  }
-                }}
-                title={previewFile.path}
-                className={`group flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-                  previewActive
-                    ? 'bg-accentBg font-semibold text-fg shadow-xs ring-1 ring-inset ring-accentBorder'
-                    : 'text-fgdim hover:bg-hover'
-                }`}
-              >
-                <svg
-                  className="h-3.5 w-3.5 shrink-0"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d="M3 1.75h6l4 4v8.5H3z" />
-                  <path d="M9 1.75v4h4" />
-                </svg>
-                <span className="max-w-48 truncate whitespace-nowrap">{previewFile.name}</span>
-                {previewDirty && (
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
-                    aria-label={t('preview.unsaved')}
-                    title={t('preview.unsaved')}
-                  />
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onClosePreview()
-                  }}
-                  className="text-fgmuted opacity-0 transition group-hover:opacity-100 hover:text-fg focus-visible:opacity-100"
-                  aria-label={t('tab.close')}
-                  title={t('tab.close')}
-                >
-                  <CloseIcon size={11} />
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center px-1">
-            <button
-              onClick={onAddTab}
-              className="rounded-sm px-2 py-1 text-sm text-fgdim transition hover:bg-hover hover:text-fg"
-              aria-label={t('tab.new')}
-              title={t('tab.new')}
-            >
-              +
-            </button>
-          </div>
-
-          {/* Right-side tools: insert a saved prompt / broadcast to all cells. */}
-          <div className="ml-auto flex shrink-0 items-center gap-0.5 px-1">
-            <IconButton
-              size="sm"
-              label={t('prompts.insert')}
-              disabled={previewActive || !activeSessionId}
-              onClick={() => setPromptPickerOpen(true)}
-            >
-              <PromptIcon size={14} />
-            </IconButton>
-            <IconButton
-              size="sm"
-              label={t('broadcast.toggle')}
-              disabled={previewActive || gridCells.length === 0}
-              className={broadcastMode ? '!text-warn' : ''}
-              onClick={toggleBroadcast}
-            >
-              <BroadcastIcon size={14} />
-            </IconButton>
-          </div>
-        </div>
-      )}
-
       {interrupted.length > 0 && (
         <div
           role="status"
@@ -497,47 +296,16 @@ export function TerminalPanel({
                   e.currentTarget.value = ''
                 }
               } else if (e.key === 'Escape') {
-                setBroadcastMode(false)
+                onBroadcastModeChange(false)
               }
             }}
             placeholder={t('broadcast.placeholder', { n: broadcastTargets.length })}
             className="h-7 min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-warn/50"
           />
-          <IconButton size="sm" label={t('broadcast.exit')} onClick={() => setBroadcastMode(false)}>
+          <IconButton size="sm" label={t('broadcast.exit')} onClick={() => onBroadcastModeChange(false)}>
             <CloseIcon size={12} />
           </IconButton>
         </div>
-      )}
-
-      {promptPickerOpen && (
-        <PromptPicker
-          onPick={(p, submit) => insertPrompt(p.text, submit)}
-          onClose={() => setPromptPickerOpen(false)}
-        />
-      )}
-
-      {/* Tab context menu — same actions as double-click rename + hover close. */}
-      {tabMenu && (
-        <Menu
-          anchor={{ x: tabMenu.x, y: tabMenu.y }}
-          onClose={() => setTabMenu(null)}
-          items={[
-            {
-              id: 'rename',
-              label: t('tab.renameAction'),
-              icon: <PencilIcon size={13} />,
-              onSelect: () => setEditingTab({ id: tabMenu.id, name: tabMenu.name })
-            },
-            'separator',
-            {
-              id: 'close',
-              label: t('tab.close'),
-              icon: <CloseIcon size={13} />,
-              tone: 'danger',
-              onSelect: () => onCloseTab(tabMenu.id)
-            }
-          ]}
-        />
       )}
 
       <div className="relative min-h-0 flex-1">
@@ -740,38 +508,5 @@ export function TerminalPanel({
         </div>
       </div>
     </div>
-  )
-}
-
-/**
- * Aggregate activity dot for one tab chip. Subscribes to the activity store
- * itself so per-chunk busy churn re-renders only these dots, not the panel:
- * attention color = a terminal finished and hasn't been seen, pulsing green =
- * output streaming, steady green = running-idle, grey = all exited.
- */
-function TabActivityDot({ cells }: { cells: AgentSession[] }): React.JSX.Element {
-  const { t } = useI18n()
-  const busy = useBusySessions()
-  const attention = useAttentionSessions()
-  const { attentionColor } = useAttentionColor()
-  const hasAttention = cells.some((s) => attention.has(s.id))
-  const isBusy = cells.some((s) => s.status === 'running' && busy.has(s.id))
-  const running = cells.some((s) => s.status === 'running')
-  if (hasAttention) {
-    return (
-      <span
-        className="h-2 w-2 shrink-0 animate-pulse rounded-full"
-        style={{ backgroundColor: attentionColor }}
-        title={t('terminal.statusFinished')}
-      />
-    )
-  }
-  return (
-    <span
-      className={`h-2 w-2 shrink-0 rounded-full ${
-        isBusy ? 'animate-pulse bg-status' : running ? 'bg-status' : 'bg-fgmuted'
-      }`}
-      title={isBusy ? t('terminal.statusWorking') : undefined}
-    />
   )
 }
