@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
-import { wrapForPty } from '../terminalInput'
+import { insertIntoTerminal } from '../terminalInput'
 import {
   Button,
   BroadcastIcon,
@@ -243,8 +243,7 @@ export function TerminalPanel({
   )
 
   const sendBroadcast = (text: string): void => {
-    const payload = wrapForPty(text) + '\r'
-    for (const s of broadcastTargets) window.api.sendInput(s.id, payload)
+    for (const s of broadcastTargets) insertIntoTerminal(s.id, text, true)
   }
 
   // Switching tab/workspace invalidates the targeted cells — drop the mode.

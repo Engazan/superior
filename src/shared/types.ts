@@ -98,7 +98,7 @@ export interface AppSettings {
    * tooltip always lists every stat regardless of this choice.
    */
   usagePrimary: UsagePrimary
-  /** Native OS notification when an agent finishes while the app is unfocused. */
+  /** Native OS notification for explicit terminal attention/exit while unfocused. */
   notifications: boolean
   /**
    * System-wide show/hide chord (app chord format, e.g. 'mod+shift+space'),

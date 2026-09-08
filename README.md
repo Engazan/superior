@@ -72,6 +72,23 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
   (and a plain terminal opens PowerShell).
 - Each launched agent gets its own terminal tab; Claude and Codex can run concurrently.
 
+### Terminal activity and notifications
+
+The activity pulse means the terminal is producing output; a pause does not mean
+the agent has finished. Attention indicators and background OS notifications are
+triggered by explicit terminal alerts (BEL, OSC 9 notifications, or OSC 777
+`notify`) or an actual process exit. Alerts can also mean an agent needs approval,
+so the UI says **needs attention**, not **finished successfully**.
+
+Repeated alerts are coalesced until another keyboard interaction or submitted
+prompt. Historical scrollback, redraws, Windows OSC 9;4 progress updates and daemon
+disconnects do not trigger completion notifications. Native notifications are
+suppressed while Superior is focused or notifications are disabled in settings.
+
+An interactive CLI must emit a supported terminal alert to notify between turns;
+if its own notifications are disabled or use an unsupported channel, Superior
+does not guess completion from silence. No agent configuration files are changed.
+
 ## Layout
 
 ```

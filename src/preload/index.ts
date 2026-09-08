@@ -331,8 +331,8 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_GLOBAL_HOTKEY, chord)
   },
 
-  /** Show a native "agent finished" notification (clicking focuses the workspace). */
-  notifyAgentFinished(payload: { workspaceId: string; title: string; body: string }): void {
+  /** Show an explicit terminal attention notification; clicking focuses its workspace. */
+  notifyAgentFinished(payload: { sessionId: string; workspaceId: string; title: string; body: string }): void {
     ipcRenderer.send(IPC.NOTIFY_FINISHED, payload)
   },
 

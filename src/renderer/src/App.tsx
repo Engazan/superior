@@ -229,29 +229,29 @@ export default function App(): React.JSX.Element {
   }, [ws.activeSessionId])
   const update = useUpdateCheck()
 
-  // Native OS notification when an agent finishes while the app is unfocused.
+  // Native OS notification for explicit terminal attention while unfocused.
   // Names resolve through refs so the notifier callback never goes stale.
   const notifyCtxRef = useRef({ sessions: ws.sessions, workspaces: ws.workspaces, t })
   notifyCtxRef.current = { sessions: ws.sessions, workspaces: ws.workspaces, t }
   useEffect(() => {
-    setActivityNotifier((sessionId, workspaceId) => {
+    setActivityNotifier((sessionId, workspaceId, isCurrent) => {
       if (document.hasFocus()) return
       void window.api.getSettings().then((s) => {
-        if (!s.notifications) return
+        if (!s.notifications || document.hasFocus() || !isCurrent()) return
         const ctx = notifyCtxRef.current
         const session = ctx.sessions.find((x) => x.id === sessionId)
         const workspace = ctx.workspaces.find((w) => w.id === workspaceId)
-        const label = session
-          ? session.nickname
-            ? `${session.label} · ${session.nickname}`
-            : session.label
-          : 'Agent'
+        if (!session || !workspace) return
+        const label = session.nickname
+          ? `${session.label} · ${session.nickname}`
+          : session.label
         window.api.notifyAgentFinished({
           workspaceId,
+          sessionId,
           title: ctx.t('notify.finishedTitle', { label }),
-          body: ctx.t('notify.finishedBody', { workspace: workspace?.name ?? '' })
+          body: ctx.t('notify.finishedBody', { workspace: workspace.name })
         })
-      })
+      }).catch((error) => console.error('[notifications] settings lookup failed:', error))
     })
     return () => setActivityNotifier(null)
   }, [])

@@ -1,3 +1,5 @@
+import { noteActivityInput } from './activityStore'
+
 /**
  * Multi-line text goes through bracketed paste so TUI agents (Claude/Codex)
  * receive it as one paste instead of executing line by line.
@@ -8,6 +10,7 @@ export function wrapForPty(text: string): string {
 
 /** Insert `text` into a session's pty; `submit` also presses Enter. */
 export function insertIntoTerminal(sessionId: string, text: string, submit: boolean): void {
+  if (submit) noteActivityInput(sessionId)
   window.api.sendInput(sessionId, wrapForPty(text) + (submit ? '\r' : ''))
 }
 

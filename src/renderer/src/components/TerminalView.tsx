@@ -6,7 +6,7 @@ import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
 import { registerFileLinkProvider } from '../terminalLinks'
 import { formatPathForPrompt } from '../terminalInput'
-import { useAttentionSessions, useBusySessions } from '../activityStore'
+import { noteActivityInput, useAttentionSessions, useBusySessions } from '../activityStore'
 import { useAttentionColor } from '../attentionColor'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
@@ -338,6 +338,9 @@ export const TerminalView = memo(function TerminalView({
       }
       window.api.sendInput(session.id, data)
     })
+    // onKey represents user interaction, unlike onData which also includes
+    // terminal-generated replies. Approval keys need to re-arm alerts too.
+    const keyDisposable = term.onKey(() => noteActivityInput(session.id))
 
     // Image paste: xterm's built-in paste is text-only, so a clipboard image
     // (screenshot, copied picture) would otherwise be dropped and never reach
@@ -453,6 +456,7 @@ export const TerminalView = memo(function TerminalView({
       unregisterSearch(session.id)
       fileLinks.dispose()
       dataDisposable.dispose()
+      keyDisposable.dispose()
       term.dispose()
       termRef.current = null
       fitRef.current = null
