@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.2] - 2026-09-08
+
+### Fixed
+
+- **Copy terminal text from the context menu.** Right-clicking a terminal now
+  offers a localized Copy action for the selected text, including on Windows.
+  The action is disabled without a selection, and keyboard shortcuts retain
+  their existing behavior.
+- **No false completion notifications during pauses or redraws.** Terminal
+  attention now comes from explicit alerts or an actual process exit instead
+  of a short period without output. Historical scrollback, Windows progress
+  updates and daemon disconnects no longer trigger completion notifications.
+- **Fewer duplicate and stale notifications.** Repeated alerts are coalesced
+  until the next user interaction, notifications for the same session replace
+  older ones, and focus and settings are checked again before delivery.
+  Closing a terminal clears its timers and pending alerts; activity in another
+  terminal no longer clears an unread attention indicator.
+
+### Changed
+
+- **More accurate terminal status labels.** The activity pulse indicates incoming
+  output, while alerts say the terminal needs attention, since an agent may be
+  awaiting approval. Interactive agents must emit a supported terminal alert
+  to notify between turns; completion is no longer guessed from silence.
+
 ## [0.21.1] - 2026-09-01
 
 ### Changed
