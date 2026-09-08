@@ -360,6 +360,8 @@ export const pl: Record<MessageKey, string> = {
   'terminal.restartHint': 'naciśnij Enter, aby uruchomić ponownie',
   'terminal.imagePasted': 'Obraz dołączony do terminala',
   'terminal.imagePasteFailed': 'Nie udało się wkleić obrazu',
+  'terminal.copyFailed': 'Nie udało się skopiować zaznaczonego tekstu',
+  'terminal.copy': 'Kopiuj',
   'usage.context': 'Kontekst',
   'usage.total': 'Razem',
   'usage.tokens': 'tokenów',

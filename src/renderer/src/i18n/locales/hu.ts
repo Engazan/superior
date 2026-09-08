@@ -360,6 +360,8 @@ export const hu: Record<MessageKey, string> = {
   'terminal.restartHint': 'nyomd meg az Entert az újraindításhoz',
   'terminal.imagePasted': 'Kép csatolva a terminálhoz',
   'terminal.imagePasteFailed': 'A képet nem sikerült beilleszteni',
+  'terminal.copyFailed': 'A kijelölt szöveget nem sikerült másolni',
+  'terminal.copy': 'Másolás',
   'usage.context': 'Kontextus',
   'usage.total': 'Összesen',
   'usage.tokens': 'token',

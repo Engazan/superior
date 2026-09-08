@@ -361,6 +361,8 @@ export const sk: Record<MessageKey, string> = {
   'terminal.restartHint': 'stlač Enter pre opätovné spustenie',
   'terminal.imagePasted': 'Obrázok vložený do terminálu',
   'terminal.imagePasteFailed': 'Obrázok sa nepodarilo vložiť',
+  'terminal.copyFailed': 'Označený text sa nepodarilo skopírovať',
+  'terminal.copy': 'Kopírovať',
   'usage.context': 'Kontext',
   'usage.total': 'Spolu',
   'usage.tokens': 'tokenov',

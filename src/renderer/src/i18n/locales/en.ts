@@ -357,6 +357,8 @@ export const en = {
   'terminal.restartHint': 'press Enter to restart',
   'terminal.imagePasted': 'Image attached to the terminal',
   'terminal.imagePasteFailed': 'Could not paste the image',
+  'terminal.copyFailed': 'Could not copy the selected text',
+  'terminal.copy': 'Copy',
   'usage.context': 'Context',
   'usage.total': 'Total',
   'usage.tokens': 'tokens',

@@ -14,6 +14,7 @@ import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
 import { CloseIcon, IconButton, PencilIcon, RestartIcon, useToast } from './ui'
 import { UsageBadge } from './UsageBadge'
+import { Menu } from './ui/Menu'
 import { barTint } from '../tint'
 import type { Rect } from '../gridLayout'
 import type { AgentSession, FileLinkTarget } from '../types'
@@ -205,6 +206,11 @@ export const TerminalView = memo(function TerminalView({
   const r = rect ?? FULL_RECT
   const flushRight = r.left + r.width >= 99.999
   const hostRef = useRef<HTMLDivElement>(null)
+  const [copyMenu, setCopyMenu] = useState<{
+    x: number
+    y: number
+    text: string
+  } | null>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const replayWritesRef = useRef(0)
@@ -687,7 +693,40 @@ export const TerminalView = memo(function TerminalView({
             </div>
           </div>
         )}
-        <div ref={hostRef} data-terminal-host className="min-h-0 w-full flex-1" />
+        <div
+          ref={hostRef}
+          data-terminal-host
+          className="min-h-0 w-full flex-1"
+          onContextMenuCapture={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            // Snapshot before the menu takes focus from xterm's textarea.
+            setCopyMenu({
+              x: event.clientX,
+              y: event.clientY,
+              text: termRef.current?.getSelection() ?? ''
+            })
+          }}
+        />
+        {visible && copyMenu && (
+          <Menu
+            anchor={copyMenu}
+            onClose={() => setCopyMenu(null)}
+            items={[
+              {
+                id: 'copy',
+                label: t('terminal.copy'),
+                disabled: !copyMenu.text,
+                onSelect: () => {
+                  void navigator.clipboard.writeText(copyMenu.text).catch((error) => {
+                    console.error('[copy] clipboard write failed:', error)
+                    toastRef.current.error(tRef.current('terminal.copyFailed'))
+                  })
+                }
+              }
+            ]}
+          />
+        )}
 
         {/* Dead-terminal affordance: the "[press Enter to restart]" scrollback
             line scrolls away; this chip stays put so a dead cell never looks

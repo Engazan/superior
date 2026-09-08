@@ -360,6 +360,8 @@ export const cs: Record<MessageKey, string> = {
   'terminal.restartHint': 'stiskněte Enter pro opětovné spuštění',
   'terminal.imagePasted': 'Obrázek vložen do terminálu',
   'terminal.imagePasteFailed': 'Obrázek se nepodařilo vložit',
+  'terminal.copyFailed': 'Označený text se nepodařilo zkopírovat',
+  'terminal.copy': 'Kopírovat',
   'usage.context': 'Kontext',
   'usage.total': 'Celkem',
   'usage.tokens': 'tokenů',
