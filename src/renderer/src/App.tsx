@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
+import { UsageFooter } from './components/UsageFooter'
 import { Sidebar } from './components/Sidebar'
 import { TerminalPanel } from './components/TerminalPanel'
 import type { SettingsSection } from './components/SettingsView'
@@ -910,6 +911,8 @@ export default function App(): React.JSX.Element {
           </>
         )}
       </div>
+
+      <UsageFooter onManage={openPresets} />
 
       {view === 'main' && launcherOpen && (
         <QuickLaunch

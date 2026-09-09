@@ -89,7 +89,35 @@ An interactive CLI must emit a supported terminal alert to notify between turns;
 if its own notifications are disabled or use an unsupported channel, Superior
 does not guess completion from silence. No agent configuration files are changed.
 
-## Layout
+## Account usage footer
+
+Codex profiles also display available reset tickets and their expiry dates when
+the provider supplies them. **Use one ticket** opens a confirmation dialog showing
+the selected profile; only **CONFIRM** submits the reset. The provider selects the
+ticket. Limits and ticket availability are fetched again afterwards, including for
+custom memory profiles. Failed ticket lookups are shown as unknown, not zero.
+Ambiguous network results can be retried with the same request ID during the
+current app session; reset requests are never retried automatically.
+
+The footer shows Claude and Codex subscription limits. Open **Profiles & options**
+to pin default or custom-memory profiles, inspect each limit and reset time,
+refresh usage, and choose used/remaining percentages or compact details. Choices
+are saved. Custom profiles come from **Custom memory terminal presets**; selecting
+them here chooses the displayed usage profile, not the account of a running CLI.
+
+Each profile reads its own credentials: Claude's `.credentials.json` (or its
+scoped macOS Keychain entry) and Codex's `auth.json`. Credentials stay in the main
+process and are sent only to their provider's fixed account-usage endpoint.
+The footer does not change login files or install status-line hooks. Codex profiles
+using only an OS credential store currently show that no readable sign-in is
+available. Expired credentials require signing in again through the relevant CLI.
+
+Usage refreshes approximately once per minute, with caching and backoff for
+rate-limited requests. Provider account endpoints are not stable public billing
+APIs; failures display an unavailable state rather than zero usage. Profiles that
+share an account also share its quota, so percentages are never summed.
+
+## Source layout
 
 ```
 src/shared/                  # domain types, typed IPC contract, daemon protocol

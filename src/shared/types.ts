@@ -78,6 +78,9 @@ export interface UiState {
   recentWorkspaceIds?: string[]
   /** Right panel width in px (clamped to 280–560). */
   rightPanelWidth?: number
+  usageFooterProfiles?: string[]
+  usageFooterRemaining?: boolean
+  usageFooterCompact?: boolean
 }
 
 export interface AppSettings {
@@ -107,6 +110,45 @@ export interface AppSettings {
   globalHotkey: string | null
   /** Editor that mod+clicked file paths in a terminal open in. */
   fileOpener: FileOpener
+}
+
+/** Account limits are scoped to a configuration directory, not a terminal session. */
+export interface UsageProfile {
+  id: string
+  provider: 'claude' | 'codex'
+  name: string
+  directoryPath: string
+}
+
+export interface UsageWindow {
+  id: string
+  label: string
+  usedPercent: number
+  resetsAt: number | null
+}
+
+export interface CodexResetCredits {
+  availableCount: number
+  credits: { expiresAt: number | null }[] | null
+}
+
+export interface UsageResetRequest {
+  profileId: string
+  authFingerprint: string
+  idempotencyKey: string
+  confirmed: true
+}
+
+export type UsageResetOutcome = 'reset' | 'alreadyRedeemed' | 'nothingToReset' | 'noCredit' | 'accountChanged' | 'unavailable' | 'busy'
+
+export interface AccountUsage {
+  resetCredits?: CodexResetCredits | null
+  authFingerprint?: string
+  profileId: string
+  status: 'ready' | 'notSignedIn' | 'expired' | 'unavailable' | 'rateLimited' | 'noData'
+  plan: string | null
+  windows: UsageWindow[]
+  updatedAt: number
 }
 
 /** Editors a terminal file link can open in ('system' = OS default app). */
@@ -1002,6 +1044,9 @@ export const IPC = {
   AGENT_EXIT: 'agent:exit',
   AGENT_USAGE: 'agent:usage',
   AGENT_USAGE_GET: 'agent:usage-get',
+  USAGE_PROFILES: 'usage:profiles',
+  USAGE_ACCOUNTS: 'usage:accounts',
+  USAGE_RESET: 'usage:reset',
   AGENT_RESTORE: 'agent:restore',
   AGENT_UPDATE_META: 'agent:update-meta',
   AGENT_ATTACH: 'agent:attach',

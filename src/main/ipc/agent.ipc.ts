@@ -15,10 +15,19 @@ import {
 } from '../services/agent.service'
 import { daemonClient } from '../services/daemonClient'
 import { getUsageSnapshots } from '../services/usage.service'
+import { consumeUsageReset, getAccountUsage, listUsageProfiles } from '../services/account-usage.service'
 import { handle } from './handle'
 import { isStartAgentArgs, validId } from './validation'
 
 export function registerAgentIpc(): void {
+  handle(IPC.USAGE_PROFILES, () => listUsageProfiles())
+  handle(IPC.USAGE_RESET, consumeUsageReset)
+  handle(IPC.USAGE_ACCOUNTS, (ids: string[], force: boolean) => {
+    if (!Array.isArray(ids) || ids.length > 100 || ids.some((id) => typeof id !== 'string' || id.length > 256) || typeof force !== 'boolean') {
+      return Promise.resolve([])
+    }
+    return getAccountUsage(ids, force)
+  })
   handle(IPC.AGENT_START, (payload: StartAgentArgs): Promise<StartAgentResult> => {
     if (!isStartAgentArgs(payload)) return Promise.resolve({ error: 'Invalid terminal launch request.' })
     return startAgent(payload)

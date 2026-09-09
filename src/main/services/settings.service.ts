@@ -129,6 +129,9 @@ function normalizeUi(raw: unknown): UiState {
     }
     next.favoriteWorkspaceIds = normalizeIds(obj.favoriteWorkspaceIds, 200)
     next.recentWorkspaceIds = normalizeIds(obj.recentWorkspaceIds, 12)
+    next.usageFooterProfiles = normalizeIds(obj.usageFooterProfiles, 100)
+    if (typeof obj.usageFooterRemaining === 'boolean') next.usageFooterRemaining = obj.usageFooterRemaining
+    if (typeof obj.usageFooterCompact === 'boolean') next.usageFooterCompact = obj.usageFooterCompact
     if (typeof obj.rightPanelWidth === 'number' && Number.isFinite(obj.rightPanelWidth))
       next.rightPanelWidth = Math.min(560, Math.max(280, Math.round(obj.rightPanelWidth)))
   }

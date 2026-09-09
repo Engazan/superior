@@ -3,6 +3,10 @@ import type {
   AgentTask,
   AgentSession,
   AgentUsage,
+  AccountUsage,
+  UsageResetRequest,
+  UsageResetOutcome,
+  UsageProfile,
   AppSettings,
   BranchInfo,
   BranchSwitchResult,
@@ -212,6 +216,9 @@ export interface IpcInvokeMap {
   [IPC.AGENT_UPDATE_META]: Invocation<[args: { id: string; nickname: string }], void>
   [IPC.AGENT_KILL]: Invocation<[id: string], void>
   [IPC.AGENT_USAGE_GET]: Invocation<[], AgentUsage[]>
+  [IPC.USAGE_PROFILES]: Invocation<[], UsageProfile[]>
+  [IPC.USAGE_ACCOUNTS]: Invocation<[ids: string[], force: boolean], AccountUsage[]>
+  [IPC.USAGE_RESET]: Invocation<[request: UsageResetRequest], UsageResetOutcome>
   [IPC.TABS_GET]: Invocation<[], TabsState>
   [IPC.TABS_SET]: Invocation<[args: { workspaceId: string; tabs: WorkspaceTabs }], TabsState>
   [IPC.CLIPBOARD_SAVE_IMAGE]: Invocation<

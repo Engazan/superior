@@ -6,6 +6,10 @@ import {
   type AgentExitEvent,
   type AgentSession,
   type AgentUsage,
+  type AccountUsage,
+  type UsageResetRequest,
+  type UsageResetOutcome,
+  type UsageProfile,
   type AppSettings,
   type BranchInfo,
   type BranchSwitchResult,
@@ -84,6 +88,15 @@ const ipcRenderer = {
 const api = {
   /** Host platform, e.g. 'darwin' | 'win32' | 'linux'. */
   platform: process.platform,
+  getUsageProfiles(): Promise<UsageProfile[]> {
+    return ipcRenderer.invoke(IPC.USAGE_PROFILES)
+  },
+  getAccountUsage(ids: string[], force = false): Promise<AccountUsage[]> {
+    return ipcRenderer.invoke(IPC.USAGE_ACCOUNTS, ids, force)
+  },
+  consumeUsageReset(request: UsageResetRequest): Promise<UsageResetOutcome> {
+    return ipcRenderer.invoke(IPC.USAGE_RESET, request)
+  },
 
   listWorkspaces(): Promise<WorkspaceState> {
     return ipcRenderer.invoke(IPC.WORKSPACE_LIST)
