@@ -1,4 +1,5 @@
 export const en = {
+  'footer.resetNotice': 'Usage limits reset',
   'pane.split': 'Split terminal',
   'pane.left': '← Left',
   'pane.right': 'Right →',

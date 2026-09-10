@@ -4,6 +4,8 @@ import { useOverlayLayer } from '../overlayStack'
 import type { AccountUsage, UiState, UsageProfile, UsageWindow } from '../types'
 import { builtinIcon } from '@shared/icons'
 import { IconButton, RefreshIcon, useConfirm, useToast } from './ui'
+import { resetWindows } from '../usageReset'
+import { UsageResetNotice } from './UsageResetNotice'
 
 export function tightestWindow(windows: UsageWindow[]): UsageWindow | undefined {
   return windows.reduce<UsageWindow | undefined>((best, window) =>
@@ -75,6 +77,10 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const [refresh, setRefresh] = useState(0)
+  const resetBaseline = useRef(new Map<string, AccountUsage>())
+  const announcedResets = useRef(new Set<string>())
+  const [notice, setNotice] = useState<{ id: number; message: string } | null>(null)
+  const dismissNotice = useRef(() => setNotice(null))
   const [hover, setHover] = useState<{ id: string; left: number } | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const clearHoverTimer = (): void => {
@@ -132,6 +138,22 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
         const values = await window.api.getAccountUsage(ids, force)
         force = false
         if (live) {
+          const messages: string[] = []
+          for (const value of values) {
+            const previous = resetBaseline.current.get(value.profileId)
+            const profile = profiles.find((item) => item.id === value.profileId)
+            const resets = resetWindows(previous, value).filter((limit) => {
+              const key = `${value.authFingerprint ?? value.profileId}:${limit.id}:${limit.resetsAt}`
+              if (announcedResets.current.has(key) || !selected.includes(value.profileId)) return false
+              announcedResets.current.add(key)
+              if (announcedResets.current.size > 200) announcedResets.current.delete(announcedResets.current.values().next().value!)
+              return true
+            })
+            if (profile && resets.length) messages.push(`${profile.name} · ${resets.map((limit) => limit.label).join(', ')}`)
+            // A failed lookup breaks the baseline instead of becoming a fake zero.
+            resetBaseline.current.set(value.profileId, value)
+          }
+          if (messages.length) setNotice((previous) => ({ id: (previous?.id ?? 0) + 1, message: messages.join(' · ') }))
           setReadings((previous) => ({ ...previous, ...Object.fromEntries(values.map((value) => [value.profileId, value])) }))
           setFailed(false)
         }
@@ -156,7 +178,12 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
       resetKeys.current.set(account, key)
       const outcome = await window.api.consumeUsageReset({ profileId: profile.id, authFingerprint: account, idempotencyKey: key, confirmed: true })
       if (outcome !== 'unavailable' && outcome !== 'busy') resetKeys.current.delete(account)
-      if (outcome === 'reset' || outcome === 'alreadyRedeemed') toast.success(t('footer.resetDone'))
+      if (outcome === 'reset') {
+        // Aliases of the same account must not announce this manual reset again.
+        resetBaseline.current.clear()
+        setNotice((previous) => ({ id: (previous?.id ?? 0) + 1, message: profile.name }))
+      }
+      else if (outcome === 'alreadyRedeemed') toast.success(t('footer.resetDone'))
       else toast.error(t(`footer.reset_${outcome}`))
     } catch { toast.error(t('footer.reset_unavailable')) }
     finally {
@@ -179,6 +206,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
   const hoveredReading = hoveredProfile ? readings[hoveredProfile.id] : undefined
   return (
     <footer className="relative z-40 flex h-8 shrink-0 items-center gap-2 border-t border-edge bg-panel px-3 text-[11px] text-fgmuted">
+      {notice && <UsageResetNotice key={notice.id} message={notice.message} onClose={dismissNotice.current} />}
       <IconButton
         type="button"
         size="sm"

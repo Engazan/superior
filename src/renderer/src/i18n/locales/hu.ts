@@ -1,6 +1,7 @@
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  'footer.resetNotice': 'A használati korlátok visszaálltak',
   'pane.split': 'Terminál felosztása',
   'pane.left': '← Balra',
   'pane.right': 'Jobbra →',

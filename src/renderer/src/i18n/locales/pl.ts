@@ -1,6 +1,7 @@
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  'footer.resetNotice': 'Limity użycia zostały odnowione',
   'pane.split': 'Podziel terminal',
   'pane.left': '← W lewo',
   'pane.right': 'W prawo →',

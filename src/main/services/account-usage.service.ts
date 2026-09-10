@@ -147,7 +147,8 @@ async function fetchProfile(profile: UsageProfile): Promise<AccountUsage> {
     const windows = parseUsageWindows(profile.provider, data)
     const plan = data.plan_type ?? auth.subscriptionType
     const reset = profile.provider === 'codex'
-      ? { resetCredits: await fetchCredits(headers), authFingerprint: fingerprint(auth) } : {}
+      ? { resetCredits: await fetchCredits(headers), authFingerprint: fingerprint(auth) }
+      : { authFingerprint: fingerprint({ access_token: token }) }
     return { ...result, windows, status: windows.length ? 'ready' : 'noData',
       ...reset,
       plan: typeof plan === 'string' ? plan.slice(0, 80) : null, updatedAt: Date.now() }
