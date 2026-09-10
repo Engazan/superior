@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-09-10
+
+### Added
+
+- **Claude and Codex account usage footer.** View subscription limits, usage
+  percentages and reset times without leaving the workspace. A refresh icon
+  reloads usage, while Profiles & options offers used/remaining percentages,
+  compact details and persistent profile selection.
+- **Usage for custom memory profiles.** Default and custom Claude/Codex
+  configuration directories use their own credentials. Profiles sharing an
+  account share its limits; credentials remain in the main process.
+- **Codex reset tickets with explicit confirmation.** Each Codex profile shows
+  available tickets and expiry dates when supplied by the provider. Using a
+  ticket requires CONFIRM, checks that the account has not changed and refreshes
+  usage afterwards. Duplicate clicks are guarded and ambiguous requests can be
+  retried with the same request ID during the current app session.
+
+### Changed
+
+- **Clearer usage values.** Footer limits and percentages are visually separated,
+  with percentages in distinct highlighted blocks. Missing usage or ticket data
+  is shown as unavailable rather than zero. Footer controls and messages are
+  localized in all five supported languages.
+
 ## [0.21.2] - 2026-09-08
 
 ### Fixed
