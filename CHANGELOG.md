@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2026-09-10
+
+### Added
+
+- **Terminal splits without tabs.** A split icon in each terminal header opens
+  the same preset picker as the add button, followed by left, right, above or
+  below placement. Different agents and custom presets share one workspace.
+- **Drag-to-dock terminal layouts.** Drag a terminal header onto another pane
+  to place it at any of its four edges, with a preview of the resulting position.
+  Existing terminals remain mounted without restarting their processes.
+- **Persistent nested layouts.** Resize individual splits, close panes to reclaim
+  their space and restart terminals in place. Existing grids retain their sizes
+  during migration; maximize, broadcast and the 12-pane limit remain supported.
+- **Account detail tooltips.** Hover or focus a footer account to see all its
+  limits, reset times, plan, profile directory and available Codex reset tickets.
+- **Usage reset notifications.** Confirmed quota-period resets for selected
+  footer accounts and successful reset-ticket applications show a rounded banner
+  at the top of the app with a short chime. It disappears after eight seconds
+  without taking keyboard focus. Initial loads and failed lookups do not alert.
+
+### Changed
+
+- **Clearer AI usage footer.** Claude shows its five-hour limit alongside the
+  weekly limit. Separators distinguish account blocks rather than splitting
+  account names from their usage, and redundant remaining/used text is removed
+  from the compact bar while staying available in the details.
+- **Preset menus fit small panes.** The shared picker is rendered above panel
+  boundaries and supports keyboard navigation and viewport-clamped placement.
+
 ## [0.22.1] - 2026-09-10
 
 ### Fixed
