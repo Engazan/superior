@@ -75,6 +75,25 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const [refresh, setRefresh] = useState(0)
+  const [hover, setHover] = useState<{ id: string; left: number } | null>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearHoverTimer = (): void => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+  }
+  const hideHover = (): void => {
+    clearHoverTimer()
+    hoverTimer.current = setTimeout(() => setHover(null), 150)
+  }
+  const showHover = (id: string, element: HTMLElement): void => {
+    clearHoverTimer()
+    const footer = element.closest('footer')!.getBoundingClientRect()
+    setHover({ id, left: Math.max(8, Math.min(element.getBoundingClientRect().left - footer.left, footer.width - 348)) })
+  }
+  useEffect(() => {
+    const dismiss = (event: KeyboardEvent): void => { if (event.key === 'Escape') setHover(null) }
+    window.addEventListener('keydown', dismiss)
+    return () => { window.removeEventListener('keydown', dismiss); if (hoverTimer.current) clearTimeout(hoverTimer.current) }
+  }, [])
   const closeRef = useRef(() => setOpen(false))
 
   useEffect(() => {
@@ -156,6 +175,8 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
     return t(`footer.${reading.status === 'ready' ? 'noData' : reading.status}`)
   }
   const visible = profiles.filter((profile) => selected.includes(profile.id))
+  const hoveredProfile = visible.find((profile) => profile.id === hover?.id)
+  const hoveredReading = hoveredProfile ? readings[hoveredProfile.id] : undefined
   return (
     <footer className="relative z-40 flex h-8 shrink-0 items-center gap-2 border-t border-edge bg-panel px-3 text-[11px] text-fgmuted">
       <IconButton
@@ -170,19 +191,26 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
       <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto">
         {visible.map((profile) => {
           const reading = readings[profile.id]
-          const limit = tightestWindow(reading?.windows ?? [])
+          const windows = reading?.windows ?? []
+          const limits = (profile.provider === 'claude'
+            ? [windows.find((limit) => limit.id === 'five_hour'), tightestWindow(windows.filter((limit) => limit.id !== 'five_hour'))]
+            : [tightestWindow(windows)]).filter((limit): limit is UsageWindow => !!limit)
           return (
             <button key={profile.id} type="button" aria-haspopup="dialog" aria-expanded={open}
-              onClick={() => setOpen(true)} title={profile.directoryPath}
+              onClick={() => { setHover(null); setOpen(true) }}
+              onMouseEnter={(event) => showHover(profile.id, event.currentTarget)} onMouseLeave={hideHover}
+              onFocus={(event) => showHover(profile.id, event.currentTarget)} onBlur={hideHover}
+              aria-describedby={!open && hover?.id === profile.id ? 'usage-profile-tooltip' : undefined}
               className="flex shrink-0 items-center gap-1.5 rounded px-1 py-0.5 hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
               <img src={builtinIcon(profile.provider)?.dataUrl} alt="" className={`h-3.5 w-3.5 object-contain ${profile.provider === 'codex' ? 'superior-usage-codex-icon' : ''}`} />
               <span className="font-medium text-fg">{profile.name}</span>
-              {limit && reading?.status === 'ready' ? <>
-                <span className="ml-1 border-l border-edge pl-2 text-fgmuted">{limit.label}</span>
-                <span className="min-w-[3rem] rounded bg-hover px-1.5 py-0.5 text-center font-semibold tabular-nums"
-                  style={{ color: color(limit.usedPercent) }}>{percent(limit)}</span>
-                <span className="text-fgdim">{t(remaining ? 'usage.remaining' : 'usage.used')}</span>
-              </> : <span className="text-fgdim">{status(reading)}</span>}
+              {limits.length > 0 && reading?.status === 'ready' ? limits.map((limit) => (
+                <span key={limit.id} className="ml-1 flex items-center gap-1.5 border-l border-edge pl-2">
+                  <span className="text-fgmuted">{limit.label}</span>
+                  <span className="min-w-[3rem] rounded bg-hover px-1.5 py-0.5 text-center font-semibold tabular-nums"
+                    style={{ color: color(limit.usedPercent) }}>{percent(limit)}</span>
+                </span>
+              )) : <span className="text-fgdim">{status(reading)}</span>}
             </button>
           )
         })}
@@ -191,6 +219,35 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
         className="shrink-0 rounded px-2 py-1 hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
         {t('footer.options')} ▴
       </button>
+      {!open && hover && hoveredProfile && <div id="usage-profile-tooltip" role="tooltip"
+        onMouseEnter={clearHoverTimer} onMouseLeave={hideHover}
+        style={{ left: hover.left }}
+        className="solid-surface absolute bottom-full mb-2 max-h-[65vh] w-[340px] max-w-[calc(100vw-16px)] overflow-y-auto rounded-lg border border-edge bg-panel p-3 text-xs text-fgmuted shadow-xl">
+        <div className="flex items-center justify-between gap-2 font-semibold text-fg">
+          <span>{hoveredProfile.name}</span><span>{hoveredReading?.plan}</span>
+        </div>
+        <p className="mt-1 break-all text-[10px] text-fgdim">{hoveredProfile.directoryPath}</p>
+        {hoveredReading?.status === 'ready' ? hoveredReading.windows.map((limit) => <div key={limit.id} className="mt-3">
+          <div className="flex justify-between gap-2"><span>{limit.label}</span>
+            <span style={{ color: color(limit.usedPercent) }}>{percent(limit)} {t(remaining ? 'usage.remaining' : 'usage.used')}</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-hover"><div className="h-full rounded-full"
+            style={{ width: `${remaining ? 100 - limit.usedPercent : limit.usedPercent}%`, backgroundColor: color(limit.usedPercent) }} /></div>
+          {limit.resetsAt && <p className="mt-1 text-[10px] text-fgdim">{t('usage.resets')} {new Date(limit.resetsAt).toLocaleString(lang)}</p>}
+        </div>) : <p className="mt-2">{status(hoveredReading)}</p>}
+        {hoveredProfile.provider === 'codex' && <div className="mt-3 border-t border-edge pt-2">
+          <p>{t('footer.tickets')}: {hoveredReading?.resetCredits?.availableCount ?? '—'}</p>
+          {!hoveredReading?.resetCredits ? <p>{t('footer.ticketsUnknown')}</p>
+            : hoveredReading.resetCredits.availableCount === 0 ? <p>{t('footer.noTickets')}</p> : <>
+              {hoveredReading.resetCredits.credits?.map((ticket, index) => <p key={index} className="mt-1 text-[10px] text-fgdim">
+                #{index + 1} · {ticket.expiresAt ? `${t('footer.ticketExpires')} ${new Date(ticket.expiresAt).toLocaleString(lang)}` : t('footer.ticketNoExpiry')}
+              </p>)}
+              {(hoveredReading.resetCredits.credits?.length ?? 0) < hoveredReading.resetCredits.availableCount && <p>{t('footer.ticketDetailsUnknown')}</p>}
+            </>}
+        </div>}
+        {hoveredReading && <p className="mt-2 text-[10px] text-fgdim">{t('footer.updated')} {new Date(hoveredReading.updatedAt).toLocaleTimeString(lang)}</p>}
+        <p className="mt-2 text-[10px] text-fgdim">{t('footer.sharedLimit')}</p>
+      </div>}
       {open && <UsageDetail onClose={closeRef.current}>
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <span className="text-sm font-semibold text-fg">{t('footer.title')}</span>
