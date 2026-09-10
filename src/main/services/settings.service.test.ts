@@ -1,0 +1,64 @@
+import * as fs from 'fs'
+import * as os from 'os'
+import * as path from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const electron = vi.hoisted(() => ({ getPath: vi.fn() }))
+vi.mock('electron', () => ({ app: { getPath: electron.getPath } }))
+
+describe('first-run preferences and onboarding', () => {
+  let userData: string
+  beforeEach(() => {
+    vi.resetModules()
+    userData = fs.mkdtempSync(path.join(os.tmpdir(), 'superior-onboarding-'))
+    electron.getPath.mockReturnValue(userData)
+  })
+  afterEach(() => { fs.rmSync(userData, { recursive: true, force: true }) })
+
+  it('starts a fresh installation in Light with setup pending', async () => {
+    const settings = await import('./settings.service')
+    expect(settings.getSettings()).toMatchObject({ theme: 'light', language: 'en', ui: { onboardingCompleted: false } })
+  })
+
+  it('preserves an existing installation’s theme and does not force setup on upgrade', async () => {
+    fs.writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ theme: 'gradient-light', language: 'sk', ui: { sidebarCollapsed: true } }))
+    const settings = await import('./settings.service')
+    expect(settings.getSettings()).toMatchObject({ theme: 'gradient-light', language: 'sk', ui: { sidebarCollapsed: true, onboardingCompleted: true } })
+  })
+
+  it('resumes unfinished setup after saving language and theme and restarting', async () => {
+    const settings = await import('./settings.service')
+    settings.setLanguage('sk')
+    settings.setTheme('dark')
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings()).toMatchObject({ language: 'sk', theme: 'dark', ui: { onboardingCompleted: false } })
+  })
+
+  it('persists completion/skip across restart without losing unrelated UI preferences', async () => {
+    const settings = await import('./settings.service')
+    settings.setUi({ favoriteWorkspaceIds: ['pinned'], usageFooterProfiles: ['claude:work'], rightPanelWidth: 420 })
+    settings.setUi({ onboardingCompleted: true })
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings().ui).toMatchObject({ onboardingCompleted: true, favoriteWorkspaceIds: ['pinned'], usageFooterProfiles: ['claude:work'], rightPanelWidth: 420 })
+    restarted.setUi({ rightSidebarOpen: true })
+    expect(restarted.getSettings().ui.onboardingCompleted).toBe(true)
+  })
+
+  it('keeps setup pending when saving completion fails', async () => {
+    const settings = await import('./settings.service')
+    expect(settings.getSettings().ui.onboardingCompleted).toBe(false)
+    fs.mkdirSync(path.join(userData, 'settings.json'))
+    expect(() => settings.setUi({ onboardingCompleted: true })).toThrow('Failed to persist settings')
+    expect(settings.getSettings().ui.onboardingCompleted).toBe(false)
+  })
+
+  it('cannot lose a completed marker to an invalid preference patch', async () => {
+    const settings = await import('./settings.service')
+    settings.setUi({ onboardingCompleted: true })
+    // Main IPC accepts an object, while normalization enforces field types.
+    settings.setUi({ onboardingCompleted: 'no' } as never)
+    expect(settings.getSettings().ui.onboardingCompleted).toBe(true)
+  })
+})

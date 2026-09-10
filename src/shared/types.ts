@@ -66,6 +66,8 @@ export type RightPanelTab = 'files' | 'changes' | 'history' | 'tasks'
 
 /** Persisted layout state for the left/right sidebars, restored on launch. */
 export interface UiState {
+  /** First-run setup was finished or explicitly skipped. */
+  onboardingCompleted?: boolean
   sidebarCollapsed: boolean
   rightSidebarOpen: boolean
   /** Show workspace search, favorites, and recent shortcuts in the sidebar. */

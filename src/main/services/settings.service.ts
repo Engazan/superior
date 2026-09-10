@@ -53,6 +53,7 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
   'openPalette'
 ]
 const DEFAULT_UI: UiState = {
+  onboardingCompleted: false,
   sidebarCollapsed: false,
   rightSidebarOpen: false,
   sidebarWorkspaceTools: false
@@ -60,7 +61,7 @@ const DEFAULT_UI: UiState = {
 /** Catppuccin peach — a warm "done" tint that reads against the dark UI. */
 const DEFAULT_ATTENTION_COLOR = '#fab387'
 const DEFAULTS: AppSettings = {
-  theme: 'gradient-light',
+  theme: 'light',
   language: 'en',
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ui: { ...DEFAULT_UI },
@@ -116,6 +117,7 @@ function normalizeUi(raw: unknown): UiState {
   const next: UiState = { ...DEFAULT_UI }
   if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>
+    if (typeof obj.onboardingCompleted === 'boolean') next.onboardingCompleted = obj.onboardingCompleted
     if (typeof obj.sidebarCollapsed === 'boolean') next.sidebarCollapsed = obj.sidebarCollapsed
     if (typeof obj.rightSidebarOpen === 'boolean') next.rightSidebarOpen = obj.rightSidebarOpen
     if (typeof obj.sidebarWorkspaceTools === 'boolean')
@@ -171,7 +173,14 @@ export function getSettings(): AppSettings {
       ? (parsed.language as Language)
       : DEFAULTS.language,
     shortcuts: normalizeShortcuts(parsed.shortcuts),
-    ui: normalizeUi(parsed.ui),
+    // Existing installations predate the wizard. Preserve their preferences and
+    // offer replay in Settings; only a fresh store starts setup automatically.
+    ui: {
+      ...normalizeUi(parsed.ui),
+      onboardingCompleted: typeof parsed.ui?.onboardingCompleted === 'boolean'
+        ? parsed.ui.onboardingCompleted
+        : Object.keys(parsed).length > 0
+    },
     attentionColor: normalizeColor(parsed.attentionColor),
     usageTracking:
       typeof parsed.usageTracking === 'boolean' ? parsed.usageTracking : DEFAULTS.usageTracking,
@@ -232,7 +241,13 @@ export function setUi(ui: Partial<UiState>): AppSettings {
   const current = getSettings()
   const next: AppSettings = {
     ...current,
-    ui: normalizeUi({ ...current.ui, ...ui })
+    ui: normalizeUi({
+      ...current.ui,
+      ...ui,
+      onboardingCompleted: typeof ui.onboardingCompleted === 'boolean'
+        ? ui.onboardingCompleted
+        : current.ui.onboardingCompleted
+    })
   }
   save(next)
   return next

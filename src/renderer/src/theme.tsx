@@ -8,7 +8,7 @@ interface ThemeContextValue {
   mode: ThemeMode
   /** The concrete theme actually applied (system resolved against the OS). */
   resolved: ResolvedTheme
-  setMode: (mode: ThemeMode) => void
+  setMode: (mode: ThemeMode) => Promise<void>
 }
 
 const isMac = window.api.platform === 'darwin'
@@ -20,8 +20,8 @@ function systemTheme(): ResolvedTheme {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [mode, setModeState] = useState<ThemeMode>('system')
-  const [resolved, setResolved] = useState<ResolvedTheme>('dark')
+  const [mode, setModeState] = useState<ThemeMode>('light')
+  const [resolved, setResolved] = useState<ResolvedTheme>('light')
 
   // Load the persisted choice once.
   useEffect(() => {
@@ -69,9 +69,9 @@ export function ThemeProvider({ children }: { children: ReactNode }): React.JSX.
     return () => mq.removeEventListener('change', apply)
   }, [mode])
 
-  const setMode = (next: ThemeMode): void => {
+  const setMode = async (next: ThemeMode): Promise<void> => {
+    await window.api.setTheme(next)
     setModeState(next)
-    window.api.setTheme(next)
   }
 
   return (

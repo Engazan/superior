@@ -5,7 +5,7 @@ import { CloseIcon } from './icons'
 import { useOverlayLayer } from '../../overlayStack'
 import { useI18n } from '../../i18n'
 
-type Size = 'sm' | 'md' | 'lg'
+type Size = 'sm' | 'md' | 'lg' | 'xl'
 
 interface Props {
   onClose: () => void
@@ -26,7 +26,8 @@ interface Props {
 const SIZE: Record<Size, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
-  lg: 'max-w-xl'
+  lg: 'max-w-xl',
+  xl: 'max-w-4xl'
 }
 
 /**

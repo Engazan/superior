@@ -1,6 +1,8 @@
+import { onboardingHu } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  ...onboardingHu,
   'footer.resetNotice': 'A használati korlátok visszaálltak',
   'pane.split': 'Terminál felosztása',
   'terminal.lightMode': 'Világos téma ehhez a terminálhoz',

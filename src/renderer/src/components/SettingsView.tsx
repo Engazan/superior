@@ -5,6 +5,7 @@ import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { IntegrationsSection } from './IntegrationsSection'
 import { ShellCommandSection } from './ShellCommandSection'
+import { THEME_OPTIONS } from '../themeOptions'
 import { useTheme } from '../theme'
 import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
 import { clearUsageStore, primeUsageStore } from '../usageStore'
@@ -25,7 +26,6 @@ import type {
   FileOpener,
   Folder,
   PresetsState,
-  ThemeMode,
   TerminalPreset,
   UsagePrimary,
   Workspace
@@ -45,6 +45,7 @@ interface Props {
   /** Reports section switches so the last section can be restored on reopen. */
   onSectionChange?: (section: SettingsSection) => void
   onBack: () => void
+  onOpenOnboarding: () => void
   /** Called after the user adds/edits/removes an integration, so the sidebar's
    *  clone affordance can refresh. */
   onIntegrationsChanged?: () => void
@@ -59,29 +60,6 @@ interface Props {
   folders: Folder[]
   onKillSession: (id: string) => void
 }
-
-const THEME_OPTIONS: {
-  value: ThemeMode
-  labelKey:
-    | 'theme.light'
-    | 'theme.dark'
-    | 'theme.system'
-    | 'theme.transparent'
-    | 'theme.gradient'
-    | 'theme.gradientLight'
-}[] = [
-  { value: 'light', labelKey: 'theme.light' },
-  { value: 'dark', labelKey: 'theme.dark' },
-  { value: 'system', labelKey: 'theme.system' },
-  // The app-icon gradient with frosted chrome — pure CSS, so it works everywhere.
-  { value: 'gradient', labelKey: 'theme.gradient' },
-  // Its light-based twin: same glows over a bright backdrop.
-  { value: 'gradient-light', labelKey: 'theme.gradientLight' },
-  // Vibrancy (blur-behind) exists only on macOS.
-  ...(window.api.platform === 'darwin'
-    ? ([{ value: 'transparent', labelKey: 'theme.transparent' }] as const)
-    : [])
-]
 
 const USAGE_PRIMARY_OPTIONS: {
   value: UsagePrimary
@@ -204,7 +182,7 @@ function FileOpenerSelect({
   )
 }
 
-function AppearanceSection(): React.JSX.Element {
+function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void }): React.JSX.Element {
   const { mode, setMode } = useTheme()
   const { lang, setLang, t } = useI18n()
   const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
@@ -254,6 +232,11 @@ function AppearanceSection(): React.JSX.Element {
       <SectionHeader title={t('settings.appearance')} description={t('appearance.desc')} />
 
       <div className="space-y-3">
+        <SettingsCard>
+          <SettingRow title={t('onboarding.replayTitle')} description={t('onboarding.replayDescription')}>
+            <Button variant="secondary" onClick={onOpenOnboarding}>{t('onboarding.replay')}</Button>
+          </SettingRow>
+        </SettingsCard>
         <SettingsCard>
           <SettingRow title={t('appearance.theme')} description={t('appearance.themeDesc')}>
             <SegmentedControl
@@ -372,6 +355,7 @@ export function SettingsView({
   initialSection,
   onSectionChange,
   onBack,
+  onOpenOnboarding,
   onIntegrationsChanged,
   presets,
   onSavePreset,
@@ -481,7 +465,7 @@ export function SettingsView({
       {/* Settings content */}
       <div className="superior-settings-panel min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6 lg:p-8">
         <div className="mx-auto w-full max-w-6xl">
-          {section === 'appearance' && <AppearanceSection />}
+          {section === 'appearance' && <AppearanceSection onOpenOnboarding={onOpenOnboarding} />}
           {section === 'integrations' && (
             <IntegrationsSection onChanged={onIntegrationsChanged} />
           )}

@@ -1,6 +1,8 @@
+import { onboardingCs } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  ...onboardingCs,
   'footer.resetNotice': 'Usage limity se obnovily',
   'pane.split': 'Rozdělit terminál',
   'terminal.lightMode': 'Světlý motiv pro tento terminál',

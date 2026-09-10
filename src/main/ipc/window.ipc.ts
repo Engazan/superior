@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import { IPC } from '@shared/types'
+import { getSettings } from '../services/settings.service'
 import { handleWithEvent } from './handle'
 
 /**
@@ -35,7 +36,7 @@ export function registerWindowIpc(): void {
     if (!win) return
     win.setVibrancy(enabled ? 'fullscreen-ui' : null)
     // An opaque window background would paint over the blur.
-    win.setBackgroundColor(enabled ? '#00000000' : '#181825')
+    win.setBackgroundColor(enabled ? '#00000000' : ['light', 'gradient-light'].includes(getSettings().theme) ? '#edf1f7' : '#0f131a')
   })
 }
 

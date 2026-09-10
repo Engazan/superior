@@ -10,6 +10,7 @@ import type {
   PresetsState,
   TerminalPreset
 } from '@shared/types'
+import { customMemoryName } from '@shared/custom-memory'
 import { builtinIcon } from '@shared/icons'
 import { listPresets, savePreset } from './presets.service'
 
@@ -50,16 +51,6 @@ const isWindows = process.platform === 'win32'
 
 function homeDir(): string {
   return app.isReady() ? app.getPath('home') : os.homedir()
-}
-
-function slugify(value: string): string {
-  return value
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
 }
 
 function providerSpec(provider: string): ProviderSpec {
@@ -312,7 +303,7 @@ export function createCustomMemoryPreset(
   displayName: string
 ): CustomMemoryMutationResult {
   const spec = providerSpec(providerInput)
-  const name = slugify(displayName)
+  const name = customMemoryName(displayName)
   if (!name) throw new Error('Enter a valid name.')
 
   const directoryName = `${spec.prefix}${name}`

@@ -1,4 +1,6 @@
+import { onboardingEn } from '../onboarding'
 export const en = {
+  ...onboardingEn,
   'footer.resetNotice': 'Usage limits reset',
   'pane.split': 'Split terminal',
   'terminal.lightMode': 'Use light theme for this terminal',

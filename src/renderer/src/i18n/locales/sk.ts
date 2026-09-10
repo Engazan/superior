@@ -1,6 +1,8 @@
+import { onboardingSk } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  ...onboardingSk,
   'footer.resetNotice': 'Usage limity sa obnovili',
   'pane.split': 'Rozdeliť terminál',
   'terminal.lightMode': 'Svetlá téma pre tento terminál',

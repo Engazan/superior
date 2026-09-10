@@ -39,6 +39,8 @@ import {
 // These surfaces are absent from the initial terminal workspace. Loading them
 // on demand keeps the first renderer parse/evaluate path focused on the app
 // chrome and xterm, while Vite gives each feature its own cached chunk.
+const Onboarding = lazy(() => import('./components/Onboarding').then(({ Onboarding }) => ({ default: Onboarding })))
+
 const SettingsView = lazy(() =>
   import('./components/SettingsView').then(({ SettingsView }) => ({ default: SettingsView }))
 )
@@ -76,6 +78,15 @@ export default function App(): React.JSX.Element {
   const { t } = useI18n()
   const { shortcuts } = useShortcuts()
   const toast = useToast()
+  const [onboarding, setOnboarding] = useState<'first-run' | 'replay' | null>(null)
+  const [usageRevision, setUsageRevision] = useState(0)
+  useEffect(() => {
+    let live = true
+    void window.api.getSettings().then((settings) => {
+      if (live && settings.ui.onboardingCompleted === false) setOnboarding('first-run')
+    }).catch((err: unknown) => { if (live) toast.error(String(err)) })
+    return () => { live = false }
+  }, [toast])
 
   const [error, setError] = useState<string | null>(null)
   // Errors reported by hooks/components surface as a sticky toast rather than
@@ -782,6 +793,7 @@ export default function App(): React.JSX.Element {
               initialSection={settingsSection}
               onSectionChange={setSettingsSection}
               onBack={closeSettings}
+              onOpenOnboarding={() => setOnboarding('replay')}
               onIntegrationsChanged={reloadIntegrations}
               presets={presets}
               onSavePreset={presetsApi.savePreset}
@@ -912,7 +924,19 @@ export default function App(): React.JSX.Element {
         )}
       </div>
 
-      <UsageFooter onManage={openPresets} />
+      <UsageFooter key={usageRevision} onManage={openPresets} />
+      {onboarding && (
+        <Suspense fallback={<DeferredPanel />}>
+          <Onboarding
+            replay={onboarding === 'replay'}
+            onPresetsChanged={(state) => presetsApi.setPresets(state.presets)}
+            onClose={() => {
+              setOnboarding(null)
+              setUsageRevision((value) => value + 1)
+            }}
+          />
+        </Suspense>
+      )}
 
       {view === 'main' && launcherOpen && (
         <QuickLaunch

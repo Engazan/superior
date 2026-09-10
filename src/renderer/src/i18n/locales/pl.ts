@@ -1,6 +1,8 @@
+import { onboardingPl } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  ...onboardingPl,
   'footer.resetNotice': 'Limity użycia zostały odnowione',
   'pane.split': 'Podziel terminal',
   'terminal.lightMode': 'Jasny motyw dla tego terminala',

@@ -21,7 +21,7 @@ export type TFunction = (key: MessageKey, params?: Record<string, string | numbe
 
 interface I18nContextValue {
   lang: Language
-  setLang: (lang: Language) => void
+  setLang: (lang: Language) => Promise<void>
   t: TFunction
 }
 
@@ -34,10 +34,12 @@ export function I18nProvider({ children }: { children: ReactNode }): React.JSX.E
     window.api.getSettings().then((s) => setLangState(s.language))
   }, [])
 
-  const setLang = (next: Language): void => {
+  const setLang = async (next: Language): Promise<void> => {
+    await window.api.setLanguage(next)
     setLangState(next)
-    window.api.setLanguage(next)
   }
+
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
 
   const t: TFunction = (key, params) => {
     let str = (messages[lang] ?? en)[key] ?? en[key] ?? key
