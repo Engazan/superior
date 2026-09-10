@@ -196,7 +196,8 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
             ? [windows.find((limit) => limit.id === 'five_hour'), tightestWindow(windows.filter((limit) => limit.id !== 'five_hour'))]
             : [tightestWindow(windows)]).filter((limit): limit is UsageWindow => !!limit)
           return (
-            <button key={profile.id} type="button" aria-haspopup="dialog" aria-expanded={open}
+            <div key={profile.id} className="flex shrink-0 items-center gap-3 before:h-4 before:w-px before:bg-edge first:before:hidden">
+            <button type="button" aria-haspopup="dialog" aria-expanded={open}
               onClick={() => { setHover(null); setOpen(true) }}
               onMouseEnter={(event) => showHover(profile.id, event.currentTarget)} onMouseLeave={hideHover}
               onFocus={(event) => showHover(profile.id, event.currentTarget)} onBlur={hideHover}
@@ -205,13 +206,14 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
               <img src={builtinIcon(profile.provider)?.dataUrl} alt="" className={`h-3.5 w-3.5 object-contain ${profile.provider === 'codex' ? 'superior-usage-codex-icon' : ''}`} />
               <span className="font-medium text-fg">{profile.name}</span>
               {limits.length > 0 && reading?.status === 'ready' ? limits.map((limit) => (
-                <span key={limit.id} className="ml-1 flex items-center gap-1.5 border-l border-edge pl-2">
+                <span key={limit.id} className="ml-1 flex items-center gap-1.5">
                   <span className="text-fgmuted">{limit.label}</span>
                   <span className="min-w-[3rem] rounded bg-hover px-1.5 py-0.5 text-center font-semibold tabular-nums"
                     style={{ color: color(limit.usedPercent) }}>{percent(limit)}</span>
                 </span>
               )) : <span className="text-fgdim">{status(reading)}</span>}
             </button>
+            </div>
           )
         })}
       </div>
