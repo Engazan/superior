@@ -335,6 +335,29 @@ body {
   box-shadow: 0 8px 22px color-mix(in srgb, #080b10 12%, transparent);
 }
 
+/* Dark chrome uses surface contrast and a single muted edge for separation.
+   White bevels make nested panels look illuminated, especially in settings.
+   Keep the same matte treatment when System or Glass resolves to dark; the
+   translucent fills and gradient backdrop remain controlled by their themes. */
+.dark :is(
+  .superior-titlebar,
+  .superior-settings-panel,
+  .settings-island,
+  .superior-right-panel,
+  .superior-terminal-surface
+) {
+  border-color: var(--c-edge);
+  box-shadow: none;
+}
+
+.dark .superior-titlebar {
+  border-bottom: 1px solid var(--c-edge);
+}
+
+.dark .settings-island {
+  border-color: color-mix(in srgb, var(--c-edge) 70%, var(--c-bar));
+}
+
 @media (max-width: 760px) {
   .superior-workspace {
     gap: 5px;
