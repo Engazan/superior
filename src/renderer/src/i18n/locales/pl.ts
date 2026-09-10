@@ -3,6 +3,8 @@ import type { MessageKey } from './en'
 export const pl: Record<MessageKey, string> = {
   'footer.resetNotice': 'Limity użycia zostały odnowione',
   'pane.split': 'Podziel terminal',
+  'terminal.lightMode': 'Jasny motyw dla tego terminala',
+  'terminal.darkMode': 'Ciemny motyw dla tego terminala',
   'pane.left': '← W lewo',
   'pane.right': 'W prawo →',
   'pane.top': '↑ Na górze',

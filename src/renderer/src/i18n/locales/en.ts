@@ -1,6 +1,8 @@
 export const en = {
   'footer.resetNotice': 'Usage limits reset',
   'pane.split': 'Split terminal',
+  'terminal.lightMode': 'Use light theme for this terminal',
+  'terminal.darkMode': 'Use dark theme for this terminal',
   'pane.left': '← Left',
   'pane.right': 'Right →',
   'pane.top': '↑ Above',

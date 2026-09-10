@@ -227,6 +227,8 @@ export const TerminalView = memo(function TerminalView({
   // Last size we told the pty, so we can skip redundant resizes.
   const lastSizeRef = useRef<{ cols: number; rows: number } | null>(null)
   const { resolved } = useTheme()
+  const [themeOverride, setThemeOverride] = useState<'light' | 'dark' | null>(null)
+  const terminalTheme = themeOverride ?? resolved
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
 
@@ -303,7 +305,7 @@ export const TerminalView = memo(function TerminalView({
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       fontSize: 13,
       cursorBlink: true,
-      theme: TERM_THEMES[resolved],
+      theme: TERM_THEMES[terminalTheme],
       scrollback: 10_000,
       // FitAddon subtracts this value from usable terminal width. Keep just a
       // 1px calculation reserve; the CSS scrollbar below overlays the content
@@ -486,8 +488,8 @@ export const TerminalView = memo(function TerminalView({
 
   // Recolor an existing terminal when the theme changes (without recreating it).
   useEffect(() => {
-    if (termRef.current) termRef.current.options.theme = TERM_THEMES[resolved]
-  }, [resolved])
+    if (termRef.current) termRef.current.options.theme = TERM_THEMES[terminalTheme]
+  }, [terminalTheme])
 
   // Refit whenever this view becomes visible or its cell changes size. syncSize
   // skips the pty resize when the measured size is unchanged, so simply becoming
@@ -563,8 +565,8 @@ export const TerminalView = memo(function TerminalView({
         // its cell wrapper on the exact same theme background.
         style={
           {
-            backgroundColor: TERM_THEMES[resolved].background,
-            '--terminal-background': TERM_THEMES[resolved].background
+            backgroundColor: TERM_THEMES[terminalTheme].background,
+            '--terminal-background': TERM_THEMES[terminalTheme].background
           } as React.CSSProperties
         }
       >
@@ -648,6 +650,21 @@ export const TerminalView = memo(function TerminalView({
 
             {/* Action zone — restart / maximize / close, right-aligned. */}
             <div className="flex shrink-0 items-center">
+              <IconButton size="sm" label={t(terminalTheme === 'dark' ? 'terminal.lightMode' : 'terminal.darkMode')}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setThemeOverride(terminalTheme === 'dark' ? 'light' : 'dark')
+                }}>
+                {terminalTheme === 'dark' ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" />
+                  </svg>
+                )}
+              </IconButton>
               <PresetMenu presets={presets} disabled={splitDisabled} onSelect={() => {}} onManage={onManagePresets}
                 onSplit={(preset, direction) => onSplit(session.id, preset, direction)} />
               {session.status !== 'running' && (

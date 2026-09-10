@@ -3,6 +3,8 @@ import type { MessageKey } from './en'
 export const cs: Record<MessageKey, string> = {
   'footer.resetNotice': 'Usage limity se obnovily',
   'pane.split': 'Rozdělit terminál',
+  'terminal.lightMode': 'Světlý motiv pro tento terminál',
+  'terminal.darkMode': 'Tmavý motiv pro tento terminál',
   'pane.left': '← Vlevo',
   'pane.right': 'Vpravo →',
   'pane.top': '↑ Nahoru',

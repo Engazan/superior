@@ -3,6 +3,8 @@ import type { MessageKey } from './en'
 export const hu: Record<MessageKey, string> = {
   'footer.resetNotice': 'A használati korlátok visszaálltak',
   'pane.split': 'Terminál felosztása',
+  'terminal.lightMode': 'Világos téma ehhez a terminálhoz',
+  'terminal.darkMode': 'Sötét téma ehhez a terminálhoz',
   'pane.left': '← Balra',
   'pane.right': 'Jobbra →',
   'pane.top': '↑ Felül',
