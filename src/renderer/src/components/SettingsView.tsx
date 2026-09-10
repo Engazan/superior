@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PresetsSection } from './PresetsSection'
 import { PromptsSection } from './PromptsSection'
 import { DaemonsSection } from './DaemonsSection'
@@ -13,6 +13,13 @@ import { useUsagePrimary } from '../usagePrimary'
 import { useI18n, LANGUAGES } from '../i18n'
 import {
   Button,
+  ChevronIcon,
+  GearIcon,
+  BranchIcon,
+  PromptIcon,
+  BroadcastIcon,
+  KeyboardIcon,
+  TerminalIcon,
   Menu,
   SectionHeader,
   SegmentedControl,
@@ -30,6 +37,16 @@ import type {
   UsagePrimary,
   Workspace
 } from '../types'
+
+const SECTION_ICONS = {
+  appearance: GearIcon,
+  integrations: BranchIcon,
+  presets: TerminalIcon,
+  prompts: PromptIcon,
+  daemons: BroadcastIcon,
+  keyboard: KeyboardIcon,
+  shell: TerminalIcon
+}
 
 export type SettingsSection =
   | 'appearance'
@@ -149,7 +166,7 @@ function FileOpenerSelect({
         aria-expanded={anchor !== null}
         aria-label={t('fileOpener.title')}
         onClick={(e) => setAnchor((cur) => (cur ? null : e.currentTarget))}
-        className="flex h-8 w-56 items-center gap-2 rounded-md border border-edge bg-bar px-2.5 text-sm text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+        className="flex h-8 w-56 max-w-full items-center gap-2 rounded-md border border-edge bg-bar px-2.5 text-sm text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
       >
         <EditorBadge opener={value} />
         <span className="min-w-0 flex-1 truncate text-left">{labelOf(value)}</span>
@@ -228,15 +245,10 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="settings-section">
       <SectionHeader title={t('settings.appearance')} description={t('appearance.desc')} />
 
       <div className="space-y-3">
-        <SettingsCard>
-          <SettingRow title={t('onboarding.replayTitle')} description={t('onboarding.replayDescription')}>
-            <Button variant="secondary" onClick={onOpenOnboarding}>{t('onboarding.replay')}</Button>
-          </SettingRow>
-        </SettingsCard>
         <SettingsCard>
           <SettingRow title={t('appearance.theme')} description={t('appearance.themeDesc')}>
             <SegmentedControl
@@ -331,7 +343,7 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
           {usageTracking === true && (
             <SettingRow title={t('usage.primary')} description={t('usage.primaryDesc')}>
               {/* Fixed-width wrapper — the Select itself is w-full by design. */}
-              <div className="w-56">
+              <div className="w-56 max-w-full">
                 <Select
                   value={usagePrimary}
                   onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
@@ -345,6 +357,11 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
               </div>
             </SettingRow>
           )}
+        </SettingsCard>
+        <SettingsCard>
+          <SettingRow title={t('onboarding.replayTitle')} description={t('onboarding.replayDescription')}>
+            <Button variant="secondary" onClick={onOpenOnboarding}>{t('onboarding.replay')}</Button>
+          </SettingRow>
         </SettingsCard>
       </div>
     </div>
@@ -370,9 +387,11 @@ export function SettingsView({
 }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [section, setSectionState] = useState<SettingsSection>(initialSection)
+  const contentRef = useRef<HTMLDivElement>(null)
   // Report section changes up so the app can reopen settings where you left off.
   const setSection = (next: SettingsSection): void => {
     setSectionState(next)
+    contentRef.current?.scrollTo({ top: 0 })
     onSectionChange?.(next)
   }
   // One poll serves both the nav badge and the Daemons section's list, so an
@@ -398,64 +417,78 @@ export function SettingsView({
   }[] = [
     {
       label: t('settings.personal'),
-      items: [{ id: 'appearance', label: t('settings.appearance') }]
+      items: [
+        { id: 'appearance', label: t('settings.appearance') },
+        { id: 'keyboard', label: t('settings.keyboard') }
+      ]
     },
     {
       label: t('settings.workflow'),
       items: [
-        { id: 'integrations', label: t('settings.integrations') },
         { id: 'presets', label: t('settings.terminalPresets') },
         { id: 'prompts', label: t('settings.prompts') },
+        { id: 'integrations', label: t('settings.integrations') },
         { id: 'daemons', label: t('settings.daemons'), badge: daemonSessions.length },
-        { id: 'keyboard', label: t('settings.keyboard') },
         { id: 'shell', label: t('settings.shellCommand') }
       ]
     }
   ]
 
   return (
-    <div className="flex min-h-0 flex-1 gap-2">
+    <div className="settings-layout flex min-h-0 min-w-0 flex-1 gap-2">
+      <div className="settings-mobile-nav superior-settings-panel items-center gap-3 bg-bar p-2">
+        <Button variant="ghost" onClick={onBack}><ChevronIcon direction="left" />{t('settings.back')}</Button>
+        <Select aria-label={t('sidebar.settings')} value={section} onChange={(event) => setSection(event.target.value as SettingsSection)}>
+          {groups.map((group) => <optgroup key={group.label} label={group.label}>
+            {group.items.map((item) => <option key={item.id} value={item.id}>{item.label}{item.badge ? ` (${item.badge})` : ''}</option>)}
+          </optgroup>)}
+        </Select>
+      </div>
       {/* Settings sidebar */}
-      <aside className="superior-settings-panel flex w-56 shrink-0 flex-col overflow-hidden bg-bar">
+      <aside className="settings-navigation superior-settings-panel flex w-52 shrink-0 flex-col overflow-hidden bg-bar">
         <div className="border-b border-edge px-2 py-2">
           <button
             onClick={onBack}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
-            <span className="text-base leading-none text-accent">‹</span>
+            <ChevronIcon direction="left" size={16} />
             {t('settings.back')}
           </button>
         </div>
-        <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        <nav aria-label={t('sidebar.settings')} className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
           {groups.map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
               <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-fgmuted">
                 {group.label}
               </div>
               <ul className="space-y-0.5">
-                {group.items.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => setSection(item.id)}
-                      aria-current={section === item.id ? 'page' : undefined}
-                      className={`relative flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition ${
-                        section === item.id
-                          ? 'bg-accentBg text-fg'
-                          : 'text-fgdim hover:bg-hover hover:text-fg'
-                      } focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent`}
-                    >
-                      {section === item.id && (
-                        <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
-                      )}
-                      <span>{item.label}</span>
-                      {item.badge != null && item.badge > 0 && (
-                        <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-statusBg px-1.5 text-[10px] font-bold text-status ring-1 ring-inset ring-statusBorder">
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                ))}
+                {group.items.map((item) => {
+                  const Icon = SECTION_ICONS[item.id]
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => setSection(item.id)}
+                        aria-current={section === item.id ? 'page' : undefined}
+                        className={`relative flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition ${
+                          section === item.id
+                            ? 'bg-accentBg text-fg'
+                            : 'text-fgdim hover:bg-hover hover:text-fg'
+                        } focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent`}
+                      >
+                        {section === item.id && (
+                          <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
+                        )}
+                        <Icon size={17} className="shrink-0" />
+                        <span className="min-w-0 flex-1">{item.label}</span>
+                        {item.badge != null && item.badge > 0 && (
+                          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-statusBg px-1.5 text-[10px] font-bold text-status ring-1 ring-inset ring-statusBorder">
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           ))}
@@ -463,8 +496,8 @@ export function SettingsView({
       </aside>
 
       {/* Settings content */}
-      <div className="superior-settings-panel min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel p-6 lg:p-8">
-        <div className="mx-auto w-full max-w-6xl">
+      <div ref={contentRef} className="settings-content superior-settings-panel min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel">
+        <div className="settings-content-inner mx-auto w-full max-w-4xl">
           {section === 'appearance' && <AppearanceSection onOpenOnboarding={onOpenOnboarding} />}
           {section === 'integrations' && (
             <IntegrationsSection onChanged={onIntegrationsChanged} />

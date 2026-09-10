@@ -91,7 +91,7 @@ export function KeyboardSection(): React.JSX.Element {
   }, [recordingFor, setShortcut, shortcuts, globalHotkey])
 
   return (
-    <div className="max-w-2xl">
+    <div className="settings-section">
       <SectionHeader title={t('settings.keyboard')} description={t('keyboard.desc')} />
 
       {/* System-wide hotkey — registered with the OS, works while the app is
@@ -133,9 +133,9 @@ export function KeyboardSection(): React.JSX.Element {
             return (
               <li
                 key={id}
-                className="flex items-center gap-3 border-b border-edge px-3 py-2 text-sm last:border-b-0"
+                className="settings-shortcut-row flex items-center gap-3 border-b border-edge px-4 py-3 text-sm last:border-b-0"
               >
-                <span className="min-w-0 flex-1 truncate text-fg">{t(labelKey)}</span>
+                <span className="min-w-0 flex-1 text-fg">{t(labelKey)}</span>
                 <button
                   onClick={() => setRecordingFor(isRecording ? null : id)}
                   className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
@@ -160,8 +160,8 @@ export function KeyboardSection(): React.JSX.Element {
             )
           })}
           {/* Fixed binding, listed so the grid-focus feature is discoverable. */}
-          <li className="flex items-center gap-3 px-3 py-2 text-sm">
-            <span className="min-w-0 flex-1 truncate text-fg">{t('keyboard.focusCell')}</span>
+          <li className="settings-shortcut-row flex items-center gap-3 px-4 py-3 text-sm">
+            <span className="min-w-0 flex-1 text-fg">{t('keyboard.focusCell')}</span>
             <span className="min-w-24 rounded-md border border-edge px-2.5 py-1 text-center font-mono text-xs text-fgdim">
               {formatChord('ctrl+1')}–{formatChord('ctrl+9').split(/[\s+]/).pop()}
             </span>

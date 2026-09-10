@@ -6,6 +6,8 @@ import {
   GripIcon,
   IconButton,
   PencilIcon,
+  PlusIcon,
+  EmptyState,
   SectionHeader,
   Toggle,
   TrashIcon,
@@ -73,7 +75,7 @@ export function PresetsSection({
     setOrder(presets.map((p) => p.id))
   }
 
-  const dragOverRow = (e: DragEvent<HTMLTableRowElement>, targetId: string): void => {
+  const dragOverRow = (e: DragEvent<HTMLLIElement>, targetId: string): void => {
     e.preventDefault()
     if (!dragId || dragId === targetId) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -119,117 +121,88 @@ export function PresetsSection({
   }
 
   return (
-    <div className="relative h-full">
+    <div className="settings-section">
       <SectionHeader
         title={t('settings.terminalPresets')}
-        actions={<Button onClick={() => setEditing('new')}>{t('presets.add')}</Button>}
+        actions={<Button onClick={() => setEditing('new')}><PlusIcon />{t('presets.add')}</Button>}
       />
 
       <div className="settings-island">
-        <table className="w-full text-sm">
-          <thead className="bg-bar text-left text-xs text-fgdim">
-            <tr>
-              <th className="w-8 px-2 py-2"></th>
-              <th className="w-10 px-2 py-2">{t('presets.colIcon')}</th>
-              <th className="px-2 py-2">{t('presets.colName')}</th>
-              <th className="px-2 py-2">{t('presets.colDescription')}</th>
-              <th className="px-2 py-2">{t('presets.colCommand')}</th>
-              <th className="w-16 px-2 py-2 text-center">{t('presets.colActive')}</th>
-              <th className="w-20 px-2 py-2 text-right">{t('presets.colActions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayed.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-sm text-fgmuted">
-                  {t('presets.empty')}
-                </td>
-              </tr>
-            ) : (
-              displayed.map((p) => (
-                <tr
-                  key={p.id}
-                  onDragOver={(e) => dragOverRow(e, p.id)}
-                  onDrop={(e) => e.preventDefault()}
-                  className={`border-t border-edge transition ${
-                    dragId === p.id ? 'opacity-40' : 'hover:bg-bar/60'
-                  }`}
+        {displayed.length === 0 ? <EmptyState title={t('presets.empty')} /> : (
+          <ul className="divide-y divide-edge">
+            {displayed.map((p) => (
+              <li
+                key={p.id}
+                onDragOver={(e) => dragOverRow(e, p.id)}
+                onDrop={(e) => e.preventDefault()}
+                className={`settings-preset-row grid items-center gap-3 px-4 py-3 transition ${
+                  dragId === p.id ? 'opacity-40' : 'hover:bg-bar/60'
+                }`}
+              >
+                <button
+                  type="button"
+                  draggable
+                  tabIndex={0}
+                  onDragStart={(e) => {
+                    startDrag(p.id)
+                    // No floating ghost — just sort the rows in place.
+                    e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }}
+                  onDragEnd={endDrag}
+                  // Arrow keys reorder too — the drag grip alone is mouse-only.
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      moveBy(p.id, -1)
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      moveBy(p.id, 1)
+                    }
+                  }}
+                  className="cursor-grab select-none rounded py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                  title={t('presets.dragReorder')}
+                  aria-label={t('presets.dragReorder')}
                 >
-                  <td
-                    draggable
-                    tabIndex={0}
-                    role="button"
-                    onDragStart={(e) => {
-                      startDrag(p.id)
-                      // No floating ghost — just sort the rows in place.
-                      e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0)
-                      e.dataTransfer.effectAllowed = 'move'
-                    }}
-                    onDragEnd={endDrag}
-                    // Arrow keys reorder too — the drag grip alone is mouse-only.
-                    onKeyDown={(e) => {
-                      if (e.key === 'ArrowUp') {
-                        e.preventDefault()
-                        moveBy(p.id, -1)
-                      } else if (e.key === 'ArrowDown') {
-                        e.preventDefault()
-                        moveBy(p.id, 1)
-                      }
-                    }}
-                    className="cursor-grab select-none px-2 py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
-                    title={t('presets.dragReorder')}
-                    aria-label={t('presets.dragReorder')}
-                  >
-                    <span className="inline-flex justify-center">
-                      <GripIcon />
-                    </span>
-                  </td>
-                  <td className="px-2 py-2">
-                    <PresetIcon iconType={p.iconType} icon={p.icon} className="h-5 w-5 text-lg" />
-                  </td>
-                  <td className="px-2 py-2 font-medium text-fg">{p.name}</td>
-                  <td className="px-2 py-2 text-fgdim">{p.description}</td>
-                  <td className="px-2 py-2 font-mono text-xs text-fgdim">{p.command}</td>
-                  <td className="px-2 py-2">
-                    <div className="flex justify-center">
-                      <Toggle
-                        checked={p.active}
-                        onChange={(checked) => onToggleActive(p.id, checked)}
-                        label={t('presets.markActive', { name: p.name })}
-                      />
-                    </div>
-                  </td>
-                  <td className="px-2 py-2">
-                    <div className="flex justify-end gap-1">
-                      <IconButton
-                        size="sm"
-                        label={`${t('common.edit')} ${p.name}`}
-                        title={t('common.edit')}
-                        onClick={() => setEditing(p)}
-                      >
-                        <PencilIcon size={13} />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        variant="danger-ghost"
-                        label={`${t('common.delete')} ${p.name}`}
-                        title={t('common.delete')}
-                        onClick={() => void removePreset(p)}
-                      >
-                        <TrashIcon size={13} />
-                      </IconButton>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  <span className="inline-flex justify-center">
+                    <GripIcon />
+                  </span>
+                </button>
+                <PresetIcon iconType={p.iconType} icon={p.icon} className="h-6 w-6 text-lg" />
+                <div className="min-w-0">
+                  <div className="break-words text-sm font-medium text-fg">{p.name}</div>
+                  {p.description && <p className="mt-0.5 text-xs leading-relaxed text-fgdim [overflow-wrap:anywhere]">{p.description}</p>}
+                  <p title={p.command} className="mt-1 truncate font-mono text-[11px] text-fgmuted">{p.command}</p>
+                </div>
+                <div className="settings-preset-actions flex items-center justify-end gap-1">
+                  <span className="mr-2"><Toggle checked={p.active} onChange={(checked) => onToggleActive(p.id, checked)} label={t('presets.markActive', { name: p.name })} /></span>
+                    <IconButton
+                      size="sm"
+                      label={`${t('common.edit')} ${p.name}`}
+                      title={t('common.edit')}
+                      onClick={() => setEditing(p)}
+                    >
+                      <PencilIcon size={13} />
+                    </IconButton>
+                    <IconButton
+                      size="sm"
+                      variant="danger-ghost"
+                      label={`${t('common.delete')} ${p.name}`}
+                      title={t('common.delete')}
+                      onClick={() => void removePreset(p)}
+                    >
+                      <TrashIcon size={13} />
+                    </IconButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      <CliToolsHealth />
-
       <CustomMemoryPresets onPresetsChanged={onPresetsChanged} />
+
+      <CliToolsHealth />
 
       {editing !== null && (
         <PresetForm

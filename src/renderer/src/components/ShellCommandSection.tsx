@@ -48,7 +48,7 @@ export function ShellCommandSection(): React.JSX.Element {
   const installed = status?.resolvable === true
 
   return (
-    <div className="max-w-2xl">
+    <div className="settings-section">
       <SectionHeader title={t('settings.shellCommand')} description={t('shell.description')} />
 
       <SettingsCard>

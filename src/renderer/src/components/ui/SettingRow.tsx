@@ -15,16 +15,16 @@ interface RowProps {
 /**
  * One setting inside a {@link SettingsCard}: name + description on the left,
  * control on the right (macOS/VS Code settings style). The left column
- * truncates first when space runs out; the control never shrinks.
+ * and controls stack when their settings container gets narrow.
  */
 export function SettingRow({ title, description, children }: RowProps): React.JSX.Element {
   return (
-    <div className="flex items-center justify-between gap-6 px-4 py-3">
+    <div className="settings-row flex items-center justify-between gap-6 px-4 py-4">
       <div className="min-w-0">
         <div className="text-sm font-medium text-fg">{title}</div>
-        {description && <p className="mt-0.5 max-w-sm text-xs text-fgdim">{description}</p>}
+        {description && <p className="mt-1 max-w-md text-xs leading-relaxed text-fgdim [overflow-wrap:anywhere]">{description}</p>}
       </div>
-      <div className="flex shrink-0 items-center gap-2">{children}</div>
+      <div className="settings-row-controls flex max-w-full shrink-0 flex-wrap items-center gap-2">{children}</div>
     </div>
   )
 }

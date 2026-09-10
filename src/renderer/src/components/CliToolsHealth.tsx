@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
-import { Button, StatusPill } from './ui'
+import { Button, StatusPill, SectionHeader, RefreshIcon } from './ui'
 import type { CliToolId, CliToolStatus } from '../types'
 
 /**
@@ -43,16 +43,12 @@ export function CliToolsHealth(): React.JSX.Element {
   }
 
   return (
-    <div className="mt-8">
-      <div className="mb-1 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-fg">{t('cli.title')}</h3>
-        <Button variant="ghost" size="sm" onClick={() => void refresh(true)}>
-          {t('cli.recheck')}
-        </Button>
-      </div>
-      <p className="mb-3 max-w-xl text-xs text-fgdim">{t('cli.description')}</p>
+    <section className="settings-subsection">
+      <SectionHeader level={3} title={t('cli.title')} description={t('cli.description')}
+        actions={<Button variant="secondary" size="sm" onClick={() => void refresh(true)}><RefreshIcon />{t('cli.recheck')}</Button>}
+      />
 
-      <div className="overflow-hidden rounded-lg border border-edge">
+      <div className="settings-island">
         {tools === null ? (
           <div className="px-3 py-4 text-sm text-fgmuted">{t('cli.checking')}</div>
         ) : (
@@ -62,7 +58,7 @@ export function CliToolsHealth(): React.JSX.Element {
               return (
                 <li
                   key={tool.id}
-                  className="flex items-center gap-3 border-b border-edge px-3 py-2.5 text-sm last:border-b-0"
+                  className="flex flex-wrap items-center gap-3 border-b border-edge px-3 py-2.5 text-sm last:border-b-0"
                 >
                   {icon && <img src={icon.dataUrl} alt="" className="h-5 w-5 shrink-0" />}
                   <div className="min-w-0 flex-1">
@@ -117,6 +113,6 @@ export function CliToolsHealth(): React.JSX.Element {
           {note.text}
         </p>
       )}
-    </div>
+    </section>
   )
 }

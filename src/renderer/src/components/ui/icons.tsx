@@ -232,3 +232,11 @@ export function RestartIcon(props: IconProps): React.JSX.Element {
     </svg>
   )
 }
+
+export function TerminalIcon(props: IconProps): React.JSX.Element {
+  return <svg {...base(props)}><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m7 9 3 3-3 3m6 0h4" /></svg>
+}
+
+export function KeyboardIcon(props: IconProps): React.JSX.Element {
+  return <svg {...base(props)}><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10" /></svg>
+}

@@ -12,6 +12,7 @@ import {
   IconButton,
   Input,
   SectionHeader,
+  PlusIcon,
   Select,
   TrashIcon,
   useConfirm,
@@ -87,7 +88,7 @@ function IntegrationForm({
   }
 
   return (
-    <div className="rounded-lg border border-edge bg-bar p-4">
+    <div className="settings-island p-4">
       <div className="grid gap-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-fg">
@@ -237,14 +238,14 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="settings-section">
       <SectionHeader
         title={t('settings.integrations')}
         description={t('integrations.desc')}
         actions={
           !editing && (
-            <Button variant="secondary" size="sm" onClick={() => setEditing(emptyDraft())}>
-              <span className="text-base leading-none text-accent">+</span>
+            <Button onClick={() => setEditing(emptyDraft())}>
+              <PlusIcon />
               {t('integrations.add')}
             </Button>
           )
@@ -256,10 +257,10 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
       {integrations.length > 0 && (
         <ul className="settings-island divide-y divide-edge">
           {integrations.map((it) => (
-            <li key={it.id} className="flex items-center gap-3 px-3 py-2.5">
+            <li key={it.id} className="flex items-center gap-3 px-4 py-3">
               <ProviderLogo provider={it.provider} className="h-9 w-9" />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-medium text-fg">{it.name}</span>
                   <span className="shrink-0 rounded-full bg-accentBg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
                     {providerLabel(it.provider)}

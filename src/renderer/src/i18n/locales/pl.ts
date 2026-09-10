@@ -233,6 +233,7 @@ export const pl: Record<MessageKey, string> = {
   'broadcast.exit': 'Zakończ broadcast',
   'broadcast.target': 'Przełącz ten terminal jako cel broadcastu',
   'settings.language': 'Język',
+  'daemons.search': 'Szukaj procesów…',
   'daemons.desc':
     'Aktywne procesy terminala należące do demona w tle. Działają dalej, gdy aplikacja jest zamknięta.',
   'daemons.empty': 'Brak działających sesji demona.',

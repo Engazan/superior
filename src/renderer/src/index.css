@@ -662,3 +662,39 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .onboarding-choice { transition: none; }
 }
+
+/* Settings use the available content width, not the whole window, to decide
+   when labels and controls need separate rows. All sections share this frame. */
+.settings-content { padding: 28px; }
+.settings-content-inner { container-type: inline-size; }
+.settings-section { width: 100%; min-width: 0; }
+.settings-mobile-nav { display: none; }
+.settings-subsection { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--c-edge); }
+.settings-row > :first-child { flex: 1; }
+.settings-row-controls { flex-basis: auto; max-width: 56%; justify-content: flex-end; }
+.settings-preset-row { grid-template-columns: 16px 24px minmax(0, 1fr) auto; }
+.settings-content .settings-island { box-shadow: none; border-color: var(--c-edge); }
+
+@container (max-width: 640px) {
+  .settings-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .settings-row-controls { max-width: 100%; justify-content: flex-start; }
+  .settings-row-controls [role='radiogroup'] { flex-wrap: wrap; justify-content: flex-start; }
+  .settings-row:has([role='switch']) { flex-direction: row; align-items: center; }
+  .settings-row:has([role='switch']) .settings-row-controls { flex-shrink: 0; }
+  .settings-memory-row > :last-child { flex-basis: 100%; align-items: flex-start; padding-left: 44px; }
+}
+
+@container (max-width: 440px) {
+  .settings-preset-actions { grid-column: 3 / -1; justify-content: flex-start; }
+  .settings-preset-row { grid-template-columns: 16px 24px minmax(0, 1fr); }
+  .settings-shortcut-row { flex-wrap: wrap; }
+  .settings-shortcut-row > :first-child { flex-basis: 100%; }
+}
+
+@media (max-width: 900px) {
+  .settings-layout { flex-direction: column; }
+  .settings-navigation { display: none; }
+  .settings-mobile-nav { display: flex; flex-shrink: 0; }
+  .settings-mobile-nav > button { flex-shrink: 0; }
+  .settings-content { padding: 20px; }
+}

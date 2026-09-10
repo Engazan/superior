@@ -3,7 +3,7 @@ import { PresetIcon } from './PresetIcon'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
 import { ipcErrorMessage as errorText } from '../ipcError'
-import { Button, Input, Modal } from './ui'
+import { Button, Input, Modal, SectionHeader, PlusIcon } from './ui'
 import type {
   CustomMemoryPreset,
   CustomMemoryProvider,
@@ -91,23 +91,10 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
   }
 
   return (
-    <section className="mt-10 border-t border-edge pt-6">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-base font-semibold text-fg">{t('memory.title')}</h3>
-          <p className="mt-1 text-xs text-fgdim">{t('memory.description')}</p>
-        </div>
-        <Button
-          variant="secondary"
-          className="shrink-0"
-          onClick={() => {
-            setError(null)
-            setCreating(true)
-          }}
-        >
-          {t('memory.add')}
-        </Button>
-      </div>
+    <section className="settings-subsection">
+      <SectionHeader level={3} title={t('memory.title')} description={t('memory.description')}
+        actions={<Button variant="secondary" onClick={() => { setError(null); setCreating(true) }}><PlusIcon />{t('memory.add')}</Button>}
+      />
 
       {error && (
         <div className="mb-3 rounded-md border border-dangerBorder bg-dangerBg px-3 py-2 text-xs text-danger">
@@ -115,7 +102,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-edge">
+      <div className="settings-island">
         {loading ? (
           <div className="px-3 py-8 text-center text-sm text-fgmuted">{t('memory.loading')}</div>
         ) : items.length === 0 ? (
@@ -125,7 +112,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
             {items.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-3 px-3 py-3 transition hover:bg-bar/60"
+                className="settings-memory-row flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-bar/60"
               >
                 <PresetIcon
                   iconType="image"
@@ -133,8 +120,8 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
                   className="h-8 w-8 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-fg">{item.aliasName}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="break-all font-medium text-fg">{item.aliasName}</span>
                     <span className="rounded-sm bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
                       {PROVIDER_UI[item.provider].label}
                     </span>
@@ -168,13 +155,9 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
                   {item.terminalPresetExists ? (
                     <span className="text-xs text-fgmuted">{t('memory.inTerminalPresets')}</span>
                   ) : (
-                    <button
-                      disabled={busyId === item.id}
-                      className="rounded-md bg-accentBg px-2.5 py-1 text-xs font-medium text-accent ring-1 ring-inset ring-accentBorder transition hover:brightness-95 disabled:opacity-50"
-                      onClick={() => void addTerminalPreset(item)}
-                    >
+                    <Button variant="secondary" size="sm" disabled={busyId === item.id} onClick={() => void addTerminalPreset(item)}>
                       {t('memory.addToTerminalPresets')}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

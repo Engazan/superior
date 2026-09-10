@@ -233,6 +233,7 @@ export const hu: Record<MessageKey, string> = {
   'broadcast.exit': 'Broadcast befejezése',
   'broadcast.target': 'Terminál ki/be a broadcast céljaként',
   'settings.language': 'Nyelv',
+  'daemons.search': 'Folyamatok keresése…',
   'daemons.desc':
     'A háttérdémon által birtokolt élő terminálfolyamatok. Az alkalmazás bezárása után is futnak.',
   'daemons.empty': 'Nincs futó démon munkamenet.',

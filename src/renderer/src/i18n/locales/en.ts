@@ -230,6 +230,7 @@ export const en = {
   'broadcast.exit': 'Exit broadcast',
   'broadcast.target': 'Toggle this terminal as a broadcast target',
   'settings.language': 'Language',
+  'daemons.search': 'Search processes…',
   'daemons.desc':
     'Live terminal processes owned by the background daemon. They keep running while the app is closed.',
   'daemons.empty': 'No running daemon sessions.',

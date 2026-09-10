@@ -9,6 +9,7 @@ import {
   Modal,
   PencilIcon,
   SectionHeader,
+  PlusIcon,
   TrashIcon,
   useConfirm,
   useToast
@@ -43,11 +44,11 @@ export function PromptsSection(): React.JSX.Element {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="settings-section">
       <SectionHeader
         title={t('settings.prompts')}
         description={t('prompts.desc')}
-        actions={<Button onClick={() => setEditing('new')}>{t('prompts.add')}</Button>}
+        actions={<Button onClick={() => setEditing('new')}><PlusIcon />{t('prompts.add')}</Button>}
       />
 
       {prompts.length > 0 && (
@@ -67,7 +68,7 @@ export function PromptsSection(): React.JSX.Element {
       ) : (
         <ul className="settings-island divide-y divide-edge">
           {filteredPrompts.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 px-3 py-2.5">
+            <li key={p.id} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-fg">{p.name}</div>
                 <div className="truncate text-xs text-fgmuted">{p.text}</div>

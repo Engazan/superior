@@ -233,6 +233,7 @@ export const sk: Record<MessageKey, string> = {
   'broadcast.exit': 'Ukončiť broadcast',
   'broadcast.target': 'Prepnúť tento terminál ako cieľ broadcastu',
   'settings.language': 'Jazyk',
+  'daemons.search': 'Hľadať procesy…',
   'daemons.desc':
     'Živé terminálové procesy vlastnené démonom na pozadí. Bežia ďalej aj keď je aplikácia zatvorená.',
   'daemons.empty': 'Žiadne bežiace démon relácie.',
