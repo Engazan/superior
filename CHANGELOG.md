@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-09-10
+
+### Added
+
+- **Independent terminal themes.** Each terminal header now has a sun/moon
+  toggle for its own light or dark theme, without changing the application or
+  other terminals. Colors update in place without restarting the process.
+  Terminals follow the application theme until overridden; overrides last for
+  the lifetime of the terminal view. Tooltips are localized in all five languages.
+
+### Changed
+
+- Updated the README application screenshot to show the current workspace,
+  split terminals and AI account usage footer.
+
 ## [0.23.0] - 2026-09-10
 
 ### Added
