@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import type { TFunction } from '../../i18n'
 import type { UpdateController } from '../../hooks/useUpdateCheck'
 import type { WorkspaceGitStat } from '../../hooks/useWorkspaceGitStats'
@@ -32,11 +31,6 @@ export function folderTitle(folder: Folder): string {
   return folder.kind === 'remote' && folder.remote
     ? `${folder.remote.host}:${folder.remote.path}`
     : folder.path
-}
-
-/** Subtle row-background tint for a folder's chosen color, or undefined when unset. */
-export function folderTint(color: string | null | undefined): CSSProperties | undefined {
-  return color ? { backgroundColor: `${color}26` } : undefined
 }
 
 /** A folder's custom icon when set, else the default folder glyph. `size` is px. */
@@ -81,8 +75,13 @@ export function RunningBadge({ count, title }: { count: number; title: string })
   return (
     <span
       title={title}
-      className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-statusBg px-1.5 text-[10px] font-bold leading-none text-status ring-1 ring-inset ring-statusBorder"
+      aria-label={`${title}: ${count}`}
+      className="flex h-5 shrink-0 items-center justify-center gap-1 rounded px-1 text-[11px] font-medium leading-none tabular-nums text-fgdim"
     >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="3" y="4" width="18" height="16" rx="3" />
+        <path d="m7 9 3 3-3 3m6 0h4" />
+      </svg>
       {count}
     </span>
   )
@@ -104,7 +103,7 @@ export function DiffStat({
   return (
     <span
       title={title}
-      className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold leading-none tabular-nums"
+      className="flex shrink-0 items-center gap-1 font-mono text-[11px] font-medium leading-4 tabular-nums"
     >
       {stat.additions > 0 && <span className="text-status">+{stat.additions}</span>}
       {stat.deletions > 0 && <span className="text-danger">−{stat.deletions}</span>}
@@ -159,7 +158,7 @@ export function BranchBadge({ branch, title }: { branch: string; title: string }
   return (
     <span
       title={title}
-      className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] font-medium text-fgmuted"
+      className="flex min-w-0 items-center gap-1 text-[11px] font-medium leading-4 text-fgdim"
     >
       <BranchIcon size={11} className="shrink-0" />
       <span className="truncate">{branch}</span>
@@ -171,7 +170,7 @@ export function RemoteBadge({ title }: { title: string }): React.JSX.Element {
   return (
     <span
       title={title}
-      className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-accent"
+      className="flex min-w-0 items-center gap-1 text-[11px] leading-4 font-semibold uppercase tracking-wide text-accent"
     >
       SSH
     </span>

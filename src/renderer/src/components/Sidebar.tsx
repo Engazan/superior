@@ -10,6 +10,7 @@ import {
   KebabIcon,
   Menu,
   PencilIcon,
+  PlusIcon,
   SearchIcon,
   StarIcon,
   TrashIcon,
@@ -26,7 +27,6 @@ import {
   WorkingSpinner,
   folderLabel,
   folderTitle,
-  folderTint,
   initial,
   updateTitle
 } from './sidebar/parts'
@@ -396,7 +396,7 @@ export const Sidebar = memo(function Sidebar({
     </>
   )
 
-  // Collapsed: a narrow rail with workspace initials + a running-count dot.
+  // Collapsed: workspace initials with the same activity and selection cues.
   if (collapsed) {
     return (
       <aside
@@ -418,7 +418,6 @@ export const Sidebar = memo(function Sidebar({
           <div className="flex flex-col items-center gap-2">
             {folders.map((folder, i) => {
               const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
-              const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
               const folderBusy = folderWorkspaces.some((w) => busyWorkspaceIds.has(w.id))
               const folderAttn = folderWorkspaces.some((w) => attentionWorkspaceIds.has(w.id))
               return (
@@ -438,28 +437,23 @@ export const Sidebar = memo(function Sidebar({
                     }}
                     title={folderTitle(folder)}
                     aria-label={folderLabel(folder)}
-                    style={folderTint(folder.color)}
+                    style={folder.color ? { color: folder.color } : undefined}
                     className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
                   >
                     <FolderGlyph folder={folder} />
-                    {folderBusy ? (
-                      <WorkingSpinner className="absolute -right-0.5 -top-0.5 h-3 w-3" />
-                    ) : folderAttn ? (
+                    {folderAttn ? (
                       <span
                         style={{ '--attn': attentionColor } as CSSProperties}
                         className="attention-pulse-dot absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar"
                       />
-                    ) : (
-                      folderRunning > 0 && (
-                        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar bg-status" />
-                      )
-                    )}
+                    ) : folderBusy ? (
+                      <WorkingSpinner className="absolute -right-0.5 -top-0.5 h-3 w-3" />
+                    ) : null}
                   </button>
 
                   {/* Workspaces — square initial badges */}
                   {folderWorkspaces.map((ws) => {
                     const active = ws.id === activeWorkspaceId
-                    const n = counts[ws.id] ?? 0
                     const busy = busyWorkspaceIds.has(ws.id)
                     const attn = attentionWorkspaceIds.has(ws.id)
                     return (
@@ -470,29 +464,25 @@ export const Sidebar = memo(function Sidebar({
                           e.preventDefault()
                           setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                         }}
+                        aria-current={active || undefined}
                         title={`${folderLabel(folder)} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
                         style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
                         className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                           active
                             ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder'
-                            : attn
-                              ? 'attention-pulse text-fg'
-                              : 'text-fgdim hover:bg-hover hover:text-fg'
+                            : 'text-fgdim hover:bg-hover hover:text-fg'
                         }`}
                       >
                         {initial(ws.name)}
-                        {busy ? (
-                          <WorkingSpinner className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5" />
-                        ) : attn ? (
+                        {active && <span aria-hidden className="absolute inset-y-2 -left-2 w-0.5 rounded-full bg-accent" />}
+                        {attn ? (
                           <span
                             style={{ '--attn': attentionColor } as CSSProperties}
                             className="attention-pulse-dot absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar"
                           />
-                        ) : (
-                          n > 0 && (
-                            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar bg-status" />
-                          )
-                        )}
+                        ) : busy ? (
+                          <WorkingSpinner className="absolute -right-1 -top-1 h-3.5 w-3.5" />
+                        ) : null}
                       </button>
                     )
                   })}
@@ -627,7 +617,7 @@ export const Sidebar = memo(function Sidebar({
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {workspaceToolsVisible &&
               !workspaceQuery &&
               !favoritesOnly &&
@@ -656,7 +646,7 @@ export const Sidebar = memo(function Sidebar({
                 {t('sidebar.noMatches')}
               </div>
             ) : (
-            displayFolders.map((folder, folderIndex) => {
+            displayFolders.map((folder) => {
               const folderWorkspaces = workspaces.filter(
                 (w) => w.folderPath === folder.path && filteredWorkspaceIds.has(w.id)
               )
@@ -669,10 +659,7 @@ export const Sidebar = memo(function Sidebar({
                 <div
                   key={folder.path}
                   data-folder-path={folder.path}
-                  style={folderTint(folder.color)}
-                  className={`pb-1 ${
-                    folderIndex > 0 ? 'pt-1' : ''
-                  } ${beingDragged ? 'opacity-60 ring-1 ring-accentBorder' : ''}`}
+                  className={beingDragged ? 'rounded-lg opacity-60 ring-1 ring-accentBorder' : undefined}
                 >
                   {/* Folder header — click to collapse / expand; the grip drags to reorder */}
                   <div
@@ -681,6 +668,7 @@ export const Sidebar = memo(function Sidebar({
                     aria-expanded={open}
                     onClick={() => toggleFolder(folder)}
                     onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
                         toggleFolder(folder)
@@ -698,13 +686,13 @@ export const Sidebar = memo(function Sidebar({
                     }}
                     title={folderTitle(folder)}
                     className={`group relative flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-0.5 text-fgdim transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-                      folderActive ? 'bg-hover text-fg shadow-sm' : 'hover:bg-hover/70 hover:text-fg'
+                      folderActive ? 'text-fg hover:bg-hover/70' : 'hover:bg-hover/70 hover:text-fg'
                     }`}
                   >
                     <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
                       <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
                     </span>
-                    <span className={folderActive ? 'text-fgdim' : 'text-fgmuted'}>
+                    <span style={folder.color ? { color: folder.color } : undefined} className="text-fgdim">
                       <FolderGlyph folder={folder} size={15} />
                     </span>
                     <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] ${
@@ -712,17 +700,17 @@ export const Sidebar = memo(function Sidebar({
                     }`}>
                       {folderLabel(folder)}
                     </span>
-                    <span
-                      className="mr-1 shrink-0 px-1 text-[11px] font-semibold tabular-nums text-fgmuted transition group-hover:opacity-0 group-focus-within:opacity-0"
-                    >
-                      {folderWorkspaces.length}
-                    </span>
+                    {(!open || folderWorkspaces.length > 1) && (
+                      <span className="mr-1 shrink-0 px-1 text-[11px] font-medium tabular-nums text-fgdim transition group-hover:opacity-0 group-focus-within:opacity-0">
+                        {folderWorkspaces.length}
+                      </span>
+                    )}
                     {!open && folderRunning > 0 && (
                       <RunningBadge count={folderRunning} title={t('sidebar.runningTerminals')} />
                     )}
                     {/* Drag handle — the drag itself runs on window listeners
                         (see beginFolderDrag), the list live-reorders under the pointer. */}
-                    <span className="absolute right-1 flex items-center bg-hover opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                    <span className="absolute right-1 flex items-center rounded-md bg-panel opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                       <span
                         title={t('sidebar.reorderFolder')}
                         onClick={(e) => e.stopPropagation()}
@@ -733,8 +721,18 @@ export const Sidebar = memo(function Sidebar({
                       >
                         <GripIcon size={12} />
                       </span>
-                      {/* One kebab replaces the previous pencil + ✕ pair; right-click
-                          opens the identical menu. */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startAdd(folder.path)
+                        }}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                        aria-label={t('sidebar.addWorkspace')}
+                        title={t('sidebar.addWorkspace')}
+                      >
+                        <PlusIcon size={13} />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -752,12 +750,14 @@ export const Sidebar = memo(function Sidebar({
 
                   {/* Workspaces — compact, indented rows under their project. */}
                   {open && (
-                    <ul className="mt-0.5 space-y-px py-0.5">
+                    <ul className="mt-1 space-y-0.5">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
                         const attn = attentionWorkspaceIds.has(ws.id)
                         const busy = busyWorkspaceIds.has(ws.id)
                         const runningCount = counts[ws.id] ?? 0
+                        const stat = gitStats[ws.id]
+                        const hasDiff = !!stat?.isRepository && (stat.additions > 0 || stat.deletions > 0)
                         return (
                           <li key={ws.id}>
                             <div
@@ -766,7 +766,7 @@ export const Sidebar = memo(function Sidebar({
                               aria-current={active || undefined}
                               onClick={() => selectWorkspace(ws.id)}
                               onKeyDown={(e) => {
-                                if (editingId === ws.id) return
+                                if (editingId === ws.id || e.target !== e.currentTarget) return
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   e.preventDefault()
                                   selectWorkspace(ws.id)
@@ -783,20 +783,30 @@ export const Sidebar = memo(function Sidebar({
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-8 cursor-pointer items-center gap-2 rounded-lg py-0.5 pl-10 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                              className={`group relative flex min-h-9 cursor-pointer items-center gap-2 rounded-lg py-2 pl-5 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
-                                  ? 'bg-hover text-fg shadow-sm'
-                                  : attn
-                                    ? 'attention-pulse text-fg'
-                                    : 'text-fg2 hover:bg-hover/70'
+                                  ? 'bg-accentBg text-fg'
+                                  : 'text-fg2 hover:bg-hover/70'
                               }`}
                             >
-                              <span
-                                style={attn ? { backgroundColor: attentionColor } : undefined}
-                                className={`h-2 w-2 shrink-0 rounded-full shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-panel)_75%,transparent)] ${
-                                  busy ? 'bg-status' : active ? 'bg-accent' : attn ? '' : 'bg-fgmuted/70'
-                                }`}
-                              />
+                              {active && (
+                                <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />
+                              )}
+                              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                                {attn ? (
+                                  <span
+                                    role="img"
+                                    aria-label={t('terminal.statusFinished')}
+                                    title={t('terminal.statusFinished')}
+                                    style={{ '--attn': attentionColor } as CSSProperties}
+                                    className="attention-pulse-dot h-2 w-2 rounded-full"
+                                  />
+                                ) : busy ? (
+                                  <span role="img" aria-label={t('sidebar.workingTerminals')} title={t('sidebar.workingTerminals')}>
+                                    <WorkingSpinner />
+                                  </span>
+                                ) : null}
+                              </span>
                               {editingId === ws.id ? (
                                 <input
                                   autoFocus
@@ -813,7 +823,7 @@ export const Sidebar = memo(function Sidebar({
                               ) : (
                                 // Two-line row: name on top; branch + diff stat on a
                                 // second, smaller line so nothing overlaps at 224px.
-                                <div className="flex min-w-0 flex-1 flex-col">
+                                <div className="flex min-w-0 flex-1 flex-col gap-1">
                                   <span
                                     onDoubleClick={(e) => {
                                       e.stopPropagation()
@@ -831,7 +841,7 @@ export const Sidebar = memo(function Sidebar({
                                   >
                                     {ws.name}
                                   </span>
-                                  {(folder.kind === 'remote' || ws.branch || gitStats[ws.id]) && (
+                                  {(folder.kind === 'remote' || ws.branch || hasDiff) && (
                                     <span className="flex min-w-0 items-center gap-2">
                                       {folder.kind === 'remote' && (
                                         <RemoteBadge title={folderTitle(folder)} />
@@ -842,9 +852,9 @@ export const Sidebar = memo(function Sidebar({
                                           title={t('sidebar.worktreeBadge')}
                                         />
                                       )}
-                                      {gitStats[ws.id] && (
+                                      {hasDiff && (
                                         <DiffStat
-                                          stat={gitStats[ws.id]}
+                                          stat={stat}
                                           title={t('sidebar.diffStat')}
                                         />
                                       )}
@@ -853,17 +863,8 @@ export const Sidebar = memo(function Sidebar({
                                 </div>
                               )}
 
-                              {editingId !== ws.id && runningCount > 0 && !busy && (
-                                <span
-                                  title={t('sidebar.runningTerminals')}
-                                  className="min-w-5 shrink-0 px-1 text-right text-xs font-semibold tabular-nums text-fgmuted"
-                                >
-                                  {runningCount}
-                                </span>
-                              )}
-
-                              {editingId !== ws.id && busy && (
-                                <WorkingSpinner title={t('sidebar.workingTerminals')} />
+                              {editingId !== ws.id && runningCount > 0 && (
+                                <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />
                               )}
 
                               {/* Keep the two lightweight row actions discoverable. */}
