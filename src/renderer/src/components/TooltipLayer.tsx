@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * A single app-wide tooltip that replaces the browser's native `title` bubbles
@@ -135,11 +136,13 @@ export function TooltipLayer(): React.JSX.Element | null {
   if (!tip) return null
 
   const top = tip.placement === 'top'
-  return (
+  // Escape the app’s isolated stacking context so modal backdrops cannot dim
+  // or cover tooltips for controls inside a portaled dialog.
+  return createPortal(
     <div
       ref={bubbleRef}
       role="tooltip"
-      className={`solid-surface pointer-events-none fixed z-100 max-w-[min(22rem,90vw)] rounded-md border border-edge bg-panel px-2 py-1 text-xs font-medium leading-snug text-fg shadow-xl transition-opacity duration-100 ${
+      className={`solid-surface pointer-events-none fixed z-250 max-w-[min(22rem,90vw)] rounded-md border border-edge bg-panel px-2 py-1 text-xs font-medium leading-snug text-fg shadow-xl transition-opacity duration-100 ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{
@@ -161,6 +164,7 @@ export function TooltipLayer(): React.JSX.Element | null {
             : { top: -4, borderLeftWidth: 1, borderTopWidth: 1 })
         }}
       />
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -563,7 +563,7 @@ export function TerminalPanel({
         {moving && <div className="absolute inset-0 z-40 cursor-grabbing">
           {drop && <div className="pointer-events-none absolute flex items-center justify-center border-2 border-accent bg-accent/20 text-xs font-semibold text-fg"
             style={{ left: `${drop.rect.left}%`, top: `${drop.rect.top}%`, width: `${drop.rect.width}%`, height: `${drop.rect.height}%` }}>
-            <span className="rounded bg-panel px-3 py-2 shadow">{t(`pane.${drop.direction}`)}</span>
+            <span className="solid-surface rounded bg-panel px-3 py-2 shadow">{t(`pane.${drop.direction}`)}</span>
           </div>}
         </div>}
         {resizing && (
@@ -583,7 +583,7 @@ export function TerminalPanel({
         )}
 
         {activeWorkspaceId && tabSessions.length > 0 && (
-          <div className="absolute bottom-3 right-3 z-50 rounded-md border border-edge bg-bar shadow-lg">
+          <div className="solid-surface absolute bottom-3 right-3 z-50 rounded-md border border-edge bg-bar shadow-lg">
             <PresetMenu
               presets={presets}
               disabled={launching || gridCells.length >= MAX_GRID}
