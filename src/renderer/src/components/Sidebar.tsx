@@ -23,13 +23,12 @@ import {
   FolderGlyph,
   RemoteBadge,
   RunningBadge,
-  UpdateGlyph,
   WorkingSpinner,
   folderLabel,
   folderTitle,
-  initial,
-  updateTitle
+  initial
 } from './sidebar/parts'
+import { SidebarUpdate } from './sidebar/SidebarUpdate'
 import { WorkspaceCreateModal } from './sidebar/WorkspaceCreateModal'
 import { FolderEditModal } from './sidebar/FolderEditModal'
 import type { UpdateController } from '../hooks/useUpdateCheck'
@@ -491,36 +490,7 @@ export const Sidebar = memo(function Sidebar({
             })}
           </div>
         </nav>
-        {update.info?.updateAvailable && (
-          <div className="shrink-0 border-t border-edge p-2">
-            <button
-              onClick={
-                update.progress.phase === 'downloaded'
-                  ? update.installAndRestart
-                  : update.progress.phase === 'error'
-                    ? () => window.api.openReleasePage(update.info?.releaseUrl ?? '')
-                    : update.progress.phase === 'downloading'
-                      ? undefined
-                      : update.startDownload
-              }
-              disabled={update.progress.phase === 'downloading'}
-              title={updateTitle(update, t)}
-              aria-label={updateTitle(update, t)}
-              className="relative mx-auto flex h-8 w-8 items-center justify-center rounded-md text-accent transition hover:bg-hover disabled:cursor-default disabled:opacity-70"
-            >
-              {update.progress.phase === 'downloading' ? (
-                <WorkingSpinner className="h-4 w-4" />
-              ) : (
-                <UpdateGlyph />
-              )}
-              <span
-                className={`absolute right-0.5 top-0.5 h-2 w-2 rounded-full border-2 border-bar ${
-                  update.progress.phase === 'downloaded' ? 'bg-status' : 'bg-accent'
-                }`}
-              />
-            </button>
-          </div>
-        )}
+        <SidebarUpdate update={update} collapsed />
         <div className="shrink-0 border-t border-edge p-2">
           <button
             onClick={onOpenSettings}
@@ -927,57 +897,7 @@ export const Sidebar = memo(function Sidebar({
           </div>
         )}
       </nav>
-      {update.info?.updateAvailable && (
-        <div className="shrink-0 border-t border-edge p-2">
-          <div className="rounded-md bg-accentBg/50 px-2.5 py-2 ring-1 ring-inset ring-accentBorder">
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-fg">
-              <UpdateGlyph className="h-3.5 w-3.5 text-accent" />
-              <span className="truncate">
-                {t('update.available', { version: update.info.latestVersion ?? '' })}
-              </span>
-            </div>
-
-            {update.progress.phase === 'downloading' ? (
-              <>
-                <div className="mb-1.5 h-1 w-full overflow-hidden rounded-full bg-edge">
-                  <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-200"
-                    style={{ width: `${update.progress.percent ?? 0}%` }}
-                  />
-                </div>
-                <button
-                  disabled
-                  className="w-full cursor-default rounded-md bg-accent/60 px-2 py-1 text-xs font-semibold text-bar"
-                >
-                  {t('update.downloading', { percent: String(update.progress.percent ?? 0) })}
-                </button>
-              </>
-            ) : update.progress.phase === 'downloaded' ? (
-              <button
-                onClick={update.installAndRestart}
-                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-              >
-                {t('update.restart')}
-              </button>
-            ) : update.progress.phase === 'error' ? (
-              <button
-                onClick={() => window.api.openReleasePage(update.info?.releaseUrl ?? '')}
-                title={t('update.failed')}
-                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-              >
-                {t('update.openPage')}
-              </button>
-            ) : (
-              <button
-                onClick={update.startDownload}
-                className="w-full rounded-md bg-accent px-2 py-1 text-xs font-semibold text-bar transition hover:opacity-90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-              >
-                {t('update.action')}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <SidebarUpdate update={update} />
       <div className="shrink-0 border-t border-edge p-2">
         <button
           onClick={onOpenSettings}
