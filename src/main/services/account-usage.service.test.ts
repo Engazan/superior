@@ -16,10 +16,12 @@ vi.mock('./custom-memory.service', () => ({
 }))
 vi.mock('node:fs/promises', () => ({
   stat: async (file: string) => {
+    // The virtual filesystem accepts native Windows separators, just like fs.
+    file = file.replaceAll('\\', '/')
     if (!mocks.files.has(file)) throw new Error('ENOENT')
     return { isFile: () => true, size: mocks.files.get(file)!.length }
   },
-  readFile: async (file: string) => mocks.files.get(file),
+  readFile: async (file: string) => mocks.files.get(file.replaceAll('\\', '/')),
   realpath: async (file: string) => file
 }))
 vi.mock('node:child_process', () => ({

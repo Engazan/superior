@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.1] - 2026-09-10
+
+### Fixed
+
+- **Windows release tests.** The account-usage test filesystem now accepts native
+  Windows path separators, so credential and reset-ticket tests run correctly.
+- **macOS signing.** Backported the keychain password fix for electron-builder
+  26.15.3, keeping certificate import and keychain passwords separate. Signing
+  and notarization remain enabled, with a regression test for the actual builder
+  implementation and a version guard for future dependency upgrades.
+
 ## [0.22.0] - 2026-09-10
 
 ### Added
