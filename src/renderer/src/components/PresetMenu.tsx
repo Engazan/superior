@@ -1,77 +1,45 @@
 import { useRef, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
-import { useDismiss } from './ui'
+import { Menu } from './ui/Menu'
 import type { TerminalPreset } from '../types'
+import type { PaneDirection } from '@shared/types'
 
 interface Props {
   presets: TerminalPreset[]
-  /** when true the trigger is non-interactive (e.g. grid already full) */
   disabled?: boolean
-  /** open the menu upward (for a bottom-anchored trigger) */
   dropUp?: boolean
   onSelect: (preset: TerminalPreset) => void
   onManage: () => void
+  onSplit?: (preset: TerminalPreset, direction: PaneDirection) => void
 }
 
-/** A "+" trigger that opens a dropdown of active presets plus a "Manage presets…" item. */
-export function PresetMenu({ presets, disabled, dropUp, onSelect, onManage }: Props): React.JSX.Element {
+/** Shared picker, portaled so small terminal panes never clip its menu. */
+export function PresetMenu({ presets, disabled, onSelect, onManage, onSplit }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [chosen, setChosen] = useState<TerminalPreset | null>(null)
+  const ref = useRef<HTMLButtonElement>(null)
   const active = presets.filter((p) => p.active)
-
-  // Close on outside click or Escape.
-  useDismiss(ref, open, () => setOpen(false))
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
-        aria-label={t('terminal.addTerminal')}
-        title={t('terminal.addTerminal')}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
-
-      {open && (
-        <div
-          className={`solid-surface absolute right-0 z-50 min-w-44 overflow-hidden rounded-md border border-edge bg-panel py-1 shadow-lg ${
-            dropUp ? 'bottom-8' : 'top-7'
-          }`}
-        >
-          {active.length === 0 && (
-            <div className="px-3 py-2 text-xs text-fgmuted">{t('launcher.noPresets')}</div>
-          )}
-          {active.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => {
-                setOpen(false)
-                onSelect(p)
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover"
-            >
-              <PresetIcon iconType={p.iconType} icon={p.icon} className="h-3.5 w-3.5 text-sm" />
-              <span>{p.name}</span>
-            </button>
-          ))}
-          <div className="my-1 border-t border-edge" />
-          <button
-            onClick={() => {
-              setOpen(false)
-              onManage()
-            }}
-            className="flex w-full items-center px-3 py-1.5 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg"
-          >
-            {t('terminal.managePresets')}
-          </button>
-        </div>
-      )}
-    </div>
-  )
+  return <>
+    <button ref={ref} type="button" disabled={disabled} aria-haspopup="menu" aria-expanded={open || !!chosen}
+      onClick={(event) => { event.stopPropagation(); setOpen((value) => !value) }}
+      className="flex h-6 w-6 items-center justify-center rounded-md text-fgdim hover:bg-hover hover:text-fg disabled:opacity-40"
+      aria-label={t(onSplit ? 'pane.split' : 'terminal.addTerminal')} title={t(onSplit ? 'pane.split' : 'terminal.addTerminal')}>
+      {onSplit ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" />
+      </svg> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M12 5v14M5 12h14" /></svg>}
+    </button>
+    {open && ref.current && <Menu anchor={ref.current} onClose={() => setOpen(false)} items={[
+      ...(active.length ? active.map((preset) => ({ id: preset.id, label: preset.name,
+        icon: <PresetIcon iconType={preset.iconType} icon={preset.icon} className="h-3.5 w-3.5 text-sm" />,
+        onSelect: () => { if (onSplit) setChosen(preset); else onSelect(preset) }
+      })) : [{ id: 'empty', label: t('launcher.noPresets'), disabled: true, onSelect: () => {} }]),
+      'separator', { id: 'manage', label: t('terminal.managePresets'), onSelect: onManage }
+    ]} />}
+    {chosen && ref.current && <Menu anchor={ref.current} onClose={() => setChosen(null)} items={
+      (['left', 'right', 'top', 'bottom'] as const).map((direction) => ({ id: direction,
+        label: `${t(`pane.${direction}`)} · ${chosen.name}`, onSelect: () => onSplit?.(chosen, direction) }))
+    } />}
+  </>
 }

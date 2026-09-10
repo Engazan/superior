@@ -532,6 +532,12 @@ export interface AgentSession {
 export interface GridLayoutData {
   rows: number[]
   cols: number[][]
+  tree?: PaneNode
+}
+
+export type PaneDirection = 'left' | 'right' | 'top' | 'bottom'
+export type PaneNode = { kind: 'leaf'; sessionId: string } | {
+  kind: 'split'; axis: 'v' | 'h'; ratio: number; first: PaneNode; second: PaneNode
 }
 
 /** A single tab within a workspace: a named grid of terminals. */

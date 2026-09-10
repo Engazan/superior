@@ -1,6 +1,11 @@
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  'pane.split': 'Rozdělit terminál',
+  'pane.left': '← Vlevo',
+  'pane.right': 'Vpravo →',
+  'pane.top': '↑ Nahoru',
+  'pane.bottom': '↓ Dolů',
   'sidebar.openProject': 'Otevřít / klonovat projekt',
   'sidebar.noWorkspaces': 'Zatím žádné složky — otevřete jednu.',
   'sidebar.removeFromList': 'Odebrat ze seznamu',

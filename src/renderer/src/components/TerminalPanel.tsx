@@ -13,18 +13,14 @@ import {
 } from './ui'
 import { useI18n } from '../i18n'
 import { interruptedSessions } from '../interruptedSessions'
+import { paneGeometry, resolvePaneTree, resizePane, dropDirection, type PaneDivider } from '../paneLayout'
+import { movePane } from '@shared/pane-layout'
+import type { PaneDirection, PaneNode } from '@shared/types'
 import { useShortcutTitle } from '../shortcuts'
 import {
-  gridRects,
-  gridDividers,
-  distribute,
-  uniformLayout,
-  matchesDist,
-  applyDividerDrag,
   MAX_GRID,
   type Rect,
   type GridLayout,
-  type Divider
 } from '../gridLayout'
 import type {
   AgentSession,
@@ -75,7 +71,7 @@ interface Props {
   /** launch wizard result — fill the active tab's grid */
   onStart: (config: LaunchConfig) => void
   /** add a single terminal (another grid cell) to the active tab */
-  onLaunch: (preset: TerminalPreset) => void
+  onLaunch: (preset: TerminalPreset, placement?: { targetId: string; direction: PaneDirection }) => Promise<void>
   onManagePresets: () => void
   /** open the "Open / Clone project" modal (first-run empty state CTA) */
   onOpenProject: (source?: 'local' | 'git' | 'remote') => void
@@ -131,7 +127,13 @@ export function TerminalPanel({
   // Live layout while a divider drag is in flight. Only the release commits it
   // upstream (state + IPC write) — per-move commits would persist the tab
   // layout over IPC on every pointer event.
-  const [dragLayout, setDragLayout] = useState<GridLayout | null>(null)
+  const [dragTree, setDragTree] = useState<PaneNode | undefined>()
+  const [moving, setMoving] = useState(false)
+  const [drop, setDrop] = useState<{ target: string; direction: PaneDirection; rect: Rect } | null>(null)
+  const [launching, setLaunching] = useState(false)
+  const launchLock = useRef(false)
+  const cancelDrag = useRef<(() => void) | null>(null)
+  useEffect(() => () => { cancelDrag.current?.() }, [activeWorkspaceId, activeTabId, previewActive, sessions, maximizedId])
   // Stable identity so memoized TerminalViews don't re-render on every panel render.
   // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
   // "error" dot for Ctrl+C would cry wolf and erode the real-crash signal.
@@ -172,13 +174,15 @@ export function TerminalPanel({
 
   // Grid: map the first MAX_GRID sessions to their slot rectangles.
   const gridCells = tabSessions.slice(0, MAX_GRID)
-  const dist = distribute(gridCells.length)
-  const committedLayout = matchesDist(gridLayout, dist)
-    ? (gridLayout as GridLayout)
-    : uniformLayout(dist)
-  const layout = dragLayout && matchesDist(dragLayout, dist) ? dragLayout : committedLayout
-  const rects = gridRects(dist, layout)
-  const dividers = gridDividers(dist, layout)
+  const tree = dragTree ?? resolvePaneTree(gridCells.map((s) => s.id), gridLayout)
+  useEffect(() => {
+    if (tree && !dragTree && JSON.stringify(tree) !== JSON.stringify(gridLayout?.tree)) {
+      onGridLayoutChange({ rows: [], cols: [], tree })
+    }
+  }, [tree, dragTree, gridLayout, onGridLayoutChange])
+  const geometry = paneGeometry(tree)
+  const rects = gridCells.map((s) => geometry.rects.get(s.id)!)
+  const dividers = geometry.dividers
   const gridIndex = new Map(gridCells.map((s, i) => [s.id, i] as const))
 
   // Only honor a maximized id while that cell still exists in the current grid.
@@ -202,32 +206,106 @@ export function TerminalPanel({
   // Drag a divider: convert the pointer position to a fraction of the panel and
   // resize the two cells it separates. The layout is snapshotted at drag start.
   // Dividers snap to even-split guides; hold Alt to drag freely.
-  const startDrag = (d: Divider) => (e: React.PointerEvent): void => {
-    e.preventDefault()
+  const commitTree = (next: PaneNode): void => onGridLayoutChange({ rows: [], cols: [], tree: next })
+
+  const launch = async (preset: TerminalPreset, placement?: { targetId: string; direction: PaneDirection }): Promise<void> => {
+    if (launchLock.current || gridCells.length >= MAX_GRID) return
+    launchLock.current = true
+    setLaunching(true)
+    if (maxId) onToggleMaximize(maxId)
+    try { await onLaunch(preset, placement) }
+    finally { launchLock.current = false; setLaunching(false) }
+  }
+
+  const startDrag = (d: PaneDivider) => (event: React.PointerEvent): void => {
+    if (event.button !== 0 || !tree || launching) return
+    event.preventDefault()
+    cancelDrag.current?.()
     const el = containerRef.current
     if (!el) return
     setResizing(d.axis)
-    let latest: GridLayout | null = null
+    let latest = tree
     const move = (ev: PointerEvent): void => {
+      if (ev.pointerId !== event.pointerId) return
       const box = el.getBoundingClientRect()
-      const fraction =
-        d.axis === 'v'
-          ? (ev.clientX - box.left) / box.width
-          : (ev.clientY - box.top) / box.height
-      latest = applyDividerDrag(layout, d, fraction, !ev.altKey)
-      setDragLayout(latest)
+      const percent = d.axis === 'v' ? (ev.clientX - box.left) / box.width * 100 : (ev.clientY - box.top) / box.height * 100
+      let ratio = (percent - (d.axis === 'v' ? d.bounds.left : d.bounds.top)) / (d.axis === 'v' ? d.bounds.width : d.bounds.height)
+      if (!ev.altKey) for (const guide of [0.25, 1 / 3, 0.5, 2 / 3, 0.75]) {
+        if (Math.abs(ratio - guide) < 0.025) { ratio = guide; break }
+      }
+      latest = resizePane(tree, d.path, ratio)
+      setDragTree(latest)
     }
-    const up = (): void => {
-      setResizing(null)
-      if (latest) onGridLayoutChange(latest)
-      setDragLayout(null)
+    const finish = (commit: boolean): void => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('blur', cancel)
+      window.removeEventListener('keydown', key)
+      cancelDrag.current = null
+      setResizing(null); setDragTree(undefined)
+      if (commit && latest !== tree) commitTree(latest)
     }
+    const up = (ev: PointerEvent): void => { if (ev.pointerId === event.pointerId) finish(true) }
+    const cancel = (): void => finish(false)
+    const key = (ev: KeyboardEvent): void => { if (ev.key === 'Escape') { ev.preventDefault(); cancel() } }
+    cancelDrag.current = cancel
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('blur', cancel)
+    window.addEventListener('keydown', key)
   }
 
+  const startPaneDrag = (id: string, event: React.PointerEvent): void => {
+    if (event.button !== 0 || event.ctrlKey || !tree || gridCells.length < 2 || maxId || launching) return
+    event.preventDefault()
+    onSelect(id)
+    cancelDrag.current?.()
+    const el = containerRef.current
+    if (!el) return
+    const startX = event.clientX, startY = event.clientY, pointerId = event.pointerId
+    let active = false
+    let target: { target: string; direction: PaneDirection; rect: Rect } | null = null
+    const move = (ev: PointerEvent): void => {
+      if (ev.pointerId !== pointerId) return
+      if (!active && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return
+      active = true
+      setMoving(true)
+      const box = el.getBoundingClientRect()
+      const x = (ev.clientX - box.left) / box.width * 100, y = (ev.clientY - box.top) / box.height * 100
+      target = null
+      for (const [targetId, r] of geometry.rects) {
+        if (id === targetId || x < r.left || x > r.left + r.width || y < r.top || y > r.top + r.height) continue
+        const direction = dropDirection(x, y, r)
+        const next = movePane(tree, id, targetId, direction)
+        if (next === tree) break
+        // Preview the actual final rectangle, including space reclaimed at the source.
+        target = { target: targetId, direction, rect: paneGeometry(next).rects.get(id)! }
+        break
+      }
+      setDrop(target)
+    }
+    const finish = (commit: boolean): void => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('blur', cancel)
+      window.removeEventListener('keydown', key)
+      cancelDrag.current = null
+      setMoving(false); setDrop(null)
+      if (commit && target) { commitTree(movePane(tree, id, target.target, target.direction)); onSelect(id) }
+    }
+    const up = (ev: PointerEvent): void => { if (ev.pointerId === pointerId) { if (active) move(ev); finish(true) } }
+    const cancel = (): void => finish(false)
+    const key = (ev: KeyboardEvent): void => { if (ev.key === 'Escape') { ev.preventDefault(); cancel() } }
+    cancelDrag.current = cancel
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('blur', cancel)
+    window.addEventListener('keydown', key)
+  }
   const toggleTarget = (id: string): void => {
     setBroadcastExcluded((prev) => {
       const next = new Set(prev)
@@ -377,6 +455,11 @@ export function TerminalPanel({
           return (
             <TerminalView
               key={s.id}
+              presets={presets}
+              splitDisabled={launching || gridCells.length >= MAX_GRID}
+              onManagePresets={onManagePresets}
+              onSplit={(id, preset, direction) => { void launch(preset, { targetId: id, direction }) }}
+              onPaneDrag={startPaneDrag}
               session={s}
               workingDir={workingDir}
               rect={l.rect}
@@ -386,7 +469,7 @@ export function TerminalPanel({
               shortcutNumber={isGridCell ? (gridIndex.get(s.id) ?? 0) + 1 : undefined}
               active={s.id === activeSessionId}
               maximized={s.id === maxId}
-              animate={!resizing}
+              animate={!resizing && !moving}
               onSelect={onSelect}
               onOpenFileTarget={onOpenFileTarget}
               onClose={onClose}
@@ -477,6 +560,12 @@ export function TerminalPanel({
           })}
 
         {/* While dragging, an overlay stops the terminals from swallowing the pointer. */}
+        {moving && <div className="absolute inset-0 z-40 cursor-grabbing">
+          {drop && <div className="pointer-events-none absolute flex items-center justify-center border-2 border-accent bg-accent/20 text-xs font-semibold text-fg"
+            style={{ left: `${drop.rect.left}%`, top: `${drop.rect.top}%`, width: `${drop.rect.width}%`, height: `${drop.rect.height}%` }}>
+            <span className="rounded bg-panel px-3 py-2 shadow">{t(`pane.${drop.direction}`)}</span>
+          </div>}
+        </div>}
         {resizing && (
           <div
             className={`absolute inset-0 z-40 ${
@@ -497,9 +586,9 @@ export function TerminalPanel({
           <div className="absolute bottom-3 right-3 z-50 rounded-md border border-edge bg-bar shadow-lg">
             <PresetMenu
               presets={presets}
-              disabled={gridCells.length >= MAX_GRID}
+              disabled={launching || gridCells.length >= MAX_GRID}
               dropUp
-              onSelect={onLaunch}
+              onSelect={(preset) => { void launch(preset) }}
               onManage={onManagePresets}
             />
           </div>

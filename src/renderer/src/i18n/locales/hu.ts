@@ -1,6 +1,11 @@
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  'pane.split': 'Terminál felosztása',
+  'pane.left': '← Balra',
+  'pane.right': 'Jobbra →',
+  'pane.top': '↑ Felül',
+  'pane.bottom': '↓ Alul',
   'sidebar.openProject': 'Projekt megnyitása / klónozása',
   'sidebar.noWorkspaces': 'Még nincs mappa — nyiss meg egyet.',
   'sidebar.removeFromList': 'Eltávolítás a listából',

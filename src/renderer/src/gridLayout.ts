@@ -11,6 +11,7 @@ export interface Rect {
  * widths as fractions (each row sums to 1). Terminals fill the grid row by row.
  */
 export interface GridLayout {
+  tree?: import('@shared/types').PaneNode
   rows: number[]
   cols: number[][]
 }

@@ -13,6 +13,9 @@ import {
   type MaximizedByTab
 } from '../maximizedSessions'
 import { useWorkspaceTabs } from './useWorkspaceTabs'
+import { insertPane, replacePaneId } from '@shared/pane-layout'
+import type { PaneDirection } from '@shared/types'
+import { resolvePaneTree } from '../paneLayout'
 import {
   WORKTREE_ERROR,
   type AgentLaunchTarget,
@@ -530,7 +533,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   )
 
   const launchAgent = useCallback(
-    async (preset: TerminalPreset) => {
+    async (preset: TerminalPreset, placement?: { targetId: string; direction: PaneDirection }) => {
       setError(null)
       if (!activeWorkspace || !activeLaunchTarget || !workingDirLabel) {
         setError(t('error.noWorkspace'))
@@ -547,8 +550,15 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         return
       }
       setActiveSessionId(res.session.id)
+      const ids = sessions.filter((s) => s.workspaceId === activeWorkspace.id && s.tabId === res.session.tabId).map((s) => s.id)
+      if (placement && ids.includes(placement.targetId)) {
+        setWorkspaceGridLayout(activeWorkspace.id, (grid) => {
+          const tree = resolvePaneTree(ids, grid)
+          return tree ? { rows: [], cols: [], tree: insertPane(tree, placement.targetId, res.session.id, placement.direction) } : grid
+        }, res.session.tabId)
+      }
     },
-    [activeWorkspace, activeLaunchTarget, workingDirLabel, launchSessionIn, t, setError]
+    [activeWorkspace, activeLaunchTarget, workingDirLabel, launchSessionIn, t, setError, sessions, setWorkspaceGridLayout]
   )
 
   // Fill the active tab's grid from the launch wizard: spawn each chosen preset.
@@ -654,11 +664,13 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
         return
       }
       void window.api.killAgent(id)
+      setWorkspaceGridLayout(prev.workspaceId, (grid) => grid?.tree
+        ? { ...grid, tree: replacePaneId(grid.tree, id, res.session.id) } : grid, prev.tabId)
       setSessions((curr) => curr.map((s) => (s.id === id ? res.session : s)))
       setActiveSessionId((curr) => (curr === id ? res.session.id : curr))
       setMaximizedByTab((current) => replaceMaximizedSession(current, id, res.session.id))
     },
-    [sessions, activeLaunchTarget, t, setError]
+    [sessions, activeLaunchTarget, t, setError, setWorkspaceGridLayout]
   )
 
   const closeSession = useCallback(

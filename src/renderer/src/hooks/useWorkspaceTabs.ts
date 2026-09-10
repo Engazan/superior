@@ -28,6 +28,8 @@ export function useWorkspaceTabs({
 }: Deps) {
   const confirm = useConfirm()
   const [tabsByWs, setTabsByWs] = useState<TabsState>({})
+  const tabsRef = useRef(tabsByWs)
+  tabsRef.current = tabsByWs
 
   const activeTabId = useCallback(
     (workspaceId: string | null): string | undefined =>
@@ -96,19 +98,25 @@ export function useWorkspaceTabs({
   )
 
   const setGridLayout = useCallback(
-    (workspaceId: string, layout: GridLayout): void => {
-      const tabs = tabsByWs[workspaceId]
+    (workspaceId: string, layout: GridLayout | ((current: GridLayout | undefined) => GridLayout | undefined), tabId?: string): void => {
+      const tabs = tabsRef.current[workspaceId]
       if (!tabs) return
+      const targetId = tabId ?? tabs.activeTabId
+      const current = tabs.tabs.find((tab) => tab.id === targetId)
+      if (!current) return
+      const nextLayout = typeof layout === 'function' ? layout(current.gridLayout) : layout
+      if (!nextLayout) return
       const next: WorkspaceTabs = {
         ...tabs,
         tabs: tabs.tabs.map((tab) =>
-          tab.id === tabs.activeTabId ? { ...tab, gridLayout: layout } : tab
+          tab.id === targetId ? { ...tab, gridLayout: nextLayout } : tab
         )
       }
-      setTabsByWs((prev) => ({ ...prev, [workspaceId]: next }))
+      tabsRef.current = { ...tabsRef.current, [workspaceId]: next }
+      setTabsByWs(tabsRef.current)
       void window.api.setTabs(workspaceId, next)
     },
-    [tabsByWs]
+    []
   )
 
   // Add a new (empty) tab to a workspace and switch to it. The empty tab shows

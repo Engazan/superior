@@ -1,6 +1,11 @@
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  'pane.split': 'Podziel terminal',
+  'pane.left': '← W lewo',
+  'pane.right': 'W prawo →',
+  'pane.top': '↑ Na górze',
+  'pane.bottom': '↓ Na dole',
   'sidebar.openProject': 'Otwórz / sklonuj projekt',
   'sidebar.noWorkspaces': 'Brak folderów — otwórz jeden.',
   'sidebar.removeFromList': 'Usuń z listy',

@@ -70,7 +70,22 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
   falling back to `/bin/bash`) so your real `PATH` (e.g. `~/.local/bin`, nvm) is
   available even when launched from Finder; on Windows it's `cmd.exe /c <cmd>`
   (and a plain terminal opens PowerShell).
-- Each launched agent gets its own terminal tab; Claude and Codex can run concurrently.
+- Each launched agent gets its own terminal pane; Claude, Codex and custom
+  presets can run side by side on the same workspace surface, without new tabs.
+
+### Splitting and moving terminals
+
+- Click **SPLIT** in a terminal's top-right corner, choose a preset from the
+  same picker as **+**, then choose left, right, above or below.
+- Drag a terminal by its header onto another terminal. The nearest edge selects
+  its placement, and the highlighted area previews the resulting position.
+  This moves the existing terminal; it does not merge shell input or restart it.
+- Drag a divider to resize its split. Hold Alt to bypass snapping. Escape,
+  pointer cancellation or losing window focus cancels an in-progress drag.
+- Closing a pane gives its space back to its sibling. Layouts are saved per
+  workspace, and restarting a terminal retains its position. Existing grid
+  layouts migrate with their cell sizes intact. The existing 12-pane limit,
+  maximize/restore and broadcast features remain available.
 
 ### Terminal activity and notifications
 

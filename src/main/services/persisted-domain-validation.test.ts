@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const electron = vi.hoisted(() => ({ getPath: vi.fn() }))
 vi.mock('electron', () => ({ app: { getPath: electron.getPath } }))
 
-import { getTabs } from './layout.service'
+import { getTabs, setTabs } from './layout.service'
 import { listTasks } from './tasks.service'
 
 describe('persisted domain validation', () => {
@@ -58,5 +58,18 @@ describe('persisted domain validation', () => {
     expect(getTabs()).toEqual({
       good: { tabs: [{ id: 'tab-1', name: 'Tab 1' }], activeTabId: 'tab-1' }
     })
+  })
+
+  it('round-trips split layouts and rejects invalid trees before overwriting disk', () => {
+    const tabs = { activeTabId: 'tab', tabs: [{ id: 'tab', name: 'Workspace', gridLayout: {
+      rows: [], cols: [], tree: { kind: 'split' as const, axis: 'v' as const, ratio: 0.4,
+        first: { kind: 'leaf' as const, sessionId: 'claude' }, second: { kind: 'leaf' as const, sessionId: 'codex' } }
+    } }] }
+    setTabs('ws', tabs)
+    expect(getTabs().ws).toEqual(tabs)
+    const invalid = structuredClone(tabs)
+    invalid.tabs[0].gridLayout.tree.ratio = 1
+    expect(() => setTabs('ws', invalid)).toThrow('Invalid workspace layout')
+    expect(getTabs().ws).toEqual(tabs)
   })
 })

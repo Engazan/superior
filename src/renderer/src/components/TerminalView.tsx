@@ -12,6 +12,8 @@ import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
 import { PresetIcon } from './PresetIcon'
+import { PresetMenu } from './PresetMenu'
+import type { PaneDirection, TerminalPreset } from '@shared/types'
 import { CloseIcon, IconButton, PencilIcon, RestartIcon, useToast } from './ui'
 import { UsageBadge } from './UsageBadge'
 import { Menu } from './ui/Menu'
@@ -71,6 +73,11 @@ function sanitizeReplay(data: string): string {
 }
 
 interface Props {
+  presets: TerminalPreset[]
+  splitDisabled: boolean
+  onSplit: (id: string, preset: TerminalPreset, direction: PaneDirection) => void
+  onManagePresets: () => void
+  onPaneDrag: (id: string, event: React.PointerEvent) => void
   session: AgentSession
   /** working dir file-path links resolve against (the workspace's effective dir) */
   workingDir?: string | null
@@ -164,6 +171,8 @@ function rectEqual(a?: Rect, b?: Rect): boolean {
 
 function propsEqual(prev: Props, next: Props): boolean {
   return (
+    prev.presets === next.presets && prev.splitDisabled === next.splitDisabled &&
+    prev.onSplit === next.onSplit && prev.onManagePresets === next.onManagePresets && prev.onPaneDrag === next.onPaneDrag &&
     prev.session === next.session &&
     prev.workingDir === next.workingDir &&
     rectEqual(prev.rect, next.rect) &&
@@ -185,6 +194,7 @@ function propsEqual(prev: Props, next: Props): boolean {
 }
 
 export const TerminalView = memo(function TerminalView({
+  presets, splitDisabled, onSplit, onManagePresets, onPaneDrag,
   session,
   workingDir,
   rect,
@@ -524,6 +534,7 @@ export const TerminalView = memo(function TerminalView({
 
   return (
     <div
+      data-terminal-session={session.id}
       className={`superior-terminal-cell absolute ${flushRight ? 'superior-terminal-cell--flush-right' : ''} ${
         animate
           ? 'transition-[top,left,width,height,opacity] duration-200 ease-out'
@@ -565,6 +576,9 @@ export const TerminalView = memo(function TerminalView({
         {showBar && (
           <div
             onClick={() => onSelect(session.id)}
+            onPointerDown={(event) => {
+              if (!(event.target as HTMLElement).closest('button,input')) onPaneDrag(session.id, event)
+            }}
             style={barTint(session.color, active)}
             // The Ctrl+N focus shortcut lives in the bar's tooltip instead of a
             // chip, freeing space in small grid cells.
@@ -573,11 +587,12 @@ export const TerminalView = memo(function TerminalView({
                 ? `${t('terminal.focusHint')}: ${formatChord(`ctrl+${shortcutNumber}`)}`
                 : undefined
             }
-            className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-b border-edge px-3 py-1.5 text-xs ${
+            className={`flex shrink-0 cursor-grab touch-none items-center gap-1.5 border-b border-edge px-3 py-1.5 text-xs ${
               active ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
             }`}
           >
             {/* Identity zone — status, icon, name, nickname. Truncates first. */}
+            <span aria-hidden="true" className="shrink-0 select-none text-fgdim">⠿</span>
             <div className="group flex min-w-0 flex-1 items-center gap-1.5">
               <CellStatusDot session={session} />
               <PresetIcon
@@ -633,6 +648,8 @@ export const TerminalView = memo(function TerminalView({
 
             {/* Action zone — restart / maximize / close, right-aligned. */}
             <div className="flex shrink-0 items-center">
+              <PresetMenu presets={presets} disabled={splitDisabled} onSelect={() => {}} onManage={onManagePresets}
+                onSplit={(preset, direction) => onSplit(session.id, preset, direction)} />
               {session.status !== 'running' && (
                 <IconButton
                   size="sm"

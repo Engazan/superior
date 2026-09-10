@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { validPaneTree } from '@shared/pane-layout'
 import type { GridLayoutData, TabsState, WorkspaceTabs } from '@shared/types'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
@@ -21,6 +22,7 @@ function isGridLayout(value: unknown): value is GridLayoutData {
   if (!value || typeof value !== 'object') return false
   const grid = value as Partial<GridLayoutData>
   return (
+    (grid.tree === undefined || validPaneTree(grid.tree)) &&
     Array.isArray(grid.rows) &&
     grid.rows.every((n) => typeof n === 'number' && Number.isFinite(n) && n > 0) &&
     Array.isArray(grid.cols) &&
@@ -87,6 +89,7 @@ function save(state: TabsState): void {
 
 /** Persist one workspace's tabs and return the full state. */
 export function setTabs(workspaceId: string, tabs: WorkspaceTabs): TabsState {
+  if (!isWorkspaceTabs(tabs)) throw new Error('Invalid workspace layout')
   const state = getTabs()
   state[workspaceId] = tabs
   save(state)

@@ -1,4 +1,9 @@
 export const en = {
+  'pane.split': 'Split terminal',
+  'pane.left': '← Left',
+  'pane.right': 'Right →',
+  'pane.top': '↑ Above',
+  'pane.bottom': '↓ Below',
   'sidebar.openProject': 'Open / Clone project',
   'sidebar.noWorkspaces': 'No folders yet — open one.',
   'sidebar.removeFromList': 'Remove from list',
