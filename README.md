@@ -201,3 +201,33 @@ src/renderer/src/            # React UI, hooks, terminal and file/git views
 ## License
 
 MIT
+
+## Terminal preferences
+
+Open **Settings → Terminal** (also available from the command palette) to adjust
+font family, size, regular/bold weight, line height, ligatures, cursor shape,
+blinking and opacity. A local terminal preview shows the changes before you
+return to your sessions. Preferences apply to existing terminals and survive app
+restarts. Font names refer to fonts installed on your computer.
+
+Terminal colors can follow the app or stay light/dark independently. Choose
+separate light and dark palettes (Superior, Solarized, and Dracula for dark),
+minimum text contrast and opacity for inactive split panes. Scroll controls cover
+normal history, fast Alt/Option scrolling, terminal applications and the retained
+row count (1,000–100,000). The row setting controls each displayed terminal;
+restored output still has the daemon's separate 1.5 MB retention limit, and
+increasing a limit cannot recover discarded output.
+
+On macOS, **Option as Alt** supports Auto, Both, Left, Right and Off. Auto uses
+Alt/Esc sequences only for a detected US layout; unknown or non-US layouts keep
+character composition. GPU acceleration supports Auto/On/Off, loads on demand,
+and falls back to the DOM renderer on activation failure or context loss.
+Ligatures require a supporting font; Auto recognizes common programming fonts.
+
+Optional switches enable copy on selection, right-click paste, focus following
+the mouse, and OSC 52 clipboard writes from local or SSH terminal programs.
+Control-click (Ctrl+right-click on Windows/Linux) keeps the context menu available
+when right-click paste is enabled. OSC 52 is off by default, accepts UTF-8 writes
+up to 100 KB, blocks clipboard queries and does not execute historical replay.
+**Reset terminal settings** restores terminal defaults without changing other
+application preferences.

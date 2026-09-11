@@ -1,5 +1,9 @@
+import { useTerminalSettings } from '../terminalSettingsStore'
+import { terminalOptions, terminalPalette } from '../terminalAppearance'
+import { createTerminalRendering } from '../terminalRendering'
+import { installTerminalInteractions } from '../terminalInteractions'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Terminal, type ITheme } from '@xterm/xterm'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { activateTerminalUrl } from '../terminalUrl'
@@ -114,55 +118,6 @@ interface Props {
   onExit: (id: string, exitCode: number | null) => void
 }
 
-// Full 16-colour ANSI palettes so program output is colourful and on-theme:
-// Catppuccin-derived ANSI palettes, paired with the app's dark/light surfaces.
-const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
-  dark: {
-    background: '#12171f',
-    foreground: '#e6ebf2',
-    cursor: '#f08a72',
-    selectionBackground: '#344052',
-    black: '#6b7687',
-    red: '#ff7f88',
-    green: '#7bd39b',
-    yellow: '#e8bf73',
-    blue: '#83adff',
-    magenta: '#d1a2f4',
-    cyan: '#6bcbd3',
-    white: '#cbd3df',
-    brightBlack: '#8c97a8',
-    brightRed: '#ff9aa1',
-    brightGreen: '#98e0b0',
-    brightYellow: '#f2d18f',
-    brightBlue: '#a2c1ff',
-    brightMagenta: '#dfb9f8',
-    brightCyan: '#8bdce1',
-    brightWhite: '#f4f7fb'
-  },
-  light: {
-    background: '#ffffff',
-    foreground: '#202633',
-    cursor: '#bd5845',
-    selectionBackground: '#f5d6cf',
-    black: '#5c5f77',
-    red: '#d20f39',
-    green: '#40a02b',
-    yellow: '#df8e1d',
-    blue: '#1e66f5',
-    magenta: '#ea76cb',
-    cyan: '#179299',
-    white: '#acb0be',
-    brightBlack: '#6c6f85',
-    brightRed: '#d20f39',
-    brightGreen: '#40a02b',
-    brightYellow: '#df8e1d',
-    brightBlue: '#1e66f5',
-    brightMagenta: '#ea76cb',
-    brightCyan: '#179299',
-    brightWhite: '#bcc0cc'
-  }
-}
-
 // Memoized with rects compared by value (the grid rebuilds them each render):
 // every terminal stays mounted across workspace/tab switches, so without this
 // each App render re-runs the render of every terminal in every workspace.
@@ -231,9 +186,14 @@ export const TerminalView = memo(function TerminalView({
   const replayWritesRef = useRef(0)
   // Last size we told the pty, so we can skip redundant resizes.
   const lastSizeRef = useRef<{ cols: number; rows: number } | null>(null)
+  const { settings: terminalSettings, loaded: terminalSettingsLoaded } = useTerminalSettings()
+  const settingsRef = useRef(terminalSettings)
+  settingsRef.current = terminalSettings
+  const renderingRef = useRef<ReturnType<typeof createTerminalRendering> | null>(null)
   const { resolved } = useTheme()
   const [themeOverride, setThemeOverride] = useState<'light' | 'dark' | null>(null)
-  const terminalTheme = themeOverride ?? resolved
+  const terminalTheme = themeOverride ?? (terminalSettings.theme === 'app' ? resolved : terminalSettings.theme)
+  const palette = terminalPalette(terminalSettings, terminalTheme)
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
 
@@ -306,18 +266,11 @@ export const TerminalView = memo(function TerminalView({
   // Create the xterm instance once per session id and wire it to the bus + pty.
   useEffect(() => {
     const host = hostRef.current
-    if (!host) return
+    if (!host || !terminalSettingsLoaded) return
 
     const term = new Terminal({
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      fontSize: 13,
-      cursorBlink: true,
-      theme: TERM_THEMES[terminalTheme],
-      scrollback: 10_000,
-      // FitAddon subtracts this value from usable terminal width. Keep just a
-      // 1px calculation reserve; the CSS scrollbar below overlays the content
-      // instead of leaving xterm's default 14px empty gutter.
-      overviewRuler: { width: 1 }
+      ...terminalOptions(settingsRef.current, terminalTheme),
+      allowProposedApi: true
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
@@ -336,6 +289,16 @@ export const TerminalView = memo(function TerminalView({
       onOpenError: (message) => toastRef.current.error(message)
     })
     term.open(host)
+    renderingRef.current = createTerminalRendering(term)
+    void renderingRef.current.update(settingsRef.current)
+    const disposeInteractions = installTerminalInteractions(term, {
+      getSettings: () => settingsRef.current,
+      isReplay: () => replayWritesRef.current > 0,
+      isMac: window.api.platform === 'darwin',
+      writeClipboard: text => window.api.writeTerminalClipboard(text),
+      copySelection: text => navigator.clipboard.writeText(text),
+      onClipboardError: () => toastRef.current.error(tRef.current('terminal.copyFailed'))
+    })
     fit.fit()
 
     termRef.current = term
@@ -479,13 +442,16 @@ export const TerminalView = memo(function TerminalView({
       fileLinks.dispose()
       dataDisposable.dispose()
       keyDisposable.dispose()
+      disposeInteractions()
+      renderingRef.current?.dispose()
+      renderingRef.current = null
       term.dispose()
       termRef.current = null
       fitRef.current = null
     }
     // session.id is stable for the life of this component (keyed by it upstream)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.id])
+  }, [session.id, terminalSettingsLoaded])
 
   // Also apply the compact scrollbar width to a live terminal after a renderer
   // hot reload. New terminals receive it in the constructor above; this keeps
@@ -496,10 +462,16 @@ export const TerminalView = memo(function TerminalView({
     syncSize()
   }, [syncSize])
 
-  // Recolor an existing terminal when the theme changes (without recreating it).
+  // Apply preferences without recreating the terminal or losing its buffer.
   useEffect(() => {
-    if (termRef.current) termRef.current.options.theme = TERM_THEMES[terminalTheme]
-  }, [terminalTheme])
+    if (!termRef.current) return
+    termRef.current.options = terminalOptions(terminalSettings, terminalTheme)
+    void renderingRef.current?.update(terminalSettings)
+    syncSize()
+    let cancelled = false
+    void document.fonts.ready.then(() => { if (!cancelled) syncSize() })
+    return () => { cancelled = true }
+  }, [terminalSettings, terminalTheme, syncSize])
 
   // Refit whenever this view becomes visible or its cell changes size. syncSize
   // skips the pty resize when the measured size is unchanged, so simply becoming
@@ -524,7 +496,7 @@ export const TerminalView = memo(function TerminalView({
       }
     }, 0)
     return () => window.clearTimeout(t)
-  }, [focused, session.id])
+  }, [focused, session.id, terminalSettingsLoaded])
 
   // Inline nickname editor: whether the name is being edited and its draft text.
   const [editingNick, setEditingNick] = useState(false)
@@ -564,7 +536,8 @@ export const TerminalView = memo(function TerminalView({
         top: `${r.top}%`,
         left: `${r.left}%`,
         width: `${r.width}%`,
-        height: `${r.height}%`
+        height: `${r.height}%`,
+        opacity: !visible ? 0 : focused || !showBar ? 1 : terminalSettings.inactivePaneOpacity
       }}
     >
       <div
@@ -575,8 +548,8 @@ export const TerminalView = memo(function TerminalView({
         // its cell wrapper on the exact same theme background.
         style={
           {
-            backgroundColor: TERM_THEMES[terminalTheme].background,
-            '--terminal-background': TERM_THEMES[terminalTheme].background
+            backgroundColor: palette.background,
+            '--terminal-background': palette.background
           } as React.CSSProperties
         }
       >
@@ -745,9 +718,26 @@ export const TerminalView = memo(function TerminalView({
           ref={hostRef}
           data-terminal-host
           className="min-h-0 w-full flex-1"
+          onPointerEnter={(event) => {
+            if (terminalSettings.focusFollowsMouse && visible && document.hasFocus() && event.buttons === 0 && !window.getSelection()?.toString()) {
+              onSelect(session.id)
+              termRef.current?.focus()
+            }
+          }}
           onContextMenuCapture={(event) => {
             event.preventDefault()
             event.stopPropagation()
+            if (terminalSettings.rightClickToPaste && !event.ctrlKey) {
+              const term = termRef.current
+              if (term && !exitedRef.current) {
+                onSelect(session.id)
+                term.focus()
+                void navigator.clipboard.readText().then(text => {
+                  if (termRef.current === term && !exitedRef.current) term.paste(text)
+                }).catch(() => toastRef.current.error(tRef.current('terminalSettings.clipboardError')))
+              }
+              return
+            }
             // Snapshot before the menu takes focus from xterm's textarea.
             setCopyMenu({
               x: event.clientX,

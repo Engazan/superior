@@ -1,7 +1,9 @@
+import { terminalSettingsPl } from '../terminalSettings'
 import { onboardingPl } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  ...terminalSettingsPl,
   'browser.navigation': "Nawigacja przeglądarki",
   'browser.back': "Wstecz",
   'browser.forward': "Dalej",

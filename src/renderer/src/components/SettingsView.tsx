@@ -1,3 +1,4 @@
+import { TerminalSettingsSection } from './TerminalSettingsSection'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PresetsSection } from './PresetsSection'
 import { PromptsSection } from './PromptsSection'
@@ -40,6 +41,7 @@ import type {
 
 const SECTION_ICONS = {
   appearance: GearIcon,
+  terminal: TerminalIcon,
   integrations: BranchIcon,
   presets: TerminalIcon,
   prompts: PromptIcon,
@@ -50,6 +52,7 @@ const SECTION_ICONS = {
 
 export type SettingsSection =
   | 'appearance'
+  | 'terminal'
   | 'integrations'
   | 'presets'
   | 'prompts'
@@ -419,6 +422,7 @@ export function SettingsView({
       label: t('settings.personal'),
       items: [
         { id: 'appearance', label: t('settings.appearance') },
+        { id: 'terminal', label: t('terminalSettings.title') },
         { id: 'keyboard', label: t('settings.keyboard') }
       ]
     },
@@ -498,6 +502,7 @@ export function SettingsView({
       {/* Settings content */}
       <div ref={contentRef} className="settings-content superior-settings-panel min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel">
         <div className="settings-content-inner mx-auto w-full max-w-4xl">
+          {section === 'terminal' && <TerminalSettingsSection />}
           {section === 'appearance' && <AppearanceSection onOpenOnboarding={onOpenOnboarding} />}
           {section === 'integrations' && (
             <IntegrationsSection onChanged={onIntegrationsChanged} />

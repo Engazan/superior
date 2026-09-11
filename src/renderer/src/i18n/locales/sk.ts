@@ -1,7 +1,9 @@
+import { terminalSettingsSk } from '../terminalSettings'
 import { onboardingSk } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  ...terminalSettingsSk,
   'browser.navigation': "Navigácia prehliadača",
   'browser.back': "Späť",
   'browser.forward': "Dopredu",

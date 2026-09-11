@@ -1,5 +1,7 @@
+import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
 export const en = {
+  ...terminalSettingsEn,
   'browser.navigation': "Browser navigation",
   'browser.back': "Back",
   'browser.forward': "Forward",

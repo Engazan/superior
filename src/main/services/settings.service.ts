@@ -1,3 +1,4 @@
+import { DEFAULT_TERMINAL_SETTINGS, normalizeTerminalSettings, type TerminalSettings } from '@shared/terminalSettings'
 import type {
   AppSettings,
   FileOpener,
@@ -63,6 +64,7 @@ const DEFAULT_UI: UiState = {
 /** Catppuccin peach — a warm "done" tint that reads against the dark UI. */
 const DEFAULT_ATTENTION_COLOR = '#fab387'
 const DEFAULTS: AppSettings = {
+  terminal: { ...DEFAULT_TERMINAL_SETTINGS },
   theme: 'light',
   language: 'en',
   shortcuts: { ...DEFAULT_SHORTCUTS },
@@ -170,6 +172,7 @@ export function getSettings(): AppSettings {
     isSettingsRecord(value) ? value : null
   )
   cached = {
+    terminal: normalizeTerminalSettings(parsed.terminal),
     theme: THEMES.includes(parsed.theme as ThemeMode) ? (parsed.theme as ThemeMode) : DEFAULTS.theme,
     language: LANGUAGES.includes(parsed.language as Language)
       ? (parsed.language as Language)
@@ -311,6 +314,14 @@ export function setUsagePrimary(primary: UsagePrimary): AppSettings {
     ...getSettings(),
     usagePrimary: USAGE_PRIMARIES.includes(primary) ? primary : DEFAULTS.usagePrimary
   }
+  save(next)
+  return next
+}
+
+/** Merge a terminal patch against the latest persisted preferences. */
+export function setTerminalSettings(patch: Partial<TerminalSettings>): AppSettings {
+  const current = getSettings()
+  const next = { ...current, terminal: normalizeTerminalSettings(patch, current.terminal) }
   save(next)
   return next
 }

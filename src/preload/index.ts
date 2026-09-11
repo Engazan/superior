@@ -1,3 +1,4 @@
+import type { TerminalSettings } from '@shared/terminalSettings'
 import { BROWSER_IPC, type BrowserKey, type BrowserRequest, type BrowserState, type BrowserSelection, type BrowserDesignRequest } from '@shared/browser'
 import type { SendReviewArgs } from '@shared/types'
 import { contextBridge, ipcRenderer as electronIpcRenderer } from 'electron'
@@ -308,6 +309,12 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_FILE_OPENER, opener)
   },
 
+  setTerminalSettings(patch: Partial<TerminalSettings>): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_TERMINAL, patch)
+  },
+  writeTerminalClipboard(text: string): Promise<boolean> {
+    return ipcRenderer.invoke(IPC.TERMINAL_CLIPBOARD_WRITE, text)
+  },
   getSettings(): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_GET)
   },

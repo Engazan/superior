@@ -532,6 +532,7 @@ export default function App(): React.JSX.Element {
     }
     const sections: { id: SettingsSection; label: string }[] = [
       { id: 'appearance', label: t('settings.appearance') },
+      { id: 'terminal', label: t('terminalSettings.title') },
       { id: 'integrations', label: t('settings.integrations') },
       { id: 'presets', label: t('settings.terminalPresets') },
       { id: 'prompts', label: t('settings.prompts') },

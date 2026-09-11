@@ -1,3 +1,4 @@
+import type { TerminalSettings } from './terminalSettings'
 import { BROWSER_IPC, type BrowserRequest, type BrowserState, type BrowserDesignRequest } from './browser'
 import { IPC } from './types'
 import type {
@@ -157,6 +158,8 @@ export interface IpcInvokeMap {
     OpenFileTargetResult
   >
 
+  [IPC.SETTINGS_SET_TERMINAL]: Invocation<[patch: Partial<TerminalSettings>], AppSettings>
+  [IPC.TERMINAL_CLIPBOARD_WRITE]: Invocation<[text: string], boolean>
   [IPC.SETTINGS_GET]: Invocation<[], AppSettings>
   [IPC.SETTINGS_SET_THEME]: Invocation<[theme: ThemeMode], AppSettings>
   [IPC.SETTINGS_SET_LANGUAGE]: Invocation<[language: Language], AppSettings>

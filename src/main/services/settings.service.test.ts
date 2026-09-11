@@ -61,4 +61,24 @@ describe('first-run preferences and onboarding', () => {
     settings.setUi({ onboardingCompleted: 'no' } as never)
     expect(settings.getSettings().ui.onboardingCompleted).toBe(true)
   })
+  it('persists terminal patches across restart without losing app preferences', async () => {
+    const settings = await import('./settings.service')
+    settings.setLanguage('sk')
+    settings.setTerminalSettings({ fontSize: 18, darkTheme: 'dracula', copyOnSelect: true })
+    settings.setTerminalSettings({ scrollback: 50_000, gpuAcceleration: 'off' })
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings()).toMatchObject({ language: 'sk', terminal: {
+      fontSize: 18, darkTheme: 'dracula', copyOnSelect: true, scrollback: 50_000, gpuAcceleration: 'off'
+    } })
+  })
+
+  it('retains the applied terminal preferences when persistence fails', async () => {
+    const settings = await import('./settings.service')
+    const before = settings.getSettings().terminal
+    fs.mkdirSync(path.join(userData, 'settings.json'))
+    expect(() => settings.setTerminalSettings({ fontSize: 24 })).toThrow('Failed to persist settings')
+    expect(settings.getSettings().terminal).toEqual(before)
+  })
+
 })

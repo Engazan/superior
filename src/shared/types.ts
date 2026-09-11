@@ -1,3 +1,5 @@
+import type { TerminalSettings } from "./terminalSettings"
+export type { TerminalSettings } from "./terminalSettings"
 /**
  * 'transparent' = macOS vibrancy (blur-behind); resolves light/dark from the OS.
  * 'gradient' = the app-icon gradient painted as the window background with a
@@ -87,6 +89,7 @@ export interface UiState {
 }
 
 export interface AppSettings {
+  terminal: TerminalSettings
   theme: ThemeMode
   language: Language
   shortcuts: ShortcutMap
@@ -1002,6 +1005,8 @@ export const IPC = {
   FS_RESOLVE_FILE_LINK: 'fs:resolve-file-link',
   FS_OPEN_FILE_TARGET: 'fs:open-file-target',
   SHELL_OPEN_PATH: 'shell:open-path',
+  SETTINGS_SET_TERMINAL: 'settings:set-terminal',
+  TERMINAL_CLIPBOARD_WRITE: 'terminal:clipboard-write',
   SETTINGS_SET_FILE_OPENER: 'settings:set-file-opener',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET_THEME: 'settings:set-theme',

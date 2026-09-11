@@ -1,7 +1,9 @@
+import { terminalSettingsCs } from '../terminalSettings'
 import { onboardingCs } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  ...terminalSettingsCs,
   'browser.navigation': "Navigace prohlížeče",
   'browser.back': "Zpět",
   'browser.forward': "Vpřed",

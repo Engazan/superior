@@ -1,4 +1,5 @@
-import { BrowserWindow } from 'electron'
+import type { TerminalSettings } from '@shared/terminalSettings'
+import { BrowserWindow, clipboard } from 'electron'
 import {
   IPC,
   type AppSettings,
@@ -12,6 +13,7 @@ import {
 } from '@shared/types'
 import {
   getSettings,
+  setTerminalSettings,
   setAttentionColor,
   setFileOpener,
   setGlobalHotkey,
@@ -34,6 +36,15 @@ const FILE_OPENERS = new Set(['system', 'vscode', 'cursor', 'zed', 'sublime', 'p
 const USAGE_PRIMARIES = new Set(['remaining', 'sevenDay', 'cost', 'tokens', 'context'])
 
 export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void {
+  handle(IPC.SETTINGS_SET_TERMINAL, (patch: Partial<TerminalSettings>): AppSettings =>
+    isRecord(patch) ? setTerminalSettings(patch) : invalidPayload()
+  )
+  handle(IPC.TERMINAL_CLIPBOARD_WRITE, (text: string): boolean => {
+    if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 100_000) return invalidPayload()
+    if (!getSettings().terminal.allowOsc52Clipboard) return false
+    clipboard.writeText(text)
+    return true
+  })
   handle(IPC.SETTINGS_GET, (): AppSettings => getSettings())
 
   handle(IPC.SETTINGS_SET_THEME, (theme: ThemeMode): AppSettings =>
