@@ -58,6 +58,7 @@ interface Props {
   onSelect: (id: string) => void
   /** open a terminal file link in Superior's built-in preview editor */
   onOpenFileTarget: (target: FileLinkTarget) => void
+  onOpenUrl: (workspaceId: string, url: string) => void
   /** toggle a grid cell's maximized state */
   onToggleMaximize: (id: string) => void
   onClose: (id: string) => void
@@ -103,6 +104,7 @@ export function TerminalPanel({
   presets,
   onSelect,
   onOpenFileTarget,
+  onOpenUrl,
   onToggleMaximize,
   onClose,
   onRestart,
@@ -455,6 +457,7 @@ export function TerminalPanel({
               animate={!resizing && !moving}
               onSelect={onSelect}
               onOpenFileTarget={onOpenFileTarget}
+              onOpenUrl={onOpenUrl}
               onClose={onClose}
               onRestart={onRestart}
               onSetNickname={onSetNickname}

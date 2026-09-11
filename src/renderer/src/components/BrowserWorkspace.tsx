@@ -7,7 +7,10 @@ import { noteActivityInput } from '../activityStore'
 import { Button, Modal, Select, useToast } from './ui'
 import type { AgentSession, BrowserRequest, BrowserSelection, BrowserState, Workspace } from '../types'
 
+interface BrowserLink { workspaceId: string; url: string }
+
 interface Props {
+  browserLink: BrowserLink | null
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   visible: boolean
@@ -16,13 +19,13 @@ interface Props {
 }
 
 /** Keep visited browser surfaces mounted so navigation and pending feedback survive mode switches. */
-export function BrowserDeck({ workspaces, activeWorkspaceId, visible, sessions, onSent }: Props): React.JSX.Element {
+export function BrowserDeck({ browserLink, workspaces, activeWorkspaceId, visible, sessions, onSent }: Props): React.JSX.Element {
   const [visited, setVisited] = useState<string[]>([])
   useEffect(() => {
     if (visible && activeWorkspaceId) setVisited((ids) => ids.includes(activeWorkspaceId) ? ids : [...ids, activeWorkspaceId])
   }, [activeWorkspaceId, visible])
   return <>{workspaces.filter((workspace) => visited.includes(workspace.id)).map((workspace) =>
-    <BrowserWorkspace key={workspace.id} workspace={workspace} sessions={sessions} onSent={onSent}
+    <BrowserWorkspace browserLink={browserLink?.workspaceId === workspace.id ? browserLink : null} key={workspace.id} workspace={workspace} sessions={sessions} onSent={onSent}
       visible={visible && activeWorkspaceId === workspace.id} />)}</>
 }
 
@@ -30,8 +33,8 @@ function readUrl(id: string): string {
   try { const value = localStorage.getItem(`superior.browser.url.${id}`); return value ? browserUrl(value) : '' } catch { return '' }
 }
 
-function BrowserWorkspace({ workspace, visible, sessions, onSent }: {
-  workspace: Workspace; visible: boolean; sessions: AgentSession[]; onSent: (session: AgentSession) => void
+function BrowserWorkspace({ browserLink, workspace, visible, sessions, onSent }: {
+  browserLink: BrowserLink | null; workspace: Workspace; visible: boolean; sessions: AgentSession[]; onSent: (session: AgentSession) => void
 }): React.JSX.Element {
   const { t } = useI18n()
   const overlays = useOverlayCount()
@@ -47,6 +50,7 @@ function BrowserWorkspace({ workspace, visible, sessions, onSent }: {
   const slot = useRef<HTMLDivElement>(null)
   const mounted = useRef(true)
   const previousUrl = useRef(initialUrl)
+  const consumedLink = useRef<BrowserLink | null>(null)
   const receiveState = useCallback((next: BrowserState): void => {
     if (!mounted.current || next.workspaceId !== workspace.id) return
     setState(next)
@@ -100,7 +104,11 @@ function BrowserWorkspace({ workspace, visible, sessions, onSent }: {
         const encoded = JSON.stringify(bounds)
         if (encoded !== previous) {
           previous = encoded
-          void requestRef.current({ workspaceId: id, type: 'show', bounds, initialUrl })
+          const pending = browserLink && consumedLink.current !== browserLink ? browserLink : null
+          void requestRef.current({ workspaceId: id, type: 'show', bounds, initialUrl: pending ? undefined : initialUrl }).then(() => {
+            if (pending) return requestRef.current({ workspaceId: id, type: 'navigate', url: pending.url })
+          })
+          if (pending) consumedLink.current = pending
         }
       }
       frame = requestAnimationFrame(update)
@@ -110,7 +118,7 @@ function BrowserWorkspace({ workspace, visible, sessions, onSent }: {
       cancelAnimationFrame(frame)
       void window.api.browserRequest({ workspaceId: id, type: 'hide' }).catch(() => {})
     }
-  }, [workspace.id, showPage, initialUrl])
+  }, [workspace.id, showPage, initialUrl, browserLink])
 
   const navigate = (event: React.FormEvent): void => {
     event.preventDefault()

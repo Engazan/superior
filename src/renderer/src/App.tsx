@@ -1,3 +1,4 @@
+import { browserUrl } from '@shared/browser'
 import { nextWorkspaceMode } from './codeWorkspace'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
@@ -99,6 +100,7 @@ export default function App(): React.JSX.Element {
     setError(null)
   }, [error, toast])
   const {
+    uiReady,
     view,
     setView,
     settingsSection,
@@ -140,8 +142,23 @@ export default function App(): React.JSX.Element {
   const ws = useWorkspaceSessions({ setError, t, presets })
   const code = useCodeWorkspaces(ws.activeWorkspaceId)
   const { dispatch: dispatchCode, act: actCode } = code
+  const [browserLink, setBrowserLink] = useState<{ workspaceId: string; url: string } | null>(null)
+  const selectBrowserWorkspace = ws.selectWorkspace
+  const openTerminalUrl = useCallback((workspaceId: string, url: string) => {
+    const safeUrl = browserUrl(url)
+    setBrowserLink({ workspaceId, url: safeUrl })
+    void selectBrowserWorkspace(workspaceId)
+    dispatchCode(workspaceId, { type: 'mode', mode: 'browser' })
+  }, [selectBrowserWorkspace, dispatchCode])
   const codeActive = code.current.mode === 'code'
   const terminalActive = code.current.mode === 'terminals'
+  const [filesRevealRequest, setFilesRevealRequest] = useState(0)
+  const codeEmpty = code.current.tabs.length === 0
+  useEffect(() => {
+    if (!uiReady || view !== 'main' || !ws.activeWorkspaceId || !codeActive || !codeEmpty) return
+    setRightSidebarOpen(true)
+    setFilesRevealRequest((request) => request + 1)
+  }, [uiReady, view, ws.activeWorkspaceId, codeActive, codeEmpty, setRightSidebarOpen])
   const currentCodePath = code.current.selected[code.current.focusedGroup]
   const confirm = useConfirm()
   const [dirtyFiles, setDirtyFiles] = useState<Record<string, ReadonlySet<string>>>({})
@@ -889,6 +906,7 @@ export default function App(): React.JSX.Element {
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
                     onOpenFileTarget={openTerminalFileInCode}
+                    onOpenUrl={openTerminalUrl}
                     onToggleMaximize={ws.toggleMaximize}
                     onClose={ws.closeSession}
                     onRestart={ws.restartSession}
@@ -904,7 +922,7 @@ export default function App(): React.JSX.Element {
                   />
                 </div>
                 <Suspense fallback={<DeferredPanel />}>
-                  <BrowserDeck workspaces={ws.workspaces} activeWorkspaceId={ws.activeWorkspaceId}
+                  <BrowserDeck browserLink={browserLink} workspaces={ws.workspaces} activeWorkspaceId={ws.activeWorkspaceId}
                     visible={code.current.mode === 'browser' && view === 'main'} sessions={ws.sessions}
                     onSent={(session) => {
                       if (session.workspaceId !== ws.activeWorkspaceId) return
@@ -949,6 +967,7 @@ export default function App(): React.JSX.Element {
               {rightPanelLoaded && (
                 <Suspense fallback={<DeferredPanel />}>
                   <RightPanel
+                    filesRevealRequest={filesRevealRequest}
                     workspaceId={ws.activeWorkspaceId}
                     sessions={ws.sessions}
                     onReviewSent={(session) => {

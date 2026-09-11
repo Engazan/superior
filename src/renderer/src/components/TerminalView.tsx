@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { WebLinksAddon } from '@xterm/addon-web-links'
+import { activateTerminalUrl } from '../terminalUrl'
 import { SearchAddon } from '@xterm/addon-search'
 import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
@@ -102,6 +104,7 @@ interface Props {
   onSelect: (id: string) => void
   /** open a terminal file link in Superior's built-in preview editor */
   onOpenFileTarget: (target: FileLinkTarget) => void
+  onOpenUrl: (workspaceId: string, url: string) => void
   onClose: (id: string) => void
   /** re-run the session's original preset command in place */
   onRestart: (id: string) => Promise<void>
@@ -185,6 +188,7 @@ function propsEqual(prev: Props, next: Props): boolean {
     prev.animate === next.animate &&
     prev.onSelect === next.onSelect &&
     prev.onOpenFileTarget === next.onOpenFileTarget &&
+    prev.onOpenUrl === next.onOpenUrl &&
     prev.onClose === next.onClose &&
     prev.onRestart === next.onRestart &&
     prev.onSetNickname === next.onSetNickname &&
@@ -207,6 +211,7 @@ export const TerminalView = memo(function TerminalView({
   animate,
   onSelect,
   onOpenFileTarget,
+  onOpenUrl,
   onClose,
   onRestart,
   onSetNickname,
@@ -236,6 +241,8 @@ export const TerminalView = memo(function TerminalView({
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
 
+  const onOpenUrlRef = useRef(onOpenUrl)
+  onOpenUrlRef.current = onOpenUrl
   const onOpenFileTargetRef = useRef(onOpenFileTarget)
   onOpenFileTargetRef.current = onOpenFileTarget
 
@@ -319,6 +326,9 @@ export const TerminalView = memo(function TerminalView({
     const search = new SearchAddon()
     term.loadAddon(search)
     registerSearch(session.id, search, term)
+    term.loadAddon(new WebLinksAddon((event, url) => {
+      activateTerminalUrl(event, url, (safeUrl) => onOpenUrlRef.current(session.workspaceId, safeUrl))
+    }))
     // mod+click on a file path in the output opens it in the configured editor.
     const fileLinks = registerFileLinkProvider(term, {
       getCwd: () => workingDirRef.current,

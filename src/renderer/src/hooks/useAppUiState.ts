@@ -37,6 +37,7 @@ export function useAppUiState() {
   // Restore the persisted shell layout once; only after that do we persist
   // changes, so initial defaults never overwrite the stored values.
   const uiLoaded = useRef(false)
+  const [uiReady, setUiReady] = useState(false)
   useEffect(() => {
     void window.api.getSettings().then((settings) => {
       setSidebarCollapsed(settings.ui.sidebarCollapsed)
@@ -45,6 +46,7 @@ export function useAppUiState() {
         setRightPanelWidth(settings.ui.rightPanelWidth)
       }
       uiLoaded.current = true
+      setUiReady(true)
     })
   }, [])
 
@@ -82,6 +84,7 @@ export function useAppUiState() {
   }, [])
 
   return {
+    uiReady,
     view,
     setView,
     settingsSection,

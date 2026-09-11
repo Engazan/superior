@@ -14,6 +14,8 @@ import type { AgentSession, AgentTask, FsEntry, GitDiff, TerminalPreset } from '
 type Tab = 'files' | 'changes' | 'history' | 'tasks'
 
 interface Props {
+  /** Increment to reveal the file tree without locking the selected tab. */
+  filesRevealRequest: number
   /** Whether the panel is open. Kept mounted while closed (for the slide
       animation), so polling is gated on this to stay idle when hidden. */
   active: boolean
@@ -45,6 +47,7 @@ interface Props {
  * totals can show on the Changes tab even while the Files tab is open.
  */
 export function RightPanel({
+  filesRevealRequest,
   active,
   workspaceId,
   sessions,
@@ -81,6 +84,9 @@ export function RightPanel({
     setTab(next)
     void window.api.setUiState({ rightPanelTab: next })
   }, [])
+  useEffect(() => {
+    if (filesRevealRequest > 0) selectTab('files')
+  }, [filesRevealRequest, selectTab])
   const [diff, setDiff] = useState<GitDiff | null>(null)
   const [diffFolder, setDiffFolder] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

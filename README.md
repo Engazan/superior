@@ -140,7 +140,9 @@ A transport error keeps the notes; check the target terminal before retrying.
 ### Browser preview and Design Mode
 
 Use the **CLI · Code · Browser** switch in the title bar to open Browser.
-Enter the HTTP/HTTPS URL of your running development server. Back, Forward and
+Use **Cmd/Ctrl+click** on an HTTP/HTTPS URL in terminal output to open it in
+that workspace's Browser automatically, or enter the URL of your running
+development server in the address bar. Back, Forward and
 Reload work within that workspace; its last URL is restored on the next app
 launch. The workspace-mode shortcut cycles through all three modes. With focus
 in the page, **Ctrl/Cmd+L** focuses the address bar and app navigation shortcuts
