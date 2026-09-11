@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-09-11
+
+### Added
+
+- **Terminal preferences.** A new Settings → Terminal section with a live
+  preview controls fonts, ligatures, cursor appearance, independent light/dark
+  palettes, contrast and inactive-pane opacity. Preferences apply to existing
+  terminals, persist across restarts and can be reset separately.
+- **Terminal interaction and rendering controls.** Configure scroll speeds,
+  retained history, macOS Option-as-Alt behavior and GPU acceleration with
+  automatic fallback. Optional copy on selection, right-click paste,
+  focus following the mouse and OSC 52 clipboard writes are also available.
+
+### Changed
+
+- **Reorder usage profiles.** Drag profiles in the bottom usage bar or use
+  Alt+Left/Right while a profile is focused. The selected order is saved
+  across app restarts.
+
 ## [0.26.1] - 2026-09-11
 
 ### Changed
