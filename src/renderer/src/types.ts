@@ -90,3 +90,5 @@ export type {
   WorktreeAddResult,
   WorktreeErrorCode
 } from '@shared/types'
+
+export type { BrowserState, BrowserSelection, BrowserRequest, BrowserDesignRequest } from '@shared/browser'

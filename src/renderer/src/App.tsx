@@ -1,3 +1,4 @@
+import { nextWorkspaceMode } from './codeWorkspace'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { UsageFooter } from './components/UsageFooter'
@@ -44,6 +45,7 @@ const Onboarding = lazy(() => import('./components/Onboarding').then(({ Onboardi
 const SettingsView = lazy(() =>
   import('./components/SettingsView').then(({ SettingsView }) => ({ default: SettingsView }))
 )
+const BrowserDeck = lazy(() => import('./components/BrowserWorkspace').then(({ BrowserDeck }) => ({ default: BrowserDeck })))
 const RightPanel = lazy(() =>
   import('./components/RightPanel').then(({ RightPanel }) => ({ default: RightPanel }))
 )
@@ -139,6 +141,7 @@ export default function App(): React.JSX.Element {
   const code = useCodeWorkspaces(ws.activeWorkspaceId)
   const { dispatch: dispatchCode, act: actCode } = code
   const codeActive = code.current.mode === 'code'
+  const terminalActive = code.current.mode === 'terminals'
   const currentCodePath = code.current.selected[code.current.focusedGroup]
   const confirm = useConfirm()
   const [dirtyFiles, setDirtyFiles] = useState<Record<string, ReadonlySet<string>>>({})
@@ -235,8 +238,8 @@ export default function App(): React.JSX.Element {
     setActivityActiveWorkspace(ws.activeWorkspaceId)
   }, [ws.activeWorkspaceId])
   useEffect(() => {
-    setActivityActiveSession(codeActive || view !== 'main' ? null : ws.activeSessionId)
-  }, [ws.activeSessionId, codeActive, view])
+    setActivityActiveSession(!terminalActive || view !== 'main' ? null : ws.activeSessionId)
+  }, [ws.activeSessionId, terminalActive, view])
   const update = useUpdateCheck()
 
   // Native OS notification for explicit terminal attention while unfocused.
@@ -451,7 +454,7 @@ export default function App(): React.JSX.Element {
         title: t('code.switchMode'),
         section: t('palette.sectionView'),
         hint: formatChord(shortcuts.toggleWorkspaceMode),
-        run: () => codeActionsRef.current.act({ type: 'mode', mode: codeActionsRef.current.mode === 'code' ? 'terminals' : 'code' })
+        run: () => codeActionsRef.current.act({ type: 'mode', mode: nextWorkspaceMode(codeActionsRef.current.mode) })
       }] : []),
       {
         id: 'view:sidebar',
@@ -634,7 +637,7 @@ export default function App(): React.JSX.Element {
         !e.altKey &&
         !e.shiftKey &&
         /^[1-9]$/.test(e.key) &&
-        view === 'main' && !codeActive &&
+        view === 'main' && terminalActive &&
         ws.focusGridCell(Number(e.key) - 1)
       ) {
         e.preventDefault()
@@ -647,7 +650,7 @@ export default function App(): React.JSX.Element {
         if (view !== 'main' || !ws.activeWorkspaceId) return
         e.preventDefault()
         e.stopPropagation()
-        actCode({ type: 'mode', mode: codeActive ? 'terminals' : 'code' })
+        actCode({ type: 'mode', mode: nextWorkspaceMode(code.current.mode) })
       } else if (chord === shortcuts.toggleSidebar) {
         if (view !== 'main') return
         e.preventDefault()
@@ -659,7 +662,7 @@ export default function App(): React.JSX.Element {
         if (view === 'settings') closeSettings()
         else setView('settings')
       } else if (chord === shortcuts.maximizeFocusedCell) {
-        if (view !== 'main' || codeActive) return
+        if (view !== 'main' || !terminalActive) return
         e.preventDefault()
         e.stopPropagation()
         ws.toggleMaximizeFocused()
@@ -678,6 +681,7 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         e.stopPropagation()
         if (codeActive) void setCodeFile(null)
+        else if (!terminalActive) actCode({ type: 'mode', mode: 'terminals' })
         else if (ws.activeSessionId) ws.closeSession(ws.activeSessionId)
       } else if (chord === shortcuts.closePreview) {
         if (view !== 'main' || !codeActive || !currentCodePath) return
@@ -685,11 +689,11 @@ export default function App(): React.JSX.Element {
         e.stopPropagation()
         void setCodeFile(null)
       } else if (chord === shortcuts.prevTerminal) {
-        if (view !== 'main' || codeActive || !ws.cycleSession(-1)) return
+        if (view !== 'main' || !terminalActive || !ws.cycleSession(-1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.nextTerminal) {
-        if (view !== 'main' || codeActive || !ws.cycleSession(1)) return
+        if (view !== 'main' || !terminalActive || !ws.cycleSession(1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.openFolder) {
@@ -729,7 +733,7 @@ export default function App(): React.JSX.Element {
         // terminal search. Opening a file from the right sidebar leaves focus
         // on its result row, which previously misrouted Markdown find attempts
         // into xterm instead of the preview.
-        if (codeActive) return
+        if (!terminalActive) return
         e.preventDefault()
         e.stopPropagation()
         setSearchOpen(true)
@@ -767,6 +771,8 @@ export default function App(): React.JSX.Element {
     ws.cycleWorkspace,
     ws.cycleProfile,
     codeActive,
+    terminalActive,
+    code.current.mode,
     currentCodePath,
     actCode,
     setCodeFile
@@ -794,11 +800,11 @@ export default function App(): React.JSX.Element {
         }}
         onOpenPromptPicker={() => setPalettePromptsOpen(true)}
         promptPickerEnabled={
-          view === 'main' && !codeActive && !!ws.activeSessionId
+          view === 'main' && terminalActive && !!ws.activeSessionId
         }
         onToggleBroadcast={() => setBroadcastMode((active) => !active)}
         broadcastEnabled={
-          view === 'main' && !codeActive && activeTabSessionCount > 0
+          view === 'main' && terminalActive && activeTabSessionCount > 0
         }
         broadcastActive={broadcastMode}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
@@ -863,7 +869,7 @@ export default function App(): React.JSX.Element {
             <div className="superior-main flex min-h-0 min-w-0 flex-1 flex-col">
               <div className="flex min-h-0 min-w-0 flex-1">
                 <div className="relative flex min-h-0 min-w-0 flex-1">
-                <div className="absolute inset-0 flex" style={{ display: codeActive ? 'none' : undefined }}>
+                <div className="absolute inset-0 flex" style={{ display: terminalActive ? undefined : 'none' }}>
                   <TerminalPanel
                     sessions={ws.sessions}
                     activeWorkspaceId={ws.activeWorkspaceId}
@@ -878,7 +884,7 @@ export default function App(): React.JSX.Element {
                     activeSessionId={ws.activeSessionId}
                     maximizedId={ws.maximizedId}
                     activeTabId={activeTabs?.activeTabId}
-                    surfaceActive={!codeActive && view === 'main'}
+                    surfaceActive={terminalActive && view === 'main'}
                     gridLayout={activeTab?.gridLayout}
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
@@ -897,6 +903,16 @@ export default function App(): React.JSX.Element {
                     onBroadcastModeChange={setBroadcastMode}
                   />
                 </div>
+                <Suspense fallback={<DeferredPanel />}>
+                  <BrowserDeck workspaces={ws.workspaces} activeWorkspaceId={ws.activeWorkspaceId}
+                    visible={code.current.mode === 'browser' && view === 'main'} sessions={ws.sessions}
+                    onSent={(session) => {
+                      if (session.workspaceId !== ws.activeWorkspaceId) return
+                      actCode({ type: 'mode', mode: 'terminals' })
+                      ws.selectTab(session.workspaceId, session.tabId)
+                      ws.setActiveSessionId(session.id)
+                    }} />
+                </Suspense>
                 {Object.entries(code.workspaces).map(([id, state]) => (
                   <Suspense key={id} fallback={<DeferredPanel />}>
                     <CodeWorkspace state={state}

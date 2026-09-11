@@ -1,3 +1,4 @@
+import { browserService, registerBrowserIpc } from './ipc/browser.ipc'
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { IPC } from '@shared/types'
@@ -105,6 +106,7 @@ function createWindow(): BrowserWindow {
 
   win.on('ready-to-show', () => win.show())
   win.on('closed', () => {
+    browserService.closeWindow(win)
     if (mainWindow === win) mainWindow = null
   })
   attachWindowMaximizeEvents(win)
@@ -167,6 +169,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerWorkspaceIpc(reconciled)
   registerWorktreeIpc()
   registerAgentIpc()
+  registerBrowserIpc(() => mainWindow)
   registerSettingsIpc(() => mainWindow)
   registerPresetsIpc()
   registerPromptsIpc()

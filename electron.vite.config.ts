@@ -24,6 +24,7 @@ export default defineConfig({
     }
   },
   preload: {
+    build: { rollupOptions: { input: { index: resolve(__dirname, 'src/preload/index.ts'), browser: resolve(__dirname, 'src/preload/browser.ts') } } },
     plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {

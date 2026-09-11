@@ -2,6 +2,25 @@ import { onboardingHu } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  'browser.navigation': "Böngésző navigáció",
+  'browser.back': "Vissza",
+  'browser.forward': "Előre",
+  'browser.reload': "Oldal újratöltése",
+  'browser.address': "Oldal címe",
+  'browser.go': "Megnyitás",
+  'browser.selected': "Kijelölt elem",
+  'browser.pickHint': "Kattints egy elemre, és írd le a változtatást. Az Escape kikapcsolja a Design Mode módot.",
+  'browser.requestFailed': "A böngésző művelete sikertelen. Nyisd meg újra az oldalt.",
+  'browser.invalidUrl': "Adj meg HTTP vagy HTTPS címet.",
+  'browser.loadFailed': "Az oldal betöltése sikertelen.",
+  'browser.loading': "Betöltés…",
+  'browser.empty': "Add meg a fejlesztői szerver URL-jét, és nyisd meg az oldalt.",
+  'browser.designTitle': "Kijelölt elem módosítása",
+  'browser.designDescription': "Küldd el a kérést az elem HTML-jével, számított CSS-ével és képernyőképével. A kiválasztott ügynök egy Enterrel lezárt promptot kap.",
+  'browser.screenshot': "A kijelölt elem képernyőképe",
+  'browser.instruction': "Mi változzon?",
+  'browser.sent': "A kérés továbbítva a terminálnak.",
+
   'review.comment': "Megjegyzés a változáshoz",
   'review.feedback': "Visszajelzés",
   'review.oldLine': "régi sor: {line}",
@@ -22,7 +41,7 @@ export const hu: Record<MessageKey, string> = {
   'review.sent': "A megjegyzések továbbítva a terminálnak.",
   'review.lineComment': "Megjegyzés a(z) {line}. sorhoz",
 
-  'code.switchMode': 'Terminals / Code váltása',
+  'code.switchMode': 'Terminals / Code / Browser váltása',
   'code.group': 'Szerkesztőcsoport {n}',
   'code.split': 'Fájl áthelyezése a másik csoportba',
   'code.merge': 'Szerkesztőcsoportok egyesítése',

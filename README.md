@@ -137,6 +137,27 @@ available even when its line is no longer in the diff. Notes stay in the list
 after sending so you can check the agent's revision and remove addressed items.
 A transport error keeps the notes; check the target terminal before retrying.
 
+### Browser preview and Design Mode
+
+Use the **Terminals · Code · Browser** switch in the title bar to open Browser.
+Enter the HTTP/HTTPS URL of your running development server. Back, Forward and
+Reload work within that workspace; its last URL is restored on the next app
+launch. The workspace-mode shortcut cycles through all three modes. With focus
+in the page, **Ctrl/Cmd+L** focuses the address bar and app navigation shortcuts
+remain available.
+
+Turn on **Design Mode** and click an element. The click selects it without
+activating its page action. A dialog shows the element's visible screenshot crop,
+HTML and computed CSS. Describe the change, pick a running agent in the workspace,
+and choose **Send to agent**. The request includes the source context and a local
+PNG path that the agent can read. **Escape** leaves selection mode. The selected
+element and draft remain available while switching modes during the app session.
+
+Preview pages run in a separate sandboxed Chromium view without Superior's API or
+Node access. Browser views hide while app dialogs are open and close with their
+workspace/window. The development server still runs independently; remote agent
+sessions cannot receive the local screenshot through this flow.
+
 ## Account usage footer
 
 Codex profiles also display available reset tickets and their expiry dates when

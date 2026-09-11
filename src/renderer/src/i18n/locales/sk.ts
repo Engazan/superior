@@ -2,6 +2,25 @@ import { onboardingSk } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  'browser.navigation': "Navigácia prehliadača",
+  'browser.back': "Späť",
+  'browser.forward': "Dopredu",
+  'browser.reload': "Obnoviť stránku",
+  'browser.address': "Adresa stránky",
+  'browser.go': "Otvoriť",
+  'browser.selected': "Vybraný prvok",
+  'browser.pickHint': "Klikni na prvok a opíš zmenu. Escape vypne Design Mode.",
+  'browser.requestFailed': "Akcia prehliadača zlyhala. Skús stránku otvoriť znova.",
+  'browser.invalidUrl': "Zadaj HTTP alebo HTTPS adresu.",
+  'browser.loadFailed': "Stránku sa nepodarilo načítať.",
+  'browser.loading': "Načítavam…",
+  'browser.empty': "Zadaj URL svojho vývojového servera a otvor stránku.",
+  'browser.designTitle': "Upraviť vybraný prvok",
+  'browser.designDescription': "Odošli požiadavku spolu s HTML prvku, vypočítanými štýlmi a screenshotom. Vybraný agent dostane jeden prompt zakončený Enterom.",
+  'browser.screenshot': "Screenshot vybraného prvku",
+  'browser.instruction': "Čo sa má zmeniť?",
+  'browser.sent': "Požiadavka bola odovzdaná terminálu.",
+
   'review.comment': "Komentár ku zmene",
   'review.feedback': "Pripomienka",
   'review.oldLine': "pôvodný riadok {line}",
@@ -22,7 +41,7 @@ export const sk: Record<MessageKey, string> = {
   'review.sent': "Pripomienky boli odovzdané terminálu.",
   'review.lineComment': "Pridať pripomienku k riadku {line}",
 
-  'code.switchMode': 'Prepnúť Terminals / Code',
+  'code.switchMode': 'Prepnúť Terminals / Code / Browser',
   'code.group': 'Skupina editora {n}',
   'code.split': 'Presunúť súbor do druhej skupiny',
   'code.merge': 'Zlúčiť skupiny editora',

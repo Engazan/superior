@@ -1,3 +1,4 @@
+import { BROWSER_IPC, type BrowserRequest, type BrowserState, type BrowserDesignRequest } from './browser'
 import { IPC } from './types'
 import type {
   SendReviewArgs,
@@ -214,6 +215,8 @@ export interface IpcInvokeMap {
   [IPC.WINDOW_IS_MAXIMIZED]: Invocation<[], boolean>
   [IPC.AGENT_START]: Invocation<[args: StartAgentArgs], StartAgentResult>
   [IPC.AGENT_REVIEW]: Invocation<[SendReviewArgs], void>
+  [BROWSER_IPC.REQUEST]: Invocation<[BrowserRequest], BrowserState | null>
+  [BROWSER_IPC.SEND]: Invocation<[BrowserDesignRequest], void>
   [IPC.AGENT_RESTORE]: Invocation<[], AgentSession[]>
   [IPC.AGENT_UPDATE_META]: Invocation<[args: { id: string; nickname: string }], void>
   [IPC.AGENT_KILL]: Invocation<[id: string], void>

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 
 /**
  * Module-level stack of currently open overlays (modals, menus, popovers).
@@ -11,15 +11,21 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
  * chords from firing behind an open overlay.
  */
 let stack: symbol[] = []
+const listeners = new Set<() => void>()
+function notify(): void { for (const listener of listeners) listener() }
+function subscribe(listener: () => void): () => void { listeners.add(listener); return () => { listeners.delete(listener) } }
+export function useOverlayCount(): number { return useSyncExternalStore(subscribe, overlayCount, () => 0) }
 
 export function pushOverlay(): symbol {
   const id = Symbol('overlay')
   stack.push(id)
+  notify()
   return id
 }
 
 export function popOverlay(id: symbol): void {
   stack = stack.filter((s) => s !== id)
+  notify()
 }
 
 export function isTopOverlay(id: symbol): boolean {

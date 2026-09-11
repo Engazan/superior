@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { emptyCodeWorkspace, reduceCodeWorkspace as reduce, restoreCodeWorkspaces } from './codeWorkspace'
+import { emptyCodeWorkspace, nextWorkspaceMode, reduceCodeWorkspace as reduce, restoreCodeWorkspaces } from './codeWorkspace'
 
 const file = (name: string) => ({ path: `/project/${name}`, name, isDirectory: false })
 const open = (name: string) => ({ type: 'open' as const, file: file(name) })
 
 describe('Code workspace navigation', () => {
+  it('cycles through Browser and restores its mode without losing editor tabs', () => {
+    expect(nextWorkspaceMode('terminals')).toBe('code')
+    expect(nextWorkspaceMode('code')).toBe('browser')
+    expect(nextWorkspaceMode('browser')).toBe('terminals')
+    const state = reduce(reduce(emptyCodeWorkspace(), open('a.ts')), { type: 'mode', mode: 'browser' })
+    expect(restoreCodeWorkspaces(JSON.stringify({ workspace: state })).workspace).toEqual(state)
+    expect(reduce(state, { type: 'mode', mode: 'code' }).tabs).toEqual(state.tabs)
+  })
   it('keeps multiple tabs when opening files and reuses an existing tab for line links', () => {
     let state = reduce(reduce(emptyCodeWorkspace(), open('a.ts')), open('b.ts'))
     state = reduce(state, { ...open('a.ts'), line: 24 })

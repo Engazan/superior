@@ -165,17 +165,17 @@ export function TitleBar({
       {/* CENTER — pin the workspace mode switcher to the title bar's actual midpoint,
           independently of the widths of the controls on either side. */}
       <div
-        className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center max-[1100px]:static max-[1100px]:max-w-40 max-[1100px]:translate-x-0"
+        className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center max-[1100px]:static max-[1100px]:max-w-64 max-[1100px]:translate-x-0"
         onDoubleClick={onMaximize}
       >
         {showToggle && (
           <div role="group" aria-label={t('code.switchMode')} title={shortcutTitle(t('code.switchMode'), 'toggleWorkspaceMode')}
             className="superior-mode-switch app-no-drag mx-2 flex shrink-0 rounded-lg border border-edge bg-bar p-0.5">
-            {(['terminals', 'code'] as const).map((mode) => (
+            {(['terminals', 'code', 'browser'] as const).map((mode) => (
               <button key={mode} type="button" aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
                 onClick={() => onWorkspaceModeChange(mode)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>
-                {mode === 'terminals' ? 'Terminals' : 'Code'}
+                {mode === 'terminals' ? 'Terminals' : mode === 'code' ? 'Code' : 'Browser'}
               </button>
             ))}
           </div>
@@ -241,7 +241,7 @@ export function TitleBar({
         )}
 
         {showToggle && (
-          <div className="app-no-drag mx-2 min-w-0 max-[1100px]:max-w-40">
+          <div className="app-no-drag mx-2 min-w-0 max-[1100px]:max-w-64">
             <ProfileSwitcher
               profiles={profiles}
               activeProfileId={activeProfileId}

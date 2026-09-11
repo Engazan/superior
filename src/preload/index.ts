@@ -1,3 +1,4 @@
+import { BROWSER_IPC, type BrowserKey, type BrowserRequest, type BrowserState, type BrowserSelection, type BrowserDesignRequest } from '@shared/browser'
 import type { SendReviewArgs } from '@shared/types'
 import { contextBridge, ipcRenderer as electronIpcRenderer } from 'electron'
 import type { IpcInvokeArgs, IpcInvokeChannel, IpcInvokeResult } from '@shared/ipc-contract'
@@ -582,6 +583,27 @@ const api = {
     return ipcRenderer.invoke(IPC.TABS_SET, { workspaceId, tabs })
   },
 
+  browserRequest(args: BrowserRequest): Promise<BrowserState | null> {
+    return ipcRenderer.invoke(BROWSER_IPC.REQUEST, args)
+  },
+  sendDesign(args: BrowserDesignRequest): Promise<void> {
+    return ipcRenderer.invoke(BROWSER_IPC.SEND, args)
+  },
+  onBrowserKey(callback: (key: BrowserKey) => void): () => void {
+    const listener = (_event: Electron.IpcRendererEvent, key: BrowserKey): void => callback(key)
+    ipcRenderer.on(BROWSER_IPC.KEY, listener)
+    return () => ipcRenderer.removeListener(BROWSER_IPC.KEY, listener)
+  },
+  onBrowserState(callback: (state: BrowserState) => void): () => void {
+    const listener = (_event: Electron.IpcRendererEvent, state: BrowserState): void => callback(state)
+    ipcRenderer.on(BROWSER_IPC.STATE, listener)
+    return () => ipcRenderer.removeListener(BROWSER_IPC.STATE, listener)
+  },
+  onBrowserSelection(callback: (selection: BrowserSelection) => void): () => void {
+    const listener = (_event: Electron.IpcRendererEvent, selection: BrowserSelection): void => callback(selection)
+    ipcRenderer.on(BROWSER_IPC.SELECTION, listener)
+    return () => ipcRenderer.removeListener(BROWSER_IPC.SELECTION, listener)
+  },
   sendReview(args: SendReviewArgs): Promise<void> {
     return ipcRenderer.invoke(IPC.AGENT_REVIEW, args)
   },

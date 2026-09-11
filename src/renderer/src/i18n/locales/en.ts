@@ -1,5 +1,24 @@
 import { onboardingEn } from '../onboarding'
 export const en = {
+  'browser.navigation': "Browser navigation",
+  'browser.back': "Back",
+  'browser.forward': "Forward",
+  'browser.reload': "Reload page",
+  'browser.address': "Page address",
+  'browser.go': "Open",
+  'browser.selected': "Selected element",
+  'browser.pickHint': "Click an element to describe a change. Escape exits Design Mode.",
+  'browser.requestFailed': "Browser action failed. Try opening the page again.",
+  'browser.invalidUrl': "Enter an HTTP or HTTPS address.",
+  'browser.loadFailed': "Could not load the page.",
+  'browser.loading': "Loading…",
+  'browser.empty': "Enter your development server URL and open the page.",
+  'browser.designTitle': "Change selected element",
+  'browser.designDescription': "Send your request with the element’s HTML, computed CSS and screenshot. The selected agent receives one prompt followed by Enter.",
+  'browser.screenshot': "Screenshot of the selected element",
+  'browser.instruction': "What should change?",
+  'browser.sent': "Design request forwarded to the terminal.",
+
   'review.comment': "Review comment",
   'review.feedback': "Feedback",
   'review.oldLine': "old line {line}",
@@ -20,7 +39,7 @@ export const en = {
   'review.sent': "Review forwarded to the terminal.",
   'review.lineComment': "Comment on line {line}",
 
-  'code.switchMode': 'Switch Terminals / Code',
+  'code.switchMode': 'Switch Terminals / Code / Browser',
   'code.group': 'Editor group {n}',
   'code.split': 'Move file to other editor group',
   'code.merge': 'Merge editor groups',

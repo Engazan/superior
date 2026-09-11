@@ -2,6 +2,25 @@ import { onboardingPl } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  'browser.navigation': "Nawigacja przeglądarki",
+  'browser.back': "Wstecz",
+  'browser.forward': "Dalej",
+  'browser.reload': "Odśwież stronę",
+  'browser.address': "Adres strony",
+  'browser.go': "Otwórz",
+  'browser.selected': "Wybrany element",
+  'browser.pickHint': "Kliknij element i opisz zmianę. Escape wyłącza Design Mode.",
+  'browser.requestFailed': "Operacja przeglądarki nie powiodła się. Otwórz stronę ponownie.",
+  'browser.invalidUrl': "Podaj adres HTTP lub HTTPS.",
+  'browser.loadFailed': "Nie udało się wczytać strony.",
+  'browser.loading': "Wczytywanie…",
+  'browser.empty': "Podaj URL serwera deweloperskiego i otwórz stronę.",
+  'browser.designTitle': "Zmień wybrany element",
+  'browser.designDescription': "Wyślij prośbę wraz z HTML elementu, obliczonym CSS i zrzutem ekranu. Wybrany agent otrzyma jeden prompt zakończony Enterem.",
+  'browser.screenshot': "Zrzut ekranu wybranego elementu",
+  'browser.instruction': "Co należy zmienić?",
+  'browser.sent': "Prośbę przekazano do terminala.",
+
   'review.comment': "Komentarz do zmiany",
   'review.feedback': "Uwaga",
   'review.oldLine': "stary wiersz {line}",
@@ -22,7 +41,7 @@ export const pl: Record<MessageKey, string> = {
   'review.sent': "Uwagi przekazano do terminala.",
   'review.lineComment': "Dodaj uwagę do wiersza {line}",
 
-  'code.switchMode': 'Przełącz Terminals / Code',
+  'code.switchMode': 'Przełącz Terminals / Code / Browser',
   'code.group': 'Grupa edytora {n}',
   'code.split': 'Przenieś plik do drugiej grupy',
   'code.merge': 'Połącz grupy edytora',

@@ -1,6 +1,7 @@
 import type { FsEntry } from './types'
 
-export type WorkspaceMode = 'terminals' | 'code'
+export type WorkspaceMode = 'terminals' | 'code' | 'browser'
+export const nextWorkspaceMode = (mode: WorkspaceMode): WorkspaceMode => mode === 'terminals' ? 'code' : mode === 'code' ? 'browser' : 'terminals'
 export type EditorGroup = 0 | 1
 export interface CodeTab {
   file: FsEntry
@@ -102,7 +103,7 @@ export function restoreCodeWorkspaces(raw: string | null): Record<string, CodeWo
       if (Array.isArray(value.selected)) {
         for (const path of value.selected) if (typeof path === 'string') state = reduceCodeWorkspace(state, { type: 'select', path })
       }
-      result[id] = { ...state, mode: value.mode === 'code' ? 'code' : 'terminals', split: value.split === true,
+      result[id] = { ...state, mode: value.mode === 'browser' ? 'browser' : value.mode === 'code' ? 'code' : 'terminals', split: value.split === true,
         focusedGroup: value.split === true && value.focusedGroup === 1 ? 1 : 0,
         ratio: typeof value.ratio === 'number' && Number.isFinite(value.ratio) ? Math.max(0.2, Math.min(0.8, value.ratio)) : 0.5 }
     }
