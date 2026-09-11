@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.1] - 2026-09-11
+
+### Changed
+
+- **Terminal links open in Browser.** Cmd/Ctrl+click an HTTP/HTTPS URL in
+  terminal output to open it in the same workspace's built-in Browser.
+  Wrapped URLs are supported; ordinary clicks retain terminal selection.
+- **File tree for empty Code workspaces.** Entering Code with no open files
+  opens the right sidebar on Files. Workspaces with open files preserve the
+  sidebar state, and manually closing the panel remains possible.
+
+### Fixed
+
+- Restore executable permissions on node-pty spawn helpers during installation,
+  before tests or development runs, as well as in packaged apps. This fixes
+  macOS release tests failing with `posix_spawnp failed` after a fresh install.
+- Minify production renderer JavaScript to keep builds within the existing
+  bundle size limits as browser and review features grow.
+- Account for Windows ConPTY consuming bracketed-paste delimiters in the raw
+  Node test fixture while still verifying the complete review text and Enter.
+
 ## [0.26.0] - 2026-09-11
 
 ### Added
