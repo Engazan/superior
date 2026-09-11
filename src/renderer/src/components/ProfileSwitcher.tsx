@@ -10,24 +10,6 @@ interface Props {
   onManage: () => void
 }
 
-function ProfileGlyph(): React.JSX.Element {
-  return (
-    <svg
-      className="block h-3.5 w-3.5 shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  )
-}
-
 function Chevron(): React.JSX.Element {
   return (
     <svg
@@ -63,7 +45,7 @@ function CheckGlyph(): React.JSX.Element {
 }
 
 /**
- * The PROFILE switch that lives in the center of the title bar. Opens a dropdown
+ * The compact profile switcher on the right of the title bar. Opens a dropdown
  * to pick a profile (each profile owns its own folders) plus a "Manage profiles…"
  * entry that opens the management modal.
  */
@@ -112,17 +94,13 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         aria-label={t('profile.switch')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-8 max-w-full items-center gap-2 rounded-full border border-edge bg-panel px-3.5 text-fgdim shadow-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+        className="superior-profile-switch flex h-8 max-w-full items-center gap-2 rounded-lg border border-edge bg-bar px-2.5 text-fgdim transition hover:bg-hover hover:text-fg aria-expanded:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <ProfileGlyph />
         <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10 bg-fgmuted shadow-xs"
+          className="h-2 w-2 shrink-0 rounded-full bg-fgmuted"
           style={active?.color ? { backgroundColor: active.color } : undefined}
           aria-hidden
         />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-fgmuted max-[1100px]:hidden">
-          {t('profile.label')}
-        </span>
         <span className="truncate text-xs font-medium text-fg">{active?.name ?? '—'}</span>
         <Chevron />
       </button>
@@ -131,7 +109,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         <div
           ref={menuRef}
           role="menu"
-          className="solid-surface absolute left-1/2 top-10 z-50 min-w-52 -translate-x-1/2 overflow-hidden rounded-xl border border-edge bg-panel py-1.5 shadow-xl"
+          className="solid-surface absolute right-0 top-10 z-50 max-h-[calc(100vh-80px)] w-60 max-w-[calc(100vw-32px)] overflow-y-auto rounded-xl border border-edge bg-panel p-1.5 shadow-xl"
         >
           {profiles.map((p) => (
             <button
@@ -142,7 +120,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
                 setOpen(false)
                 onSelect(p.id)
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-hidden"
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-fg transition hover:bg-hover aria-checked:bg-hover focus-visible:bg-hover focus-visible:outline-hidden"
             >
               <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                 {p.id === activeProfileId && <CheckGlyph />}
@@ -162,7 +140,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
               setOpen(false)
               onManage()
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:outline-hidden"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:outline-hidden"
           >
             <svg
               className="block h-3.5 w-3.5 shrink-0"

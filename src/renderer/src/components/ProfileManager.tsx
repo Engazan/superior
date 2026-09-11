@@ -24,27 +24,6 @@ interface Props {
   onClose: () => void
 }
 
-function PaletteGlyph(): React.JSX.Element {
-  return (
-    <svg
-      className="h-4 w-4 text-fgmuted"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.012 17.5 2 12 2Z" />
-    </svg>
-  )
-}
-
 /**
  * The "Manage profiles" modal: add, rename, and delete profiles. Renaming
  * commits on blur or Enter; deleting a profile removes all of its folders, so it
@@ -64,6 +43,7 @@ export function ProfileManager({
   const confirm = useConfirm()
   const toast = useToast()
   const [newName, setNewName] = useState('')
+  const newNameRef = useRef<HTMLInputElement>(null)
   // Local draft of each profile's name, keyed by id, so typing stays responsive.
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   // The open color popover: which profile and where to anchor it (the swatch
@@ -110,104 +90,98 @@ export function ProfileManager({
 
   return (
     <Modal
-      title={t('profile.manageTitle')}
+      size="lg"
+      title={
+        <span className="flex items-center gap-2.5">
+          {t('profile.manageTitle')}
+          <span className="rounded-md border border-edge bg-bar px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-fgmuted">{profiles.length}</span>
+        </span>
+      }
       description={t('profile.manageDescription')}
       onClose={onClose}
       closeLabel={t('window.close')}
-    >
-      <div className="space-y-2 py-1">
-        {profiles.map((p) => (
-          <div key={p.id} className="flex min-w-0 items-center gap-2">
+      initialFocusRef={newNameRef}
+      footer={
+        <form className="w-full rounded-xl border border-edge bg-bar/60 p-3.5"
+          onSubmit={(event) => { event.preventDefault(); submitNew() }}>
+          <label className="mb-2 block text-xs font-medium text-fgdim" htmlFor="new-profile-name">{t('profile.add')}</label>
+          <div className="flex min-w-0 items-center gap-2">
             <Input
+              ref={newNameRef}
+              id="new-profile-name"
               className="min-w-0 flex-1"
-              value={draftFor(p)}
-              onChange={(e) => setDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
-              onBlur={() => commit(p)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  e.currentTarget.blur()
-                }
-              }}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t('profile.addPlaceholder')}
               autoComplete="off"
-              aria-label={t('profile.name')}
             />
-            {p.id === activeProfileId && (
-              <span
-                className="shrink-0 rounded-md bg-accentBg px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent ring-1 ring-inset ring-accentBorder"
-                style={
-                  p.color
-                    ? {
-                        color: p.color,
-                        backgroundColor: `color-mix(in srgb, ${p.color} 12%, transparent)`,
-                        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${p.color} 45%, transparent)`
-                      }
-                    : undefined
-                }
-              >
-                {t('profile.active')}
-              </span>
-            )}
-
-            {/* Color swatch — click to open the palette popover (next to delete). */}
-            <IconButton
-              label={t('profile.color')}
+            <Button type="submit" className="shrink-0 whitespace-nowrap" disabled={!newName.trim()}>
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="M8 3v10M3 8h10" /></svg>
+              {t('profile.add')}
+            </Button>
+          </div>
+        </form>
+      }
+    >
+      <ul className="space-y-2 py-1">
+        {profiles.map((p) => (
+          <li key={p.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-edge bg-bar/30 p-3">
+            <button
+              type="button"
+              aria-label={`${t('profile.color')}: ${p.name}`}
+              title={t('profile.color')}
               aria-haspopup="menu"
               aria-expanded={colorPicker?.id === p.id}
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect()
-                setColorPicker((cur) =>
-                  cur?.id === p.id ? null : { id: p.id, x: r.right, y: r.bottom + 6 }
-                )
+                setColorPicker((cur) => cur?.id === p.id ? null : {
+                  id: p.id,
+                  x: Math.min(window.innerWidth - 12, r.left + 176),
+                  y: Math.max(12, Math.min(window.innerHeight - 240, r.bottom + 8))
+                })
               }}
-              className="border border-edge"
+              className="group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-edge bg-hover text-sm font-semibold text-fg transition hover:border-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+              style={p.color ? {
+                backgroundColor: `color-mix(in srgb, ${p.color} 16%, var(--c-panel))`,
+                borderColor: `color-mix(in srgb, ${p.color} 35%, var(--c-edge))`
+              } : undefined}
             >
-              {p.color ? (
-                <span
-                  className="h-4 w-4 rounded-full ring-1 ring-inset ring-black/20"
-                  style={{ backgroundColor: p.color }}
-                />
-              ) : (
-                <PaletteGlyph />
-              )}
-            </IconButton>
-
+              <span aria-hidden>{Array.from(p.name.trim())[0]?.toLocaleUpperCase() ?? '?'}</span>
+              <span aria-hidden className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-panel bg-fgmuted" style={p.color ? { backgroundColor: p.color } : undefined} />
+            </button>
+            <div className="min-w-0 flex-1">
+              <input
+                className="h-8 w-full min-w-0 rounded-md border border-transparent bg-transparent px-2 text-sm font-medium text-fg transition hover:border-edge focus:border-edge focus:bg-panel focus:outline-hidden focus:ring-2 focus:ring-accent/30"
+                value={draftFor(p)}
+                onChange={(e) => setDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                onBlur={() => commit(p)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    e.currentTarget.blur()
+                  }
+                }}
+                autoComplete="off"
+                aria-label={`${t('profile.name')}: ${p.name}`}
+              />
+            </div>
+            {p.id === activeProfileId && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-accentBg px-2 py-1 text-[10px] font-medium text-accent">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m2.5 6 2 2 5-5" /></svg>
+                {t('profile.active')}
+              </span>
+            )}
             <IconButton
-              label={t('profile.delete')}
+              label={`${t('profile.delete')}: ${p.name}`}
               variant="danger-ghost"
               disabled={profiles.length <= 1}
               onClick={() => void remove(p)}
             >
               <TrashIcon size={15} />
             </IconButton>
-          </div>
+          </li>
         ))}
-      </div>
-
-      <div className="mt-4 flex min-w-0 items-center gap-2 border-t border-edge pt-4">
-        <Input
-          className="min-w-0 flex-1"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              submitNew()
-            }
-          }}
-          placeholder={t('profile.addPlaceholder')}
-          autoComplete="off"
-          aria-label={t('profile.add')}
-        />
-        <Button
-          variant="primary"
-          className="shrink-0 whitespace-nowrap"
-          disabled={!newName.trim()}
-          onClick={submitNew}
-        >
-          {t('profile.add')}
-        </Button>
-      </div>
+      </ul>
 
       {/* Color palette popover, anchored to the clicked swatch (viewport coords
           so the scrolling/clipping list never cuts it off). */}

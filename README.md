@@ -89,7 +89,7 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
 
 ### Code and terminals
 
-Use **Terminals | Code** in the top-right title bar, or **Cmd/Ctrl+Shift+E**, to
+Use **Terminals | Code** in the center of the title bar, or **Cmd/Ctrl+Shift+E**, to
 switch between the terminal layout and the file editor. The shortcut is
 customizable in Settings → Keyboard.
 
