@@ -26,22 +26,9 @@
 // keychain, electron-builder's later sign step re-signs over this ad-hoc
 // signature — which is exactly what we want.
 const { execFileSync } = require('node:child_process')
-const fs = require('node:fs')
 const path = require('node:path')
 
-/** Recursively chmod +x every node-pty `spawn-helper` under a directory. */
-function fixSpawnHelperPerms(root) {
-  if (!fs.existsSync(root)) return
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    const full = path.join(root, entry.name)
-    if (entry.isDirectory()) {
-      fixSpawnHelperPerms(full)
-    } else if (entry.name === 'spawn-helper') {
-      fs.chmodSync(full, 0o755)
-      console.log(`after-pack: chmod +x ${full}`)
-    }
-  }
-}
+const { fixSpawnHelperPerms } = require('./fix-pty-helpers.cjs')
 
 exports.default = async function afterPack(context) {
   // node-pty lives in the unpacked asar dir (asarUnpack), present on every OS.

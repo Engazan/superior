@@ -40,5 +40,9 @@ it('delivers the complete review to a real PTY through the daemon transport', as
   await vi.waitFor(() => expect(existsSync(ready)).toBe(true), { timeout: 15_000 })
   const prompt = 'Review comment 1\nKeep the original behavior.\n\nReview comment 2\nPridaj test.'
   await sendReview({ sessionId: id, workspaceId: 'review-workspace', folderPath: host.directory, prompt })
-  await vi.waitFor(() => expect(readFileSync(received, 'utf8')).toBe(`\x1b[200~${prompt}\x1b[201~\r`), { timeout: 15_000 })
+  // ConPTY translates VT input into console input records for this Node fixture,
+  // consuming the bracketed-paste delimiters. POSIX raw PTYs preserve them.
+  // The service unit test separately checks the exact outgoing batch on every OS.
+  const expected = process.platform === 'win32' ? `${prompt}\r` : `\x1b[200~${prompt}\x1b[201~\r`
+  await vi.waitFor(() => expect(readFileSync(received, 'utf8')).toBe(expected), { timeout: 15_000 })
 }, 40_000)
