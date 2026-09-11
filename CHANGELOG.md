@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-09-11
+
+### Added
+
+- **Diff review comments.** Add, edit and remove comments beside diff lines,
+  preview the combined request and send it to a running agent in the current
+  workspace. Comments retain their original file, line and nearby code, persist
+  across app restarts and remain available after sending or subsequent edits.
+- **Browser workspace.** Preview a running development server inside the app
+  with an address bar, Back, Forward and Reload. Each workspace remembers its
+  last URL. Pages run in an isolated, sandboxed Chromium view, and browser
+  views hide while application dialogs are open.
+- **Design Mode.** Select a page element without activating it, inspect its
+  screenshot crop, HTML and computed CSS, then send a change request and local
+  PNG path to a running agent in the same workspace. Selection and draft text
+  remain available when switching views during the app session.
+
+### Changed
+
+- Renamed the terminal workspace segment to **CLI**. The title-bar switch now
+  offers **CLI · Code · Browser**, and the workspace shortcut cycles through
+  all three views. Browser pages support Cmd/Ctrl+L for the address bar and
+  application navigation shortcuts.
+
 ## [0.25.0] - 2026-09-11
 
 ### Added
