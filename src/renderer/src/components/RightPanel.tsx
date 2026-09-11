@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DiffReview, ReviewCommentEditor } from './DiffReview'
+import { useDiffReview } from '../hooks/useDiffReview'
+import { reviewScope, reviewTargets, sameReviewAnchor, type ReviewAnchor, type ReviewNote } from '../diffReview'
 import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { HistoryView } from './HistoryView'
@@ -6,7 +9,7 @@ import { TasksView } from './TasksView'
 import { BranchIcon, FolderIcon, HistoryIcon, TasksIcon } from './ui'
 import { useI18n } from '../i18n'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
-import type { AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
+import type { AgentSession, AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
 
 type Tab = 'files' | 'changes' | 'history' | 'tasks'
 
@@ -14,6 +17,9 @@ interface Props {
   /** Whether the panel is open. Kept mounted while closed (for the slide
       animation), so polling is gated on this to stay idle when hidden. */
   active: boolean
+  workspaceId: string | null
+  sessions: AgentSession[]
+  onReviewSent: (session: AgentSession) => void
   /** Folder backing the active workspace, or null when none is selected. */
   folderPath: string | null
   /** True for SSH-backed workspaces; their filesystem/git/task panels are local-only in v1. */
@@ -40,6 +46,9 @@ interface Props {
  */
 export function RightPanel({
   active,
+  workspaceId,
+  sessions,
+  onReviewSent,
   folderPath,
   isRemoteWorkspace,
   tasksFolder,
@@ -51,6 +60,10 @@ export function RightPanel({
   width
 }: Props): React.JSX.Element {
   const { t } = useI18n()
+  const scope = reviewScope(workspaceId, folderPath)
+  const review = useDiffReview(scope)
+  const [editor, setEditor] = useState<{ scope: string; anchor: ReviewAnchor; note?: ReviewNote } | null>(null)
+  const openComment = (anchor: ReviewAnchor): void => setEditor({ scope, anchor, note: review.notes.find((note) => sameReviewAnchor(note, anchor)) })
   const [tab, setTab] = useState<Tab>('files')
 
   // Restore the last-open tab once; after that every switch persists, so users
@@ -69,6 +82,7 @@ export function RightPanel({
     void window.api.setUiState({ rightPanelTab: next })
   }, [])
   const [diff, setDiff] = useState<GitDiff | null>(null)
+  const [diffFolder, setDiffFolder] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   // Monotonic token so a slow fetch can't overwrite a newer one (or a stale folder).
   const reqRef = useRef(0)
@@ -88,6 +102,7 @@ export function RightPanel({
       // Keep the previous object when nothing changed: React then bails out of
       // the update entirely, so an idle 3s poll stops re-rendering every hunk
       // row of a large diff (thousands of elements) for no visual change.
+      setDiffFolder(folderPath)
       setDiff((prev) => (prev && JSON.stringify(prev) === JSON.stringify(result) ? prev : result))
       setLoading(false)
     },
@@ -103,7 +118,12 @@ export function RightPanel({
     const id = window.setInterval(() => {
       if (!document.hidden) void fetchDiff(false)
     }, 3000)
-    return () => window.clearInterval(id)
+    return () => {
+      window.clearInterval(id)
+      // Invalidate asynchronous responses; this ref is a counter, not a DOM node.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      ++reqRef.current
+    }
   }, [folderPath, fetchDiff, active])
 
   // Bumped on every explicit refresh (incl. after commit/pull) so the history
@@ -189,7 +209,18 @@ export function RightPanel({
           {t('remote.localOnlyPanel')}
         </div>
       ) : tab === 'changes' ? (
-        <ChangesView folderPath={folderPath} diff={diff} loading={loading} onRefresh={refresh} />
+        <>
+          {workspaceId && folderPath && <DiffReview key={`review:${scope}`} notes={review.notes}
+            onEdit={(note) => setEditor({ scope, anchor: note, note })}
+            onRemove={(id) => review.update(review.notes.filter((note) => note.id !== id))}
+            targets={reviewTargets(sessions, workspaceId)} workspaceId={workspaceId} folderPath={folderPath}
+            onSent={onReviewSent} storageFailed={review.storageFailed} />}
+          <ChangesView key={`changes:${scope}`} folderPath={folderPath} diff={diffFolder === folderPath ? diff : null}
+            loading={loading} onRefresh={refresh} reviewNotes={review.notes} onComment={openComment} />
+          {active && editor?.scope === scope && <ReviewCommentEditor key={JSON.stringify(editor.anchor)}
+            anchor={editor.anchor} note={editor.note} onClose={() => setEditor(null)}
+            onSave={(note) => review.update([...review.notes.filter((item) => item.id !== note.id), note])} />}
+        </>
       ) : tab === 'history' ? (
         <HistoryView folderPath={folderPath} refreshToken={refreshToken} />
       ) : tab === 'tasks' ? (

@@ -2,6 +2,26 @@ import { onboardingSk } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  'review.comment': "Komentár ku zmene",
+  'review.feedback': "Pripomienka",
+  'review.oldLine': "pôvodný riadok {line}",
+  'review.newLine': "nový riadok {line}",
+  'review.title': "Pripomienky ku zmenám",
+  'review.count': "Pripomienky ({count})",
+  'review.send': "Odoslať agentovi",
+  'review.snapshot': "Pripomienky si uchovávajú pôvodný úryvok diffu aj po zmene súborov.",
+  'review.storageFailed': "Pripomienky sa nepodarilo uložiť na disk. Nezatváraj aplikáciu, aby sa zachovali.",
+  'review.edit': "Upraviť pripomienku",
+  'review.remove': "Odstrániť",
+  'review.hint': "Klikni na + pri riadku diffu a pridaj pripomienku.",
+  'review.sendHint': "Odošle všetky pripomienky ako jeden prompt a stlačí Enter. Vyber agenta pripraveného na vstup. Pripomienky zostanú dostupné na ďalšiu kontrolu.",
+  'review.target': "Agent v tomto workspace",
+  'review.select': "Vyber agenta…",
+  'review.noAgents': "Na odoslanie pripomienok spusti agenta v tomto workspace.",
+  'review.failed': "Odoslanie sa nepodarilo. Pripomienky zostali uložené. Pred opakovaním skontroluj terminál.",
+  'review.sent': "Pripomienky boli odovzdané terminálu.",
+  'review.lineComment': "Pridať pripomienku k riadku {line}",
+
   'code.switchMode': 'Prepnúť Terminals / Code',
   'code.group': 'Skupina editora {n}',
   'code.split': 'Presunúť súbor do druhej skupiny',

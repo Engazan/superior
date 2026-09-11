@@ -2,6 +2,26 @@ import { onboardingPl } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  'review.comment': "Komentarz do zmiany",
+  'review.feedback': "Uwaga",
+  'review.oldLine': "stary wiersz {line}",
+  'review.newLine': "nowy wiersz {line}",
+  'review.title': "Uwagi do zmian",
+  'review.count': "Uwagi ({count})",
+  'review.send': "Wyślij do agenta",
+  'review.snapshot': "Uwagi zachowują oryginalny fragment diffu także po zmianie plików.",
+  'review.storageFailed': "Nie udało się zapisać uwag na dysku. Nie zamykaj aplikacji, aby je zachować.",
+  'review.edit': "Edytuj uwagę",
+  'review.remove': "Usuń",
+  'review.hint': "Kliknij + obok wiersza diffu, aby dodać uwagę.",
+  'review.sendHint': "Wysyła wszystkie uwagi jako jeden prompt i naciska Enter. Wybierz agenta gotowego na dane wejściowe. Uwagi pozostają dostępne do ponownego przeglądu.",
+  'review.target': "Agent w tym obszarze roboczym",
+  'review.select': "Wybierz agenta…",
+  'review.noAgents': "Uruchom agenta w tym obszarze roboczym, aby wysłać uwagi.",
+  'review.failed': "Nie udało się wysłać uwag. Zachowano je. Sprawdź terminal przed ponowieniem.",
+  'review.sent': "Uwagi przekazano do terminala.",
+  'review.lineComment': "Dodaj uwagę do wiersza {line}",
+
   'code.switchMode': 'Przełącz Terminals / Code',
   'code.group': 'Grupa edytora {n}',
   'code.split': 'Przenieś plik do drugiej grupy',

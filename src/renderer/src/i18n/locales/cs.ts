@@ -2,6 +2,26 @@ import { onboardingCs } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  'review.comment': "Komentář ke změně",
+  'review.feedback': "Připomínka",
+  'review.oldLine': "původní řádek {line}",
+  'review.newLine': "nový řádek {line}",
+  'review.title': "Připomínky ke změnám",
+  'review.count': "Připomínky ({count})",
+  'review.send': "Odeslat agentovi",
+  'review.snapshot': "Připomínky uchovávají původní úryvek diffu i po změně souborů.",
+  'review.storageFailed': "Připomínky se nepodařilo uložit na disk. Nezavírej aplikaci, aby zůstaly zachovány.",
+  'review.edit': "Upravit připomínku",
+  'review.remove': "Odstranit",
+  'review.hint': "Klikni na + u řádku diffu a přidej připomínku.",
+  'review.sendHint': "Odešle všechny připomínky jako jeden prompt a stiskne Enter. Vyber agenta připraveného na vstup. Připomínky zůstanou dostupné pro další kontrolu.",
+  'review.target': "Agent v tomto workspace",
+  'review.select': "Vyber agenta…",
+  'review.noAgents': "Pro odeslání připomínek spusť agenta v tomto workspace.",
+  'review.failed': "Odeslání se nezdařilo. Připomínky zůstaly zachovány. Před opakováním zkontroluj terminál.",
+  'review.sent': "Připomínky byly předány terminálu.",
+  'review.lineComment': "Přidat připomínku k řádku {line}",
+
   'code.switchMode': 'Přepnout Terminals / Code',
   'code.group': 'Skupina editoru {n}',
   'code.split': 'Přesunout soubor do druhé skupiny',

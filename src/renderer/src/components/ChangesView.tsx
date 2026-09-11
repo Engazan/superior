@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
+import { createReviewAnchor, sameReviewAnchor, type ReviewAnchor, type ReviewNote } from '../diffReview'
 import { DiffFileView } from './DiffFileView'
 import { BranchIcon, Button, IconButton, RefreshIcon, useToast } from './ui'
 import type { GitDiff, GitDiffFile } from '../types'
@@ -13,6 +14,8 @@ interface Props {
   loading: boolean
   /** Trigger an immediate refetch. */
   onRefresh: () => void
+  reviewNotes: ReviewNote[]
+  onComment: (anchor: ReviewAnchor) => void
 }
 
 function PlusMark(): React.JSX.Element {
@@ -65,7 +68,7 @@ function SectionHead({
 const AUTO_COLLAPSE_LINES = 400
 const AUTO_COLLAPSE_FILES = 20
 
-export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): React.JSX.Element {
+export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes, onComment }: Props): React.JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const [message, setMessage] = useState('')
@@ -254,6 +257,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): Re
                 open={isOpen(file)}
                 onToggleOpen={() => toggleOpen(file)}
                 action={unstageAction(file)}
+                onComment={(hunk, index) => onComment(createReviewAnchor(file, hunk, index, 'staged', diff.branch ?? null))}
+                hasComment={(hunk, index) => reviewNotes.some((note) => sameReviewAnchor(note, createReviewAnchor(file, hunk, index, 'staged', diff.branch ?? null)))}
               />
             ))}
 
@@ -270,6 +275,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh }: Props): Re
                 open={isOpen(file)}
                 onToggleOpen={() => toggleOpen(file)}
                 action={stageAction(file)}
+                onComment={(hunk, index) => onComment(createReviewAnchor(file, hunk, index, 'unstaged', diff.branch ?? null))}
+                hasComment={(hunk, index) => reviewNotes.some((note) => sameReviewAnchor(note, createReviewAnchor(file, hunk, index, 'unstaged', diff.branch ?? null)))}
               />
             ))}
           </>

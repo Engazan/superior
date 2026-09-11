@@ -933,6 +933,14 @@ export default function App(): React.JSX.Element {
               {rightPanelLoaded && (
                 <Suspense fallback={<DeferredPanel />}>
                   <RightPanel
+                    workspaceId={ws.activeWorkspaceId}
+                    sessions={ws.sessions}
+                    onReviewSent={(session) => {
+                      if (session.workspaceId !== ws.activeWorkspaceId) return
+                      actCode({ type: 'mode', mode: 'terminals' })
+                      ws.selectTab(session.workspaceId, session.tabId)
+                      ws.setActiveSessionId(session.id)
+                    }}
                     width={rightPanelWidth}
                     active={rightSidebarOpen}
                     folderPath={ws.effectiveDir}

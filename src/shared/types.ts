@@ -501,6 +501,13 @@ export type WorktreeErrorCode = (typeof WORKTREE_ERROR)[keyof typeof WORKTREE_ER
 
 export type AgentStatus = 'running' | 'exited' | 'error'
 
+export interface SendReviewArgs {
+  sessionId: string
+  workspaceId: string
+  folderPath: string
+  prompt: string
+}
+
 export interface AgentSession {
   /** crypto.randomUUID() */
   id: string
@@ -1047,6 +1054,7 @@ export const IPC = {
   WINDOW_SET_VIBRANCY: 'window:set-vibrancy',
   AGENT_START: 'agent:start',
   AGENT_INPUT: 'agent:input',
+  AGENT_REVIEW: 'agent:review',
   AGENT_RESIZE: 'agent:resize',
   AGENT_KILL: 'agent:kill',
   AGENT_DATA: 'agent:data',

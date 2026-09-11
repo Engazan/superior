@@ -373,6 +373,13 @@ export const daemonClient = {
   updateMeta(id: string, meta: Partial<DaemonSessionMeta>): void {
     post({ t: 'update', id, meta })
   },
+  /** Batch input propagates connection/write failures to its caller. */
+  async inputChecked(id: string, data: string): Promise<void> {
+    const s = await ensureDaemon()
+    await new Promise<void>((resolve, reject) => {
+      s.write(encodeFrame({ t: 'input', id, data }), (error) => error ? reject(error) : resolve())
+    })
+  },
   input(id: string, data: string): void {
     post({ t: 'input', id, data })
   },

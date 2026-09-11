@@ -1,3 +1,4 @@
+import type { SendReviewArgs } from '@shared/types'
 import { contextBridge, ipcRenderer as electronIpcRenderer } from 'electron'
 import type { IpcInvokeArgs, IpcInvokeChannel, IpcInvokeResult } from '@shared/ipc-contract'
 import {
@@ -579,6 +580,10 @@ const api = {
 
   setTabs(workspaceId: string, tabs: WorkspaceTabs): Promise<TabsState> {
     return ipcRenderer.invoke(IPC.TABS_SET, { workspaceId, tabs })
+  },
+
+  sendReview(args: SendReviewArgs): Promise<void> {
+    return ipcRenderer.invoke(IPC.AGENT_REVIEW, args)
   },
 
   sendInput(id: string, data: string): void {

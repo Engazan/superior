@@ -1,3 +1,4 @@
+import { sendReview } from '../services/diff-review.service'
 import { ipcMain } from 'electron'
 import {
   IPC,
@@ -20,6 +21,7 @@ import { handle } from './handle'
 import { isStartAgentArgs, validId } from './validation'
 
 export function registerAgentIpc(): void {
+  handle(IPC.AGENT_REVIEW, sendReview)
   handle(IPC.USAGE_PROFILES, () => listUsageProfiles())
   handle(IPC.USAGE_RESET, consumeUsageReset)
   handle(IPC.USAGE_ACCOUNTS, (ids: string[], force: boolean) => {

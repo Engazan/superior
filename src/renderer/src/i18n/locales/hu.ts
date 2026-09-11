@@ -2,6 +2,26 @@ import { onboardingHu } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  'review.comment': "Megjegyzés a változáshoz",
+  'review.feedback': "Visszajelzés",
+  'review.oldLine': "régi sor: {line}",
+  'review.newLine': "új sor: {line}",
+  'review.title': "Ellenőrzési megjegyzések",
+  'review.count': "Megjegyzések ({count})",
+  'review.send': "Küldés az ügynöknek",
+  'review.snapshot': "A megjegyzések a fájlok módosítása után is megőrzik az eredeti diff részletét.",
+  'review.storageFailed': "A megjegyzéseket nem sikerült lemezre menteni. Megőrzésükhöz hagyd nyitva az alkalmazást.",
+  'review.edit': "Megjegyzés szerkesztése",
+  'review.remove': "Eltávolítás",
+  'review.hint': "Megjegyzés hozzáadásához kattints a diff sora melletti + jelre.",
+  'review.sendHint': "Az összes megjegyzést egy promptként küldi el, majd Entert nyom. Válassz bevitelre kész ügynököt. A megjegyzések elérhetők maradnak az újabb ellenőrzéshez.",
+  'review.target': "Ügynök ebben a munkaterületben",
+  'review.select': "Válassz ügynököt…",
+  'review.noAgents': "A megjegyzések elküldéséhez indíts ügynököt ebben a munkaterületben.",
+  'review.failed': "A küldés sikertelen. A megjegyzések megmaradtak. Újrapróbálás előtt ellenőrizd a terminált.",
+  'review.sent': "A megjegyzések továbbítva a terminálnak.",
+  'review.lineComment': "Megjegyzés a(z) {line}. sorhoz",
+
   'code.switchMode': 'Terminals / Code váltása',
   'code.group': 'Szerkesztőcsoport {n}',
   'code.split': 'Fájl áthelyezése a másik csoportba',

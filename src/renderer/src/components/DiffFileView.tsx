@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
-import type { GitDiffFile, GitFileStatus } from '../types'
+import type { GitDiffFile, GitFileStatus, GitDiffHunk } from '../types'
 
 // Short status badge — letter + colour, mirroring common Git UIs.
 const STATUS_META: Record<GitFileStatus, { letter: string; className: string }> = {
@@ -21,6 +21,8 @@ interface Props {
   onToggleOpen?: () => void
   /** hover action rendered at the row's right edge (e.g. stage/unstage) */
   action?: ReactNode
+  onComment?: (hunk: GitDiffHunk, lineIndex: number) => void
+  hasComment?: (hunk: GitDiffHunk, lineIndex: number) => boolean
 }
 
 /**
@@ -33,7 +35,9 @@ export function DiffFileView({
   defaultOpen = true,
   open: openProp,
   onToggleOpen,
-  action
+  action,
+  onComment,
+  hasComment
 }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [openState, setOpenState] = useState(defaultOpen)
@@ -99,7 +103,13 @@ export function DiffFileView({
                   return (
                     // Two gutters (old | new) so deleted-line numbers don't
                     // interleave with new-file numbers in a single column.
-                    <div key={li} className={`flex ${bg}`}>
+                    <div key={li} className={`group/line flex ${bg}`}>
+                      {onComment && <button
+                        className={`w-6 shrink-0 text-accent hover:bg-hover focus-visible:outline-accent ${hasComment?.(hunk, li) ? '' : 'opacity-40 hover:opacity-100 focus:opacity-100 group-hover/line:opacity-100'}`}
+                        aria-label={t('review.lineComment', { line: line.newLine ?? line.oldLine ?? '' })}
+                        title={t('review.comment')}
+                        onClick={() => onComment(hunk, li)}
+                      >{hasComment?.(hunk, li) ? '●' : '+'}</button>}
                       <span className="w-8 shrink-0 select-none px-1 text-right text-fgmuted tabular-nums">
                         {line.oldLine ?? ''}
                       </span>

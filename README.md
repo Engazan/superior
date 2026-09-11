@@ -122,6 +122,21 @@ An interactive CLI must emit a supported terminal alert to notify between turns;
 if its own notifications are disabled or use an unsupported channel, Superior
 does not guess completion from silence. No agent configuration files are changed.
 
+### Review comments → agent
+
+In **Changes**, click **+** beside a diff line to add a review comment. Save with
+**Ctrl/Cmd+Enter** or **Save**. The comments list lets you edit or remove notes,
+then **Send to agent** shows the combined prompt and a picker of running command
+sessions in the current workspace. Sending pastes the batch and presses Enter;
+choose an agent ready for input.
+
+Notes are saved locally per workspace and retain their original file, old/new
+line, branch, staged/unstaged side, and nearby code. They survive panel switches,
+app restarts, staging, and subsequent file edits. The original excerpt remains
+available even when its line is no longer in the diff. Notes stay in the list
+after sending so you can check the agent's revision and remove addressed items.
+A transport error keeps the notes; check the target terminal before retrying.
+
 ## Account usage footer
 
 Codex profiles also display available reset tickets and their expiry dates when

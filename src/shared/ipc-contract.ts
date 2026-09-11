@@ -1,5 +1,6 @@
 import { IPC } from './types'
 import type {
+  SendReviewArgs,
   AgentTask,
   AgentSession,
   AgentUsage,
@@ -212,6 +213,7 @@ export interface IpcInvokeMap {
 
   [IPC.WINDOW_IS_MAXIMIZED]: Invocation<[], boolean>
   [IPC.AGENT_START]: Invocation<[args: StartAgentArgs], StartAgentResult>
+  [IPC.AGENT_REVIEW]: Invocation<[SendReviewArgs], void>
   [IPC.AGENT_RESTORE]: Invocation<[], AgentSession[]>
   [IPC.AGENT_UPDATE_META]: Invocation<[args: { id: string; nickname: string }], void>
   [IPC.AGENT_KILL]: Invocation<[id: string], void>
