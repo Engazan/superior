@@ -87,6 +87,24 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
   layouts migrate with their cell sizes intact. The existing 12-pane limit,
   maximize/restore and broadcast features remain available.
 
+### Code and terminals
+
+Use **Terminals | Code** in the top-right title bar, or **Cmd/Ctrl+Shift+E**, to
+switch between the terminal layout and the file editor. The shortcut is
+customizable in Settings → Keyboard.
+
+Opening a file from the project tree, file search, or a terminal link selects
+**Code**. Each file gets a tab; reopening the same file selects its existing tab.
+Use the split button or drag a tab into the right half of the editor to view two
+files side by side. Drag the divider to resize, or use its arrow keys while
+focused. The merge button brings the groups back together.
+
+Terminals continue running while Code is visible. Open editors retain unsaved
+changes, undo history, cursor and scroll when switching files, projects, views,
+or settings. **Cmd/Ctrl+S** saves the focused editor; **Cmd/Ctrl+W** closes its tab
+and asks before discarding unsaved edits. Each workspace remembers its open file
+paths, editor groups, divider width and selected view across app restarts.
+
 ### Terminal activity and notifications
 
 The activity pulse means the terminal is producing output; a pause does not mean

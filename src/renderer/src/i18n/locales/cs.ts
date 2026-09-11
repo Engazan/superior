@@ -2,6 +2,13 @@ import { onboardingCs } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  'code.switchMode': 'Přepnout Terminals / Code',
+  'code.group': 'Skupina editoru {n}',
+  'code.split': 'Přesunout soubor do druhé skupiny',
+  'code.merge': 'Sloučit skupiny editoru',
+  'code.resize': 'Změnit šířku skupin editoru',
+  'code.empty': 'Otevři soubor ze stromu projektu nebo ho vyhledej dvojitým Shiftem.',
+  'code.openFiles': 'Otevřít soubor…',
   ...onboardingCs,
   'footer.resetNotice': 'Usage limity se obnovily',
   'pane.split': 'Rozdělit terminál',

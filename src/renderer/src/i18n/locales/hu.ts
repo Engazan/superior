@@ -2,6 +2,13 @@ import { onboardingHu } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  'code.switchMode': 'Terminals / Code váltása',
+  'code.group': 'Szerkesztőcsoport {n}',
+  'code.split': 'Fájl áthelyezése a másik csoportba',
+  'code.merge': 'Szerkesztőcsoportok egyesítése',
+  'code.resize': 'Szerkesztőcsoportok átméretezése',
+  'code.empty': 'Nyiss meg egy fájlt a projektfából, vagy keress a Shift kétszeri megnyomásával.',
+  'code.openFiles': 'Fájl megnyitása…',
   ...onboardingHu,
   'footer.resetNotice': 'A használati korlátok visszaálltak',
   'pane.split': 'Terminál felosztása',

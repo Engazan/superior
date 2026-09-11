@@ -19,6 +19,7 @@ export type ShortcutAction =
   | 'closeFocusedCell'
   | 'closePreview'
   | 'saveFile'
+  | 'toggleWorkspaceMode'
   | 'prevTerminal'
   | 'nextTerminal'
   | 'openFolder'

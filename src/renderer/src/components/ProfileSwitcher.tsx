@@ -105,14 +105,14 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
   }, [open])
 
   return (
-    <div ref={ref} className="app-no-drag relative">
+    <div ref={ref} className="app-no-drag relative min-w-0 max-w-64">
       <button
         onClick={() => setOpen((o) => !o)}
         title={t('profile.switch')}
         aria-label={t('profile.switch')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-8 max-w-64 items-center gap-2 rounded-full border border-edge bg-panel px-3.5 text-fgdim shadow-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex h-8 max-w-full items-center gap-2 rounded-full border border-edge bg-panel px-3.5 text-fgdim shadow-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ProfileGlyph />
         <span
@@ -120,7 +120,7 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
           style={active?.color ? { backgroundColor: active.color } : undefined}
           aria-hidden
         />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-fgmuted max-[1100px]:hidden">
           {t('profile.label')}
         </span>
         <span className="truncate text-xs font-medium text-fg">{active?.name ?? '—'}</span>

@@ -1,5 +1,12 @@
 import { onboardingEn } from '../onboarding'
 export const en = {
+  'code.switchMode': 'Switch Terminals / Code',
+  'code.group': 'Editor group {n}',
+  'code.split': 'Move file to other editor group',
+  'code.merge': 'Merge editor groups',
+  'code.resize': 'Resize editor groups',
+  'code.empty': 'Open a file from the project tree or use double Shift to search.',
+  'code.openFiles': 'Open file…',
   ...onboardingEn,
   'footer.resetNotice': 'Usage limits reset',
   'pane.split': 'Split terminal',

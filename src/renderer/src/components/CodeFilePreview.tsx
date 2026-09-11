@@ -37,6 +37,8 @@ interface Props {
   searchable?: boolean
   /** Allow editing the document. When false (default) the view is read-only. */
   editable?: boolean
+  /** Only the focused editor may restore focus or reveal search results. */
+  active?: boolean
   /** Called with the full document text on every edit (only while `editable`). */
   onChange?: (value: string) => void
 }
@@ -134,10 +136,12 @@ export function CodeFilePreview({
   compact,
   searchable = true,
   editable,
+  active = true,
   onChange
 }: Props): React.JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
+  const lastReveal = useRef<{ view: EditorView; line: number; requestId?: number } | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
@@ -215,11 +219,15 @@ export function CodeFilePreview({
 
   useEffect(() => {
     const view = viewRef.current
-    if (!view || !initialLine) return
-    const line = view.state.doc.line(Math.min(initialLine, view.state.doc.lines))
-    view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true })
+    if (!view || !active || (!editable && !initialLine)) return
+    if (initialLine && (lastReveal.current?.view !== view || lastReveal.current.line !== initialLine || lastReveal.current.requestId !== revealRequestId)) {
+      const line = view.state.doc.line(Math.max(1, Math.min(initialLine, view.state.doc.lines)))
+      view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true })
+      lastReveal.current = { view, line: initialLine, requestId: revealRequestId }
+    }
     view.focus()
-  }, [content, initialLine, revealRequestId])
+    view.requestMeasure()
+  }, [active, content, language, initialLine, revealRequestId, editable])
 
   return <div ref={hostRef} className="h-full overflow-hidden" />
 }

@@ -22,7 +22,7 @@ import { useGitStatus } from './hooks/useGitStatus'
 import { useWorkspaceGitStats } from './hooks/useWorkspaceGitStats'
 import { usePresets } from './hooks/usePresets'
 import { useLayoutPresets } from './hooks/useLayoutPresets'
-import { usePreviewPane } from './hooks/usePreviewPane'
+import { useCodeWorkspaces } from './hooks/useCodeWorkspaces'
 import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 import { useTaskQueue } from './hooks/useTaskQueue'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
@@ -47,8 +47,8 @@ const SettingsView = lazy(() =>
 const RightPanel = lazy(() =>
   import('./components/RightPanel').then(({ RightPanel }) => ({ default: RightPanel }))
 )
-const FilePreviewPanel = lazy(() =>
-  import('./components/FilePreviewPanel').then(({ FilePreviewPanel }) => ({ default: FilePreviewPanel }))
+const CodeWorkspace = lazy(() =>
+  import('./components/CodeWorkspace').then(({ CodeWorkspace }) => ({ default: CodeWorkspace }))
 )
 const CommandPalette = lazy(() =>
   import('./components/CommandPalette').then(({ CommandPalette }) => ({ default: CommandPalette }))
@@ -135,45 +135,43 @@ export default function App(): React.JSX.Element {
   const presetsApi = usePresets()
   const { presets } = presetsApi
   const layoutPresets = useLayoutPresets()
-  const preview = usePreviewPane()
-  const { setPreviewFile } = preview
-  const currentPreviewPath = preview.previewFile?.path
-  const confirm = useConfirm()
-
-  // Unsaved-edit guard for the file preview: switching to another file or
-  // closing its tab while the editor is dirty asks before discarding.
-  const previewDirtyRef = useRef(false)
-  const onPreviewDirtyChange = useCallback((dirty: boolean) => {
-    previewDirtyRef.current = dirty
-  }, [])
-  const setPreviewFileGuarded = useCallback(
-    async (file: FsEntry | null, line?: number): Promise<boolean> => {
-      if (file && file.path === currentPreviewPath) {
-        setPreviewFile(file, line)
-        return true
-      }
-      if (previewDirtyRef.current) {
-        const ok = await confirm({
-          title: t('preview.unsavedTitle'),
-          message: t('preview.unsavedConfirm'),
-          confirmLabel: t('preview.discard'),
-          tone: 'danger'
-        })
-        if (!ok) return false
-        previewDirtyRef.current = false
-      }
-      setPreviewFile(file, line)
-      return true
-    },
-    [confirm, currentPreviewPath, setPreviewFile, t]
-  )
-  const openTerminalFileInPreview = useCallback(
-    (target: FileLinkTarget) => {
-      void setPreviewFileGuarded(fileLinkTargetToEntry(target), target.line)
-    },
-    [setPreviewFileGuarded]
-  )
   const ws = useWorkspaceSessions({ setError, t, presets })
+  const code = useCodeWorkspaces(ws.activeWorkspaceId)
+  const { dispatch: dispatchCode, act: actCode } = code
+  const codeActive = code.current.mode === 'code'
+  const currentCodePath = code.current.selected[code.current.focusedGroup]
+  const confirm = useConfirm()
+  const [dirtyFiles, setDirtyFiles] = useState<Record<string, ReadonlySet<string>>>({})
+  const dirtyFilesRef = useRef(dirtyFiles)
+  const onCodeDirtyChange = useCallback((id: string, path: string, dirty: boolean) => {
+    const current = dirtyFilesRef.current[id] ?? new Set<string>()
+    if (current.has(path) === dirty) return
+    const next = new Set(current)
+    if (dirty) next.add(path)
+    else next.delete(path)
+    dirtyFilesRef.current = { ...dirtyFilesRef.current, [id]: next }
+    setDirtyFiles(dirtyFilesRef.current)
+  }, [])
+  const closeCodeFile = useCallback(async (id: string, path: string): Promise<boolean> => {
+    if (dirtyFilesRef.current[id]?.has(path)) {
+      const ok = await confirm({
+        title: t('preview.unsavedTitle'), message: t('preview.unsavedConfirm'),
+        confirmLabel: t('preview.discard'), tone: 'danger'
+      })
+      if (!ok) return false
+    }
+    dispatchCode(id, { type: 'close', path })
+    onCodeDirtyChange(id, path, false)
+    return true
+  }, [dispatchCode, confirm, onCodeDirtyChange, t])
+  const setCodeFile = useCallback(async (file: FsEntry | null, line?: number): Promise<boolean> => {
+    if (!ws.activeWorkspaceId) return false
+    if (file) { actCode({ type: 'open', file, line }); return true }
+    return currentCodePath ? closeCodeFile(ws.activeWorkspaceId, currentCodePath) : true
+  }, [ws.activeWorkspaceId, actCode, currentCodePath, closeCodeFile])
+  const openTerminalFileInCode = useCallback((target: FileLinkTarget) => {
+    void setCodeFile(fileLinkTargetToEntry(target), target.line)
+  }, [setCodeFile])
   // The agent-task queue: persists in main, runs here (one task per folder at
   // a time, next starts when the previous task's terminal exits).
   const taskQueue = useTaskQueue({
@@ -237,8 +235,8 @@ export default function App(): React.JSX.Element {
     setActivityActiveWorkspace(ws.activeWorkspaceId)
   }, [ws.activeWorkspaceId])
   useEffect(() => {
-    setActivityActiveSession(ws.activeSessionId)
-  }, [ws.activeSessionId])
+    setActivityActiveSession(codeActive || view !== 'main' ? null : ws.activeSessionId)
+  }, [ws.activeSessionId, codeActive, view])
   const update = useUpdateCheck()
 
   // Native OS notification for explicit terminal attention while unfocused.
@@ -333,6 +331,8 @@ export default function App(): React.JSX.Element {
   // over sessions/tabs that aren't memo deps).
   const wsRef = useRef(ws)
   wsRef.current = ws
+  const codeActionsRef = useRef({ act: actCode, mode: code.current.mode })
+  codeActionsRef.current = { act: actCode, mode: code.current.mode }
 
   // ⌘K command registry — every currently actionable thing, rebuilt from live
   // state. Terminal/git-scoped entries appear only when their target exists.
@@ -368,7 +368,10 @@ export default function App(): React.JSX.Element {
           title: `${t('terminal.addTerminal')}: ${p.name}`,
           keywords: p.command,
           section: t('palette.sectionTerminals'),
-          run: () => void wsRef.current.launchAgent(p)
+          run: () => {
+            codeActionsRef.current.act({ type: 'mode', mode: 'terminals' })
+            void wsRef.current.launchAgent(p)
+          }
         })
       }
       for (const layout of layoutPresets.layouts) {
@@ -376,11 +379,13 @@ export default function App(): React.JSX.Element {
           id: `layout:${layout.id}`,
           title: `${t('launcher.start')}: ${layout.name}`,
           section: t('palette.sectionTerminals'),
-          run: () =>
+          run: () => {
+            codeActionsRef.current.act({ type: 'mode', mode: 'terminals' })
             void wsRef.current.startLayout({
               presetIds: layout.presetIds.filter(Boolean),
               nicknames: layout.nicknames
             })
+          }
         })
       }
     }
@@ -389,14 +394,20 @@ export default function App(): React.JSX.Element {
         id: 'prompt:insert',
         title: t('prompts.insert'),
         section: t('palette.sectionTerminals'),
-        run: () => setPalettePromptsOpen(true)
+        run: () => {
+          codeActionsRef.current.act({ type: 'mode', mode: 'terminals' })
+          setPalettePromptsOpen(true)
+        }
       })
       cmds.push({
         id: 'terminal:search',
         title: t('keyboard.searchTerminal'),
         section: t('palette.sectionTerminals'),
         hint: formatChord(shortcuts.searchTerminal),
-        run: () => setSearchOpen(true)
+        run: () => {
+          codeActionsRef.current.act({ type: 'mode', mode: 'terminals' })
+          setSearchOpen(true)
+        }
       })
     }
     if (ws.effectiveDir) {
@@ -435,6 +446,13 @@ export default function App(): React.JSX.Element {
       )
     }
     cmds.push(
+      ...(ws.activeWorkspaceId ? [{
+        id: 'view:code',
+        title: t('code.switchMode'),
+        section: t('palette.sectionView'),
+        hint: formatChord(shortcuts.toggleWorkspaceMode),
+        run: () => codeActionsRef.current.act({ type: 'mode', mode: codeActionsRef.current.mode === 'code' ? 'terminals' : 'code' })
+      }] : []),
       {
         id: 'view:sidebar',
         title: t('keyboard.toggleSidebar'),
@@ -616,7 +634,7 @@ export default function App(): React.JSX.Element {
         !e.altKey &&
         !e.shiftKey &&
         /^[1-9]$/.test(e.key) &&
-        view === 'main' &&
+        view === 'main' && !codeActive &&
         ws.focusGridCell(Number(e.key) - 1)
       ) {
         e.preventDefault()
@@ -625,7 +643,12 @@ export default function App(): React.JSX.Element {
       }
       const chord = eventToChord(e)
       if (!chord) return
-      if (chord === shortcuts.toggleSidebar) {
+      if (chord === shortcuts.toggleWorkspaceMode) {
+        if (view !== 'main' || !ws.activeWorkspaceId) return
+        e.preventDefault()
+        e.stopPropagation()
+        actCode({ type: 'mode', mode: codeActive ? 'terminals' : 'code' })
+      } else if (chord === shortcuts.toggleSidebar) {
         if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
@@ -636,7 +659,7 @@ export default function App(): React.JSX.Element {
         if (view === 'settings') closeSettings()
         else setView('settings')
       } else if (chord === shortcuts.maximizeFocusedCell) {
-        if (view !== 'main') return
+        if (view !== 'main' || codeActive) return
         e.preventDefault()
         e.stopPropagation()
         ws.toggleMaximizeFocused()
@@ -651,21 +674,22 @@ export default function App(): React.JSX.Element {
         e.stopPropagation()
         setRightSidebarOpen((o) => !o)
       } else if (chord === shortcuts.closeFocusedCell) {
-        if (view !== 'main' || !ws.activeSessionId) return
+        if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
-        ws.closeSession(ws.activeSessionId)
+        if (codeActive) void setCodeFile(null)
+        else if (ws.activeSessionId) ws.closeSession(ws.activeSessionId)
       } else if (chord === shortcuts.closePreview) {
-        if (view !== 'main' || !preview.previewFile) return
+        if (view !== 'main' || !codeActive || !currentCodePath) return
         e.preventDefault()
         e.stopPropagation()
-        void setPreviewFileGuarded(null)
+        void setCodeFile(null)
       } else if (chord === shortcuts.prevTerminal) {
-        if (view !== 'main' || !ws.cycleSession(-1)) return
+        if (view !== 'main' || codeActive || !ws.cycleSession(-1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.nextTerminal) {
-        if (view !== 'main' || !ws.cycleSession(1)) return
+        if (view !== 'main' || codeActive || !ws.cycleSession(1)) return
         e.preventDefault()
         e.stopPropagation()
       } else if (chord === shortcuts.openFolder) {
@@ -705,7 +729,7 @@ export default function App(): React.JSX.Element {
         // terminal search. Opening a file from the right sidebar leaves focus
         // on its result row, which previously misrouted Markdown find attempts
         // into xterm instead of the preview.
-        if (preview.previewFile && !document.activeElement?.closest('[data-terminal-host]')) return
+        if (codeActive) return
         e.preventDefault()
         e.stopPropagation()
         setSearchOpen(true)
@@ -742,14 +766,19 @@ export default function App(): React.JSX.Element {
     ws.addFolder,
     ws.cycleWorkspace,
     ws.cycleProfile,
-    preview.previewFile,
-    setPreviewFileGuarded
+    codeActive,
+    currentCodePath,
+    actCode,
+    setCodeFile
   ])
 
   return (
     <div className="superior-app flex h-full flex-col text-fg">
       <TitleBar
         showToggle={view === 'main'}
+        workspaceMode={code.current.mode}
+        onWorkspaceModeChange={(mode) => actCode({ type: 'mode', mode })}
+        workspaceModeEnabled={!!ws.activeWorkspaceId}
         gitStatus={view === 'main' ? gitStatus : null}
         gitLoading={gitLoading}
         onToggle={() => setSidebarCollapsed((c) => !c)}
@@ -765,11 +794,11 @@ export default function App(): React.JSX.Element {
         }}
         onOpenPromptPicker={() => setPalettePromptsOpen(true)}
         promptPickerEnabled={
-          view === 'main' && !preview.previewActive && !!ws.activeSessionId
+          view === 'main' && !codeActive && !!ws.activeSessionId
         }
         onToggleBroadcast={() => setBroadcastMode((active) => !active)}
         broadcastEnabled={
-          view === 'main' && !preview.previewActive && activeTabSessionCount > 0
+          view === 'main' && !codeActive && activeTabSessionCount > 0
         }
         broadcastActive={broadcastMode}
         onToggleRight={() => setRightSidebarOpen((o) => !o)}
@@ -787,7 +816,7 @@ export default function App(): React.JSX.Element {
           rightSidebarOpen ? 'superior-workspace--right-open' : ''
         } ${view === 'settings' ? 'superior-workspace--settings' : ''}`}
       >
-        {view === 'settings' ? (
+        {view === 'settings' && (
           <Suspense fallback={<DeferredPanel />}>
             <SettingsView
               initialSection={settingsSection}
@@ -807,8 +836,8 @@ export default function App(): React.JSX.Element {
               onKillSession={ws.closeSession}
             />
           </Suspense>
-        ) : (
-          <>
+        )}
+        <div className="flex min-h-0 min-w-0 flex-1 gap-2" style={{ display: view === 'settings' ? 'none' : undefined }}>
             <Sidebar
               folders={ws.visibleFolders}
               workspaces={ws.workspaces}
@@ -833,7 +862,8 @@ export default function App(): React.JSX.Element {
 
             <div className="superior-main flex min-h-0 min-w-0 flex-1 flex-col">
               <div className="flex min-h-0 min-w-0 flex-1">
-                <div className="flex min-h-0 min-w-0 flex-1">
+                <div className="relative flex min-h-0 min-w-0 flex-1">
+                <div className="absolute inset-0 flex" style={{ display: codeActive ? 'none' : undefined }}>
                   <TerminalPanel
                     sessions={ws.sessions}
                     activeWorkspaceId={ws.activeWorkspaceId}
@@ -848,26 +878,11 @@ export default function App(): React.JSX.Element {
                     activeSessionId={ws.activeSessionId}
                     maximizedId={ws.maximizedId}
                     activeTabId={activeTabs?.activeTabId}
-                    previewFile={preview.previewFile}
-                    previewActive={preview.previewActive}
-                    previewContent={
-                      preview.previewFile ? (
-                        <Suspense fallback={<DeferredPanel />}>
-                          <FilePreviewPanel
-                            file={preview.previewFile}
-                            initialLine={preview.previewLine ?? undefined}
-                            revealRequestId={preview.previewRequestId}
-                            active={preview.previewActive}
-                            onClose={() => void setPreviewFileGuarded(null)}
-                            onDirtyChange={onPreviewDirtyChange}
-                          />
-                        </Suspense>
-                      ) : null
-                    }
+                    surfaceActive={!codeActive && view === 'main'}
                     gridLayout={activeTab?.gridLayout}
                     presets={presets}
                     onSelect={ws.setActiveSessionId}
-                    onOpenFileTarget={openTerminalFileInPreview}
+                    onOpenFileTarget={openTerminalFileInCode}
                     onToggleMaximize={ws.toggleMaximize}
                     onClose={ws.closeSession}
                     onRestart={ws.restartSession}
@@ -881,6 +896,18 @@ export default function App(): React.JSX.Element {
                     broadcastMode={broadcastMode}
                     onBroadcastModeChange={setBroadcastMode}
                   />
+                </div>
+                {Object.entries(code.workspaces).map(([id, state]) => (
+                  <Suspense key={id} fallback={<DeferredPanel />}>
+                    <CodeWorkspace state={state}
+                      visible={id === ws.activeWorkspaceId && codeActive && view === 'main'}
+                      dispatch={(action) => dispatchCode(id, action)}
+                      onClose={(path) => void closeCodeFile(id, path)}
+                      onDirtyChange={(path, dirty) => onCodeDirtyChange(id, path, dirty)}
+                      dirtyPaths={dirtyFiles[id] ?? new Set<string>()}
+                      onOpenFiles={() => setFileSearchOpen(true)} />
+                  </Suspense>
+                ))}
                 </div>
               </div>
             </div>
@@ -914,14 +941,13 @@ export default function App(): React.JSX.Element {
                     taskQueue={taskQueue}
                     presets={presets}
                     onJumpToTask={onJumpToTask}
-                    onOpenFile={(file) => void setPreviewFileGuarded(file)}
-                    selectedPath={preview.previewFile?.path ?? null}
+                    onOpenFile={(file) => void setCodeFile(file)}
+                    selectedPath={currentCodePath}
                   />
                 </Suspense>
               )}
             </div>
-          </>
-        )}
+        </div>
       </div>
 
       <UsageFooter key={usageRevision} onManage={openPresets} />
@@ -941,7 +967,7 @@ export default function App(): React.JSX.Element {
       {view === 'main' && launcherOpen && (
         <QuickLaunch
           presets={presets.filter((p) => p.active)}
-          onSelect={ws.launchAgent}
+          onSelect={(preset) => { actCode({ type: 'mode', mode: 'terminals' }); void ws.launchAgent(preset) }}
           onClose={() => setLauncherOpen(false)}
           onManagePresets={openPresets}
         />
@@ -959,7 +985,7 @@ export default function App(): React.JSX.Element {
           <FileSearchPalette
             folderPath={ws.effectiveDir}
             onOpenFile={async (file) => {
-              if (await setPreviewFileGuarded(file)) setFileSearchOpen(false)
+              if (await setCodeFile(file)) setFileSearchOpen(false)
             }}
             onClose={() => setFileSearchOpen(false)}
           />
@@ -976,7 +1002,7 @@ export default function App(): React.JSX.Element {
                 path: match.path,
                 isDirectory: false
               }
-              if (await setPreviewFileGuarded(file, match.line)) setContentSearchOpen(false)
+              if (await setCodeFile(file, match.line)) setContentSearchOpen(false)
             }}
             onClose={() => setContentSearchOpen(false)}
           />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
 import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
@@ -50,10 +50,8 @@ interface Props {
   maximizedId: string | null
   /** the active tab within the active workspace */
   activeTabId: string | undefined
-  /** transient file-editor tab shown beside the terminal tabs */
-  previewFile: { name: string; path: string } | null
-  previewActive: boolean
-  previewContent: ReactNode
+  /** False while Code or settings is shown; terminal sessions stay mounted. */
+  surfaceActive: boolean
   /** saved cell sizing for the active tab's grid (undefined → uniform) */
   gridLayout: GridLayout | undefined
   presets: TerminalPreset[]
@@ -100,9 +98,7 @@ export function TerminalPanel({
   activeSessionId,
   maximizedId,
   activeTabId,
-  previewFile,
-  previewActive,
-  previewContent,
+  surfaceActive,
   gridLayout,
   presets,
   onSelect,
@@ -133,7 +129,7 @@ export function TerminalPanel({
   const [launching, setLaunching] = useState(false)
   const launchLock = useRef(false)
   const cancelDrag = useRef<(() => void) | null>(null)
-  useEffect(() => () => { cancelDrag.current?.() }, [activeWorkspaceId, activeTabId, previewActive, sessions, maximizedId])
+  useEffect(() => () => { cancelDrag.current?.() }, [activeWorkspaceId, activeTabId, surfaceActive, sessions, maximizedId])
   // Stable identity so memoized TerminalViews don't re-render on every panel render.
   // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
   // "error" dot for Ctrl+C would cry wolf and erode the real-crash signal.
@@ -189,7 +185,7 @@ export function TerminalPanel({
   const maxId = gridCells.some((s) => s.id === maximizedId) ? maximizedId : null
 
   const layoutFor = (s: AgentSession): Layout => {
-    if (previewActive) return { visible: false, focused: false }
+    if (!surfaceActive) return { visible: false, focused: false }
     if (s.workspaceId !== activeWorkspaceId || s.tabId !== activeTabId) {
       return { visible: false, focused: false }
     }
@@ -328,7 +324,7 @@ export function TerminalPanel({
   useEffect(() => {
     onBroadcastModeChange(false)
     setBroadcastExcluded(new Set())
-  }, [activeTabId, activeWorkspaceId, previewActive, onBroadcastModeChange])
+  }, [activeTabId, activeWorkspaceId, surfaceActive, onBroadcastModeChange])
 
   // Every newly opened broadcast session starts with all running cells targeted.
   useEffect(() => {
@@ -359,7 +355,7 @@ export function TerminalPanel({
       )}
 
       {/* Broadcast bar — one line of input sent to every targeted cell. */}
-      {broadcastMode && !previewActive && (
+      {broadcastMode && surfaceActive && (
         <div className="flex shrink-0 items-center gap-2 border-b border-warnBorder bg-warnBg/40 px-2 py-1.5">
           <BroadcastIcon size={13} className="shrink-0 text-warn" />
           <input
@@ -386,25 +382,12 @@ export function TerminalPanel({
       )}
 
       <div className="relative min-h-0 flex-1">
-        {/* The editor stays mounted behind terminal tabs so unsaved edits and
-            CodeMirror history survive tab switches. */}
-        {previewFile && (
-          <div
-            aria-hidden={!previewActive}
-            className={`absolute inset-0 flex min-h-0 flex-col ${
-              previewActive ? '' : 'invisible pointer-events-none'
-            }`}
-          >
-            {previewContent}
-          </div>
-        )}
-
         {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
         <div
           ref={containerRef}
-          aria-hidden={previewActive}
+          aria-hidden={!surfaceActive}
           className={`absolute inset-0 py-1 pl-1 ${
-            previewActive ? 'invisible pointer-events-none' : ''
+            !surfaceActive ? 'invisible pointer-events-none' : ''
           }`}
         >
         {tabSessions.length === 0 &&

@@ -1,3 +1,4 @@
+import type { WorkspaceMode } from '../codeWorkspace'
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
@@ -11,6 +12,9 @@ import type { GitStatus, Profile } from '../types'
 const isMac = window.api.platform === 'darwin'
 
 interface Props {
+  workspaceMode: WorkspaceMode
+  onWorkspaceModeChange: (mode: WorkspaceMode) => void
+  workspaceModeEnabled: boolean
   /** Show the sidebar toggle (hidden in settings, where there is no sidebar). */
   showToggle: boolean
   gitStatus: GitStatus | null
@@ -59,6 +63,9 @@ interface Props {
  * bottom of the sidebar; the right edge holds the panel toggles + window controls.
  */
 export function TitleBar({
+  workspaceMode,
+  onWorkspaceModeChange,
+  workspaceModeEnabled,
   showToggle,
   gitStatus,
   gitLoading,
@@ -158,7 +165,7 @@ export function TitleBar({
       {/* CENTER — pin the profile switcher to the title bar's actual midpoint,
           independently of the widths of the controls on either side. */}
       <div
-        className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center"
+        className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center max-[1100px]:static max-[1100px]:max-w-40 max-[1100px]:translate-x-0"
         onDoubleClick={onMaximize}
       >
         {showToggle && (
@@ -172,7 +179,7 @@ export function TitleBar({
       </div>
 
       {/* RIGHT — terminal tools + quick-launch + right-panel toggle + window controls. */}
-      <div className="flex h-full min-w-0 flex-1 items-center justify-end" onDoubleClick={onMaximize}>
+      <div className="flex h-full shrink-0 items-center justify-end" onDoubleClick={onMaximize}>
         {showToggle && (
           <>
             <button
@@ -227,6 +234,19 @@ export function TitleBar({
               <path d="m7 9 3 3-3 3M12 15h5" />
             </svg>
           </button>
+        )}
+
+        {showToggle && (
+          <div role="group" aria-label={t('code.switchMode')} title={shortcutTitle(t('code.switchMode'), 'toggleWorkspaceMode')}
+            className="app-no-drag mx-2 flex shrink-0 rounded-lg border border-edge bg-bar p-0.5">
+            {(['terminals', 'code'] as const).map((mode) => (
+              <button key={mode} type="button" aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
+                onClick={() => onWorkspaceModeChange(mode)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>
+                {mode === 'terminals' ? 'Terminals' : 'Code'}
+              </button>
+            ))}
+          </div>
         )}
 
         {showToggle && (

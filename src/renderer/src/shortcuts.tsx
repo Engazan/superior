@@ -13,6 +13,7 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   closeFocusedCell: 'mod+w',
   closePreview: 'mod+shift+w',
   saveFile: 'mod+s',
+  toggleWorkspaceMode: 'mod+shift+e',
   // `alt` included so the chords don't collide with macOS Spaces switching or
   // in-terminal word navigation on plain ctrl+arrows.
   prevTerminal: 'mod+alt+arrowleft',

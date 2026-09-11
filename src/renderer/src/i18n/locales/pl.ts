@@ -2,6 +2,13 @@ import { onboardingPl } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  'code.switchMode': 'Przełącz Terminals / Code',
+  'code.group': 'Grupa edytora {n}',
+  'code.split': 'Przenieś plik do drugiej grupy',
+  'code.merge': 'Połącz grupy edytora',
+  'code.resize': 'Zmień szerokość grup edytora',
+  'code.empty': 'Otwórz plik z drzewa projektu lub wyszukaj go, naciskając Shift dwukrotnie.',
+  'code.openFiles': 'Otwórz plik…',
   ...onboardingPl,
   'footer.resetNotice': 'Limity użycia zostały odnowione',
   'pane.split': 'Podziel terminal',

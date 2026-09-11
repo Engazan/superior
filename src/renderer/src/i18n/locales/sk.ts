@@ -2,6 +2,13 @@ import { onboardingSk } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  'code.switchMode': 'Prepnúť Terminals / Code',
+  'code.group': 'Skupina editora {n}',
+  'code.split': 'Presunúť súbor do druhej skupiny',
+  'code.merge': 'Zlúčiť skupiny editora',
+  'code.resize': 'Zmeniť šírku skupín editora',
+  'code.empty': 'Otvor súbor zo stromu projektu alebo ho vyhľadaj dvojitým Shiftom.',
+  'code.openFiles': 'Otvoriť súbor…',
   ...onboardingSk,
   'footer.resetNotice': 'Usage limity sa obnovili',
   'pane.split': 'Rozdeliť terminál',

@@ -27,11 +27,10 @@ interface Props {
   /** One-based source line to reveal after opening from a search result. */
   initialLine?: number
   revealRequestId?: number
-  onClose: () => void
-  /** False while the editor remains mounted behind a selected terminal tab. */
+  /** True only for the focused file in the visible Code workspace. */
   active?: boolean
   /** Reports the editor's unsaved-changes state up, so the owner can guard
-      file switches and closes behind a confirm instead of dropping edits. */
+      tab closes behind a confirm instead of dropping edits. */
   onDirtyChange?: (dirty: boolean) => void
 }
 
@@ -48,7 +47,6 @@ export function FilePreviewPanel({
   file,
   initialLine,
   revealRequestId,
-  onClose,
   active = true,
   onDirtyChange
 }: Props): React.JSX.Element {
@@ -280,6 +278,7 @@ export function FilePreviewPanel({
                     initialLine={initialLine}
                     revealRequestId={revealRequestId}
                     editable={editable}
+                    active={active}
                     onChange={handleChange}
                   />
                 </Suspense>
@@ -298,52 +297,28 @@ export function FilePreviewPanel({
 
   return (
     <div data-preview-panel className="flex h-full min-h-0 w-full flex-col bg-panel">
-      <div className="flex shrink-0 items-center gap-2 border-b border-edge bg-bar px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <div className="truncate text-sm font-medium text-fg" title={file.name}>
-              {file.name}
-            </div>
-            {dirty && (
-              <span
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
-                title={t('preview.unsaved')}
-                aria-label={t('preview.unsaved')}
-              />
-            )}
-          </div>
-          <div
-            className={`truncate text-[11px] ${saveError ? 'text-danger' : 'text-fgmuted'}`}
-            title={saveError ?? file.path}
-          >
-            {saveError ?? (
-              <>
-                {file.path}
-                {data && !loading && !data.error && ` · ${formatBytes(data.size)}`}
-              </>
-            )}
-          </div>
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge bg-bar/60 px-2">
+        <div className="min-w-0 flex-1 truncate text-[11px] text-fgmuted" title={file.path}>
+          {file.path}
+          {data && !loading && !data.error && ` · ${formatBytes(data.size)}`}
         </div>
-
         {editable && (
-          <button
-            onClick={() => void save()}
-            disabled={!dirty || saving}
-            title={shortcutTitle(t('common.save'), 'saveFile')}
-            className="shrink-0 rounded-sm border border-edge px-2 py-1 text-xs font-medium text-fg transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            {t('common.save')}
-          </button>
+          <IconButton size="sm" label={t('common.save')} title={shortcutTitle(t('common.save'), 'saveFile')}
+            onClick={() => void save()} disabled={!dirty || saving}>
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden>
+              <path d="M3 2h8l3 3v9H2V2h1Z" /><path d="M5 2v4h6V2M5 14V9h6v5" />
+            </svg>
+          </IconButton>
         )}
 
-        <IconButton label={t('preview.copyPath')} onClick={copyPath}>
+        <IconButton size="sm" label={t('preview.copyPath')} onClick={copyPath}>
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
             <path d="M3.5 10.5h-.5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v.5" />
           </svg>
         </IconButton>
 
-        <IconButton label={t('preview.openRaw')} onClick={openRaw}>
+        <IconButton size="sm" label={t('preview.openRaw')} onClick={openRaw}>
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M9 2.5h4.5V7" />
             <path d="M13.5 2.5 7 9" />
@@ -351,16 +326,8 @@ export function FilePreviewPanel({
           </svg>
         </IconButton>
 
-        <IconButton
-          label={t('window.close')}
-          title={shortcutTitle(t('window.close'), 'closePreview')}
-          onClick={onClose}
-        >
-          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 4l8 8M12 4l-8 8" />
-          </svg>
-        </IconButton>
       </div>
+      {saveError && <div role="alert" className="border-b border-dangerBorder bg-dangerBg px-3 py-2 text-xs text-danger">{saveError}</div>}
 
       <div className="min-h-0 flex-1">{renderBody()}</div>
     </div>
