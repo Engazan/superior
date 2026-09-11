@@ -3,6 +3,7 @@ import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { HistoryView } from './HistoryView'
 import { TasksView } from './TasksView'
+import { BranchIcon, FolderIcon, HistoryIcon, TasksIcon } from './ui'
 import { useI18n } from '../i18n'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
 import type { AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
@@ -127,7 +128,7 @@ export function RightPanel({
   )
 
   const tabClass = (active: boolean): string =>
-    `flex min-w-0 flex-1 items-center justify-center gap-1.5 truncate px-2 py-2 text-xs font-medium transition border-b-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+    `flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 truncate px-2 text-xs font-medium transition border-b-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
       active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
     }`
 
@@ -145,6 +146,7 @@ export function RightPanel({
     role: 'tab',
     'data-tab': id,
     'aria-selected': tab === id,
+    'aria-label': t(`rightPanel.${id}` as Parameters<typeof t>[0]),
     tabIndex: tab === id ? 0 : -1,
     title: t(`rightPanel.${id}` as Parameters<typeof t>[0]),
     onKeyDown: onTabKeyDown,
@@ -159,10 +161,10 @@ export function RightPanel({
     >
       <div role="tablist" aria-label={t('rightPanel.tabListLabel')} className="flex shrink-0 border-b border-edge bg-panel/75 p-1">
         <button className={tabClass(tab === 'files')} {...tabA11y('files')}>
-          {t('rightPanel.files')}
+          <FolderIcon size={17} className="shrink-0" />
         </button>
         <button className={tabClass(tab === 'changes')} {...tabA11y('changes')}>
-          {t('rightPanel.changes')}
+          <BranchIcon size={17} className="shrink-0" />
           {totals && (totals.additions > 0 || totals.deletions > 0) && (
             <span className="font-mono text-[10px] tabular-nums">
               {totals.additions > 0 && <span className="text-status">+{totals.additions}</span>}
@@ -172,10 +174,10 @@ export function RightPanel({
           )}
         </button>
         <button className={tabClass(tab === 'history')} {...tabA11y('history')}>
-          {t('rightPanel.history')}
+          <HistoryIcon size={17} className="shrink-0" />
         </button>
         <button className={tabClass(tab === 'tasks')} {...tabA11y('tasks')}>
-          {t('rightPanel.tasks')}
+          <TasksIcon size={17} className="shrink-0" />
           {pendingTasks > 0 && (
             <span className="font-mono text-[10px] tabular-nums text-accent">{pendingTasks}</span>
           )}

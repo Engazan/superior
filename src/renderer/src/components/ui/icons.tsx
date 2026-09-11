@@ -132,6 +132,23 @@ export function FolderIcon(props: IconProps): React.JSX.Element {
   )
 }
 
+export function HistoryIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <path d="M3 11a9 9 0 1 1 2.6 7.4M3 4v7h7" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
+
+export function TasksIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <path d="m3 6 1.5 1.5L7 5M11 6h10M3 12h4M11 12h10M3 18h4M11 18h10" />
+    </svg>
+  )
+}
+
 export function GripIcon(props: IconProps): React.JSX.Element {
   return (
     <svg {...base(props, 2)}>
