@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-09-11
+
+### Added
+
+- **Dedicated Code workspace.** Switch between Terminals and Code from the
+  center of the title bar or with the configurable Cmd/Ctrl+Shift+E shortcut.
+  Files opened from the project tree, search or terminal links get their own
+  tabs, with existing tabs reused when reopening a file.
+- **Split file editors.** View two files side by side, move tabs between editor
+  groups by dragging or using the split button, resize the divider and merge
+  groups. Each workspace remembers its open file paths, groups and selected
+  view across app restarts.
+- **First-run setup guide.** Choose a language, preview themes and optionally
+  configure separate Claude or Codex account spaces. The guide supports all
+  five interface languages and can be reopened from Settings.
+
+### Changed
+
+- **Continuous work across views.** Terminals keep running behind Code, while
+  open editors retain unsaved edits, undo history, cursor and scroll when
+  switching tabs, workspaces, views or settings. Cmd/Ctrl+W closes the focused
+  file tab with confirmation for unsaved edits; Cmd/Ctrl+S saves its contents.
+- **Refined profile controls.** A compact profile selector sits on the right
+  of the title bar. Profile management uses clearer rows, color avatars,
+  an active-profile badge and a separate area for adding profiles.
+- **Cleaner workspace navigation.** Improved folder/workspace hierarchy,
+  selection and activity indicators, plus clearer update-button progress
+  states. Right-sidebar tabs use icons with tooltips and accessible labels,
+  retaining change totals, task counts and keyboard navigation.
+- **Consistent settings and themes.** Settings sections share a more consistent
+  layout and adapt better to narrow windows. Dark window chrome uses matte
+  surfaces, and the selected workspace mode has clearer light-theme contrast.
+  New installations default to Light; existing theme choices are preserved.
+
+### Fixed
+
+- Menus and dialogs remain opaque and readable in Glass and gradient themes.
+  Tooltips appear above modal backdrops instead of being dimmed or obscured.
+
 ## [0.24.0] - 2026-09-10
 
 ### Added
