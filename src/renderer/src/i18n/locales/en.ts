@@ -39,7 +39,7 @@ export const en = {
   'review.sent': "Review forwarded to the terminal.",
   'review.lineComment': "Comment on line {line}",
 
-  'code.switchMode': 'Switch Terminals / Code / Browser',
+  'code.switchMode': 'Switch CLI / Code / Browser',
   'code.group': 'Editor group {n}',
   'code.split': 'Move file to other editor group',
   'code.merge': 'Merge editor groups',

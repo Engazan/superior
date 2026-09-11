@@ -41,7 +41,7 @@ export const pl: Record<MessageKey, string> = {
   'review.sent': "Uwagi przekazano do terminala.",
   'review.lineComment': "Dodaj uwagę do wiersza {line}",
 
-  'code.switchMode': 'Przełącz Terminals / Code / Browser',
+  'code.switchMode': 'Przełącz CLI / Code / Browser',
   'code.group': 'Grupa edytora {n}',
   'code.split': 'Przenieś plik do drugiej grupy',
   'code.merge': 'Połącz grupy edytora',

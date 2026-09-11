@@ -89,7 +89,7 @@ Windows needs the VS Build Tools + Python and Linux needs `build-essential` + `p
 
 ### Code and terminals
 
-Use **Terminals | Code** in the center of the title bar, or **Cmd/Ctrl+Shift+E**, to
+Use **CLI · Code · Browser** in the center of the title bar, or **Cmd/Ctrl+Shift+E**, to
 switch between the terminal layout and the file editor. The shortcut is
 customizable in Settings → Keyboard.
 
@@ -139,7 +139,7 @@ A transport error keeps the notes; check the target terminal before retrying.
 
 ### Browser preview and Design Mode
 
-Use the **Terminals · Code · Browser** switch in the title bar to open Browser.
+Use the **CLI · Code · Browser** switch in the title bar to open Browser.
 Enter the HTTP/HTTPS URL of your running development server. Back, Forward and
 Reload work within that workspace; its last URL is restored on the next app
 launch. The workspace-mode shortcut cycles through all three modes. With focus

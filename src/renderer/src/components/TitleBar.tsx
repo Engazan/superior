@@ -175,7 +175,7 @@ export function TitleBar({
               <button key={mode} type="button" aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
                 onClick={() => onWorkspaceModeChange(mode)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>
-                {mode === 'terminals' ? 'Terminals' : mode === 'code' ? 'Code' : 'Browser'}
+                {mode === 'terminals' ? 'CLI' : mode === 'code' ? 'Code' : 'Browser'}
               </button>
             ))}
           </div>

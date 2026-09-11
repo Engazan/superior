@@ -41,7 +41,7 @@ export const hu: Record<MessageKey, string> = {
   'review.sent': "A megjegyzések továbbítva a terminálnak.",
   'review.lineComment': "Megjegyzés a(z) {line}. sorhoz",
 
-  'code.switchMode': 'Terminals / Code / Browser váltása',
+  'code.switchMode': 'CLI / Code / Browser váltása',
   'code.group': 'Szerkesztőcsoport {n}',
   'code.split': 'Fájl áthelyezése a másik csoportba',
   'code.merge': 'Szerkesztőcsoportok egyesítése',

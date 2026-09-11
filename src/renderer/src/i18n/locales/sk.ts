@@ -41,7 +41,7 @@ export const sk: Record<MessageKey, string> = {
   'review.sent': "Pripomienky boli odovzdané terminálu.",
   'review.lineComment': "Pridať pripomienku k riadku {line}",
 
-  'code.switchMode': 'Prepnúť Terminals / Code / Browser',
+  'code.switchMode': 'Prepnúť CLI / Code / Browser',
   'code.group': 'Skupina editora {n}',
   'code.split': 'Presunúť súbor do druhej skupiny',
   'code.merge': 'Zlúčiť skupiny editora',

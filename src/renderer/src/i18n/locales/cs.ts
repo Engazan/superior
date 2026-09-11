@@ -41,7 +41,7 @@ export const cs: Record<MessageKey, string> = {
   'review.sent': "Připomínky byly předány terminálu.",
   'review.lineComment': "Přidat připomínku k řádku {line}",
 
-  'code.switchMode': 'Přepnout Terminals / Code / Browser',
+  'code.switchMode': 'Přepnout CLI / Code / Browser',
   'code.group': 'Skupina editoru {n}',
   'code.split': 'Přesunout soubor do druhé skupiny',
   'code.merge': 'Sloučit skupiny editoru',
