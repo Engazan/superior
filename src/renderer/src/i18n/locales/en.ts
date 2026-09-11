@@ -441,6 +441,7 @@ export const en = {
   'usage.remaining': 'remaining',
   'usage.used': 'used',
   'footer.title': 'Account usage',
+  'footer.reorder': 'Drag to reorder, or use Alt + Left/Right arrow',
   'footer.options': 'Profiles & options',
   'footer.refresh': 'Refresh',
   'footer.close': 'Close',

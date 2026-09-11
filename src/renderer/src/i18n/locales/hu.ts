@@ -444,6 +444,7 @@ export const hu: Record<MessageKey, string> = {
   'usage.remaining': 'marad',
   'usage.used': 'felhasználva',
   'footer.title': 'Fiókhasználat',
+  'footer.reorder': 'Húzással átrendezhető, vagy használja az Alt + bal/jobb nyilat',
   'footer.options': 'Profilok és beállítások',
   'footer.refresh': 'Frissítés',
   'footer.close': 'Bezárás',

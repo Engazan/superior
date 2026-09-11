@@ -444,6 +444,7 @@ export const pl: Record<MessageKey, string> = {
   'usage.remaining': 'pozostało',
   'usage.used': 'wykorzystano',
   'footer.title': 'Zużycie kont',
+  'footer.reorder': 'Przeciągnij, aby zmienić kolejność, lub użyj Alt + strzałka w lewo/prawo',
   'footer.options': 'Profile i opcje',
   'footer.refresh': 'Odśwież',
   'footer.close': 'Zamknij',

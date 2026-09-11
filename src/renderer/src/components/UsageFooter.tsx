@@ -69,6 +69,8 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
   const resetKeys = useRef(new Map<string, string>())
   const [profiles, setProfiles] = useState<UsageProfile[]>([])
   const [selected, setSelected] = useState<string[]>(['claude:default', 'codex:default'])
+  const dragProfile = useRef<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null)
   const [remaining, setRemaining] = useState(true)
   const [compact, setCompact] = useState(false)
   const [ready, setReady] = useState(false)
@@ -91,6 +93,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
     hoverTimer.current = setTimeout(() => setHover(null), 150)
   }
   const showHover = (id: string, element: HTMLElement): void => {
+    if (dragProfile.current) return
     clearHoverTimer()
     const footer = element.closest('footer')!.getBoundingClientRect()
     setHover({ id, left: Math.max(8, Math.min(element.getBoundingClientRect().left - footer.left, footer.width - 348)) })
@@ -201,7 +204,23 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
     if (!reading) return t(loading && !failed ? 'footer.loading' : 'footer.unavailable')
     return t(`footer.${reading.status === 'ready' ? 'noData' : reading.status}`)
   }
-  const visible = profiles.filter((profile) => selected.includes(profile.id))
+  const visible = selected.flatMap((id) => {
+    const profile = profiles.find((item) => item.id === id)
+    return profile ? [profile] : []
+  })
+  const moveProfile = (fromId: string, toId: string, after: boolean): void => {
+    if (fromId === toId || !selected.includes(fromId) || !selected.includes(toId)) return
+    const next = selected.filter((id) => id !== fromId)
+    next.splice(next.indexOf(toId) + (after ? 1 : 0), 0, fromId)
+    if (next.every((id, index) => id === selected[index])) return
+    setSelected(next)
+    persist({ usageFooterProfiles: next })
+    setHover(null)
+  }
+  const endDrag = (): void => {
+    dragProfile.current = null
+    setDropTarget(null)
+  }
   const hoveredProfile = visible.find((profile) => profile.id === hover?.id)
   const hoveredReading = hoveredProfile ? readings[hoveredProfile.id] : undefined
   return (
@@ -226,12 +245,48 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
           return (
             <div key={profile.id} className="flex shrink-0 items-center gap-3 before:h-4 before:w-px before:bg-edge first:before:hidden">
             <button type="button" aria-haspopup="dialog" aria-expanded={open}
+              draggable={visible.length > 1}
+              title={t('footer.reorder')}
+              aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+              onDragStart={(event) => {
+                dragProfile.current = profile.id
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData('text/plain', profile.id)
+                clearHoverTimer()
+                setHover(null)
+              }}
+              onDragOver={(event) => {
+                if (!dragProfile.current || dragProfile.current === profile.id) return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = 'move'
+                const bounds = event.currentTarget.getBoundingClientRect()
+                setDropTarget({ id: profile.id, after: event.clientX >= bounds.left + bounds.width / 2 })
+              }}
+              onDragLeave={() => setDropTarget(null)}
+              onDrop={(event) => {
+                if (!dragProfile.current) return
+                event.preventDefault()
+                const bounds = event.currentTarget.getBoundingClientRect()
+                moveProfile(dragProfile.current, profile.id, event.clientX >= bounds.left + bounds.width / 2)
+                endDrag()
+              }}
+              onDragEnd={endDrag}
+              onKeyDown={(event) => {
+                if (!event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+                event.preventDefault()
+                const direction = event.key === 'ArrowRight' ? 1 : -1
+                const target = visible[visible.findIndex((item) => item.id === profile.id) + direction]
+                if (target) moveProfile(profile.id, target.id, direction > 0)
+              }}
+              style={dropTarget?.id === profile.id ? {
+                boxShadow: `${dropTarget.after ? '2px' : '-2px'} 0 0 var(--c-accent)`
+              } : undefined}
               onClick={() => { setHover(null); setOpen(true) }}
               onMouseEnter={(event) => showHover(profile.id, event.currentTarget)} onMouseLeave={hideHover}
               onFocus={(event) => showHover(profile.id, event.currentTarget)} onBlur={hideHover}
               aria-describedby={!open && hover?.id === profile.id ? 'usage-profile-tooltip' : undefined}
-              className="flex shrink-0 items-center gap-1.5 rounded px-1 py-0.5 hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
-              <img src={builtinIcon(profile.provider)?.dataUrl} alt="" className={`h-3.5 w-3.5 object-contain ${profile.provider === 'codex' ? 'superior-usage-codex-icon' : ''}`} />
+              className="flex shrink-0 cursor-grab select-none items-center gap-1.5 rounded px-1 py-0.5 active:cursor-grabbing hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
+              <img draggable={false} src={builtinIcon(profile.provider)?.dataUrl} alt="" className={`h-3.5 w-3.5 object-contain ${profile.provider === 'codex' ? 'superior-usage-codex-icon' : ''}`} />
               <span className="font-medium text-fg">{profile.name}</span>
               {limits.length > 0 && reading?.status === 'ready' ? limits.map((limit) => (
                 <span key={limit.id} className="ml-1 flex items-center gap-1.5">

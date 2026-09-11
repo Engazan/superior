@@ -444,6 +444,7 @@ export const cs: Record<MessageKey, string> = {
   'usage.remaining': 'zbývá',
   'usage.used': 'využito',
   'footer.title': 'Spotřeba účtů',
+  'footer.reorder': 'Přetažením změníte pořadí, nebo použijte Alt + šipku vlevo/vpravo',
   'footer.options': 'Profily a možnosti',
   'footer.refresh': 'Obnovit',
   'footer.close': 'Zavřít',

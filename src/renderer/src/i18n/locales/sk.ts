@@ -445,6 +445,7 @@ export const sk: Record<MessageKey, string> = {
   'usage.remaining': 'ostáva',
   'usage.used': 'využité',
   'footer.title': 'Spotreba účtov',
+  'footer.reorder': 'Potiahnutím zmeníte poradie, alebo použite Alt + šípku doľava/doprava',
   'footer.options': 'Profily a možnosti',
   'footer.refresh': 'Obnoviť',
   'footer.close': 'Zavrieť',
