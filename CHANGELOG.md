@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-09-13
+
+### Added
+
+- **Automatic worktree preparation.** Configure setup commands and optional
+  local file copies per project. New worktrees, including those created by
+  Tasks, finish preparation before agents start. Failed preparation preserves
+  the checkout and blocks agent launch until a successful retry.
+- **Workspace setup controls.** Hover over a local workspace in the sidebar
+  to open its gear icon, or use the workspace menu. Configure preparation and
+  inspect its status, live output and errors, stop a running setup, or retry
+  in the same worktree. Tasks also reuse the original checkout when retrying
+  a preparation failure.
+- **Global accent color.** Choose a custom accent in Settings → Appearance.
+  The color applies throughout the interface, persists across restarts and
+  can be reset to the current theme's default palette.
+
+### Changed
+
+- **Workspace tree guides.** Connecting lines in the sidebar make the
+  relationship between projects and their workspaces easier to follow.
+
 ## [0.27.0] - 2026-09-11
 
 ### Added
