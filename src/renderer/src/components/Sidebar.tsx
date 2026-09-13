@@ -720,7 +720,7 @@ export const Sidebar = memo(function Sidebar({
 
                   {/* Workspaces — compact, indented rows under their project. */}
                   {open && (
-                    <ul className="mt-1 space-y-0.5">
+                    <ul className="sidebar-workspace-tree mt-1 space-y-0.5">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
                         const attn = attentionWorkspaceIds.has(ws.id)
