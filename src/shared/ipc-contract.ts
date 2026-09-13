@@ -167,6 +167,7 @@ export interface IpcInvokeMap {
   [IPC.SETTINGS_SET_UI]: Invocation<[ui: Partial<UiState>], AppSettings>
   [IPC.SETTINGS_SET_FILE_OPENER]: Invocation<[opener: FileOpener], AppSettings>
   [IPC.SETTINGS_SET_ATTENTION_COLOR]: Invocation<[color: string], AppSettings>
+  [IPC.SETTINGS_SET_ACCENT_COLOR]: Invocation<[color: string | null], AppSettings>
   [IPC.SETTINGS_SET_USAGE_TRACKING]: Invocation<[enabled: boolean], AppSettings>
   [IPC.SETTINGS_SET_USAGE_PRIMARY]: Invocation<[primary: UsagePrimary], AppSettings>
   [IPC.SETTINGS_SET_NOTIFICATIONS]: Invocation<[enabled: boolean], AppSettings>

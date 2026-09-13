@@ -15,6 +15,7 @@ import {
   getSettings,
   setTerminalSettings,
   setAttentionColor,
+  setAccentColor,
   setFileOpener,
   setGlobalHotkey,
   setLanguage,
@@ -73,6 +74,12 @@ export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void
 
   handle(IPC.SETTINGS_SET_ATTENTION_COLOR, (color: string): AppSettings =>
     boundedString(color, 32) ? setAttentionColor(color) : invalidPayload()
+  )
+
+  handle(IPC.SETTINGS_SET_ACCENT_COLOR, (color: string | null): AppSettings =>
+    color === null || (typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color))
+      ? setAccentColor(color)
+      : invalidPayload()
   )
 
   handle(

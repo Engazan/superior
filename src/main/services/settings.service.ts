@@ -70,6 +70,7 @@ const DEFAULTS: AppSettings = {
   shortcuts: { ...DEFAULT_SHORTCUTS },
   ui: { ...DEFAULT_UI },
   attentionColor: DEFAULT_ATTENTION_COLOR,
+  accentColor: null,
   usageTracking: false,
   usagePrimary: 'remaining',
   notifications: true,
@@ -187,6 +188,7 @@ export function getSettings(): AppSettings {
         : Object.keys(parsed).length > 0
     },
     attentionColor: normalizeColor(parsed.attentionColor),
+    accentColor: normalizeAccentColor(parsed.accentColor),
     usageTracking:
       typeof parsed.usageTracking === 'boolean' ? parsed.usageTracking : DEFAULTS.usageTracking,
     usagePrimary: USAGE_PRIMARIES.includes(parsed.usagePrimary as UsagePrimary)
@@ -264,6 +266,18 @@ export function setAttentionColor(color: string): AppSettings {
     ...getSettings(),
     attentionColor: normalizeColor(color)
   }
+  save(next)
+  return next
+}
+
+function normalizeAccentColor(color: unknown): string | null {
+  return typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)
+    ? color.toLowerCase()
+    : null
+}
+
+export function setAccentColor(color: string | null): AppSettings {
+  const next: AppSettings = { ...getSettings(), accentColor: normalizeAccentColor(color) }
   save(next)
   return next
 }

@@ -299,6 +299,9 @@ export const sk: Record<MessageKey, string> = {
   'appearance.sidebarWorkspaceTools': 'Nástroje workspacov v bočnom paneli',
   'appearance.sidebarWorkspaceToolsDesc':
     'Zobraziť vyhľadávanie, filter obľúbených a naposledy navštívené workspaces v bočnom paneli.',
+  'appearance.accentColor': 'Farba akcentu',
+  'appearance.accentColorDesc':
+    'Globálna farba zvýraznenia vybraných workspace a worktree, okraja aktívneho terminálu a ovládacích prvkov.',
   'appearance.attentionColor': 'Farba upozornenia',
   'appearance.attentionColorDesc':
     'Farba, ktorou bliká karta pracovného priestoru, keď niektorý jeho terminál dopracuje a vy ste inde.',

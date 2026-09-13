@@ -96,6 +96,8 @@ export interface AppSettings {
   ui: UiState
   /** Hex color a workspace tab pulses with when one of its terminals finishes. */
   attentionColor: string
+  /** Global accent override; null uses the current theme's palette. */
+  accentColor: string | null
   /**
    * Show live Claude usage (5h/7d limit, cost) in the terminal topbar. Off by
    * default because enabling it installs a status-line wrapper into the Claude
@@ -1014,6 +1016,7 @@ export const IPC = {
   SETTINGS_SET_SHORTCUTS: 'settings:set-shortcuts',
   SETTINGS_SET_UI: 'settings:set-ui',
   SETTINGS_SET_ATTENTION_COLOR: 'settings:set-attention-color',
+  SETTINGS_SET_ACCENT_COLOR: 'settings:set-accent-color',
   SETTINGS_SET_USAGE_TRACKING: 'settings:set-usage-tracking',
   SETTINGS_SET_NOTIFICATIONS: 'settings:set-notifications',
   SETTINGS_SET_GLOBAL_HOTKEY: 'settings:set-global-hotkey',

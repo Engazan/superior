@@ -295,6 +295,9 @@ export const en = {
   'appearance.sidebarWorkspaceTools': 'Sidebar workspace tools',
   'appearance.sidebarWorkspaceToolsDesc':
     'Show workspace search, favorites filters, and recently visited shortcuts in the sidebar.',
+  'appearance.accentColor': 'Accent color',
+  'appearance.accentColorDesc':
+    'Global highlight color for selected workspaces and worktrees, the active terminal border, and controls.',
   'appearance.attentionColor': 'Attention color',
   'appearance.attentionColorDesc':
     "Color a workspace tab pulses with when one of its terminals finishes while you're elsewhere.",

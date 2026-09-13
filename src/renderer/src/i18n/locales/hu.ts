@@ -299,6 +299,9 @@ export const hu: Record<MessageKey, string> = {
   'appearance.sidebarWorkspaceTools': 'Munkaterület-eszközök az oldalsávban',
   'appearance.sidebarWorkspaceToolsDesc':
     'Munkaterület-keresés, kedvencek szűrő és legutóbb megnyitott elemek megjelenítése az oldalsávban.',
+  'appearance.accentColor': 'Kiemelőszín',
+  'appearance.accentColorDesc':
+    'A kijelölt munkaterületek és worktree-k, az aktív terminál kerete és a vezérlők globális kiemelőszíne.',
   'appearance.attentionColor': 'Figyelmeztető szín',
   'appearance.attentionColorDesc':
     'Az a szín, amellyel egy munkaterület füle villog, amikor egy terminálja befejezi a munkát, miközben máshol vagy.',

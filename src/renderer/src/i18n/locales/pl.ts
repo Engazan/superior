@@ -299,6 +299,9 @@ export const pl: Record<MessageKey, string> = {
   'appearance.sidebarWorkspaceTools': 'Narzędzia workspace w panelu bocznym',
   'appearance.sidebarWorkspaceToolsDesc':
     'Pokaż wyszukiwanie, filtr ulubionych i ostatnio odwiedzane workspace w panelu bocznym.',
+  'appearance.accentColor': 'Kolor akcentu',
+  'appearance.accentColorDesc':
+    'Globalny kolor wyróżnienia wybranych obszarów roboczych i worktree, obramowania aktywnego terminala oraz elementów sterujących.',
   'appearance.attentionColor': 'Kolor powiadomienia',
   'appearance.attentionColorDesc':
     'Kolor, którym pulsuje karta przestrzeni roboczej, gdy jeden z jej terminali skończy pracę, a Ciebie nie ma.',

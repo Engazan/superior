@@ -9,6 +9,8 @@ interface ThemeContextValue {
   /** The concrete theme actually applied (system resolved against the OS). */
   resolved: ResolvedTheme
   setMode: (mode: ThemeMode) => Promise<void>
+  accentColor: string | null
+  setAccentColor: (color: string | null) => Promise<void>
 }
 
 const isMac = window.api.platform === 'darwin'
@@ -22,11 +24,31 @@ function systemTheme(): ResolvedTheme {
 export function ThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [mode, setModeState] = useState<ThemeMode>('light')
   const [resolved, setResolved] = useState<ResolvedTheme>('light')
+  const [accentColor, setAccentColorState] = useState<string | null>(null)
 
   // Load the persisted choice once.
   useEffect(() => {
-    window.api.getSettings().then((s) => setModeState(s.theme))
+    window.api.getSettings().then((s) => {
+      setModeState(s.theme)
+      setAccentColorState(s.accentColor)
+    })
   }, [])
+
+  useEffect(() => {
+    if (!accentColor) return
+    const style = document.documentElement.style
+    const tokens = {
+      '--c-accent': accentColor,
+      '--c-accent-bg': `color-mix(in srgb, ${accentColor} 16%, var(--c-panel))`,
+      '--c-accent-border': `color-mix(in srgb, ${accentColor} 50%, var(--c-panel))`,
+      '--c-accent-solid': `color-mix(in srgb, ${accentColor} 75%, black)`,
+      '--c-accent-solid-hover': `color-mix(in srgb, ${accentColor} 65%, black)`
+    }
+    for (const [name, value] of Object.entries(tokens)) style.setProperty(name, value)
+    return () => {
+      for (const name of Object.keys(tokens)) style.removeProperty(name)
+    }
+  }, [accentColor])
 
   // Resolve the mode to a concrete theme and apply it to <html>. Transparent
   // mode follows the OS light/dark (like 'system') and additionally flips the
@@ -74,8 +96,15 @@ export function ThemeProvider({ children }: { children: ReactNode }): React.JSX.
     setModeState(next)
   }
 
+  const setAccentColor = async (color: string | null): Promise<void> => {
+    const settings = await window.api.setAccentColor(color)
+    setAccentColorState(settings.accentColor)
+  }
+
   return (
-    <ThemeContext.Provider value={{ mode, resolved, setMode }}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={{ mode, resolved, setMode, accentColor, setAccentColor }}>
+      {children}
+    </ThemeContext.Provider>
   )
 }
 

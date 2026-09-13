@@ -81,4 +81,37 @@ describe('first-run preferences and onboarding', () => {
     expect(settings.getSettings().terminal).toEqual(before)
   })
 
+  it('persists the global accent and its reset across restarts', async () => {
+    const settings = await import('./settings.service')
+    expect(settings.getSettings().accentColor).toBeNull()
+    settings.setTheme('dark')
+    settings.setAttentionColor('#fab387')
+    settings.setAccentColor('#38BDF8')
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings()).toMatchObject({
+      accentColor: '#38bdf8', theme: 'dark', attentionColor: '#fab387'
+    })
+    restarted.setAccentColor(null)
+    vi.resetModules()
+    expect((await import('./settings.service')).getSettings().accentColor).toBeNull()
+  })
+
+  it.each([undefined, 'red', '#123', '#gggggg', 123, {}])(
+    'uses the theme accent for a missing or invalid stored value: %j',
+    async (accentColor) => {
+      fs.writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ accentColor }))
+      const settings = await import('./settings.service')
+      expect(settings.getSettings().accentColor).toBeNull()
+    }
+  )
+
+  it('retains the accent when persistence fails', async () => {
+    const settings = await import('./settings.service')
+    expect(settings.getSettings().accentColor).toBeNull()
+    fs.mkdirSync(path.join(userData, 'settings.json'))
+    expect(() => settings.setAccentColor('#38bdf8')).toThrow('Failed to persist settings')
+    expect(settings.getSettings().accentColor).toBeNull()
+  })
+
 })

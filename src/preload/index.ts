@@ -339,6 +339,10 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_ATTENTION_COLOR, color)
   },
 
+  setAccentColor(color: string | null): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_ACCENT_COLOR, color)
+  },
+
   /** Enable/disable live Claude usage in the terminal topbar. */
   setUsageTracking(enabled: boolean): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_USAGE_TRACKING, enabled)

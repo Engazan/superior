@@ -203,7 +203,8 @@ function FileOpenerSelect({
 }
 
 function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void }): React.JSX.Element {
-  const { mode, setMode } = useTheme()
+  const { mode, resolved, setMode, accentColor, setAccentColor } = useTheme()
+  const displayedAccent = accentColor ?? (resolved === 'dark' ? '#f08a72' : '#bd5845')
   const { lang, setLang, t } = useI18n()
   const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
   const isDefaultAttention = attentionColor.toLowerCase() === DEFAULT_ATTENTION_COLOR
@@ -276,6 +277,33 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
         </SettingsCard>
 
         <SettingsCard>
+          <SettingRow
+            title={t('appearance.accentColor')}
+            description={t('appearance.accentColorDesc')}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void setAccentColor(null)}
+              className={accentColor === null ? 'invisible' : ''}
+              aria-hidden={accentColor === null || undefined}
+              tabIndex={accentColor === null ? -1 : undefined}
+            >
+              {t('appearance.resetColor')}
+            </Button>
+            <span className="font-mono text-xs uppercase text-fgdim">{displayedAccent}</span>
+            <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-accent bg-accentBg focus-within:ring-2 focus-within:ring-accent/50">
+              <span className="h-5 w-5 rounded-full bg-accent" />
+              <input
+                type="color"
+                value={displayedAccent}
+                onChange={(e) => void setAccentColor(e.target.value)}
+                className="absolute inset-0 cursor-pointer opacity-0"
+                aria-label={t('appearance.accentColor')}
+              />
+            </label>
+          </SettingRow>
+
           <SettingRow
             title={t('appearance.sidebarWorkspaceTools')}
             description={t('appearance.sidebarWorkspaceToolsDesc')}
