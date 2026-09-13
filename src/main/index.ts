@@ -1,3 +1,4 @@
+import { stopAllSetups } from './services/worktree-setup.service'
 import { browserService, registerBrowserIpc } from './ipc/browser.ipc'
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
@@ -214,7 +215,13 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
+let setupsStopped = false
 app.on('before-quit', (event) => {
+  if (!setupsStopped) {
+    event.preventDefault()
+    void stopAllSetups().finally(() => { setupsStopped = true; app.quit() })
+    return
+  }
   // A staged update installs on quit; on Windows the daemon runs the app's own
   // executable and would keep the installer from replacing it. Take the daemon
   // down first, then let the quit resume (isUpdatePending() flips off once the

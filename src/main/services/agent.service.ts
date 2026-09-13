@@ -1,5 +1,8 @@
+import { ensureSetupReady } from './worktree-setup.service'
 import { randomUUID } from 'crypto'
 import * as os from 'os'
+import * as path from 'path'
+import { canonicalPath } from './path.service'
 import {
   type AgentLaunchTarget,
   type AgentSession,
@@ -9,7 +12,7 @@ import {
 } from '@shared/types'
 import type { DaemonSession, DirectSpawn } from '@shared/daemon-protocol'
 import { daemonClient } from './daemonClient'
-import { isValidWorkspaceDir, isWithinWorkspaceFolder } from './workspace.service'
+import { listWorkspaces, isValidWorkspaceDir, isWithinWorkspaceFolder } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
 import { ensureClaudeStatusline, restoreAllClaudeStatuslines } from './statusline.service'
 import { getSettings } from './settings.service'
@@ -138,6 +141,25 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
 
   const launchTarget = cleanLaunchTarget(args)
   if ('error' in launchTarget) return launchTarget
+  // Plain shells remain available for repairing a failed setup.
+  if (launchTarget.kind === 'local' && command.trim()) {
+    const workspaces = listWorkspaces().workspaces
+    const workspace = workspaces.find(w => w.id === workspaceId)
+    const worktree = workspaces.find(w => {
+      if (!w.worktreePath) return false
+      const relative = path.relative(canonicalPath(w.worktreePath), canonicalPath(launchTarget.cwd))
+      return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+    })
+    try {
+      if (workspace) await ensureSetupReady(workspace)
+      if (worktree && worktree.id !== workspace?.id) await ensureSetupReady(worktree)
+    } catch (err) {
+      return { error: (err as Error).message }
+    }
+    // Waiting for setup may have allowed the workspace to be removed.
+    const checked = cleanLaunchTarget(args)
+    if ('error' in checked) return checked
+  }
   // An empty command is allowed: the daemon launches a plain interactive shell.
 
   const id = randomUUID()

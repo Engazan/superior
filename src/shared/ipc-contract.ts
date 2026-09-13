@@ -1,3 +1,4 @@
+import type { WorktreeSetupConfig, WorktreeSetupSnapshot } from './worktree-setup'
 import type { TerminalSettings } from './terminalSettings'
 import { BROWSER_IPC, type BrowserRequest, type BrowserState, type BrowserDesignRequest } from './browser'
 import { IPC } from './types'
@@ -114,6 +115,11 @@ export interface IpcInvokeMap {
   [IPC.SHELL_COMMAND_STATUS]: Invocation<[], ShellCommandStatus>
   [IPC.SHELL_COMMAND_INSTALL]: Invocation<[], ShellCommandInstallResult>
   [IPC.WORKTREE_LIST_BRANCHES]: Invocation<[folderPath: string], BranchInfo[]>
+  [IPC.WORKTREE_SETUP_WAIT]: Invocation<[workspaceId: string], void>
+  [IPC.WORKTREE_SETUP_GET]: Invocation<[workspaceId: string], WorktreeSetupSnapshot>
+  [IPC.WORKTREE_SETUP_SAVE]: Invocation<[workspaceId: string, config: WorktreeSetupConfig], void>
+  [IPC.WORKTREE_SETUP_RETRY]: Invocation<[workspaceId: string], void>
+  [IPC.WORKTREE_SETUP_CANCEL]: Invocation<[workspaceId: string], void>
   [IPC.WORKTREE_IS_DIRTY]: Invocation<[worktreePath: string], boolean>
 
   [IPC.GIT_STATUS]: Invocation<[folderPath: string], GitStatus>

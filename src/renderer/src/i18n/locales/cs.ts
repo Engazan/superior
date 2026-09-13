@@ -1,8 +1,10 @@
+import { setupCs } from '../worktreeSetup'
 import { terminalSettingsCs } from '../terminalSettings'
 import { onboardingCs } from '../onboarding'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  ...setupCs,
   ...terminalSettingsCs,
   'browser.navigation': "Navigace prohlížeče",
   'browser.back': "Zpět",

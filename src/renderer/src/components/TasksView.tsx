@@ -1,3 +1,4 @@
+import { ipcErrorMessage } from '../ipcError'
 import { useMemo, useState } from 'react'
 import { useI18n, type TFunction } from '../i18n'
 import { PresetIcon } from './PresetIcon'
@@ -16,6 +17,7 @@ interface Props {
 
 /** Map an engine failure (stable code, WORKTREE_ERROR, or raw text) to a message. */
 function errorMessage(t: TFunction, raw: string): string {
+  if (raw.startsWith('setup-failed:')) return ipcErrorMessage(raw.slice('setup-failed:'.length).trim())
   switch (raw) {
     case 'preset-missing':
       return t('tasks.errPresetGone')
@@ -200,7 +202,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
             </span>
           </div>
           {task.status === 'failed' && task.error && (
-            <div className="mt-0.5 wrap-break-word text-[10px] text-danger" title={task.error}>
+            <div className="mt-0.5 wrap-break-word text-[10px] text-danger" title={errorMessage(t, task.error)}>
               {errorMessage(t, task.error)}
             </div>
           )}

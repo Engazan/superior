@@ -29,6 +29,7 @@ import {
   initial
 } from './sidebar/parts'
 import { SidebarUpdate } from './sidebar/SidebarUpdate'
+import { WorktreeSetup } from './WorktreeSetup'
 import { WorkspaceCreateModal } from './sidebar/WorkspaceCreateModal'
 import { FolderEditModal } from './sidebar/FolderEditModal'
 import type { UpdateController } from '../hooks/useUpdateCheck'
@@ -96,6 +97,7 @@ export const Sidebar = memo(function Sidebar({
   const attentionWorkspaceIds = useAttentionWorkspaces()
   const { attentionColor } = useAttentionColor()
   // Editors: which workspace is being renamed and which folder is creating a workspace.
+  const [setupWorkspaceId, setSetupWorkspaceId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [addingFor, setAddingFor] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -332,6 +334,12 @@ export const Sidebar = memo(function Sidebar({
 
   /** The workspace actions offered by both the kebab and the right-click menu. */
   const wsMenuItems = (ws: Workspace): MenuItem[] => [
+    ...(folders.find(f => f.path === ws.folderPath)?.kind !== 'remote' ? [{
+      id: 'setup',
+      label: t('setup.configure'),
+      icon: <GearIcon size={13} />,
+      onSelect: () => setSetupWorkspaceId(ws.id)
+    }] : []),
     {
       id: 'rename',
       label: t('sidebar.renameWorkspaceAction'),
@@ -362,8 +370,10 @@ export const Sidebar = memo(function Sidebar({
   const menuFolder = folderMenu ? folders.find((f) => f.path === folderMenu.path) ?? null : null
   const menuWs = wsMenu ? workspaces.find((w) => w.id === wsMenu.id) ?? null : null
   const addingFolder = addingFor ? folders.find((f) => f.path === addingFor) ?? null : null
+  const setupWorkspace = workspaces.find(w => w.id === setupWorkspaceId && folders.find(f => f.path === w.folderPath)?.kind !== 'remote')
   const overlays = (
     <>
+      {setupWorkspace && <WorktreeSetup key={setupWorkspace.id} workspace={setupWorkspace} onClose={() => setSetupWorkspaceId(null)} />}
       {folderMenu && menuFolder && (
         <Menu
           items={folderMenuItems(menuFolder)}
@@ -837,9 +847,24 @@ export const Sidebar = memo(function Sidebar({
                                 <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />
                               )}
 
-                              {/* Keep the two lightweight row actions discoverable. */}
+                              {/* Row actions appear on hover and keyboard focus. */}
                               {editingId !== ws.id && (
                                 <>
+                                  {folder.kind !== 'remote' && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setSetupWorkspaceId(ws.id)
+                                      }}
+                                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                                      aria-label={`${t('setup.configure')}: ${ws.name}`}
+                                      title={t('setup.configure')}
+                                      aria-haspopup="dialog"
+                                    >
+                                      <GearIcon size={13} />
+                                    </button>
+                                  )}
                                   {workspaceToolsVisible && (
                                     <button
                                       onClick={(e) => {

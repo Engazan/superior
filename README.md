@@ -231,3 +231,37 @@ when right-click paste is enabled. OSC 52 is off by default, accepts UTF-8 write
 up to 100 KB, blocks clipboard queries and does not execute historical replay.
 **Reset terminal settings** restores terminal defaults without changing other
 application preferences.
+
+## Worktree preparation
+
+Hover over a local workspace in the sidebar and click its gear icon for
+**Project setup** (also available in the workspace menu). Enter one setup command per line (for example `npm ci`, then `npm run build`) and optional
+relative file paths such as `.env.local`. Settings are saved locally per project;
+they apply automatically to new worktrees, including worktrees created by Tasks.
+An empty configuration makes a new worktree ready immediately.
+
+Preparation copies the selected files from the original project, then runs each
+command in the new worktree. Existing destination files are kept, including on
+retry. Copying is limited to files within the two roots; directories, symlinks,
+absolute paths, parent traversal and `.git` metadata are rejected. Files are
+copied without printing their contents. Commands use a login shell on macOS/Linux
+and `cmd.exe` on Windows, with `SUPERIOR_PROJECT_ROOT` and
+`SUPERIOR_WORKTREE_PATH` available in the environment. Each line runs in a separate
+shell; put multiline logic and shared environment setup in a script.
+
+Open the workspace gear icon and choose **Details** for preparation status and the current command,
+live output, errors, **Stop setup**, and **Retry setup**. The latest 64,000 characters
+of output are retained locally; command output can contain secrets, so avoid
+printing them. Each command must finish within 15 minutes. Agents wait for a
+successful setup; a plain terminal remains available to diagnose failures.
+
+A failure keeps the worktree and its files. Update **Project setup**, then retry in
+the same checkout. All commands run again, so use repeatable commands. A task that
+fails during preparation retains its worktree for the Tasks **Retry** action.
+Existing worktrees from earlier versions remain usable; choose **Run setup** to
+prepare one explicitly. Changing project settings does not rerun ready worktrees.
+
+Closing the app cancels active preparation processes. Interrupted preparation is
+shown as failed and requires an explicit retry; it never automatically starts an
+agent after reopening the app. Ordinary agent terminals retain their existing
+persistence behavior. This preparation workflow applies to local worktrees.

@@ -1,3 +1,4 @@
+import type { WorktreeSetupConfig } from '@shared/worktree-setup'
 import type { TerminalSettings } from '@shared/terminalSettings'
 import { BROWSER_IPC, type BrowserKey, type BrowserRequest, type BrowserState, type BrowserSelection, type BrowserDesignRequest } from '@shared/browser'
 import type { SendReviewArgs } from '@shared/types'
@@ -203,6 +204,21 @@ const api = {
   },
 
   /** True if a worktree has uncommitted changes (gate before a forced remove). */
+  waitWorktreeSetup(workspaceId: string) {
+    return ipcRenderer.invoke(IPC.WORKTREE_SETUP_WAIT, workspaceId)
+  },
+  getWorktreeSetup(workspaceId: string) {
+    return ipcRenderer.invoke(IPC.WORKTREE_SETUP_GET, workspaceId)
+  },
+  saveWorktreeSetup(workspaceId: string, config: WorktreeSetupConfig) {
+    return ipcRenderer.invoke(IPC.WORKTREE_SETUP_SAVE, workspaceId, config)
+  },
+  retryWorktreeSetup(workspaceId: string) {
+    return ipcRenderer.invoke(IPC.WORKTREE_SETUP_RETRY, workspaceId)
+  },
+  cancelWorktreeSetup(workspaceId: string) {
+    return ipcRenderer.invoke(IPC.WORKTREE_SETUP_CANCEL, workspaceId)
+  },
   isWorktreeDirty(worktreePath: string): Promise<boolean> {
     return ipcRenderer.invoke(IPC.WORKTREE_IS_DIRTY, worktreePath)
   },

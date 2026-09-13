@@ -263,7 +263,14 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
       let cwd: string
       let branch: string | undefined
 
-      if (task.useWorktree) {
+      const retained = task.workspaceId ? d.workspaces.find(w => w.id === task.workspaceId) : undefined
+      if (task.useWorktree && retained?.worktreePath) {
+        workspaceId = retained.id
+        cwd = retained.worktreePath
+        branch = retained.branch
+        const setup = await window.api.getWorktreeSetup(workspaceId)
+        if (setup.state?.status === 'failed') await window.api.retryWorktreeSetup(workspaceId)
+      } else if (task.useWorktree) {
         branch = `task/${promptSlug(task.prompt)}-${task.id.slice(0, 4)}`
         const res = await window.api.addWorktreeWorkspace({
           folderPath: task.folderPath,
@@ -315,6 +322,18 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         branch,
         startedAt: Date.now()
       }
+      await persistTask(running)
+      // Preparation has its own wait so cancel/reload cannot leave a deferred
+      // agent launch in main. A failed setup retains this task's checkout.
+      try {
+        await window.api.waitWorktreeSetup(workspaceId)
+      } catch (err) {
+        if (tasksRef.current.find(t => t.id === task.id)?.status === 'running') {
+          await failTask(running, `setup-failed: ${ipcErrorMessage(err)}`)
+        }
+        return
+      }
+      if (tasksRef.current.find(t => t.id === task.id)?.status !== 'running') return
       const command = buildTaskCommand(preset.command, task.prompt)
       const res = await depsRef.current.launchSessionIn({
         preset,
@@ -323,6 +342,10 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
         command,
         nickname: promptExcerpt(task.prompt)
       })
+      if (tasksRef.current.find(t => t.id === task.id)?.status !== 'running') {
+        if (!('error' in res)) await window.api.killAgent(res.session.id)
+        return
+      }
       if ('error' in res) {
         await failTask(running, res.error)
         return
@@ -364,9 +387,12 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
     }
     for (const task of next.values()) {
       startingRef.current.add(task.id)
-      void startTask(task).finally(() => startingRef.current.delete(task.id))
+      void startTask(task).catch(async (err) => {
+        const current = tasksRef.current.find(t => t.id === task.id)
+        if (current && current.status !== 'canceled') await failTask(current, ipcErrorMessage(err))
+      }).finally(() => startingRef.current.delete(task.id))
     }
-  }, [tasks, paused, ready, startTask])
+  }, [tasks, paused, ready, startTask, failTask])
 
   const addTask = useCallback(
     async (args: {
@@ -401,7 +427,8 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
       if (!task || task.status !== 'running') return
       // Mark canceled first so the exit event of the kill is ignored.
       await persistTask({ ...task, status: 'canceled', finishedAt: Date.now() })
-      if (task.sessionId) void window.api.killAgent(task.sessionId)
+      if (task.sessionId) await window.api.killAgent(task.sessionId)
+      else if (task.workspaceId) await window.api.cancelWorktreeSetup(task.workspaceId)
     },
     [persistTask]
   )
@@ -412,6 +439,7 @@ export function useTaskQueue(deps: Deps): TaskQueueApi {
       if (!task || (task.status !== 'failed' && task.status !== 'canceled')) return
       await persistTask({
         id: crypto.randomUUID(),
+        ...(task.error?.startsWith('setup-failed:') ? { workspaceId: task.workspaceId, branch: task.branch } : {}),
         folderPath: task.folderPath,
         prompt: task.prompt,
         presetId: task.presetId,

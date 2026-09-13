@@ -1,3 +1,4 @@
+import { initializeSetup, runSetup, cancelSetup } from './worktree-setup.service'
 import { dialog } from 'electron'
 import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
@@ -499,7 +500,10 @@ export async function removeProfile(id: string): Promise<WorkspaceState> {
   const doomedPaths = new Set(initial.folders.filter((f) => f.profileId === id).map((f) => f.path))
   const doomed = initial.workspaces.filter((w) => doomedPaths.has(w.folderPath) && w.worktreePath)
   await Promise.allSettled(
-    doomed.map((w) => removeWorktree(w.folderPath, w.worktreePath as string, { force: true }))
+    doomed.map(async (w) => {
+      await cancelSetup(w.id)
+      await removeWorktree(w.folderPath, w.worktreePath as string, { force: true })
+    })
   )
   // Worktree teardown awaits network/disk work. Reload instead of saving the
   // pre-await snapshot so a concurrently added folder or profile isn't lost.
@@ -535,7 +539,10 @@ export async function removeFolder(folderPath: string): Promise<WorkspaceState> 
   // don't leak. Folder removal is a deliberate destructive action, so force.
   const doomed = initial.workspaces.filter((w) => w.folderPath === folderPath && w.worktreePath)
   await Promise.allSettled(
-    doomed.map((w) => removeWorktree(folderPath, w.worktreePath as string, { force: true }))
+    doomed.map(async (w) => {
+      await cancelSetup(w.id)
+      await removeWorktree(folderPath, w.worktreePath as string, { force: true })
+    })
   )
   // Do not overwrite changes made while the asynchronous worktree cleanup ran.
   const state = readState()
@@ -650,10 +657,12 @@ export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<Works
       worktreePath,
       branch
     }
+    initializeSetup(ws)
     state.workspaces.push(ws)
     state.activeWorkspaceId = ws.id
     const next = normalize(state)
     saveState(next)
+    void runSetup(ws).catch(err => console.error('[worktree setup]', err))
     return next
   } catch (err) {
     // Persistence failed after the worktree was created — don't leak it.
@@ -696,6 +705,7 @@ export async function removeWorkspace(id: string, force = false): Promise<Worksp
   const removed = initial.workspaces.find((w) => w.id === id)
   // Tear the worktree down first; if it fails (dirty + !force), don't mutate state.
   if (removed?.worktreePath) {
+    await cancelSetup(removed.id)
     await removeWorktree(removed.folderPath, removed.worktreePath, { force })
   }
   // Preserve mutations made while removing a worktree from disk.
