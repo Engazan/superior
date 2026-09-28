@@ -224,4 +224,24 @@ describe('agent-reported turn state', () => {
     onState({ id: 'b', state: 'working' })
     expect(store.useBusySessions().size).toBe(0)
   })
+
+  it('records workspace activity from terminal starts, finished turns and exits', () => {
+    const t0 = Date.now()
+    store.setActivitySessions([{ id: 'c', workspaceId: 'x', status: 'running', createdAt: 5 }] as AgentSession[])
+    expect(store.useWorkspaceActivity().get('x')).toBe(5)
+    store.setActivitySessions(sessions)
+    output('\x1b]0;◐ task\x07')
+    output('\x1b]0;✳ task\x07')
+    expect(store.useWorkspaceActivity().get('w')).toBeGreaterThanOrEqual(t0)
+    store.primeWorkspaceActivity({ w: 1, old: 7 })
+    expect(store.useWorkspaceActivity().get('w')).toBeGreaterThanOrEqual(t0)
+    expect(store.useWorkspaceActivity().get('old')).toBe(7)
+  })
+
+  it('reports waiting over working per workspace', () => {
+    onState({ id: 'a', state: 'working' })
+    expect(store.useAgentWorkspaceStates().get('w')).toBe('working')
+    onState({ id: 'b', state: 'waiting' })
+    expect(store.useAgentWorkspaceStates().get('w')).toBe('waiting')
+  })
 })

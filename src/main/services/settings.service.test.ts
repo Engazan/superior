@@ -71,6 +71,15 @@ describe('first-run preferences and onboarding', () => {
     restarted.setUi({ elevationWarningDismissed: 'yes' } as never)
     expect(restarted.getSettings().ui.elevationWarningDismissed).toBeUndefined()
   })
+  it('persists workspace sorting, manual order and activity, dropping invalid values', async () => {
+    const settings = await import('./settings.service')
+    settings.setUi({ workspaceSort: 'manual', workspaceOrder: ['b', 'a', 'b', ''], workspaceActivity: { a: 5, b: Number.NaN } })
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings().ui).toMatchObject({ workspaceSort: 'manual', workspaceOrder: ['b', 'a'], workspaceActivity: { a: 5 } })
+    restarted.setUi({ workspaceSort: 'random' } as never)
+    expect(restarted.getSettings().ui.workspaceSort).toBeUndefined()
+  })
   it('persists terminal patches across restart without losing app preferences', async () => {
     const settings = await import('./settings.service')
     settings.setLanguage('sk')

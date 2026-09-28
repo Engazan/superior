@@ -86,6 +86,12 @@ export interface UiState {
   usageFooterProfiles?: string[]
   usageFooterRemaining?: boolean
   usageFooterCompact?: boolean
+  /** Workspace order inside each project in the sidebar (default 'recent'). */
+  workspaceSort?: 'recent' | 'smart' | 'name' | 'manual'
+  /** Workspace ids in the order the user dragged them into (Manual sort). */
+  workspaceOrder?: string[]
+  /** Last activity per workspace id, for the Recent sort. */
+  workspaceActivity?: Record<string, number>
   /** The Windows administrator-mode warning was turned off. */
   elevationWarningDismissed?: boolean
 }

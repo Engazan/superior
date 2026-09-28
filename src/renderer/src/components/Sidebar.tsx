@@ -1,8 +1,18 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useI18n } from '../i18n'
 import { useAttentionColor } from '../attentionColor'
-import { useBusyWorkspaces, useAttentionWorkspaces } from '../activityStore'
 import {
+  onWorkspaceActivity,
+  primeWorkspaceActivity,
+  useAgentWorkspaceStates,
+  useAttentionWorkspaces,
+  useBusyWorkspaces,
+  useWorkspaceActivity
+} from '../activityStore'
+import { WORKSPACE_SORTS, mergeVisibleOrder, sortWorkspaces, type WorkspaceSort } from '../workspaceSort'
+import { useWorkspaceDrag } from './sidebar/useWorkspaceDrag'
+import {
+  CheckIcon,
   ExternalLinkIcon,
   GearIcon,
   GripIcon,
@@ -10,6 +20,7 @@ import {
   PencilIcon,
   PlusIcon,
   SearchIcon,
+  SlidersIcon,
   StarIcon,
   TrashIcon,
   type MenuItem
@@ -109,12 +120,70 @@ export const Sidebar = memo(function Sidebar({
   const [favoriteWorkspaceIds, setFavoriteWorkspaceIds] = useState<Set<string>>(new Set())
   const [recentWorkspaceIds, setRecentWorkspaceIds] = useState<string[]>([])
   const [workspaceToolsVisible, setWorkspaceToolsVisible] = useState(false)
+  const [sortMode, setSortMode] = useState<WorkspaceSort>('recent')
+  const [sortMenu, setSortMenu] = useState<HTMLElement | null>(null)
+  const [manualOrder, setManualOrder] = useState<string[]>([])
+  const workspaceActivity = useWorkspaceActivity()
+  const agentWorkspaceStates = useAgentWorkspaceStates()
+  // Re-rank once a minute so a new workspace's grace period can expire.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
+  const sortContext = useMemo(
+    () => ({
+      now: Math.max(now, Date.now()),
+      activity: workspaceActivity,
+      agents: agentWorkspaceStates,
+      attention: attentionWorkspaceIds,
+      manualOrder
+    }),
+    [now, workspaceActivity, agentWorkspaceStates, attentionWorkspaceIds, manualOrder]
+  )
+  const sortedProject = (folderPath: string, include: (w: Workspace) => boolean = () => true): Workspace[] =>
+    sortWorkspaces(workspaces.filter((w) => w.folderPath === folderPath && include(w)), sortMode, sortContext)
+
+  // Dropping a dragged workspace pins the exact order and switches to Manual, like Orca.
+  const commitWorkspaceOrder = (folderPath: string, visibleOrder: string[]): void => {
+    const ids = (path: string): string[] => sortedProject(path).map((w) => w.id)
+    const next = folders.flatMap((f) => (f.path === folderPath ? mergeVisibleOrder(ids(f.path), visibleOrder) : ids(f.path)))
+    setManualOrder(next)
+    setSortMode('manual')
+    void window.api.setUiState({ workspaceSort: 'manual', workspaceOrder: next })
+  }
+  const navRef = useRef<HTMLElement | null>(null)
+  const { drag: workspaceDrag, begin: beginWorkspaceDrag } = useWorkspaceDrag(navRef, commitWorkspaceOrder)
+  const projectWorkspaces = (folderPath: string, include: (w: Workspace) => boolean = () => true): Workspace[] => {
+    const list = sortedProject(folderPath, include)
+    if (workspaceDrag?.folderPath !== folderPath) return list
+    const rank = new Map(workspaceDrag.order.map((id, index) => [id, index]))
+    return [...list].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
+  }
+
+  // Persist activity so Recent survives restarts; only existing workspaces are kept.
+  const workspaceIdsRef = useRef(new Set<string>())
+  workspaceIdsRef.current = new Set(workspaces.map((w) => w.id))
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const off = onWorkspaceActivity((activity) => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        const entries = [...activity].filter(([id]) => workspaceIdsRef.current.has(id))
+        void window.api.setUiState({ workspaceActivity: Object.fromEntries(entries) })
+      }, 2_000)
+    })
+    return () => { off(); clearTimeout(timer) }
+  }, [])
 
   useEffect(() => {
     void window.api.getSettings().then((settings) => {
       setFavoriteWorkspaceIds(new Set(settings.ui.favoriteWorkspaceIds ?? []))
       setRecentWorkspaceIds(settings.ui.recentWorkspaceIds ?? [])
       setWorkspaceToolsVisible(settings.ui.sidebarWorkspaceTools)
+      setSortMode(settings.ui.workspaceSort ?? 'recent')
+      setManualOrder(settings.ui.workspaceOrder ?? [])
+      primeWorkspaceActivity(settings.ui.workspaceActivity ?? {})
     })
   }, [])
 
@@ -171,7 +240,6 @@ export const Sidebar = memo(function Sidebar({
   // every live reorder, which would silently kill its pointer capture (and
   // with it the whole drag). The pointer is captured by the <nav> (a node
   // that never moves) so events keep flowing even outside the sidebar.
-  const navRef = useRef<HTMLElement | null>(null)
   const [folderDrag, setFolderDrag] = useState<{
     path: string
     /** live working order of folder paths, applied to rendering while dragging */
@@ -329,6 +397,22 @@ export const Sidebar = memo(function Sidebar({
     }
   ]
 
+  const sortLabels: Record<WorkspaceSort, string> = {
+    recent: t('sidebar.sortRecent'),
+    smart: t('sidebar.sortSmart'),
+    name: t('sidebar.sortName'),
+    manual: t('sidebar.sortManual')
+  }
+  const sortMenuItems: MenuItem[] = WORKSPACE_SORTS.map((mode) => ({
+    id: mode,
+    label: sortLabels[mode],
+    icon: mode === sortMode ? <CheckIcon size={13} /> : <span className="inline-block w-[13px]" />,
+    onSelect: () => {
+      setSortMode(mode)
+      void window.api.setUiState({ workspaceSort: mode })
+    }
+  }))
+
   /** The workspace actions offered by both the kebab and the right-click menu. */
   const wsMenuItems = (ws: Workspace): MenuItem[] => [
     ...(folders.find(f => f.path === ws.folderPath)?.kind !== 'remote' ? [{
@@ -378,6 +462,7 @@ export const Sidebar = memo(function Sidebar({
           onClose={() => setFolderMenu(null)}
         />
       )}
+      {sortMenu && <Menu items={sortMenuItems} anchor={sortMenu} onClose={() => setSortMenu(null)} />}
       {wsMenu && menuWs && (
         <Menu items={wsMenuItems(menuWs)} anchor={wsMenu.anchor} onClose={() => setWsMenu(null)} />
       )}
@@ -423,7 +508,7 @@ export const Sidebar = memo(function Sidebar({
         <nav className="min-h-0 flex-1 overflow-y-auto py-2">
           <div className="flex flex-col items-center gap-2">
             {folders.map((folder, i) => {
-              const folderWorkspaces = workspaces.filter((w) => w.folderPath === folder.path)
+              const folderWorkspaces = projectWorkspaces(folder.path)
               const folderBusy = folderWorkspaces.some((w) => busyWorkspaceIds.has(w.id))
               const folderAttn = folderWorkspaces.some((w) => attentionWorkspaceIds.has(w.id))
               return (
@@ -519,9 +604,19 @@ export const Sidebar = memo(function Sidebar({
       {overlays}
       <div className="px-3 pb-1 pt-2.5">
         <div className="flex h-7 items-center justify-between pl-2">
-          <span className="text-xs font-semibold text-fgmuted">
+          <span className="flex-1 text-xs font-semibold text-fgmuted">
             {t('palette.sectionWorkspaces')}
           </span>
+          <button
+            type="button"
+            onClick={(e) => setSortMenu(e.currentTarget)}
+            title={`${t('sidebar.sortBy')}: ${sortLabels[sortMode]}`}
+            aria-label={t('sidebar.sortBy')}
+            aria-haspopup="menu"
+            className="grid h-6 w-6 place-items-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          >
+            <SlidersIcon size={14} />
+          </button>
           <button
             onClick={onOpenProject}
             title={t('sidebar.openProject')}
@@ -624,9 +719,7 @@ export const Sidebar = memo(function Sidebar({
               </div>
             ) : (
             displayFolders.map((folder) => {
-              const folderWorkspaces = workspaces.filter(
-                (w) => w.folderPath === folder.path && filteredWorkspaceIds.has(w.id)
-              )
+              const folderWorkspaces = projectWorkspaces(folder.path, (w) => filteredWorkspaceIds.has(w.id))
               const open = !folder.collapsed
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
               const folderActive = folderWorkspaces.some((w) => w.id === activeWorkspaceId)
@@ -717,6 +810,7 @@ export const Sidebar = memo(function Sidebar({
                     <ul className="mt-0.5 space-y-px">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
+                        const draggingThis = workspaceDrag?.id === ws.id
                         const attn = attentionWorkspaceIds.has(ws.id)
                         const busy = busyWorkspaceIds.has(ws.id)
                         const runningCount = counts[ws.id] ?? 0
@@ -725,11 +819,12 @@ export const Sidebar = memo(function Sidebar({
                         // Two-line rows align the status dot with the name, not the row centre.
                         const twoLines = folder.kind === 'remote' || !!ws.branch || hasDiff
                         return (
-                          <li key={ws.id}>
+                          <li key={ws.id} data-workspace-id={ws.id}>
                             <div
                               role="button"
                               tabIndex={0}
                               aria-current={active || undefined}
+                              onPointerDown={beginWorkspaceDrag(folder.path, ws.id, folderWorkspaces.map((w) => w.id))}
                               onClick={() => selectWorkspace(ws.id)}
                               onKeyDown={(e) => {
                                 if (editingId === ws.id || e.target !== e.currentTarget) return
@@ -750,6 +845,8 @@ export const Sidebar = memo(function Sidebar({
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
                               className={`group relative flex cursor-pointer items-center gap-2 rounded-md py-1 pl-4 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                                draggingThis ? 'opacity-60 ring-1 ring-accentBorder ' : ''
+                              }${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : 'text-fg2 hover:bg-hover/70'
