@@ -61,6 +61,16 @@ describe('first-run preferences and onboarding', () => {
     settings.setUi({ onboardingCompleted: 'no' } as never)
     expect(settings.getSettings().ui.onboardingCompleted).toBe(true)
   })
+  it('persists the administrator warning opt-out and falls back to warning on invalid values', async () => {
+    const settings = await import('./settings.service')
+    expect(settings.getSettings().ui.elevationWarningDismissed).toBeUndefined()
+    settings.setUi({ elevationWarningDismissed: true })
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings().ui.elevationWarningDismissed).toBe(true)
+    restarted.setUi({ elevationWarningDismissed: 'yes' } as never)
+    expect(restarted.getSettings().ui.elevationWarningDismissed).toBeUndefined()
+  })
   it('persists terminal patches across restart without losing app preferences', async () => {
     const settings = await import('./settings.service')
     settings.setLanguage('sk')

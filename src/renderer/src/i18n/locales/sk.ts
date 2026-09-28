@@ -1,10 +1,12 @@
 import { setupSk } from '../worktreeSetup'
 import { terminalSettingsSk } from '../terminalSettings'
 import { onboardingSk } from '../onboarding'
+import { elevationSk } from '../elevation'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
   ...setupSk,
+  ...elevationSk,
   ...terminalSettingsSk,
   'browser.navigation': "Navigácia prehliadača",
   'browser.back': "Späť",

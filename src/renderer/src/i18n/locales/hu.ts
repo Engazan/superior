@@ -1,10 +1,12 @@
 import { setupHu } from '../worktreeSetup'
 import { terminalSettingsHu } from '../terminalSettings'
 import { onboardingHu } from '../onboarding'
+import { elevationHu } from '../elevation'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
   ...setupHu,
+  ...elevationHu,
   ...terminalSettingsHu,
   'browser.navigation': "Böngésző navigáció",
   'browser.back': "Vissza",

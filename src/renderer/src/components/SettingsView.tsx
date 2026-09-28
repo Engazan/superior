@@ -213,12 +213,14 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
   const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean | null>(null)
   const [sidebarWorkspaceTools, setSidebarWorkspaceTools] = useState<boolean | null>(null)
+  const [elevationWarning, setElevationWarning] = useState<boolean | null>(null)
   const [fileOpener, setFileOpenerState] = useState<FileOpener>('system')
   useEffect(() => {
     window.api.getSettings().then((s) => {
       setUsageTracking(s.usageTracking)
       setNotifications(s.notifications)
       setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools)
+      setElevationWarning(!s.ui.elevationWarningDismissed)
       setFileOpenerState(s.fileOpener)
     })
   }, [])
@@ -231,6 +233,13 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
   const toggleNotifications = (next: boolean): void => {
     setNotifications(next)
     window.api.setNotifications(next).then((s) => setNotifications(s.notifications))
+  }
+
+  const toggleElevationWarning = (next: boolean): void => {
+    setElevationWarning(next)
+    window.api
+      .setUiState({ elevationWarningDismissed: !next })
+      .then((s) => setElevationWarning(!s.ui.elevationWarningDismissed))
   }
 
   const toggleUsageTracking = (next: boolean): void => {
@@ -360,6 +369,16 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
               label={t('notify.setting')}
             />
           </SettingRow>
+
+          {window.api.platform === 'win32' && (
+            <SettingRow title={t('elevation.setting')} description={t('elevation.settingDesc')}>
+              <Toggle
+                checked={elevationWarning === true}
+                onChange={toggleElevationWarning}
+                label={t('elevation.setting')}
+              />
+            </SettingRow>
+          )}
         </SettingsCard>
 
         <SettingsCard>

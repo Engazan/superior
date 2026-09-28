@@ -223,6 +223,7 @@ export interface IpcInvokeMap {
   [IPC.TASKS_SET_PAUSED]: Invocation<[paused: boolean], TasksState>
 
   [IPC.WINDOW_IS_MAXIMIZED]: Invocation<[], boolean>
+  [IPC.APP_IS_ELEVATED]: Invocation<[], boolean>
   [IPC.AGENT_START]: Invocation<[args: StartAgentArgs], StartAgentResult>
   [IPC.AGENT_REVIEW]: Invocation<[SendReviewArgs], void>
   [BROWSER_IPC.REQUEST]: Invocation<[BrowserRequest], BrowserState | null>

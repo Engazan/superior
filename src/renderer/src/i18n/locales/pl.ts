@@ -1,10 +1,12 @@
 import { setupPl } from '../worktreeSetup'
 import { terminalSettingsPl } from '../terminalSettings'
 import { onboardingPl } from '../onboarding'
+import { elevationPl } from '../elevation'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
   ...setupPl,
+  ...elevationPl,
   ...terminalSettingsPl,
   'browser.navigation': "Nawigacja przeglądarki",
   'browser.back': "Wstecz",

@@ -351,6 +351,11 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_UI, ui)
   },
 
+  /** Windows only: whether agents would inherit an administrator token. */
+  isElevated(): Promise<boolean> {
+    return ipcRenderer.invoke(IPC.APP_IS_ELEVATED)
+  },
+
   setAttentionColor(color: string): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_ATTENTION_COLOR, color)
   },

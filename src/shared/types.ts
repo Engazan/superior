@@ -86,6 +86,8 @@ export interface UiState {
   usageFooterProfiles?: string[]
   usageFooterRemaining?: boolean
   usageFooterCompact?: boolean
+  /** The Windows administrator-mode warning was turned off. */
+  elevationWarningDismissed?: boolean
 }
 
 export interface AppSettings {
@@ -1028,6 +1030,7 @@ export const IPC = {
   NOTIFY_FINISHED: 'notify:finished',
   NOTIFY_ACTIVATED: 'notify:activated',
   APP_SET_BADGE: 'app:set-badge',
+  APP_IS_ELEVATED: 'app:is-elevated',
   SETTINGS_SET_USAGE_PRIMARY: 'settings:set-usage-primary',
   INTEGRATIONS_LIST: 'integrations:list',
   INTEGRATIONS_SAVE: 'integrations:save',

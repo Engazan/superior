@@ -1,8 +1,10 @@
 import { setupEn } from '../worktreeSetup'
 import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
+import { elevationEn } from '../elevation'
 export const en = {
   ...setupEn,
+  ...elevationEn,
   ...terminalSettingsEn,
   'browser.navigation': "Browser navigation",
   'browser.back': "Back",
