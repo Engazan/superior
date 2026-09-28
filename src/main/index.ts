@@ -26,6 +26,8 @@ import { registerUpdateIpc } from './ipc/update.ipc'
 import { registerClipboardIpc } from './ipc/clipboard.ipc'
 import { isUpdatePending, releaseDaemonForUpdate } from './services/update.service'
 import { daemonClient } from './services/daemonClient'
+import { forgetAgentState, startAgentStateWatcher } from './services/agent-state.service'
+import { ensureClaudeStateHooks } from './services/claude-hooks.service'
 
 const isMac = process.platform === 'darwin'
 
@@ -184,6 +186,11 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerUpdateIpc()
   registerClipboardIpc()
   registerCliLauncherIpc()
+
+  // Hook-reported agent state; plain `claude` typed into a shell uses ~/.claude.
+  startAgentStateWatcher()
+  daemonClient.onExit(({ id }) => forgetAgentState(id))
+  if (getSettings().agentHooks) ensureClaudeStateHooks('claude')
 
   // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
   daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))

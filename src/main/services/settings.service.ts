@@ -74,6 +74,7 @@ const DEFAULTS: AppSettings = {
   usageTracking: false,
   usagePrimary: 'remaining',
   notifications: true,
+  agentHooks: true,
   globalHotkey: null,
   fileOpener: 'system'
 }
@@ -198,6 +199,7 @@ export function getSettings(): AppSettings {
       : DEFAULTS.usagePrimary,
     notifications:
       typeof parsed.notifications === 'boolean' ? parsed.notifications : DEFAULTS.notifications,
+    agentHooks: typeof parsed.agentHooks === 'boolean' ? parsed.agentHooks : DEFAULTS.agentHooks,
     globalHotkey:
       typeof parsed.globalHotkey === 'string' && parsed.globalHotkey.trim()
         ? parsed.globalHotkey
@@ -300,6 +302,13 @@ export function setNotifications(enabled: boolean): AppSettings {
     ...getSettings(),
     notifications: Boolean(enabled)
   }
+  save(next)
+  return next
+}
+
+/** Persist whether Claude state hooks are installed. */
+export function setAgentHooks(enabled: boolean): AppSettings {
+  const next: AppSettings = { ...getSettings(), agentHooks: Boolean(enabled) }
   save(next)
   return next
 }

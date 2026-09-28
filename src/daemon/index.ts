@@ -117,7 +117,7 @@ function flush(session: Session): void {
 }
 
 /** Clean env for spawned ptys — never leak Electron-as-Node flags to children. */
-function ptyEnv(): Record<string, string> {
+function ptyEnv(extra: unknown): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) {
     if (v === undefined) continue
@@ -129,6 +129,12 @@ function ptyEnv(): Record<string, string> {
   // (xterm.js renders all of these) so CLIs emit full colour.
   env.TERM = 'xterm-256color'
   env.COLORTERM = 'truecolor'
+  // Per-terminal hook routing from the app; only SUPERIOR_* names are accepted.
+  if (extra && typeof extra === 'object') {
+    for (const [k, v] of Object.entries(extra)) {
+      if (/^SUPERIOR_[A-Z_]+$/.test(k) && typeof v === 'string') env[k] = v
+    }
+  }
   return env
 }
 
@@ -162,7 +168,8 @@ function spawnSession(
   cwd: string,
   cols: number,
   rows: number,
-  meta: DaemonSessionMeta
+  meta: DaemonSessionMeta,
+  extraEnv?: Record<string, string>
 ): void {
   if (sessions.has(id)) return
   const resolved = direct ?? (() => {
@@ -174,7 +181,7 @@ function spawnSession(
     cols: cols || 80,
     rows: rows || 24,
     cwd,
-    env: ptyEnv()
+    env: ptyEnv(extraEnv)
   })
 
   const session: Session = {
@@ -250,7 +257,7 @@ function handle(conn: Conn, msg: ClientMessage): void {
     case 'spawn':
       cancelShutdown()
       try {
-        spawnSession(msg.id, msg.command, msg.direct, msg.cwd, msg.cols, msg.rows, msg.meta)
+        spawnSession(msg.id, msg.command, msg.direct, msg.cwd, msg.cols, msg.rows, msg.meta, msg.env)
         send(conn, { t: 'spawned', id: msg.id, pid: sessions.get(msg.id)?.proc.pid })
       } catch (err) {
         send(conn, { t: 'error', id: msg.id, message: (err as Error).message || 'spawn failed' })

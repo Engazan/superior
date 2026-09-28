@@ -1,4 +1,5 @@
 import type { WorktreeSetupConfig } from '@shared/worktree-setup'
+import type { AgentStateEvent } from '@shared/agent-state'
 import type { TerminalSettings } from '@shared/terminalSettings'
 import { BROWSER_IPC, type BrowserKey, type BrowserRequest, type BrowserState, type BrowserSelection, type BrowserDesignRequest } from '@shared/browser'
 import type { SendReviewArgs } from '@shared/types'
@@ -373,6 +374,10 @@ const api = {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_NOTIFICATIONS, enabled)
   },
 
+  setAgentHooks(enabled: boolean): Promise<AppSettings> {
+    return ipcRenderer.invoke(IPC.SETTINGS_SET_AGENT_HOOKS, enabled)
+  },
+
   /** Persist + register the system-wide show/hide hotkey (null disables). */
   setGlobalHotkey(chord: string | null): Promise<GlobalHotkeyResult> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_GLOBAL_HOTKEY, chord)
@@ -669,6 +674,17 @@ const api = {
     const listener = (_e: unknown, payload: AgentExitEvent): void => cb(payload)
     ipcRenderer.on(IPC.AGENT_EXIT, listener)
     return () => ipcRenderer.removeListener(IPC.AGENT_EXIT, listener)
+  },
+
+  /** Subscribe to hook-reported agent turn state. Returns an unsubscribe function. */
+  onAgentState(cb: (e: AgentStateEvent) => void): () => void {
+    const listener = (_e: unknown, payload: AgentStateEvent): void => cb(payload)
+    ipcRenderer.on(IPC.AGENT_STATE, listener)
+    return () => ipcRenderer.removeListener(IPC.AGENT_STATE, listener)
+  },
+
+  getAgentStates(): Promise<AgentStateEvent[]> {
+    return ipcRenderer.invoke(IPC.AGENT_STATES_GET)
   },
 
   /** Current Claude usage snapshots, to prime the store on load. */

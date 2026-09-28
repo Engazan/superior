@@ -232,6 +232,8 @@ export const hu: Record<MessageKey, string> = {
   'search.close': 'Keresés bezárása',
   'notify.setting': 'Értesítések',
   'notify.settingDesc': 'Értesítés, ha a terminál figyelmet kér vagy a folyamata leáll, miközben az alkalmazás a háttérben van.',
+  'agentHooks.setting': "Pontos Claude állapot",
+  'agentHooks.settingDesc': "Hookokat ad a Claude settings.json fájljához, így a terminálok pontosan mutatják, mikor dolgozik, mikor vár engedélyre vagy mikor végzett. Az újonnan indított munkamenetekre vonatkozik.",
   'notify.finishedTitle': '{label} figyelmet igényel',
   'notify.finishedBody': 'Ellenőrizze a terminált a(z) {workspace} workspace-ben.',
   'keyboard.recording': 'Nyomjon billentyűket…',

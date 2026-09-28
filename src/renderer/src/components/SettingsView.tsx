@@ -214,6 +214,7 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
   const [notifications, setNotifications] = useState<boolean | null>(null)
   const [sidebarWorkspaceTools, setSidebarWorkspaceTools] = useState<boolean | null>(null)
   const [elevationWarning, setElevationWarning] = useState<boolean | null>(null)
+  const [agentHooks, setAgentHooksState] = useState<boolean | null>(null)
   const [fileOpener, setFileOpenerState] = useState<FileOpener>('system')
   useEffect(() => {
     window.api.getSettings().then((s) => {
@@ -221,6 +222,7 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
       setNotifications(s.notifications)
       setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools)
       setElevationWarning(!s.ui.elevationWarningDismissed)
+      setAgentHooksState(s.agentHooks)
       setFileOpenerState(s.fileOpener)
     })
   }, [])
@@ -233,6 +235,11 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
   const toggleNotifications = (next: boolean): void => {
     setNotifications(next)
     window.api.setNotifications(next).then((s) => setNotifications(s.notifications))
+  }
+
+  const toggleAgentHooks = (next: boolean): void => {
+    setAgentHooksState(next)
+    window.api.setAgentHooks(next).then((s) => setAgentHooksState(s.agentHooks))
   }
 
   const toggleElevationWarning = (next: boolean): void => {
@@ -369,6 +376,16 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
               label={t('notify.setting')}
             />
           </SettingRow>
+
+          {window.api.platform !== 'win32' && (
+            <SettingRow title={t('agentHooks.setting')} description={t('agentHooks.settingDesc')}>
+              <Toggle
+                checked={agentHooks === true}
+                onChange={toggleAgentHooks}
+                label={t('agentHooks.setting')}
+              />
+            </SettingRow>
+          )}
 
           {window.api.platform === 'win32' && (
             <SettingRow title={t('elevation.setting')} description={t('elevation.settingDesc')}>

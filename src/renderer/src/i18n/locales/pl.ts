@@ -232,6 +232,8 @@ export const pl: Record<MessageKey, string> = {
   'search.close': 'Zamknij wyszukiwanie',
   'notify.setting': 'Powiadomienia',
   'notify.settingDesc': 'Powiadom, gdy terminal wymaga uwagi lub jego proces zakończy się, a aplikacja jest w tle.',
+  'agentHooks.setting': "Dokładny stan Claude",
+  'agentHooks.settingDesc': "Dodaje hooki do settings.json Claude, dzięki czemu terminale dokładnie pokazują, kiedy Claude pracuje, czeka na zgodę lub kończy. Dotyczy nowo uruchomionych sesji.",
   'notify.finishedTitle': '{label} wymaga uwagi',
   'notify.finishedBody': 'Sprawdź terminal w workspace {workspace}.',
   'keyboard.recording': 'Naciśnij klawisze…',

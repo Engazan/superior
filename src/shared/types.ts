@@ -113,6 +113,8 @@ export interface AppSettings {
   usagePrimary: UsagePrimary
   /** Native OS notification for explicit terminal attention/exit while unfocused. */
   notifications: boolean
+  /** Install Claude hooks that report exact turn state (working / waiting / done). */
+  agentHooks: boolean
   /**
    * System-wide show/hide chord (app chord format, e.g. 'mod+shift+space'),
    * or null when disabled. Registered via Electron globalShortcut.
@@ -1026,6 +1028,7 @@ export const IPC = {
   SETTINGS_SET_ACCENT_COLOR: 'settings:set-accent-color',
   SETTINGS_SET_USAGE_TRACKING: 'settings:set-usage-tracking',
   SETTINGS_SET_NOTIFICATIONS: 'settings:set-notifications',
+  SETTINGS_SET_AGENT_HOOKS: 'settings:set-agent-hooks',
   SETTINGS_SET_GLOBAL_HOTKEY: 'settings:set-global-hotkey',
   NOTIFY_FINISHED: 'notify:finished',
   NOTIFY_ACTIVATED: 'notify:activated',
@@ -1075,6 +1078,8 @@ export const IPC = {
   AGENT_KILL: 'agent:kill',
   AGENT_DATA: 'agent:data',
   AGENT_EXIT: 'agent:exit',
+  AGENT_STATE: 'agent:state',
+  AGENT_STATES_GET: 'agent:states-get',
   AGENT_USAGE: 'agent:usage',
   AGENT_USAGE_GET: 'agent:usage-get',
   USAGE_PROFILES: 'usage:profiles',

@@ -323,6 +323,7 @@ export const daemonClient = {
     cols: number
     rows: number
     meta: DaemonSessionMeta
+    env?: Record<string, string>
   }): Promise<{ pid?: number }> {
     const s = await ensureDaemon()
     const result = new Promise<{ pid?: number }>((resolve, reject) => {

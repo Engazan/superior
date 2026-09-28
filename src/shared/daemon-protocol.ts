@@ -51,6 +51,8 @@ export type ClientMessage =
       cols: number
       rows: number
       meta: DaemonSessionMeta
+      /** Extra SUPERIOR_* variables for the terminal. Older daemons ignore it. */
+      env?: Record<string, string>
     }
   | { t: 'attach'; id: string }
   | { t: 'detach'; id: string }

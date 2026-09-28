@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
+import type { AgentState } from '@shared/agent-state'
 import type { AgentSession } from './types'
 import { TerminalSignals } from './terminalSignals'
+import { agentStateFromTitle } from './agentTitle'
 
 /** Output pulse only: silence says nothing about whether the task is done. */
 const IDLE_MS = 400
@@ -22,6 +24,11 @@ const IDLE_MS = 400
  *
  * Replay chunks (scrollback restored on attach) are ignored, so reattaching a
  * session never looks busy or raises attention.
+ *
+ * When the agent itself reports its turn (Claude hooks, or a spinner in the
+ * Claude/Codex terminal title), that state replaces the output heuristic: busy
+ * exactly while working, and attention once a turn stops or asks permission.
+ * Hooks win over the title.
  */
 
 interface SessionInfo {
@@ -41,6 +48,8 @@ const signals = new Map<string, TerminalSignals>()
 const reported = new Set<string>()
 const pendingReports = new Map<string, object>()
 const exitedSessions = new Set<string>()
+const hookStates = new Map<string, AgentState>()
+const titleStates = new Map<string, AgentState>()
 const listeners = new Set<() => void>()
 let started = false
 
@@ -119,6 +128,31 @@ function requestAttention(id: string): void {
   refresh()
 }
 
+const agentState = (id: string): AgentState | undefined => hookStates.get(id) ?? titleStates.get(id)
+
+function setAgentState(source: Map<string, AgentState>, id: string, state: AgentState | null): void {
+  const before = agentState(id)
+  if (state) source.set(id, state)
+  else source.delete(id)
+  const after = agentState(id)
+  if (after === before) return
+  if (after === 'working') {
+    stopOutput(id)
+    busySessions.add(id)
+    refresh()
+  } else if (before === 'working' || after === 'waiting') {
+    requestAttention(id)
+  } else {
+    stopOutput(id)
+    refresh()
+  }
+}
+
+function forgetAgentState(id: string): void {
+  hookStates.delete(id)
+  titleStates.delete(id)
+}
+
 /** New user input acknowledges the alert and allows the next interaction to notify. */
 export function noteActivityInput(id: string): void {
   reported.delete(id)
@@ -142,13 +176,16 @@ function start(): void {
     if (replay || !data || !sessionInfo.get(id)?.running || exitedSessions.has(id)) return
     let parser = signals.get(id)
     if (!parser) {
-      parser = new TerminalSignals()
+      parser = new TerminalSignals((title) => setAgentState(titleStates, id, agentStateFromTitle(title)))
       signals.set(id, parser)
     }
+    const stateBefore = agentState(id)
     if (parser.read(data)) {
       requestAttention(id)
       return
     }
+    // Output is not activity while the agent reports its turn, including the chunk that ended it.
+    if (stateBefore || agentState(id)) return
     const existing = timers.get(id)
     if (existing !== undefined) clearTimeout(existing)
     busySessions.add(id)
@@ -169,12 +206,28 @@ function start(): void {
     exitedSessions.add(id)
     stopOutput(id)
     signals.delete(id)
+    forgetAgentState(id)
     if (reason !== 'interrupted' && exitCode !== null) requestAttention(id)
     else {
       pendingReports.delete(id)
       refresh()
     }
   })
+
+  window.api.onAgentState(({ id, state }) => {
+    if (sessionInfo.get(id)?.running && !exitedSessions.has(id)) setAgentState(hookStates, id, state)
+  })
+  // Sessions restored after a reload resume their last reported state quietly.
+  void window.api.getAgentStates().then((states) => {
+    for (const { id, state } of states) {
+      // The session list may still be loading; unknown ids are dropped with it.
+      if (state && !hookStates.has(id)) {
+        hookStates.set(id, state)
+        if (state === 'working' && sessionInfo.get(id)?.running) busySessions.add(id)
+      }
+    }
+    refresh()
+  }).catch(() => {})
 }
 
 /** Feed the current session list (id → workspace, running) from App state. */
@@ -192,12 +245,14 @@ export function setActivitySessions(sessions: AgentSession[]): void {
       reported.delete(id)
       pendingReports.delete(id)
       exitedSessions.delete(id)
+      forgetAgentState(id)
     }
   }
   for (const [id, info] of next) {
     if (!info.running) {
       stopOutput(id)
       signals.delete(id)
+      forgetAgentState(id)
     }
   }
   sessionInfo = next

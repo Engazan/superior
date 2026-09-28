@@ -232,6 +232,8 @@ export const cs: Record<MessageKey, string> = {
   'search.close': 'Zavřít hledání',
   'notify.setting': 'Notifikace',
   'notify.settingDesc': 'Upozornit, když terminál vyžádá pozornost nebo jeho proces skončí a aplikace je na pozadí.',
+  'agentHooks.setting': "Přesný stav Claude",
+  'agentHooks.settingDesc': "Přidá hooky do settings.json Claude, takže terminály přesně ukážou, kdy Claude pracuje, čeká na povolení nebo skončil. Platí pro nově spuštěné session.",
   'notify.finishedTitle': '{label} vyžaduje pozornost',
   'notify.finishedBody': 'Zkontrolujte terminál ve workspace {workspace}.',
   'keyboard.recording': 'Stiskněte klávesy…',

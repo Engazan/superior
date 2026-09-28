@@ -229,6 +229,8 @@ export const en = {
   'search.close': 'Close search',
   'notify.setting': 'Notifications',
   'notify.settingDesc': 'Notify when a terminal requests attention or its process exits while the app is in the background.',
+  'agentHooks.setting': "Exact Claude status",
+  'agentHooks.settingDesc': "Adds hooks to Claude's settings.json so terminals show exactly when Claude works, waits for permission, or finishes. Applies to newly started sessions.",
   'notify.finishedTitle': '{label} needs attention',
   'notify.finishedBody': 'Check the terminal in workspace {workspace}.',
   'keyboard.recording': 'Press keys…',
