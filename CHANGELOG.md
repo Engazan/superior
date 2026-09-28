@@ -5,6 +5,42 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2026-09-28
+
+The 0.28.0 build failed on macOS and Windows and was never published, so its
+changes also ship in this release.
+
+### Added
+
+- **Exact agent status.** Claude reports when it is working, waiting for
+  your permission, or done through hooks Superior adds to its settings, and
+  Claude and Codex are also recognized by their terminal titles. Sidebar
+  indicators and notifications follow the agent's real turn instead of
+  terminal output. Remove the hooks any time in Settings → Appearance.
+- **Workspace sorting.** A sort menu in the sidebar orders workspaces within
+  each project by Recent activity, Smart (needs you, then unseen results,
+  then working), Name or Manual. Drag a workspace to place it exactly; the
+  order is kept and sorting switches to Manual.
+- **Administrator mode warning.** On Windows, Superior warns when it runs as
+  administrator, which prevents Codex from starting, and explains how to fix
+  it. The warning can be dismissed or turned off in Settings.
+
+### Changed
+
+- **Compact sidebar.** A smaller Workspaces header, a status dot for every
+  workspace, plain branch names and the running-terminal count on the right.
+  Workspace tree guides were removed.
+- **Right-click actions.** Project setup and folder and workspace actions
+  moved from hover buttons to the right-click menu, also available with the
+  Menu key or Shift+F10.
+- **Larger command palette.** ⌘K opens a wider palette with a prominent
+  search field and keyboard hints.
+
+### Fixed
+
+- **Worktree setup on Windows.** Setup commands containing quotes no longer
+  fail, because they reach `cmd.exe` unmodified.
+
 ## [0.28.0] - 2026-09-13
 
 ### Added
