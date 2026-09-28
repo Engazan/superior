@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2026-09-28
+
+### Changed
+
+- **Terminals survive updates on Windows.** The terminal daemon now runs from
+  its own copy of the runtime in `%LOCALAPPDATA%\Superior\daemon-host`
+  instead of the install folder, so installing an update no longer ends
+  running terminals. If the copy cannot be made or started, Superior falls
+  back to the installed daemon as before. The first update from an older
+  version still restarts terminals.
+- **Updates stop the daemon only when necessary.** On Windows, installing an
+  update brings the terminal daemon down only when it runs from the install
+  folder.
+- **Bundled ConPTY on Windows.** Terminals use the ConPTY shipped with
+  node-pty and fall back to the system one when it is unavailable.
+
+### Fixed
+
+- **Terminal daemon diagnostics.** `daemon.log` records when each terminal
+  exits and when the daemon itself stops, and start-up crashes are captured in
+  `daemon-stderr.log`, so lost terminals can be traced.
+- **Uninstall cleanup on Windows.** A real uninstall stops the relocated
+  daemon and removes its runtime copy; updates leave it running.
+
 ## [0.29.0] - 2026-09-28
 
 The 0.28.0 build failed on macOS and Windows and was never published, so its
