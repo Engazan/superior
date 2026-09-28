@@ -75,8 +75,6 @@ export const pl: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Usuń folder',
   'sidebar.removeFolderConfirm':
     'Usunąć „{name}” z listy? Jego workspaces zostaną zamknięte, a działające terminale zatrzymane. Pliki na dysku pozostaną nietknięte.',
-  'menu.folderActions': 'Akcje folderu',
-  'menu.workspaceActions': 'Akcje workspace',
   'grid.dividerHint': 'Przeciągnij, aby zmienić rozmiar · z Alt swobodnie',
   'profile.label': 'Profil',
   'profile.switch': 'Przełącz profil',

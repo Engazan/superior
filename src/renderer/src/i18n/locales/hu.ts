@@ -75,8 +75,6 @@ export const hu: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Mappa eltávolítása',
   'sidebar.removeFolderConfirm':
     'Eltávolítod „{name}” mappát a listáról? A workspace-ei bezárulnak, a futó terminálok leállnak. A lemezen lévő fájlok érintetlenek maradnak.',
-  'menu.folderActions': 'Mappaműveletek',
-  'menu.workspaceActions': 'Workspace-műveletek',
   'grid.dividerHint': 'Húzd a méretezéshez · Alt-tal szabadon',
   'profile.label': 'Profil',
   'profile.switch': 'Profil váltása',

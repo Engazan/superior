@@ -75,8 +75,6 @@ export const cs: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Odebrat složku',
   'sidebar.removeFolderConfirm':
     'Odebrat „{name}“ ze seznamu? Jeho workspaces se zavřou a běžící terminály zastaví. Soubory na disku zůstanou nedotčené.',
-  'menu.folderActions': 'Akce složky',
-  'menu.workspaceActions': 'Akce workspace',
   'grid.dividerHint': 'Tažením změníte velikost · s Alt volně',
   'profile.label': 'Profil',
   'profile.switch': 'Přepnout profil',

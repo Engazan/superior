@@ -75,8 +75,6 @@ export const sk: Record<MessageKey, string> = {
   'sidebar.removeFolder': 'Odstrániť priečinok',
   'sidebar.removeFolderConfirm':
     'Odstrániť „{name}“ zo zoznamu? Jeho workspaces sa zatvoria a bežiace terminály zastavia. Súbory na disku ostanú nedotknuté.',
-  'menu.folderActions': 'Akcie priečinka',
-  'menu.workspaceActions': 'Akcie workspace',
   'grid.dividerHint': 'Ťahom zmeníte veľkosť · s Alt voľne',
   'profile.label': 'Profil',
   'profile.switch': 'Prepnúť profil',

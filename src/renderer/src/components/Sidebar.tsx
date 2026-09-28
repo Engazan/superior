@@ -3,11 +3,9 @@ import { useI18n } from '../i18n'
 import { useAttentionColor } from '../attentionColor'
 import { useBusyWorkspaces, useAttentionWorkspaces } from '../activityStore'
 import {
-  ChevronIcon,
   ExternalLinkIcon,
   GearIcon,
   GripIcon,
-  KebabIcon,
   Menu,
   PencilIcon,
   PlusIcon,
@@ -18,7 +16,6 @@ import {
 } from './ui'
 import { useShortcutTitle } from '../shortcuts'
 import {
-  BranchBadge,
   DiffStat,
   FolderGlyph,
   RemoteBadge,
@@ -520,18 +517,18 @@ export const Sidebar = memo(function Sidebar({
       className="superior-sidebar flex w-64 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
     >
       {overlays}
-      <div className="border-b border-edge/70 px-3 pb-3 pt-3">
-        <div className="flex h-9 items-center justify-between px-1">
-          <span className="text-[15px] font-bold tracking-[-0.01em] text-fg">
+      <div className="px-3 pb-1 pt-2.5">
+        <div className="flex h-7 items-center justify-between pl-2">
+          <span className="text-xs font-semibold text-fgmuted">
             {t('palette.sectionWorkspaces')}
           </span>
           <button
             onClick={onOpenProject}
             title={t('sidebar.openProject')}
             aria-label={t('sidebar.openProject')}
-            className="grid h-8 w-8 place-items-center rounded-lg text-2xl font-light leading-none text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="grid h-6 w-6 place-items-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
           >
-            <span aria-hidden className="-translate-y-px">+</span>
+            <PlusIcon size={15} />
           </button>
         </div>
         {workspaceToolsVisible && (
@@ -597,7 +594,7 @@ export const Sidebar = memo(function Sidebar({
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {workspaceToolsVisible &&
               !workspaceQuery &&
               !favoritesOnly &&
@@ -658,6 +655,9 @@ export const Sidebar = memo(function Sidebar({
                       } else if (e.key === 'ArrowRight' && !open) {
                         e.preventDefault()
                         toggleFolder(folder)
+                      } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+                        e.preventDefault()
+                        setFolderMenu({ path: folder.path, anchor: e.currentTarget })
                       }
                     }}
                     onContextMenu={(e) => {
@@ -665,18 +665,14 @@ export const Sidebar = memo(function Sidebar({
                       setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
                     }}
                     title={folderTitle(folder)}
-                    className={`group relative flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-0.5 text-fgdim transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-                      folderActive ? 'text-fg hover:bg-hover/70' : 'hover:bg-hover/70 hover:text-fg'
-                    }`}
+                    aria-haspopup="menu"
+                    className="group relative flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 text-fg transition hover:bg-hover/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                   >
-                    <span className="flex h-5 w-4 shrink-0 items-center justify-center text-fgmuted">
-                      <ChevronIcon size={12} direction={open ? 'down' : 'right'} />
-                    </span>
                     <span style={folder.color ? { color: folder.color } : undefined} className="text-fgdim">
                       <FolderGlyph folder={folder} size={15} />
                     </span>
                     <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] ${
-                      folderActive ? 'text-fg' : 'text-fgdim'
+                      folderActive ? 'text-fg' : 'text-fg2'
                     }`}>
                       {folderLabel(folder)}
                     </span>
@@ -713,24 +709,12 @@ export const Sidebar = memo(function Sidebar({
                       >
                         <PlusIcon size={13} />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setFolderMenu({ path: folder.path, anchor: e.currentTarget })
-                        }}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-                        aria-label={t('menu.folderActions')}
-                        title={t('menu.folderActions')}
-                        aria-haspopup="menu"
-                      >
-                        <KebabIcon size={13} />
-                      </button>
                     </span>
                   </div>
 
                   {/* Workspaces — compact, indented rows under their project. */}
                   {open && (
-                    <ul className="sidebar-workspace-tree mt-1 space-y-0.5">
+                    <ul className="mt-0.5 space-y-px">
                       {folderWorkspaces.map((ws) => {
                         const active = ws.id === activeWorkspaceId
                         const attn = attentionWorkspaceIds.has(ws.id)
@@ -738,6 +722,8 @@ export const Sidebar = memo(function Sidebar({
                         const runningCount = counts[ws.id] ?? 0
                         const stat = gitStats[ws.id]
                         const hasDiff = !!stat?.isRepository && (stat.additions > 0 || stat.deletions > 0)
+                        // Two-line rows align the status dot with the name, not the row centre.
+                        const twoLines = folder.kind === 'remote' || !!ws.branch || hasDiff
                         return (
                           <li key={ws.id}>
                             <div
@@ -753,7 +739,7 @@ export const Sidebar = memo(function Sidebar({
                                 } else if (e.key === 'F2') {
                                   e.preventDefault()
                                   startRename(ws)
-                                } else if (e.key === 'ContextMenu') {
+                                } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
                                   e.preventDefault()
                                   setWsMenu({ id: ws.id, anchor: e.currentTarget })
                                 }
@@ -763,16 +749,13 @@ export const Sidebar = memo(function Sidebar({
                                 setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
                               }}
                               style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex min-h-9 cursor-pointer items-center gap-2 rounded-lg py-2 pl-5 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+                              className={`group relative flex cursor-pointer items-center gap-2 rounded-md py-1 pl-4 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
                                 active
                                   ? 'bg-accentBg text-fg'
                                   : 'text-fg2 hover:bg-hover/70'
                               }`}
                             >
-                              {active && (
-                                <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />
-                              )}
-                              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                              <span className={`flex h-4 w-3.5 shrink-0 items-center justify-center ${twoLines ? 'self-start' : ''}`}>
                                 {attn ? (
                                   <span
                                     role="img"
@@ -783,9 +766,14 @@ export const Sidebar = memo(function Sidebar({
                                   />
                                 ) : busy ? (
                                   <span role="img" aria-label={t('sidebar.workingTerminals')} title={t('sidebar.workingTerminals')}>
-                                    <WorkingSpinner />
+                                    <WorkingSpinner className="h-3 w-3" />
                                   </span>
-                                ) : null}
+                                ) : (
+                                  <span
+                                    aria-hidden
+                                    className={`h-2 w-2 rounded-full ${runningCount > 0 ? 'bg-status' : 'bg-fgmuted/45'}`}
+                                  />
+                                )}
                               </span>
                               {editingId === ws.id ? (
                                 <input
@@ -803,7 +791,7 @@ export const Sidebar = memo(function Sidebar({
                               ) : (
                                 // Two-line row: name on top; branch + diff stat on a
                                 // second, smaller line so nothing overlaps at 224px.
-                                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                                   <span
                                     onDoubleClick={(e) => {
                                       e.stopPropagation()
@@ -821,16 +809,18 @@ export const Sidebar = memo(function Sidebar({
                                   >
                                     {ws.name}
                                   </span>
-                                  {(folder.kind === 'remote' || ws.branch || hasDiff) && (
+                                  {twoLines && (
                                     <span className="flex min-w-0 items-center gap-2">
                                       {folder.kind === 'remote' && (
                                         <RemoteBadge title={folderTitle(folder)} />
                                       )}
                                       {ws.branch && (
-                                        <BranchBadge
-                                          branch={ws.branch}
+                                        <span
                                           title={t('sidebar.worktreeBadge')}
-                                        />
+                                          className="min-w-0 truncate text-[11px] leading-4 text-fgmuted"
+                                        >
+                                          {ws.branch}
+                                        </span>
                                       )}
                                       {hasDiff && (
                                         <DiffStat
@@ -843,70 +833,41 @@ export const Sidebar = memo(function Sidebar({
                                 </div>
                               )}
 
-                              {editingId !== ws.id && runningCount > 0 && (
-                                <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />
+                              {/* Setup and workspace actions live in the right-click menu. */}
+                              {editingId !== ws.id && workspaceToolsVisible && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleFavorite(ws.id)
+                                  }}
+                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                                    favoriteWorkspaceIds.has(ws.id)
+                                      ? 'text-accent opacity-100'
+                                      : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                                  }`}
+                                  aria-label={
+                                    favoriteWorkspaceIds.has(ws.id)
+                                      ? t('sidebar.unfavorite')
+                                      : t('sidebar.favorite')
+                                  }
+                                  title={
+                                    favoriteWorkspaceIds.has(ws.id)
+                                      ? t('sidebar.unfavorite')
+                                      : t('sidebar.favorite')
+                                  }
+                                  aria-pressed={favoriteWorkspaceIds.has(ws.id)}
+                                >
+                                  <StarIcon
+                                    size={12}
+                                    className={favoriteWorkspaceIds.has(ws.id) ? 'fill-current' : ''}
+                                  />
+                                </button>
                               )}
 
-                              {/* Row actions appear on hover and keyboard focus. */}
-                              {editingId !== ws.id && (
-                                <>
-                                  {folder.kind !== 'remote' && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setSetupWorkspaceId(ws.id)
-                                      }}
-                                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-                                      aria-label={`${t('setup.configure')}: ${ws.name}`}
-                                      title={t('setup.configure')}
-                                      aria-haspopup="dialog"
-                                    >
-                                      <GearIcon size={13} />
-                                    </button>
-                                  )}
-                                  {workspaceToolsVisible && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        toggleFavorite(ws.id)
-                                      }}
-                                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                                        favoriteWorkspaceIds.has(ws.id)
-                                          ? 'text-accent opacity-100'
-                                          : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-                                      }`}
-                                      aria-label={
-                                        favoriteWorkspaceIds.has(ws.id)
-                                          ? t('sidebar.unfavorite')
-                                          : t('sidebar.favorite')
-                                      }
-                                      title={
-                                        favoriteWorkspaceIds.has(ws.id)
-                                          ? t('sidebar.unfavorite')
-                                          : t('sidebar.favorite')
-                                      }
-                                      aria-pressed={favoriteWorkspaceIds.has(ws.id)}
-                                    >
-                                      <StarIcon
-                                        size={12}
-                                        className={favoriteWorkspaceIds.has(ws.id) ? 'fill-current' : ''}
-                                      />
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setWsMenu({ id: ws.id, anchor: e.currentTarget })
-                                    }}
-                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted opacity-0 transition hover:bg-edge hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-                                    aria-label={t('menu.workspaceActions')}
-                                    title={t('menu.workspaceActions')}
-                                    aria-haspopup="menu"
-                                  >
-                                    <KebabIcon size={13} />
-                                  </button>
-                                </>
+                              {editingId !== ws.id && runningCount > 0 && (
+                                <span className="ml-auto shrink-0">
+                                  <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />
+                                </span>
                               )}
                             </div>
                           </li>
