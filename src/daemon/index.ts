@@ -299,12 +299,12 @@ function handle(conn: Conn, msg: ClientMessage): void {
       if (!conn.attached.has(msg.id)) {
         flush(s) // pending bytes are already in the snapshot; don't send them twice
         const snap = s.buffer.snapshot()
-        if (snap) {
-          try {
-            conn.socket.write(encodeDataFrame(msg.id, snap, true))
-          } catch {
-            /* socket may have closed mid-write */
-          }
+        // Always send a replay frame, including for an empty buffer. Remote
+        // subscribers need an unambiguous snapshot/live boundary.
+        try {
+          conn.socket.write(encodeDataFrame(msg.id, snap, true))
+        } catch {
+          /* socket may have closed mid-write */
         }
         conn.attached.add(msg.id)
         s.attached.add(conn)

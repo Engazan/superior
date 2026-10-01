@@ -196,7 +196,26 @@ src/main/                    # Electron main process: services + IPC handlers
 src/daemon/                  # persistent PTY process and scrollback buffer
 src/preload/index.ts         # explicit contextBridge capabilities
 src/renderer/src/            # React UI, hooks, terminal and file/git views
+server/                      # encrypted mobile relay and Dokploy deployment
 ```
+
+## Mobile relay
+
+Superior's terminal daemon keeps PTY sessions and recent scrollback alive across
+desktop app restarts. The desktop can now connect to a self-hosted relay over
+WSS, pair a phone, stream existing sessions and accept terminal input. Both
+desktop and phone make outbound connections, so users need no VPN or router port
+forwarding. The daemon's local socket stays private. A React Native mobile app
+is **not included yet**; its protocol is documented for later implementation.
+
+Open **Mobile access** above Workspaces in the left sidebar (or **Settings → Mobile access**) to set the address, enable the connection,
+generate a five-minute pairing QR code and revoke devices. Official builds receive the relay
+address from the `SUPERIOR_RELAY_URL` GitHub Actions variable. A local runtime
+variable or the desktop setting can override it. No server address is hardcoded.
+
+See the [mobile protocol](docs/mobile-companion.md) for pairing, encryption and
+client messages. The [relay server and Dokploy instructions](server/README.md)
+are in `server/`.
 
 ## License
 

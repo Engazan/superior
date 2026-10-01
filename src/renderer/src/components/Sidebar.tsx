@@ -19,6 +19,7 @@ import {
   Menu,
   PencilIcon,
   PlusIcon,
+  PhoneIcon,
   SearchIcon,
   SlidersIcon,
   StarIcon,
@@ -61,6 +62,7 @@ interface Props {
   onOpenProject: () => void
   /** Open the settings view. Its button is pinned to the bottom of the rail. */
   onOpenSettings: () => void
+  onOpenMobileAccess: () => void
   onRemoveFolder: (path: string) => void
   /** Persist a new folder order after a drag-to-reorder in the sidebar. */
   onReorderFolders: (orderedPaths: string[]) => void
@@ -88,6 +90,7 @@ export const Sidebar = memo(function Sidebar({
   onExpand,
   onOpenProject,
   onOpenSettings,
+  onOpenMobileAccess,
   onRemoveFolder,
   onReorderFolders,
   onUpdateFolder,
@@ -496,6 +499,15 @@ export const Sidebar = memo(function Sidebar({
         {overlays}
         <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
           <button
+            type="button"
+            onClick={onOpenMobileAccess}
+            title="Mobile access"
+            aria-label="Mobile access"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          >
+            <PhoneIcon size={18} />
+          </button>
+          <button
             onClick={onOpenProject}
             title={t('sidebar.openProject')}
             aria-label={t('sidebar.openProject')}
@@ -603,6 +615,14 @@ export const Sidebar = memo(function Sidebar({
     >
       {overlays}
       <div className="px-3 pb-1 pt-2.5">
+        <button
+          type="button"
+          onClick={onOpenMobileAccess}
+          className="mb-2 flex w-full items-center gap-2 rounded-md border border-edge bg-panel px-2.5 py-2 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          <PhoneIcon size={15} />
+          <span>Mobile access</span>
+        </button>
         <div className="flex h-7 items-center justify-between pl-2">
           <span className="flex-1 text-xs font-semibold text-fgmuted">
             {t('palette.sectionWorkspaces')}

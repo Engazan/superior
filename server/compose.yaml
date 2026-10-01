@@ -1,0 +1,36 @@
+# Dokploy Compose deployment for the Superior relay.
+services:
+  relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${SUPERIOR_RELAY_IMAGE:-superior-relay:local}
+    restart: unless-stopped
+    environment:
+      PORT: ${SUPERIOR_RELAY_PORT:-8080}
+      SUPERIOR_RELAY_PUBLIC_URL: ${SUPERIOR_RELAY_URL:?Set SUPERIOR_RELAY_URL to a wss:// URL}
+      RELAY_DATA_FILE: /data/relay.json
+    expose:
+      - "${SUPERIOR_RELAY_PORT:-8080}"
+    networks:
+      - dokploy-network
+    volumes:
+      - relay-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.superior-relay.rule=Host(`${SUPERIOR_RELAY_DOMAIN:?Set SUPERIOR_RELAY_DOMAIN}`)
+      - traefik.http.routers.superior-relay.entrypoints=websecure
+      - traefik.http.routers.superior-relay.tls.certresolver=${SUPERIOR_RELAY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.services.superior-relay.loadbalancer.server.port=${SUPERIOR_RELAY_PORT:-8080}
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  relay-data:

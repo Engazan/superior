@@ -5,5 +5,7 @@ dist/
 *.log
 *.tsbuildinfo
 .DS_Store
+server/.env
+server/data/
 
 .idea/

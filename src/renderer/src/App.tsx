@@ -878,6 +878,7 @@ export default function App(): React.JSX.Element {
               onOpenProject={openProjectModal}
               // Reopens on the last-visited section rather than resetting to Appearance.
               onOpenSettings={() => setView('settings')}
+              onOpenMobileAccess={() => { setSettingsSection('mobile'); setView('settings') }}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
               onUpdateFolder={ws.updateFolder}

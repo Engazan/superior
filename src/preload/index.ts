@@ -1,5 +1,6 @@
 import type { WorktreeSetupConfig } from '@shared/worktree-setup'
 import type { AgentStateEvent } from '@shared/agent-state'
+import type { MobileRelayInvite, MobileRelayStatus } from '@shared/mobileRelay'
 import type { TerminalSettings } from '@shared/terminalSettings'
 import { BROWSER_IPC, type BrowserKey, type BrowserRequest, type BrowserState, type BrowserSelection, type BrowserDesignRequest } from '@shared/browser'
 import type { SendReviewArgs } from '@shared/types'
@@ -334,6 +335,22 @@ const api = {
   },
   getSettings(): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_GET)
+  },
+
+  getMobileRelayStatus(): Promise<MobileRelayStatus> {
+    return ipcRenderer.invoke(IPC.MOBILE_RELAY_STATUS)
+  },
+  setMobileRelayEnabled(enabled: boolean): Promise<MobileRelayStatus> {
+    return ipcRenderer.invoke(IPC.MOBILE_RELAY_ENABLE, enabled)
+  },
+  setMobileRelayUrl(url: string): Promise<MobileRelayStatus> {
+    return ipcRenderer.invoke(IPC.MOBILE_RELAY_SET_URL, url)
+  },
+  createMobileRelayInvite(): Promise<MobileRelayInvite> {
+    return ipcRenderer.invoke(IPC.MOBILE_RELAY_INVITE)
+  },
+  revokeMobileRelayDevice(deviceId: string): Promise<MobileRelayStatus> {
+    return ipcRenderer.invoke(IPC.MOBILE_RELAY_REVOKE, deviceId)
   },
 
   setTheme(theme: ThemeMode): Promise<AppSettings> {

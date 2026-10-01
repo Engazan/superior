@@ -6,6 +6,7 @@ import { DaemonsSection } from './DaemonsSection'
 import { KeyboardSection } from './KeyboardSection'
 import { IntegrationsSection } from './IntegrationsSection'
 import { ShellCommandSection } from './ShellCommandSection'
+import { MobileRelaySection } from './MobileRelaySection'
 import { THEME_OPTIONS } from '../themeOptions'
 import { useTheme } from '../theme'
 import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
@@ -19,6 +20,7 @@ import {
   BranchIcon,
   PromptIcon,
   BroadcastIcon,
+  PhoneIcon,
   KeyboardIcon,
   TerminalIcon,
   Menu,
@@ -47,7 +49,8 @@ const SECTION_ICONS = {
   prompts: PromptIcon,
   daemons: BroadcastIcon,
   keyboard: KeyboardIcon,
-  shell: TerminalIcon
+  shell: TerminalIcon,
+  mobile: PhoneIcon
 }
 
 export type SettingsSection =
@@ -59,6 +62,7 @@ export type SettingsSection =
   | 'daemons'
   | 'keyboard'
   | 'shell'
+  | 'mobile'
 
 interface Props {
   initialSection: SettingsSection
@@ -497,7 +501,8 @@ export function SettingsView({
         { id: 'prompts', label: t('settings.prompts') },
         { id: 'integrations', label: t('settings.integrations') },
         { id: 'daemons', label: t('settings.daemons'), badge: daemonSessions.length },
-        { id: 'shell', label: t('settings.shellCommand') }
+        { id: 'shell', label: t('settings.shellCommand') },
+        { id: 'mobile', label: 'Mobile access' }
       ]
     }
   ]
@@ -595,6 +600,7 @@ export function SettingsView({
           )}
           {section === 'keyboard' && <KeyboardSection />}
           {section === 'shell' && <ShellCommandSection />}
+          {section === 'mobile' && <MobileRelaySection />}
         </div>
       </div>
     </div>

@@ -29,6 +29,8 @@ import { daemonClient } from './services/daemonClient'
 import { prepareDaemonHost } from './services/daemonHost'
 import { forgetAgentState, startAgentStateWatcher } from './services/agent-state.service'
 import { ensureClaudeStateHooks } from './services/claude-hooks.service'
+import { mobileRelay } from './services/mobileRelay.service'
+import { registerMobileRelayIpc } from './ipc/mobileRelay.ipc'
 
 const isMac = process.platform === 'darwin'
 
@@ -191,6 +193,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerUpdateIpc()
   registerClipboardIpc()
   registerCliLauncherIpc()
+  registerMobileRelayIpc()
 
   // Hook-reported agent state; plain `claude` typed into a shell uses ~/.claude.
   startAgentStateWatcher()
@@ -199,6 +202,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
 
   // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
   daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))
+  mobileRelay.start()
 
   mainWindow = createWindow()
 
@@ -246,6 +250,7 @@ app.on('before-quit', (event) => {
   }
   // Detach from the daemon without killing sessions, so they persist.
   daemonClient.disconnect()
+  mobileRelay.stop()
 })
 
 app.on('will-quit', () => {

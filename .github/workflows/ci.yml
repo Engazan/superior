@@ -39,6 +39,12 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Test relay
+        run: npm ci --prefix server && npm test --prefix server
+
+      - name: Build relay container
+        run: docker build -t superior-relay:ci server
+
       - name: Build
         run: npm run build
 

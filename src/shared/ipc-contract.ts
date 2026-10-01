@@ -3,6 +3,7 @@ import type { TerminalSettings } from './terminalSettings'
 import { BROWSER_IPC, type BrowserRequest, type BrowserState, type BrowserDesignRequest } from './browser'
 import { IPC } from './types'
 import type { AgentStateEvent } from './agent-state'
+import type { MobileRelayInvite, MobileRelayStatus } from './mobileRelay'
 import type {
   SendReviewArgs,
   AgentTask,
@@ -168,6 +169,11 @@ export interface IpcInvokeMap {
   [IPC.SETTINGS_SET_TERMINAL]: Invocation<[patch: Partial<TerminalSettings>], AppSettings>
   [IPC.TERMINAL_CLIPBOARD_WRITE]: Invocation<[text: string], boolean>
   [IPC.SETTINGS_GET]: Invocation<[], AppSettings>
+  [IPC.MOBILE_RELAY_STATUS]: Invocation<[], MobileRelayStatus>
+  [IPC.MOBILE_RELAY_ENABLE]: Invocation<[enabled: boolean], MobileRelayStatus>
+  [IPC.MOBILE_RELAY_SET_URL]: Invocation<[url: string], MobileRelayStatus>
+  [IPC.MOBILE_RELAY_INVITE]: Invocation<[], MobileRelayInvite>
+  [IPC.MOBILE_RELAY_REVOKE]: Invocation<[deviceId: string], MobileRelayStatus>
   [IPC.SETTINGS_SET_THEME]: Invocation<[theme: ThemeMode], AppSettings>
   [IPC.SETTINGS_SET_LANGUAGE]: Invocation<[language: Language], AppSettings>
   [IPC.SETTINGS_SET_SHORTCUTS]: Invocation<[shortcuts: ShortcutMap], AppSettings>

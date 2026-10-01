@@ -242,6 +242,15 @@ export function BroadcastIcon(props: IconProps): React.JSX.Element {
   )
 }
 
+export function PhoneIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <rect x="6" y="2" width="12" height="20" rx="2" />
+      <path d="M10 18h4" />
+    </svg>
+  )
+}
+
 export function RestartIcon(props: IconProps): React.JSX.Element {
   return (
     <svg

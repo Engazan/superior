@@ -52,6 +52,7 @@ jobs:
       - name: Build and package
         run: npm run ${{ matrix.script }}
         env:
+          SUPERIOR_RELAY_URL: ${{ vars.SUPERIOR_RELAY_URL }}
           # macOS Developer ID signing + notarization. CSC_* are scoped to the
           # mac runner because electron-builder also reads CSC_LINK for Windows
           # signing — leaking the mac cert there would break the Windows build.
