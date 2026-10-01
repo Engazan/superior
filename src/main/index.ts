@@ -31,6 +31,7 @@ import { forgetAgentState, startAgentStateWatcher } from './services/agent-state
 import { ensureClaudeStateHooks } from './services/claude-hooks.service'
 import { mobileRelay } from './services/mobileRelay.service'
 import { registerMobileRelayIpc } from './ipc/mobileRelay.ipc'
+import { attachWindowRecovery, logWindowFailure } from './services/window-recovery.service'
 
 const isMac = process.platform === 'darwin'
 
@@ -39,6 +40,13 @@ const isMac = process.platform === 'darwin'
 // On macOS the userData dir is case-insensitive, so this keeps the existing
 // "superior" storage path. Packaged builds get the name from `build.productName`.
 app.setName('Superior')
+
+// A recovery restart (or manual launch) can bypass problematic GPU drivers.
+// Electron requires this before ready, rather than when the failure occurs.
+if (app.commandLine.hasSwitch('disable-gpu')) app.disableHardwareAcceleration()
+app.on('child-process-gone', (_event, details) => {
+  if (details.reason !== 'clean-exit') logWindowFailure('child-process-gone', details)
+})
 
 // Single instance: a second launch (e.g. `superior /some/dir`) must hand its
 // folder to the already-running app instead of starting a rival process whose
@@ -49,6 +57,7 @@ if (!gotSingleInstanceLock) {
 }
 
 let mainWindow: BrowserWindow | null = null
+let quitting = false
 
 /**
  * Register `dir` as a folder, make it active, and push the new state to the
@@ -116,6 +125,7 @@ function createWindow(): BrowserWindow {
     if (mainWindow === win) mainWindow = null
   })
   attachWindowMaximizeEvents(win)
+  attachWindowRecovery(win, () => quitting)
 
   // Open target=_blank / external links in the system browser, not a new window —
   // but only http(s), so untrusted repo content can't fire arbitrary OS protocol
@@ -233,6 +243,7 @@ app.on('window-all-closed', () => {
 
 let setupsStopped = false
 app.on('before-quit', (event) => {
+  quitting = true
   if (!setupsStopped) {
     event.preventDefault()
     void stopAllSetups().finally(() => { setupsStopped = true; app.quit() })
