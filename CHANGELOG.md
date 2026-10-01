@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0] - 2026-10-01
+
+### Added
+
+- **Mobile access controls.** Open Mobile access from the sidebar or Settings
+  to configure a relay connection, generate a five-minute pairing QR code and
+  revoke paired devices.
+- **Encrypted remote terminal access.** The desktop connects to a relay over
+  WSS and lets paired clients list workspaces and running sessions, receive
+  terminal output and send input. Both peers connect outbound, so no VPN or
+  router port forwarding is needed. Terminal traffic uses end-to-end encryption.
+- **Self-hosted relay.** A relay server, Docker and Dokploy deployment files,
+  protocol documentation and a phone smoke-test client are included. The mobile
+  app is not included yet; remote access requires the desktop app to stay open.
+
+### Changed
+
+- **Relay address configuration.** Official builds can receive a relay address
+  from the release configuration, with overrides in Settings or the local
+  environment. No default server address is hardcoded.
+
+### Fixed
+
+- **Empty terminal snapshots.** New subscriptions receive a snapshot boundary
+  even when the terminal buffer is empty, so remote clients can reliably switch
+  from replayed output to live updates.
+
 ## [0.30.0] - 2026-09-28
 
 ### Changed
