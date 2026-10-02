@@ -184,10 +184,10 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
     <details open={!status || !status.url || !!status.error || !!error} className="rounded-lg border border-edge px-3 py-3 text-xs text-fgdim">
       <summary className="cursor-pointer font-medium">Connection settings</summary>
       <label htmlFor={embedded ? 'mobile-modal-relay-url' : 'mobile-relay-url'} className="mt-3 block">Relay address</label>
-      <div className="mt-1.5 flex gap-2"><input id={embedded ? 'mobile-modal-relay-url' : 'mobile-relay-url'} className="min-w-0 flex-1 rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-accent/50" value={url} onChange={e => setUrl(e.target.value)} placeholder="wss://relay.example.com" disabled={busy || !status} spellCheck={false} />
+      <div className="mt-1.5 flex gap-2"><input id={embedded ? 'mobile-modal-relay-url' : 'mobile-relay-url'} className="min-w-0 flex-1 rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-accent/50" value={url} onChange={e => setUrl(e.target.value)} placeholder="wss://superior-relay.engazan.eu" disabled={busy || !status} spellCheck={false} />
         <Button variant="secondary" disabled={busy || !status || url.trim() === status.url} onClick={() => void run(() => window.api.setMobileRelayUrl(url.trim()), enabled)}>Save</Button></div>
       <p className="mt-2 leading-relaxed">Use your relay’s secure wss:// address. Save changes to reconnect.</p>
     </details>
-    <p className="text-xs leading-relaxed text-fgmuted">The Superior mobile app is not available yet. You can prepare this computer for pairing here.</p>
+    <p className="text-xs leading-relaxed text-fgmuted">Open Superior Mobile on your phone and scan the pairing code above.</p>
   </div>
 }

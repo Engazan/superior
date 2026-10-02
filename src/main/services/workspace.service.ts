@@ -355,23 +355,23 @@ export async function addFolder(): Promise<WorkspaceState | null> {
  * folder picker ({@link addFolder}) and the integration clone flow. Assumes
  * `dir` is an existing directory. Returns the updated, persisted state.
  */
-export function addFolderByPath(dir: string): WorkspaceState {
+export function addFolderByPath(dir: string, options?: { profileId: string; activate: boolean }): WorkspaceState {
   const state = readState()
   const existing = state.folders.find((f) => f.path === dir)
   if (!existing) {
     // New folders join the active profile; existing ones keep their profile but
     // switch the active profile to the one that owns them so they're visible.
-    state.folders.push(makeFolder(dir, state.activeProfileId as string))
+    state.folders.push(makeFolder(dir, options?.profileId ?? state.activeProfileId as string))
     const ws = makeWorkspace(dir, 'Main')
     state.workspaces.push(ws)
-    state.activeWorkspaceId = ws.id
+    if (options?.activate !== false) state.activeWorkspaceId = ws.id
   } else {
     existing.lastOpenedAt = Date.now()
     // Re-opening a folder filed under another profile activates that profile so
     // the folder (and its newly-active workspace) is actually shown.
-    if (existing.profileId) state.activeProfileId = existing.profileId
+    if (existing.profileId && options?.activate !== false) state.activeProfileId = existing.profileId
     const ws = state.workspaces.find((w) => w.folderPath === dir)
-    if (ws) state.activeWorkspaceId = ws.id
+    if (ws && options?.activate !== false) state.activeWorkspaceId = ws.id
   }
 
   const next = normalize(state)
@@ -451,11 +451,11 @@ export async function testRemoteFolder(
  * Create a new profile and switch to it (its folder list starts empty). The
  * caller then opens folders into it. Returns the updated state.
  */
-export function addProfile(name: string): WorkspaceState {
+export function addProfile(name: string, activate = true): WorkspaceState {
   const state = readState()
   const profile = makeProfile(name)
   state.profiles.push(profile)
-  state.activeProfileId = profile.id
+  if (activate) state.activeProfileId = profile.id
   const next = normalize(state)
   saveState(next)
   return next
@@ -614,12 +614,12 @@ export function updateFolder(folderPath: string, patch: FolderUpdate): Workspace
 }
 
 /** Create a new workspace under a folder and make it active. */
-export function addWorkspace(folderPath: string, name: string): WorkspaceState {
+export function addWorkspace(folderPath: string, name: string, activate = true): WorkspaceState {
   const state = readState()
   if (state.folders.some((f) => f.path === folderPath)) {
     const ws = makeWorkspace(folderPath, name.trim() || 'Workspace')
     state.workspaces.push(ws)
-    state.activeWorkspaceId = ws.id
+    if (activate) state.activeWorkspaceId = ws.id
   }
   const next = normalize(state)
   saveState(next)
@@ -631,7 +631,7 @@ export function addWorkspace(folderPath: string, name: string): WorkspaceState {
  * then make it active. Rolls the worktree back if persistence is impossible.
  * @throws a WORKTREE_ERROR code or raw git error (handled by the IPC layer).
  */
-export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<WorkspaceState> {
+export async function addWorktreeWorkspace(args: WorktreeAddArgs, activate = true): Promise<WorkspaceState> {
   const initial = readState()
   const folder = initial.folders.find((f) => f.path === args.folderPath)
   if (!folder || !isLocalFolder(folder)) {
@@ -659,7 +659,7 @@ export async function addWorktreeWorkspace(args: WorktreeAddArgs): Promise<Works
     }
     initializeSetup(ws)
     state.workspaces.push(ws)
-    state.activeWorkspaceId = ws.id
+    if (activate) state.activeWorkspaceId = ws.id
     const next = normalize(state)
     saveState(next)
     void runSetup(ws).catch(err => console.error('[worktree setup]', err))

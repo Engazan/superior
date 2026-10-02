@@ -202,13 +202,13 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   )
 
   const applyState = useCallback(
-    (state: WorkspaceState) => {
+    (state: WorkspaceState, focus = true) => {
       setProfiles(state.profiles)
       setActiveProfileId(state.activeProfileId)
       setFolders(state.folders)
       setWorkspaces(state.workspaces)
       setActiveWorkspaceId(state.activeWorkspaceId)
-      focusWorkspaceSession(state.activeWorkspaceId)
+      if (focus) focusWorkspaceSession(state.activeWorkspaceId)
     },
     [focusWorkspaceSession]
   )
@@ -221,8 +221,23 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
   const applyStateRef = useRef(applyState)
   applyStateRef.current = applyState
   useEffect(() => {
-    return window.api.onWorkspaceStateChanged((state) => applyStateRef.current(state))
-  }, [])
+    let active = true
+    let revision = 0
+    const off = window.api.onWorkspaceStateChanged((state) => {
+      const currentRevision = ++revision
+      applyStateRef.current(state, (state as WorkspaceState & { source?: string }).source !== 'mobile')
+      void Promise.all([window.api.restoreSessions(), window.api.getTabs()]).then(([next, tabs]) => {
+        if (!active || currentRevision !== revision) return
+        const validIds = new Set(state.workspaces.map(w => w.id))
+        const restored = restoreTabs(validIds, tabs, next.filter(s => validIds.has(s.workspaceId)))
+        setSessions(restored.sessions)
+        const tabId = state.activeWorkspaceId ? restored.tabsByWs[state.activeWorkspaceId]?.activeTabId : undefined
+        const visible = restored.sessions.filter(s => s.workspaceId === state.activeWorkspaceId && (!tabId || s.tabId === tabId))
+        setActiveSessionId(current => visible.some(s => s.id === current) ? current : visible.at(-1)?.id ?? null)
+      }).catch(() => {})
+    })
+    return () => { active = false; off() }
+  }, [restoreTabs])
 
   const addFolder = useCallback(async () => {
     setError(null)

@@ -1,6 +1,7 @@
+import { handleMobileBridge } from './mobileRelayBridge'
 import { randomBytes, randomUUID } from 'crypto'
 import type { ServerMessage } from '@shared/daemon-protocol'
-import type { MobileRelayInvite, MobileRelayStatus } from '@shared/mobileRelay'
+import { DEFAULT_MOBILE_RELAY, type MobileRelayInvite, type MobileRelayStatus } from '@shared/mobileRelay'
 import { daemonClient } from './daemonClient'
 import { getAgentStates } from './agent-state.service'
 import { listWorkspaces } from './workspace.service'
@@ -28,7 +29,7 @@ const pending = new Map<string, { resolve: () => void; reject: (err: Error) => v
 const queues = new Map<string, Promise<void>>()
 
 function effectiveUrl(): string {
-  return config.url || process.env.SUPERIOR_RELAY_URL || __SUPERIOR_RELAY_URL__ || ''
+  return config.url || process.env.SUPERIOR_RELAY_URL || __SUPERIOR_RELAY_URL__ || DEFAULT_MOBILE_RELAY
 }
 
 function socketUrl(value: string): string {
@@ -141,12 +142,14 @@ function output(id: string, msg: ServerMessage): void {
 
 async function handlePhone(id: string, raw: unknown): Promise<void> {
   const current = device(id)
-  if (!current || !raw || typeof raw !== 'object' || Array.isArray(raw)) return
+  if (!config.enabled || !current || !raw || typeof raw !== 'object' || Array.isArray(raw)) return
   const msg = raw as Record<string, unknown>
   if (msg.v !== 1 || typeof msg.type !== 'string') return
   const requestId = typeof msg.requestId === 'string' && msg.requestId.length <= 80 ? msg.requestId : undefined
   const answer = (body: object): void => encrypted(id, { v: 1, requestId, ...body })
   try {
+    const bridged = await handleMobileBridge(id, msg, () => config.enabled && device(id) === current)
+    if (bridged) { answer(bridged); return }
     if (msg.type === 'workspaces.list') {
       answer({ type: 'workspaces', list: listWorkspaces().workspaces.slice(0, 500).map((w) => ({ id: w.id, name: w.name.slice(0, 128) })) })
       return
@@ -161,6 +164,7 @@ async function handlePhone(id: string, raw: unknown): Promise<void> {
       })) })
       return
     }
+    if (!['terminal.subscribe', 'terminal.unsubscribe', 'terminal.input'].includes(msg.type)) throw new Error('unsupported_action')
     if (typeof msg.sessionId !== 'string' || !/^[0-9a-f-]{36}$/i.test(msg.sessionId)) throw new Error('invalid_session')
     const sessionId = msg.sessionId
     if (msg.type === 'terminal.unsubscribe') {
@@ -168,6 +172,7 @@ async function handlePhone(id: string, raw: unknown): Promise<void> {
       answer({ type: 'ok' }); return
     }
     const live = (await daemonClient.list()).some((s) => s.id === sessionId)
+    if (!config.enabled || device(id) !== current) throw new Error('device_revoked')
     if (!live) throw new Error('session_not_running')
     if (msg.type === 'terminal.subscribe') {
       let stream = streams.get(id)
@@ -175,6 +180,7 @@ async function handlePhone(id: string, raw: unknown): Promise<void> {
       if (!stream) {
         stream = new MobileRelayDaemon((event) => output(id, event))
         await stream.connect()
+        if (!config.enabled || device(id) !== current) { stream.close(); throw new Error('device_revoked') }
         streams.set(id, stream)
       }
       sequences.get(id)?.delete(sessionId)
@@ -241,7 +247,8 @@ function onMessage(data: unknown): void {
       if (!Number.isSafeInteger(seq) || (seq as number) <= current.lastPhoneSeq) return
       current.lastPhoneSeq = seq as number
       writeMobileRelayConfig(config)
-      await handlePhone(id, payload)
+      if ((payload as { type?: string }).type === 'terminal.input') await handlePhone(id, payload)
+      else void handlePhone(id, payload)
     }).catch(() => {})
     queues.set(id, next)
   }

@@ -75,3 +75,25 @@ jobs:
 
       - name: Test including daemon lifecycle
         run: npm test
+
+  mobile:
+    name: Mobile checks and native bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.1
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix ../server
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx expo-doctor
+      - run: npx expo export --platform ios --platform android --output-dir build/bundles
