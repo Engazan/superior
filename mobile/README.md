@@ -1,4 +1,4 @@
-# Superior Mobile
+# Superior IDE
 
 Native iOS/Android companion built with Expo SDK 57 and Expo Router. It connects
 through `wss://superior-relay.engazan.eu/ws` to a running, paired Superior desktop.

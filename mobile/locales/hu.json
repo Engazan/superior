@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Superior IDE",
+    "NSCameraUsageDescription": "Engedélyezd, hogy a Superior beolvassa a számítógéped párosító QR-kódját."
+  },
+  "android": {
+    "app_name": "Superior IDE"
+  }
+}

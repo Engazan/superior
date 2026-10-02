@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Superior IDE",
+    "NSCameraUsageDescription": "Povoľ Superior skenovať párovací QR kód z tvojho počítača."
+  },
+  "android": {
+    "app_name": "Superior IDE"
+  }
+}

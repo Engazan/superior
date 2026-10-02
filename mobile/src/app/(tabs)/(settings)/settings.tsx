@@ -198,7 +198,7 @@ export default function Settings() {
         </>
       )}
       <Label muted style={{ textAlign: 'center', fontSize: 12, marginTop: 8 }}>
-        Superior Mobile · 1.0.0
+        Superior IDE · 1.0.0
         {state.capabilities
           ? ` · Desktop ${state.capabilities.desktopVersion}`
           : ''}

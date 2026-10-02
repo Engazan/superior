@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Superior IDE",
+    "NSCameraUsageDescription": "Allow Superior to scan your desktop pairing QR code."
+  },
+  "android": {
+    "app_name": "Superior IDE"
+  }
+}

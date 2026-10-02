@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Superior Mobile",
+    "name": "Superior IDE",
     "slug": "superior-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/ios-icon.png",
-      "bundleIdentifier": "eu.engazan.superior.mobile"
+      "bundleIdentifier": "eu.engazan.superior.mobile",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +21,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "eu.engazan.superior.mobile"
+      "package": "eu.engazan.superior.mobile",
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "output": "static",
@@ -35,7 +41,27 @@
         }
       ],
       "expo-secure-store",
-      "expo-localization",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "en",
+              "sk",
+              "cs",
+              "pl",
+              "hu"
+            ],
+            "android": [
+              "en",
+              "sk",
+              "cs",
+              "pl",
+              "hu"
+            ]
+          }
+        }
+      ],
       [
         "expo-camera",
         {
@@ -55,6 +81,26 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fc4163f2-c88c-4802-9a40-a26f73240c59"
+      }
+    },
+    "owner": "engazan",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/fc4163f2-c88c-4802-9a40-a26f73240c59"
+    },
+    "locales": {
+      "en": "./locales/en.json",
+      "sk": "./locales/sk.json",
+      "cs": "./locales/cs.json",
+      "pl": "./locales/pl.json",
+      "hu": "./locales/hu.json"
     }
   }
 }

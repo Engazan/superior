@@ -14,5 +14,5 @@ export const TerminalView = forwardRef<
     onEnd(): void;
   }
 >(function TerminalView(_props, _ref) {
-  return <Text>Use Superior Mobile on iOS or Android.</Text>;
+  return <Text>Use Superior IDE on iOS or Android.</Text>;
 });
