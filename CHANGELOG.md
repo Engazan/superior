@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2026-10-02
+
+### Changed
+
+- **Mobile access modal.** The sidebar button opens a dedicated dialog with
+  connection status, activation controls, relay settings and paired-device
+  management. Its updated appearance includes a phone icon and a New badge.
+- **Guided phone pairing.** Enabling mobile access automatically generates a
+  QR code once the relay connects. The dialog shows a validity countdown,
+  expired-code recovery, manual pairing data and confirmation when a phone
+  pairs successfully. Replacing a code removes its unused invitation while
+  preserving devices that have already paired.
+
+### Fixed
+
+- **Recovery after window crashes.** Failed renderers reload automatically so
+  they can reattach to surviving terminal sessions. Repeated crashes stop
+  automatic recovery and offer a restart or closing the window; on Windows,
+  the restart can disable GPU acceleration.
+- **Window failure diagnostics.** Renderer crashes, unresponsive windows and
+  abnormal child-process exits are recorded in a bounded local log. Normal
+  exits and application shutdown do not trigger renderer recovery.
+
 ## [0.31.0] - 2026-10-01
 
 ### Added
