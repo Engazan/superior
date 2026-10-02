@@ -42,6 +42,14 @@
           "cameraPermission": "Allow Superior to scan your desktop pairing QR code.",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
       ]
     ],
     "experiments": {

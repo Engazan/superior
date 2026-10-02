@@ -18,6 +18,8 @@ compatible simulator/device. `expo-dev-client` is included for the EAS developme
 builds use `npx eas-cli@latest build --profile preview --platform ios` (or
 `android`). EAS requires your Expo account and platform signing configuration.
 Generated native projects, pairing secrets and signing files stay out of Git.
+The Expo build-properties plugin enables the scene lifecycle required by Xcode 27
+and iOS 27; `expo prebuild` generates this configuration automatically.
 
 On the desktop, enable **Mobile access**, create a QR code, then use **Pair
 desktop** on the phone. Alternatively paste the pairing JSON. Check the relay
