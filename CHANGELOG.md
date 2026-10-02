@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0] - 2026-10-02
+
+### Added
+
+- **Native mobile companion.** Superior IDE for iOS and Android connects to a
+  paired desktop through an encrypted relay. Pair with a QR code or manual
+  pairing data, save multiple desktops and reconnect when returning to the app.
+- **Manage work from your phone.** Browse and manage profiles, registered
+  projects, workspaces and Git worktrees; create terminals from desktop presets
+  and stop running sessions. Removal previews show affected workspaces and
+  terminals, with additional confirmation for dirty worktrees.
+- **Mobile terminal and Claude chat.** Use a terminal with ANSI output, search,
+  copy, paste and control keys, or follow Claude conversations in a chat view
+  with tool summaries. The desktop supplies incremental Claude transcripts.
+- **Mobile dashboard and account usage.** Native tabs provide a home dashboard,
+  projects, Claude/Codex usage and settings. Dashboard statistics open filtered
+  terminal lists. The app supports English, Slovak, Czech, Polish and Hungarian,
+  with light and dark themes.
+
+### Changed
+
+- **Desktop support for mobile management.** The relay protocol exposes the
+  workspace catalog, account usage, branch lists and management operations.
+  Operation status survives reconnects without resubmitting changes; provider
+  credentials remain on the desktop.
+- **Mobile release preparation.** The companion is named Superior IDE, with
+  updated icons, local native development commands, store build configuration,
+  declared iOS localizations and encryption export-compliance metadata.
+
+### Fixed
+
+- **Desktop focus during mobile changes.** Creating profiles, projects or
+  workspaces from a phone preserves the active desktop workspace. Desktop
+  terminal tabs refresh after remote changes without stealing keyboard focus.
+- **Mobile navigation and compatibility.** Terminal reconnect uses an icon,
+  back buttons omit their text label, and native builds enable the scene
+  lifecycle required by iOS 27.
+
 ## [0.32.0] - 2026-10-02
 
 ### Changed
