@@ -19,7 +19,7 @@
           "pl",
           "hu"
         ],
-        "ITSAppUsesNonExemptEncryption": true
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
