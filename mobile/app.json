@@ -11,7 +11,15 @@
       "icon": "./assets/images/ios-icon.png",
       "bundleIdentifier": "eu.engazan.superior.mobile",
       "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": [
+          "en",
+          "sk",
+          "cs",
+          "pl",
+          "hu"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
