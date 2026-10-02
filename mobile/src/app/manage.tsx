@@ -1,21 +1,107 @@
 import { useEffect, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Alert, Switch } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { Alert, Pressable, ScrollView, Switch, View } from 'react-native';
 import type { MobileMutation } from '@shared/mobileRelay';
-import { client, storage, useApp, useRelay } from '../ui/provider';
+import { client, storage, useApp, useRelay, type Key } from '../ui/provider';
 import {
-  Button,
-  Card,
   Field,
   Label,
-  Page,
-  Row,
+  SectionTitle,
+  SolidButton,
   useError,
 } from '../ui/components';
+import { Group, ListRow } from '../ui/kit';
+const palette = [
+  '#6d42cc',
+  '#2563eb',
+  '#0891b2',
+  '#16794c',
+  '#ca8a04',
+  '#c2410c',
+  '#be185d',
+  '#64748b',
+];
+const hex = /^#[0-9a-f]{6}$/i;
+const titles: Record<string, Key> = {
+  'profiles.create': 'newProfile',
+  profile: 'profile',
+  'projects.add': 'addProject',
+  'workspaces.create': 'newWorkspace',
+  'worktrees.create': 'newWorktree',
+  'terminals.create': 'newTerminal',
+  host: 'hostName',
+};
+function ColorPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange(color: string): void;
+}) {
+  const { colors, t } = useApp();
+  const swatch = (color: string, label: string) => {
+    const active = value.toLowerCase() === color.toLowerCase();
+    return (
+      <Pressable
+        key={color || 'none'}
+        accessibilityRole="radio"
+        accessibilityLabel={label}
+        accessibilityState={{ checked: active }}
+        onPress={() => onChange(color)}
+        hitSlop={4}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          padding: 3,
+          borderWidth: 2,
+          borderColor: active ? (color || colors.muted) : 'transparent',
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            borderRadius: 18,
+            backgroundColor: color || colors.bg,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {!color && (
+            <SymbolView
+              name={{ ios: 'circle.slash', android: 'block' }}
+              size={16}
+              tintColor={colors.muted}
+              fallback={null}
+            />
+          )}
+        </View>
+      </Pressable>
+    );
+  };
+  return (
+    <View style={{ padding: 16, gap: 14 }}>
+      <View
+        accessibilityRole="radiogroup"
+        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+      >
+        {swatch('', t('auto'))}
+        {palette.map((color) => swatch(color, color))}
+      </View>
+      <Field
+        label="#RRGGBB"
+        value={value}
+        onChangeText={onChange}
+        maxLength={7}
+      />
+    </View>
+  );
+}
 export default function Manage() {
   const params = useLocalSearchParams<Record<string, string>>();
   const { mode, id, path, workspaceId, profileId } = params;
-  const { t, reload, selected, select } = useApp();
+  const { t, reload, selected, select, colors } = useApp();
   const { catalog: c, connection } = useRelay();
   const fail = useError();
   const [name, setName] = useState(params.name ?? '');
@@ -47,11 +133,13 @@ export default function Manage() {
       active = false;
     };
   }, [mode, path]); // eslint-disable-line react-hooks/exhaustive-deps
-  const run = async (action: MobileMutation) => {
+  const run = async (...actions: MobileMutation[]) => {
     setBusy(true);
     try {
-      const operation = await client.mutate(action);
-      if (operation.state === 'failed') throw new Error(operation.code);
+      for (const action of actions) {
+        const operation = await client.mutate(action);
+        if (operation.state === 'failed') throw new Error(operation.code);
+      }
       await client.refresh();
       router.dismiss();
     } catch (error) {
@@ -81,9 +169,14 @@ export default function Manage() {
       case 'profiles.create':
         action = { type: mode, name };
         break;
-      case 'profile':
-        action = { type: 'profiles.rename', id, name };
-        break;
+      case 'profile': {
+        const changes: MobileMutation[] = [];
+        if (name !== params.name) changes.push({ type: 'profiles.rename', id, name });
+        if (color !== (params.color ?? ''))
+          changes.push({ type: 'profiles.color', id, color: color || null });
+        if (!changes.length) return router.dismiss();
+        return run(...changes);
+      }
       case 'project':
         action = { type: 'projects.update', path, name, color: color || null };
         break;
@@ -160,121 +253,151 @@ export default function Manage() {
     }
   };
   const form = mode !== 'terminals.create' && mode !== 'projects.add';
+  const colored = mode === 'profile' || mode === 'project';
+  const tabs = c.tabs.filter((tab) => tab.workspaceId === workspaceId);
+  const invalid =
+    busy ||
+    (mode !== 'host' && connection !== 'online') ||
+    (form && !name.trim()) ||
+    (mode === 'projects.add' && !projectPath.trim()) ||
+    (mode === 'worktrees.create' && !branch.trim()) ||
+    (mode === 'terminals.create' && !presetId) ||
+    (colored && !!color && !hex.test(color));
   return (
-    <Page>
-      <Card>
-        {form && (
-          <Field
-            label={t('name')}
-            value={name}
-            onChangeText={setName}
-            maxLength={100}
-          />
-        )}
-        {mode === 'projects.add' && (
-          <Field
-            label={t('path')}
-            value={projectPath}
-            onChangeText={setPath}
-            placeholder="/Users/you/projects/example"
-          />
-        )}
-        {['profile', 'project'].includes(mode) && (
-          <>
-            <Field
-              label={`${t('color')} (#RRGGBB)`}
-              value={color}
-              onChangeText={setColor}
-              maxLength={7}
-            />
-            {mode === 'profile' && (
-              <Button
-                title={t('color')}
-                disabled={busy || (!!color && !/^#[0-9a-f]{6}$/i.test(color))}
-                onPress={() =>
-                  void run({ type: 'profiles.color', id, color: color || null })
-                }
-              />
-            )}
-          </>
-        )}
-        {mode === 'worktrees.create' && (
-          <>
-            <Row>
-              <Label>{t('newBranch')}</Label>
-              <Switch value={createBranch} onValueChange={setCreate} />
-            </Row>
-            {createBranch ? (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentInsetAdjustmentBehavior="automatic"
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+    >
+      <Stack.Screen
+        options={{ title: titles[mode] ? t(titles[mode]) : params.name || t('rename') }}
+      />
+      {(form || mode === 'projects.add') && (
+        <Group>
+          <View style={{ padding: 16, gap: 12 }}>
+            {form && (
               <Field
-                label={t('branch')}
-                value={branch}
-                onChangeText={setBranch}
+                label={t('name')}
+                value={name}
+                onChangeText={setName}
+                maxLength={100}
+                autoFocus={!params.name}
               />
-            ) : (
-              <>
-                <Label muted>{t('existingBranch')}</Label>
-                <Row>
-                  {branches.map((b) => (
-                    <Button
-                      key={b}
-                      small
-                      title={`${branch === b ? '✓ ' : ''}${b}`}
-                      onPress={() => setBranch(b)}
-                    />
-                  ))}
-                </Row>
-              </>
             )}
-          </>
-        )}
-        {mode === 'terminals.create' && (
-          <>
-            <Label>{t('preset')}</Label>
-            <Row>
-              {c.presets.map((p) => (
-                <Button
-                  key={p.id}
-                  title={`${p.id === presetId ? '✓ ' : ''}${p.name}`}
-                  onPress={() => setPreset(p.id)}
+            {mode === 'projects.add' && (
+              <Field
+                label={t('path')}
+                value={projectPath}
+                onChangeText={setPath}
+                placeholder="/Users/you/projects/example"
+                autoFocus
+              />
+            )}
+          </View>
+        </Group>
+      )}
+      {colored && (
+        <>
+          <SectionTitle>{t('color')}</SectionTitle>
+          <Group>
+            <ColorPicker value={color} onChange={setColor} />
+          </Group>
+        </>
+      )}
+      {mode === 'worktrees.create' && (
+        <>
+          <SectionTitle>{t('branch')}</SectionTitle>
+          <Group>
+            <ListRow
+              title={t('newBranch')}
+              trailing={<Switch value={createBranch} onValueChange={setCreate} />}
+            />
+            {createBranch && (
+              <View style={{ padding: 16 }}>
+                <Field
+                  label={t('branch')}
+                  value={branch}
+                  onChangeText={setBranch}
                 />
-              ))}
-            </Row>
-            <Label>{t('tab')}</Label>
-            <Row>
-              {c.tabs
-                .filter((tab) => tab.workspaceId === workspaceId)
-                .map((tab) => (
-                  <Button
+              </View>
+            )}
+          </Group>
+          {!createBranch && (
+            <>
+              <SectionTitle>{t('existingBranch')}</SectionTitle>
+              <Group>
+                {branches.map((b) => (
+                  <ListRow
+                    key={b}
+                    title={b}
+                    symbol={{ ios: 'arrow.triangle.branch', android: 'fork_right' }}
+                    checked={branch === b}
+                    onPress={() => setBranch(b)}
+                  />
+                ))}
+              </Group>
+            </>
+          )}
+        </>
+      )}
+      {mode === 'terminals.create' && (
+        <>
+          <SectionTitle>{t('preset')}</SectionTitle>
+          <Group>
+            {c.presets.map((p) => (
+              <ListRow
+                key={p.id}
+                title={p.name}
+                symbol={{ ios: 'apple.terminal', android: 'terminal' }}
+                checked={p.id === presetId}
+                onPress={() => setPreset(p.id)}
+              />
+            ))}
+          </Group>
+          {tabs.length > 0 && (
+            <>
+              <SectionTitle>{t('tab')}</SectionTitle>
+              <Group>
+                {tabs.map((tab) => (
+                  <ListRow
                     key={tab.id}
-                    title={`${tab.id === tabId ? '✓ ' : ''}${tab.name}`}
+                    title={tab.name}
+                    checked={tab.id === tabId}
                     onPress={() => setTab(tab.id)}
                   />
                 ))}
-            </Row>
-          </>
-        )}
-        <Button
+              </Group>
+            </>
+          )}
+        </>
+      )}
+      <View style={{ marginTop: 8 }}>
+        <SolidButton
           title={t('save')}
-          disabled={
-            busy ||
-            (mode !== 'host' && connection !== 'online') ||
-            (form && !name.trim()) ||
-            (mode === 'projects.add' && !projectPath.trim()) ||
-            (mode === 'worktrees.create' && !branch.trim()) ||
-            (mode === 'terminals.create' && !presetId) ||
-            (mode === 'project' && !!color && !/^#[0-9a-f]{6}$/i.test(color))
-          }
+          disabled={invalid}
           onPress={() => void save()}
         />
-        {['profile', 'project', 'workspace'].includes(mode) && (
-          <Button
-            danger
-            title={t('remove')}
-            disabled={busy || connection !== 'online'}
-            onPress={() => void remove()}
-          />
-        )}
-      </Card>
-    </Page>
+      </View>
+      {['profile', 'project', 'workspace'].includes(mode) && (
+        <View style={{ marginTop: 12 }}>
+          <Group>
+            <ListRow
+              tone="danger"
+              title={t('remove')}
+              symbol={{ ios: 'trash', android: 'delete' }}
+              onPress={
+                busy || connection !== 'online' ? undefined : () => void remove()
+              }
+            />
+          </Group>
+        </View>
+      )}
+      {mode !== 'host' && connection !== 'online' && (
+        <Label muted style={{ textAlign: 'center' }}>
+          {t('offline')}
+        </Label>
+      )}
+    </ScrollView>
   );
 }

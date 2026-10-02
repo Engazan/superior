@@ -2,13 +2,14 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Provider, useApp } from '../ui/provider';
 function Navigation() {
-  const { colors, dark, t } = useApp();
+  const { colors, dark } = useApp();
   return (
     <>
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.card },
+          headerStyle: { backgroundColor: colors.bg },
+          headerShadowVisible: false,
           headerTintColor: colors.text,
           contentStyle: { backgroundColor: colors.bg },
         }}
@@ -16,7 +17,7 @@ function Navigation() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="pair"
-          options={{ title: t('pair'), presentation: 'modal' }}
+          options={{ title: '', presentation: 'modal' }}
         />
         <Stack.Screen
           name="manage"

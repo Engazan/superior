@@ -1,29 +1,49 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Platform, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { parsePairing, type Pairing } from '../relay/crypto';
 import { storage, useApp } from '../ui/provider';
 import {
-  Button,
-  Card,
   Field,
   Label,
   Page,
-  Row,
+  SolidButton,
   useError,
 } from '../ui/components';
+import { TextLink } from '../ui/kit';
+type Mode = 'intro' | 'scan' | 'paste';
+function Centered({ children }: { children: ReactNode }) {
+  const { colors } = useApp();
+  return (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentInsetAdjustmentBehavior="automatic"
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+        gap: 16,
+      }}
+    >
+      {children}
+    </ScrollView>
+  );
+}
 export default function Pair() {
-  const { t, reload, select } = useApp();
+  const { t, reload, select, colors } = useApp();
   const fail = useError();
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanning, setScanning] = useState(false);
+  const [mode, setMode] = useState<Mode>('intro');
   const [json, setJson] = useState('');
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [name, setName] = useState('Superior');
   const [busy, setBusy] = useState(false);
   const read = (data: string) => {
-    setScanning(false);
+    setMode('intro');
     try {
       const p = parsePairing(data, __DEV__);
       setPairing(p);
@@ -31,6 +51,16 @@ export default function Pair() {
     } catch (error) {
       fail(error);
     }
+  };
+  const scan = async () => {
+    const result = permission?.granted ? permission : await requestPermission();
+    if (result.granted) setMode('scan');
+    else fail(new Error('camera_permission_required'));
+  };
+  const paste = async () => {
+    setMode('paste');
+    const text = await Clipboard.getStringAsync().catch(() => '');
+    if (text.trim()) setJson(text.trim());
   };
   const save = async () => {
     if (!pairing) return;
@@ -52,79 +82,124 @@ export default function Pair() {
         <Label>{t('nativeOnly')}</Label>
       </Page>
     );
-  return (
-    <Page>
-      <Label muted>{t('pairHint')}</Label>
-      {pairing ? (
-        <Card>
-          <Label style={{ fontWeight: '700', fontSize: 20 }}>
+  if (pairing)
+    return (
+      <Centered>
+        <View style={{ width: '100%', maxWidth: 480, gap: 16 }}>
+          <Text
+            accessibilityRole="header"
+            style={{
+              color: colors.text,
+              fontSize: 22,
+              fontWeight: '700',
+              textAlign: 'center',
+            }}
+          >
             {t('confirmPair')}
-          </Label>
-          <Label>{pairing.url}</Label>
-          <Label muted>
-            {t('host')}: {pairing.hostId}
-          </Label>
+          </Text>
+          <View style={{ gap: 2 }}>
+            <Label muted style={{ textAlign: 'center' }}>
+              {pairing.url}
+            </Label>
+            <Label muted style={{ textAlign: 'center', fontSize: 13 }}>
+              {t('host')}: {pairing.hostId}
+            </Label>
+          </View>
           <Field label={t('hostName')} value={name} onChangeText={setName} />
-          <Button
+          <SolidButton
             title={t('confirmPair')}
+            symbol={{ ios: 'checkmark', android: 'check' }}
             disabled={busy || !name.trim()}
             onPress={() => void save()}
           />
-          <Button
-            title={t('cancel')}
-            disabled={busy}
-            onPress={() => setPairing(null)}
+        </View>
+        <TextLink
+          title={t('cancel')}
+          onPress={() => {
+            if (!busy) setPairing(null);
+          }}
+        />
+      </Centered>
+    );
+  if (mode === 'scan')
+    return (
+      <Centered>
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 420,
+            aspectRatio: 1,
+            borderRadius: 24,
+            overflow: 'hidden',
+            backgroundColor: '#000',
+          }}
+        >
+          <CameraView
+            style={{ flex: 1 }}
+            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            onBarcodeScanned={({ data }) => read(data)}
           />
-        </Card>
-      ) : (
-        <>
-          <Button
-            title={t('scan')}
-            onPress={() => {
-              void (async () => {
-                const result = permission?.granted
-                  ? permission
-                  : await requestPermission();
-                if (result.granted) setScanning(true);
-                else fail(new Error('camera_permission_required'));
-              })().catch(fail);
-            }}
+        </View>
+        <Label muted style={{ textAlign: 'center' }}>
+          {t('pairBody')}
+        </Label>
+        <TextLink title={t('cancel')} onPress={() => setMode('intro')} />
+      </Centered>
+    );
+  if (mode === 'paste')
+    return (
+      <Centered>
+        <View style={{ width: '100%', maxWidth: 480, gap: 16 }}>
+          <Label muted style={{ textAlign: 'center' }}>
+            {t('pairHint')}
+          </Label>
+          <Field
+            label={t('paste')}
+            value={json}
+            onChangeText={setJson}
+            multiline
+            autoFocus={!json}
+            secureTextEntry={false}
+            style={{ minHeight: 140 }}
+            accessibilityLabel={t('paste')}
           />
-          {scanning && (
-            <View style={{ height: 300, borderRadius: 18, overflow: 'hidden' }}>
-              <CameraView
-                style={{ flex: 1 }}
-                barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-                onBarcodeScanned={({ data }) => read(data)}
-              />
-            </View>
-          )}
-          <Card>
-            <Field
-              label={t('paste')}
-              value={json}
-              onChangeText={setJson}
-              multiline
-              secureTextEntry={false}
-              style={{ minHeight: 140 }}
-              accessibilityLabel={t('paste')}
-            />
-            <Row>
-              <Button
-                title={t('continue')}
-                disabled={!json.trim()}
-                onPress={() => read(json)}
-              />
-              {scanning && (
-                <Button
-                  title={t('cancel')}
-                  onPress={() => setScanning(false)}
-                />
-              )}
-            </Row>
-          </Card>
-        </>
-      )}
-    </Page>
+          <SolidButton
+            title={t('continue')}
+            disabled={!json.trim()}
+            onPress={() => read(json)}
+          />
+        </View>
+        <TextLink title={t('back')} onPress={() => setMode('intro')} />
+      </Centered>
+    );
+  return (
+    <Centered>
+      <Text
+        accessibilityRole="header"
+        style={{
+          color: colors.text,
+          fontSize: 22,
+          fontWeight: '700',
+          textAlign: 'center',
+        }}
+      >
+        {t('pairTitle')}
+      </Text>
+      <Label muted style={{ textAlign: 'center', maxWidth: 360 }}>
+        {t('pairBody')}
+      </Label>
+      <View style={{ marginTop: 8 }}>
+        <SolidButton
+          title={t('continue')}
+          symbol={{ ios: 'qrcode.viewfinder', android: 'qr_code_scanner' }}
+          onPress={() => void scan().catch(fail)}
+        />
+      </View>
+      <TextLink
+        title={t('pasteInstead')}
+        symbol={{ ios: 'doc.on.clipboard', android: 'content_paste' }}
+        onPress={() => void paste()}
+      />
+    </Centered>
   );
 }

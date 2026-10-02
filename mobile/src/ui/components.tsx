@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
+import { Stack } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import {
-  ActivityIndicator,
-  Modal,
+  Platform,
   Alert,
   Pressable,
   ScrollView,
@@ -11,20 +11,26 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { client, useApp, useRelay, type Key } from './provider';
-import { useState, type ReactNode } from 'react';
+import { useApp, type Key } from './provider';
+import type { ReactNode } from 'react';
 export function Label({
   children,
   muted = false,
   style,
+  numberOfLines,
+  ellipsizeMode,
 }: {
   children: ReactNode;
   muted?: boolean;
   style?: object;
+  numberOfLines?: number;
+  ellipsizeMode?: 'head' | 'middle' | 'tail';
 }) {
   const { colors } = useApp();
   return (
     <Text
+      numberOfLines={numberOfLines}
+      ellipsizeMode={ellipsizeMode}
       style={[
         {
           color: muted ? colors.muted : colors.text,
@@ -38,20 +44,18 @@ export function Label({
     </Text>
   );
 }
-export function Button({
+export function SolidButton({
   title,
+  symbol,
   onPress,
   disabled = false,
-  danger = false,
-  small = false,
 }: {
   title: string;
+  symbol?: SymbolViewProps['name'];
   onPress(): void;
   disabled?: boolean;
-  danger?: boolean;
-  small?: boolean;
 }) {
-  const { colors, dark } = useApp();
+  const { colors } = useApp();
   return (
     <Pressable
       accessibilityRole="button"
@@ -59,31 +63,58 @@ export function Button({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingHorizontal: small ? 12 : 18,
-        paddingVertical: small ? 7 : 12,
-        borderRadius: 12,
-        backgroundColor: danger ? colors.danger : colors.accent,
-        opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
+        flexDirection: 'row',
         alignItems: 'center',
-        minHeight: small ? 36 : 44,
+        justifyContent: 'center',
+        gap: 10,
+        paddingHorizontal: 28,
+        paddingVertical: 15,
+        borderRadius: 18,
+        backgroundColor: colors.accent,
+        opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
       })}
     >
-      <Text
-        style={{
-          color: danger
-            ? dark
-              ? '#321218'
-              : '#fff'
-            : dark
-              ? '#21135c'
-              : '#fff',
-          fontWeight: '600',
-          fontSize: small ? 13 : 15,
-        }}
-      >
+      {symbol && (
+        <SymbolView name={symbol} size={20} tintColor={colors.onAccent} fallback={null} />
+      )}
+      <Text style={{ color: colors.onAccent, fontSize: 17, fontWeight: '600' }}>
         {title}
       </Text>
     </Pressable>
+  );
+}
+export function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <Label
+      muted
+      style={{
+        fontSize: 13,
+        fontWeight: '600',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        marginTop: 8,
+        marginLeft: 8,
+      }}
+    >
+      {children}
+    </Label>
+  );
+}
+export function IconBox({ symbol }: { symbol: SymbolViewProps['name'] }) {
+  const { colors } = useApp();
+  return (
+    <View
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 14,
+        backgroundColor: colors.bg,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <SymbolView name={symbol} size={22} tintColor={colors.text} fallback={null} />
+    </View>
   );
 }
 export function Card({
@@ -99,7 +130,7 @@ export function Card({
       style={[
         {
           backgroundColor: colors.card,
-          borderRadius: 18,
+          borderRadius: 20,
           borderWidth: 1,
           borderColor: colors.border,
           padding: 16,
@@ -107,20 +138,6 @@ export function Card({
         },
         style,
       ]}
-    >
-      {children}
-    </View>
-  );
-}
-export function Row({ children }: { children: ReactNode }) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 8,
-      }}
     >
       {children}
     </View>
@@ -156,11 +173,30 @@ export function Page({ children }: { children: ReactNode }) {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
+      contentInsetAdjustmentBehavior="automatic"
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
     >
       {children}
     </ScrollView>
+  );
+}
+export function TabStack({ name, title }: { name: string; title: string }) {
+  const { colors } = useApp();
+  const ios = Platform.OS === 'ios';
+  return (
+    <Stack
+      screenOptions={{
+        headerLargeTitle: ios,
+        headerTransparent: ios,
+        headerShadowVisible: false,
+        headerStyle: ios ? undefined : { backgroundColor: colors.card },
+        headerTintColor: colors.text,
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Stack.Screen name={name} options={{ title }} />
+    </Stack>
   );
 }
 export function errorMessage(error: unknown, t: (key: Key) => string) {
@@ -173,126 +209,4 @@ export function errorMessage(error: unknown, t: (key: Key) => string) {
 export function useError() {
   const { t } = useApp();
   return (error: unknown) => Alert.alert('Superior', errorMessage(error, t));
-}
-export function ConnectionBar() {
-  const { hosts, selected, select, t, colors } = useApp();
-  const state = useRelay();
-  const operation = state.operations.at(-1);
-  const [choosing, setChoosing] = useState(false);
-  const fail = useError();
-  const status =
-    state.connection === 'online'
-      ? t('online')
-      : state.connection === 'revoked'
-        ? t('pairAgain')
-        : ['connecting', 'reconnecting', 'relay'].includes(state.connection)
-          ? t('connecting')
-          : t('offline');
-  return (
-    <Card>
-      <Modal
-        transparent
-        visible={choosing}
-        animationType="fade"
-        onRequestClose={() => setChoosing(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: '#0009',
-            padding: 20,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <View
-            style={{
-              width: '100%',
-              maxWidth: 480,
-              maxHeight: '80%',
-              backgroundColor: colors.card,
-              borderRadius: 18,
-              padding: 18,
-              gap: 12,
-            }}
-          >
-            <Label style={{ fontWeight: '700', fontSize: 20 }}>
-              {t('host')}
-            </Label>
-            <ScrollView contentContainerStyle={{ gap: 10 }}>
-              {hosts.map((host) => (
-                <Button
-                  key={host.id}
-                  title={`${selected?.id === host.id ? '✓ ' : ''}${host.name}`}
-                  onPress={() => {
-                    setChoosing(false);
-                    void select(host).catch(fail);
-                  }}
-                />
-              ))}
-            </ScrollView>
-            <Button
-              title={t('pairAnother')}
-              onPress={() => {
-                setChoosing(false);
-                router.push('/pair');
-              }}
-            />
-            <Button title={t('cancel')} onPress={() => setChoosing(false)} />
-          </View>
-        </View>
-      </Modal>
-      <Row>
-        <Pressable
-          onPress={() => setChoosing(true)}
-          accessibilityRole="button"
-          style={{ flex: 1 }}
-        >
-          <Label style={{ fontWeight: '700' }}>
-            {selected?.name ?? t('emptyHosts')} ▾
-          </Label>
-        </Pressable>
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 8,
-            backgroundColor:
-              state.connection === 'online' ? '#53b786' : colors.muted,
-          }}
-        />
-        <Label muted>{status}</Label>
-      </Row>
-      {state.error ? (
-        <Label muted>{errorMessage(new Error(state.error), t)}</Label>
-      ) : null}
-      {operation && operation.state !== 'done' && (
-        <Label muted>
-          {t('operations')}:{' '}
-          {t(
-            operation.state === 'uncertain'
-              ? 'uncertainState'
-              : operation.state,
-          )}
-          {operation.code ? ` · ${operation.code.replaceAll('_', ' ')}` : ''}
-        </Label>
-      )}
-      {!selected ? (
-        <Button title={t('pair')} onPress={() => router.push('/pair')} />
-      ) : state.connection !== 'online' ? (
-        <Button
-          small
-          title={state.connection === 'revoked' ? t('pairAgain') : t('reconnect')}
-          onPress={() => {
-            if (state.connection === 'revoked') { router.push('/pair'); return; }
-            client.stop();
-            client.resume();
-          }}
-        />
-      ) : null}
-      {['connecting', 'reconnecting', 'relay'].includes(state.connection) && (
-        <ActivityIndicator color={colors.accent} />
-      )}
-    </Card>
-  );
 }
