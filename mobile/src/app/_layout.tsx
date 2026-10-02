@@ -25,6 +25,7 @@ function Navigation() {
           options={{ title: 'Superior', presentation: 'modal' }}
         />
         <Stack.Screen name="terminal/[id]" options={{ title: 'Terminal' }} />
+        <Stack.Screen name="terminals" />
       </Stack>
     </>
   );

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, Text, View } from 'react-native';
-import type { MobileUsage } from '@shared/mobileRelay';
+import type { MobileSession, MobileUsage } from '@shared/mobileRelay';
 import { Card, IconBox, Label, SectionTitle, useError } from './components';
 import {
   Chevron,
@@ -18,24 +18,28 @@ export function Stats() {
   const { catalog } = useRelay();
   const count = (state: string) =>
     catalog.sessions.filter((s) => s.agentState === state).length;
-  const stats: [number, string][] = [
-    [catalog.sessions.length, t('terminals')],
-    [count('working'), t('working')],
-    [count('waiting'), t('waiting')],
+  const stats: [number, string, 'all' | 'working' | 'waiting'][] = [
+    [catalog.sessions.length, t('terminals'), 'all'],
+    [count('working'), t('working'), 'working'],
+    [count('waiting'), t('waiting'), 'waiting'],
   ];
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
-      {stats.map(([value, label]) => (
-        <View
+      {stats.map(([value, label, filter]) => (
+        <Pressable
           key={label}
-          style={{
+          accessibilityRole="button"
+          accessibilityLabel={`${value} ${label}`}
+          onPress={() => router.push({ pathname: '/terminals', params: { filter } })}
+          style={({ pressed }) => ({
             flex: 1,
             padding: 14,
             borderRadius: 16,
             borderWidth: 1,
             borderColor: colors.border,
             backgroundColor: colors.card,
-          }}
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
           <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700' }}>
             {value}
@@ -43,7 +47,7 @@ export function Stats() {
           <Label muted style={{ fontSize: 13 }} numberOfLines={1}>
             {label}
           </Label>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -116,8 +120,48 @@ export function Desktops() {
     </>
   );
 }
-export function Resume() {
+export function SessionTile({ session: s }: { session: MobileSession }) {
   const { t, colors } = useApp();
+  const { catalog } = useRelay();
+  const workspace = catalog.workspaces.find((w) => w.id === s.workspaceId);
+  const project = catalog.projects.find((p) => p.path === workspace?.folderPath);
+  const state = ['working', 'waiting', 'idle'].includes(s.agentState)
+    ? t(s.agentState as 'working' | 'waiting' | 'idle')
+    : s.status;
+  return (
+    <Tile
+      onPress={() =>
+        router.push({ pathname: '/terminal/[id]', params: { id: s.id } })
+      }
+    >
+      <IconBox symbol={{ ios: 'apple.terminal', android: 'terminal' }} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Label style={{ fontSize: 17, fontWeight: '600' }} numberOfLines={1}>
+          {s.nickname || s.label}
+        </Label>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Dot color={project?.color ?? colors.accent} />
+          <Label muted numberOfLines={1} style={{ flexShrink: 1 }}>
+            {[workspace?.name ?? project?.name, workspace?.branch]
+              .filter(Boolean)
+              .join(' · ')}
+          </Label>
+        </View>
+        {project && project.path !== 'legacy' && (
+          <Label muted style={{ fontSize: 12 }} numberOfLines={1} ellipsizeMode="middle">
+            {shortPath(project.path)}
+          </Label>
+        )}
+      </View>
+      <Label muted style={{ fontSize: 13 }}>
+        {state}
+      </Label>
+      <Chevron />
+    </Tile>
+  );
+}
+export function Resume() {
+  const { t } = useApp();
   const { catalog } = useRelay();
   const recent = [...catalog.sessions]
     .sort((a, b) => b.createdAt - a.createdAt)
@@ -125,47 +169,9 @@ export function Resume() {
   return (
     <>
       <SectionTitle>{t('resume')}</SectionTitle>
-      {recent.map((s) => {
-        const workspace = catalog.workspaces.find((w) => w.id === s.workspaceId);
-        const project = catalog.projects.find(
-          (p) => p.path === workspace?.folderPath,
-        );
-        const state = ['working', 'waiting', 'idle'].includes(s.agentState)
-          ? t(s.agentState as 'working' | 'waiting' | 'idle')
-          : s.status;
-        return (
-          <Tile
-            key={s.id}
-            onPress={() =>
-              router.push({ pathname: '/terminal/[id]', params: { id: s.id } })
-            }
-          >
-            <IconBox symbol={{ ios: 'apple.terminal', android: 'terminal' }} />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Label style={{ fontSize: 17, fontWeight: '600' }} numberOfLines={1}>
-                {s.nickname || s.label}
-              </Label>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Dot color={project?.color ?? colors.accent} />
-                <Label muted numberOfLines={1} style={{ flexShrink: 1 }}>
-                  {[workspace?.name ?? project?.name, workspace?.branch]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Label>
-              </View>
-              {project && project.path !== 'legacy' && (
-                <Label muted style={{ fontSize: 12 }} numberOfLines={1} ellipsizeMode="middle">
-                  {shortPath(project.path)}
-                </Label>
-              )}
-            </View>
-            <Label muted style={{ fontSize: 13 }}>
-              {state}
-            </Label>
-            <Chevron />
-          </Tile>
-        );
-      })}
+      {recent.map((s) => (
+        <SessionTile key={s.id} session={s} />
+      ))}
       {!recent.length && (
         <Card>
           <Label muted>{t('emptyResume')}</Label>
