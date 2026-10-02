@@ -618,10 +618,11 @@ export const Sidebar = memo(function Sidebar({
         <button
           type="button"
           onClick={onOpenMobileAccess}
-          className="mb-2 flex w-full items-center gap-2 rounded-md border border-edge bg-panel px-2.5 py-2 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="mb-2 flex w-full items-center gap-2.5 rounded-md px-2 py-2.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
-          <PhoneIcon size={15} />
+          <span className="shrink-0 text-fgmuted"><PhoneIcon size={18} /></span>
           <span>Mobile access</span>
+          <span className="ml-auto rounded-full bg-[#171717] px-2 py-0.5 text-[11px] font-semibold leading-4 text-white">New</span>
         </button>
         <div className="flex h-7 items-center justify-between pl-2">
           <span className="flex-1 text-xs font-semibold text-fgmuted">

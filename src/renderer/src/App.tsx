@@ -73,6 +73,9 @@ const ProfileManager = lazy(() =>
 const OpenProjectModal = lazy(() =>
   import('./components/OpenProjectModal').then(({ OpenProjectModal }) => ({ default: OpenProjectModal }))
 )
+const MobileAccessModal = lazy(() =>
+  import('./components/MobileRelaySection').then(({ MobileAccessModal }) => ({ default: MobileAccessModal }))
+)
 
 function DeferredPanel(): React.JSX.Element {
   return <div className="flex min-h-0 flex-1" aria-busy="true" />
@@ -85,6 +88,7 @@ export default function App(): React.JSX.Element {
   const [onboarding, setOnboarding] = useState<'first-run' | 'replay' | null>(null)
   const [usageRevision, setUsageRevision] = useState(0)
   const [elevationNotice, setElevationNotice] = useState(false)
+  const [mobileAccessOpen, setMobileAccessOpen] = useState(false)
   useEffect(() => {
     let live = true
     void window.api.getSettings().then((settings) => {
@@ -878,7 +882,7 @@ export default function App(): React.JSX.Element {
               onOpenProject={openProjectModal}
               // Reopens on the last-visited section rather than resetting to Appearance.
               onOpenSettings={() => setView('settings')}
-              onOpenMobileAccess={() => { setSettingsSection('mobile'); setView('settings') }}
+              onOpenMobileAccess={() => setMobileAccessOpen(true)}
               onRemoveFolder={ws.removeFolder}
               onReorderFolders={ws.reorderFolders}
               onUpdateFolder={ws.updateFolder}
@@ -1080,6 +1084,12 @@ export default function App(): React.JSX.Element {
           }}
           onClose={() => setPalettePromptsOpen(false)}
         />
+      )}
+
+      {mobileAccessOpen && (
+        <Suspense fallback={null}>
+          <MobileAccessModal onClose={() => setMobileAccessOpen(false)} />
+        </Suspense>
       )}
 
       {projectModalOpen && (
