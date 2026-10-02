@@ -15,7 +15,7 @@ import {
 import { TerminalView, type TerminalHandle } from '../../terminal/view';
 import { client, useApp, useRelay } from '../../ui/provider';
 import { Label, useError } from '../../ui/components';
-import { amber, Dot, green, Segmented, TextLink } from '../../ui/kit';
+import { amber, Dot, green, Segmented } from '../../ui/kit';
 import { ChatView, useTranscript } from '../../terminal/chat';
 const keys = [
   ['Esc', '\u001b'],
@@ -263,15 +263,27 @@ export default function Terminal() {
           ]}
         />
         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <TextLink
-            accent
-            title={t('reconnect')}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('reconnect')}
             disabled={!connected}
             onPress={() => {
               setEnded(false);
               void client.watchTerminal(id).catch(fail);
             }}
-          />
+            hitSlop={10}
+            style={({ pressed }) => ({
+              padding: 6,
+              opacity: !connected ? 0.35 : pressed ? 0.6 : 1,
+            })}
+          >
+            <SymbolView
+              name={{ ios: 'arrow.clockwise', android: 'refresh' }}
+              size={18}
+              tintColor={colors.accent}
+              fallback={<Label style={{ color: colors.accent }}>{t('reconnect')}</Label>}
+            />
+          </Pressable>
         </View>
       </View>
       {chat && (

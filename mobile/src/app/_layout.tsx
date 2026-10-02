@@ -10,6 +10,7 @@ function Navigation() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
           headerShadowVisible: false,
+          headerBackButtonDisplayMode: 'minimal',
           headerTintColor: colors.text,
           contentStyle: { backgroundColor: colors.bg },
         }}
