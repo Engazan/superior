@@ -78,6 +78,25 @@ export interface MobileUsage {
   updatedAt: number
   resetCredits?: { availableCount: number } | null
 }
+/** One rendered turn of a Claude transcript; tool calls carry a one-line summary. */
+export interface MobileChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'tool'
+  text: string
+  tool?: string
+  at: number
+}
+export interface MobileTranscript {
+  /** False when the session has no Claude transcript (plain shell, Codex, older CLI). */
+  available: boolean
+  /** Changes when Claude starts a new transcript (e.g. after /clear); clients reset then. */
+  transcriptId: string | null
+  messages: MobileChatMessage[]
+  /** Byte cursor to pass back as `offset` for the next page. */
+  offset: number
+  /** True when more is already on disk past `offset`. */
+  more: boolean
+}
 export interface MobileCatalog {
   profiles: MobileProfile[]
   projects: MobileProject[]
@@ -138,6 +157,7 @@ export const MOBILE_ACTIONS = [
   'branches.list',
   'removal.preview',
   'operations.get',
+  'transcript.get',
   'profiles.create',
   'profiles.rename',
   'profiles.color',

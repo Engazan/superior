@@ -4,7 +4,9 @@ import {
   type MobileCapabilities,
   type MobileCatalog,
   type MobileMutation,
+  type MobileChatMessage,
   type MobileOperation,
+  type MobileTranscript,
   type MobileUsage,
 } from '@shared/mobileRelay';
 import { auth, decrypt, encrypt, inputChunks } from './crypto';
@@ -526,6 +528,39 @@ export class RelayClient {
       this.emit({ type: 'reset', sessionId: id });
       await this.request('terminal.subscribe', { sessionId: id });
     }
+  }
+  /** Next page of a terminal's Claude transcript; omit `offset` to start near the end. */
+  async transcript(
+    sessionId: string,
+    offset?: number,
+    transcriptId?: string | null,
+  ): Promise<MobileTranscript> {
+    const r = await this.request(
+      'transcript.get',
+      offset === undefined || !transcriptId
+        ? { sessionId }
+        : { sessionId, offset, transcriptId },
+    );
+    if (
+      typeof r.available !== 'boolean' ||
+      !Array.isArray(r.messages) ||
+      !Number.isSafeInteger(r.offset)
+    )
+      throw new Error('invalid_packet');
+    const messages = (r.messages as MobileChatMessage[]).filter(
+      (m) =>
+        m &&
+        typeof m.id === 'string' &&
+        typeof m.text === 'string' &&
+        ['user', 'assistant', 'tool'].includes(m.role),
+    );
+    return {
+      available: r.available,
+      transcriptId: typeof r.transcriptId === 'string' ? r.transcriptId : null,
+      messages,
+      offset: r.offset as number,
+      more: r.more === true,
+    };
   }
   async input(id: string, data: string): Promise<void> {
     try {

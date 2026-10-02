@@ -25,6 +25,7 @@ import { startAgent, killAgent } from './agent.service'
 import { getAccountUsage, listUsageProfiles } from './account-usage.service'
 import { getSetupState } from './worktree-setup.service'
 import { isWorktreeDirty, listBranches } from './worktree.service'
+import { readTranscript } from './mobileTranscript'
 
 let operations: MobileOperations | undefined
 let mutationQueue: Promise<unknown> = Promise.resolve()
@@ -409,6 +410,20 @@ export async function handleMobileBridge(
       }),
       nextOffset:
         offset + page.length < profiles.length ? offset + page.length : null,
+    }
+  }
+  if (msg.type === 'transcript.get') {
+    const sessionId = text(msg.sessionId, 80)
+    if (!(await mobileSessions()).some((s) => s.id === sessionId))
+      throw new Error('invalid_session')
+    const offset = msg.offset === undefined ? undefined : msg.offset
+    if (offset !== undefined && (!Number.isSafeInteger(offset) || (offset as number) < 0))
+      throw new Error('invalid_cursor')
+    const transcriptId =
+      msg.transcriptId === undefined ? undefined : text(msg.transcriptId, 80)
+    return {
+      type: 'transcript',
+      ...readTranscript(sessionId, offset as number | undefined, transcriptId),
     }
   }
   if (msg.type === 'branches.list') {

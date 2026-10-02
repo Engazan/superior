@@ -15,7 +15,8 @@ import {
 import { TerminalView, type TerminalHandle } from '../../terminal/view';
 import { client, useApp, useRelay } from '../../ui/provider';
 import { Label, useError } from '../../ui/components';
-import { amber, Dot, green, TextLink } from '../../ui/kit';
+import { amber, Dot, green, Segmented, TextLink } from '../../ui/kit';
+import { ChatView, useTranscript } from '../../terminal/chat';
 const keys = [
   ['Esc', '\u001b'],
   ['Tab', '\t'],
@@ -122,6 +123,7 @@ export default function Terminal() {
   const [prompt, setPrompt] = useState('');
   const [search, setSearch] = useState('');
   const [finding, setFinding] = useState(false);
+  const [mode, setMode] = useState<'cli' | 'chat'>('cli');
   const [size, setSize] = useState(13);
   const [ctrl, setCtrl] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -168,6 +170,19 @@ export default function Terminal() {
     terminal.current?.send({ type: 'size', size: value });
   };
   const connected = state.connection === 'online';
+  const chatSupported =
+    !!state.capabilities?.actions.includes('transcript.get');
+  const chat = mode === 'chat' && chatSupported;
+  const transcript = useTranscript(id, chat && connected);
+  const quick: [string, string][] = [
+    ['1', '1'],
+    ['2', '2'],
+    ['3', '3'],
+    ['↑', '\u001b[A'],
+    ['↓', '\u001b[B'],
+    ['⏎', '\r'],
+    ['Esc', '\u001b'],
+  ];
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -190,7 +205,9 @@ export default function Terminal() {
                 name={{ ios: 'xmark.octagon', android: 'cancel' }}
                 size={22}
                 tintColor={colors.danger}
-                fallback={<Label style={{ color: colors.danger }}>{t('kill')}</Label>}
+                fallback={
+                  <Label style={{ color: colors.danger }}>{t('kill')}</Label>
+                }
               />
             </Pressable>
           ),
@@ -205,34 +222,77 @@ export default function Terminal() {
           paddingVertical: 4,
         }}
       >
-        <Dot color={ended ? colors.muted : connected ? (ready ? green : amber) : colors.danger} />
-        <Label muted style={{ flex: 1, fontSize: 13 }}>
-          {ended ? t('ended') : connected ? t('online') : t('offline')}
-        </Label>
-        <TextLink
-          accent
-          title={t('reconnect')}
-          disabled={!connected}
-          onPress={() => {
-            setEnded(false);
-            void client.watchTerminal(id).catch(fail);
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
           }}
+        >
+          <Dot
+            color={
+              ended
+                ? colors.muted
+                : connected
+                  ? ready
+                    ? green
+                    : amber
+                  : colors.danger
+            }
+          />
+          <Label muted style={{ fontSize: 13 }} numberOfLines={1}>
+            {ended ? t('ended') : connected ? t('online') : t('offline')}
+          </Label>
+        </View>
+        <Segmented<'cli' | 'chat'>
+          value={chat ? 'chat' : 'cli'}
+          onChange={setMode}
+          options={[
+            {
+              value: 'cli',
+              label: 'CLI',
+              symbol: { ios: 'apple.terminal', android: 'terminal' },
+            },
+            {
+              value: 'chat',
+              label: t('chat'),
+              symbol: { ios: 'bubble.left.and.bubble.right', android: 'forum' },
+              disabled: !chatSupported,
+            },
+          ]}
+        />
+        <View style={{ flex: 1, alignItems: 'flex-end' }}>
+          <TextLink
+            accent
+            title={t('reconnect')}
+            disabled={!connected}
+            onPress={() => {
+              setEnded(false);
+              void client.watchTerminal(id).catch(fail);
+            }}
+          />
+        </View>
+      </View>
+      {chat && (
+        <ChatView transcript={transcript} agentState={session?.agentState} />
+      )}
+      <View style={chat ? { height: 0, overflow: 'hidden' } : { flex: 1 }}>
+        <TerminalView
+          ref={terminal}
+          id={id}
+          cols={session?.cols ?? 80}
+          rows={session?.rows ?? 24}
+          enabled={enabled}
+          onError={(error) => {
+            setReady(false);
+            fail(error);
+          }}
+          onReady={() => setReady(true)}
+          onReset={() => setReady(false)}
+          onEnd={() => setEnded(true)}
         />
       </View>
-      <TerminalView
-        ref={terminal}
-        id={id}
-        cols={session?.cols ?? 80}
-        rows={session?.rows ?? 24}
-        enabled={enabled}
-        onError={(error) => {
-          setReady(false);
-          fail(error);
-        }}
-        onReady={() => setReady(true)}
-        onReset={() => setReady(false)}
-        onEnd={() => setEnded(true)}
-      />
       <View
         style={{
           paddingTop: 8,
@@ -242,74 +302,107 @@ export default function Terminal() {
           borderColor: colors.border,
         }}
       >
-        <ScrollView
-          horizontal
-          keyboardShouldPersistTaps="handled"
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}
-        >
-          <KeyCap
-            label="Ctrl"
-            active={ctrl}
-            disabled={!enabled}
-            onPress={() => setCtrl(!ctrl)}
-          />
-          {keys.map(([label, data]) => (
-            <KeyCap
-              key={label}
-              label={label}
-              disabled={!enabled || busy}
-              onPress={() => void input(data)}
-            />
-          ))}
-        </ScrollView>
-        <View style={{ flexDirection: 'row', paddingHorizontal: 12 }}>
-          <Tool
-            label={t('find')}
-            symbol={{ ios: 'magnifyingglass', android: 'search' }}
-            active={finding}
-            onPress={() => setFinding(!finding)}
-          />
-          <Tool
-            label={t('copy')}
-            symbol={{ ios: 'doc.on.doc', android: 'content_copy' }}
-            onPress={() => terminal.current?.send({ type: 'copy' })}
-          />
-          <Tool
-            label={t('selectAll')}
-            symbol={{ ios: 'selection.pin.in.out', android: 'select_all' }}
-            onPress={() => terminal.current?.send({ type: 'selectAll' })}
-          />
-          <Tool
-            label={t('bottom')}
-            symbol={{ ios: 'arrow.down.to.line', android: 'vertical_align_bottom' }}
-            onPress={() => terminal.current?.send({ type: 'bottom' })}
-          />
-          <Tool
-            label={`${t('font')} −`}
-            symbol={{ ios: 'textformat.size.smaller', android: 'text_decrease' }}
-            onPress={() => font(-1)}
-          />
-          <Tool
-            label={`${t('font')} +`}
-            symbol={{ ios: 'textformat.size.larger', android: 'text_increase' }}
-            onPress={() => font(1)}
-          />
-        </View>
-        {finding && (
+        {chat ? (
+          session?.agentState === 'waiting' && (
+            <ScrollView
+              horizontal
+              keyboardShouldPersistTaps="handled"
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}
+            >
+              {quick.map(([label, data]) => (
+                <KeyCap
+                  key={label}
+                  label={label}
+                  disabled={!enabled || busy}
+                  onPress={() => void input(data)}
+                />
+              ))}
+            </ScrollView>
+          )
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              keyboardShouldPersistTaps="handled"
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}
+            >
+              <KeyCap
+                label="Ctrl"
+                active={ctrl}
+                disabled={!enabled}
+                onPress={() => setCtrl(!ctrl)}
+              />
+              {keys.map(([label, data]) => (
+                <KeyCap
+                  key={label}
+                  label={label}
+                  disabled={!enabled || busy}
+                  onPress={() => void input(data)}
+                />
+              ))}
+            </ScrollView>
+            <View style={{ flexDirection: 'row', paddingHorizontal: 12 }}>
+              <Tool
+                label={t('find')}
+                symbol={{ ios: 'magnifyingglass', android: 'search' }}
+                active={finding}
+                onPress={() => setFinding(!finding)}
+              />
+              <Tool
+                label={t('copy')}
+                symbol={{ ios: 'doc.on.doc', android: 'content_copy' }}
+                onPress={() => terminal.current?.send({ type: 'copy' })}
+              />
+              <Tool
+                label={t('selectAll')}
+                symbol={{ ios: 'selection.pin.in.out', android: 'select_all' }}
+                onPress={() => terminal.current?.send({ type: 'selectAll' })}
+              />
+              <Tool
+                label={t('bottom')}
+                symbol={{
+                  ios: 'arrow.down.to.line',
+                  android: 'vertical_align_bottom',
+                }}
+                onPress={() => terminal.current?.send({ type: 'bottom' })}
+              />
+              <Tool
+                label={`${t('font')} −`}
+                symbol={{
+                  ios: 'textformat.size.smaller',
+                  android: 'text_decrease',
+                }}
+                onPress={() => font(-1)}
+              />
+              <Tool
+                label={`${t('font')} +`}
+                symbol={{
+                  ios: 'textformat.size.larger',
+                  android: 'text_increase',
+                }}
+                onPress={() => font(1)}
+              />
+            </View>
+          </>
+        )}
+        {finding && !chat && (
           <Pill
             value={search}
             onChangeText={setSearch}
             placeholder={t('find')}
             symbol={{ ios: 'magnifyingglass', android: 'search' }}
             label={t('find')}
-            onSubmit={() => terminal.current?.send({ type: 'search', data: search })}
+            onSubmit={() =>
+              terminal.current?.send({ type: 'search', data: search })
+            }
           />
         )}
         <Pill
           value={prompt}
           onChangeText={setPrompt}
-          placeholder={t('prompt')}
+          placeholder={chat ? t('messageClaude') : t('prompt')}
           editable={enabled && !busy}
           symbol={{ ios: 'arrow.up', android: 'arrow_upward' }}
           label={t('send')}
@@ -367,7 +460,12 @@ function Pill({
         returnKeyType="send"
         onSubmitEditing={onSubmit}
         submitBehavior="submit"
-        style={{ flex: 1, color: colors.text, fontSize: 15, paddingVertical: 10 }}
+        style={{
+          flex: 1,
+          color: colors.text,
+          fontSize: 15,
+          paddingVertical: 10,
+        }}
       />
       <Pressable
         accessibilityRole="button"
@@ -384,7 +482,12 @@ function Pill({
           opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
         })}
       >
-        <SymbolView name={symbol} size={18} tintColor={colors.onAccent} fallback={null} />
+        <SymbolView
+          name={symbol}
+          size={18}
+          tintColor={colors.onAccent}
+          fallback={null}
+        />
       </Pressable>
     </View>
   );

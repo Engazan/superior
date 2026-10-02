@@ -254,7 +254,13 @@ export function Segmented<T extends string>({
   onChange,
 }: {
   value: T;
-  options: { value: T; label: string }[];
+  /** With a symbol the segment shows only the icon; the label becomes its accessibility name. */
+  options: {
+    value: T;
+    label: string;
+    symbol?: SymbolViewProps['name'];
+    disabled?: boolean;
+  }[];
   onChange(value: T): void;
 }) {
   const { colors } = useApp();
@@ -270,30 +276,45 @@ export function Segmented<T extends string>({
     >
       {options.map((o) => {
         const active = o.value === value;
+        const tint = active ? colors.text : colors.muted;
         return (
           <Pressable
             key={o.value}
             accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
+            accessibilityLabel={o.label}
+            accessibilityState={{ selected: active, disabled: o.disabled }}
+            disabled={o.disabled}
             onPress={() => onChange(o.value)}
             style={{
-              flex: 1,
+              flex: o.symbol ? undefined : 1,
               alignItems: 'center',
-              paddingVertical: 8,
+              justifyContent: 'center',
+              paddingVertical: o.symbol ? 6 : 8,
+              paddingHorizontal: o.symbol ? 16 : 0,
               borderRadius: 11,
               backgroundColor: active ? colors.card : 'transparent',
               boxShadow: active ? '0 1px 3px rgba(0,0,0,0.12)' : undefined,
+              opacity: o.disabled ? 0.35 : 1,
             }}
           >
-            <Text
-              style={{
-                color: active ? colors.text : colors.muted,
-                fontSize: 14,
-                fontWeight: active ? '600' : '400',
-              }}
-            >
-              {o.label}
-            </Text>
+            {o.symbol ? (
+              <SymbolView
+                name={o.symbol}
+                size={18}
+                tintColor={tint}
+                fallback={<Text style={{ color: tint, fontSize: 13 }}>{o.label}</Text>}
+              />
+            ) : (
+              <Text
+                style={{
+                  color: tint,
+                  fontSize: 14,
+                  fontWeight: active ? '600' : '400',
+                }}
+              >
+                {o.label}
+              </Text>
+            )}
           </Pressable>
         );
       })}
