@@ -414,7 +414,7 @@ export default function Terminal() {
         <Pill
           value={prompt}
           onChangeText={setPrompt}
-          placeholder={chat ? t('messageClaude') : t('prompt')}
+          placeholder={chat ? t('messageAgent') : t('prompt')}
           editable={enabled && !busy}
           symbol={{ ios: 'arrow.up', android: 'arrow_upward' }}
           label={t('send')}

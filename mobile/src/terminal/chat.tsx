@@ -176,6 +176,7 @@ function Markdown({ text, color }: { text: string; color: string }) {
 }
 const toolSymbols: Record<string, SymbolViewProps['name']> = {
   Bash: { ios: 'apple.terminal', android: 'terminal' },
+  Shell: { ios: 'apple.terminal', android: 'terminal' },
   Read: { ios: 'doc.text', android: 'description' },
   Edit: { ios: 'pencil', android: 'edit' },
   Write: { ios: 'square.and.pencil', android: 'edit_note' },

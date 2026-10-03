@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import type { MobileUsage } from '@shared/mobileRelay';
 import { Card, IconBox, Label } from '../../../ui/components';
-import { ConnectionBar, providerSymbol, UsageBar } from '../../../ui/kit';
+import {
+  ConnectionBar,
+  providerSymbol,
+  remaining,
+  UsageBar,
+  usageColor,
+} from '../../../ui/kit';
 import { useApp, useRelay, useUsageRefresh } from '../../../ui/provider';
 const time = (at: number) =>
   new Date(at).toLocaleString(undefined, {
@@ -32,12 +38,21 @@ function Account({ account }: { account: MobileUsage }) {
         <View key={window.id} style={{ gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
             <Label style={{ flex: 1, fontWeight: '600' }}>{window.label}</Label>
-            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700' }}>
-              {Math.round(window.usedPercent)}%
+            <Text
+              style={{
+                color: usageColor(window.usedPercent, colors.danger),
+                fontSize: 17,
+                fontWeight: '700',
+              }}
+            >
+              {remaining(window.usedPercent)}%{' '}
+              <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '400' }}>
+                {t('remaining')}
+              </Text>
             </Text>
           </View>
           <View style={{ flexDirection: 'row' }}>
-            <UsageBar percent={window.usedPercent} height={8} />
+            <UsageBar used={window.usedPercent} height={8} />
           </View>
           {window.resetsAt && (
             <Label muted style={{ fontSize: 13 }}>

@@ -10,7 +10,9 @@ import {
   providerSymbol,
   shortPath,
   Tile,
+  remaining,
   UsageBar,
+  usageColor,
 } from './kit';
 import { client, useApp, useRelay } from './provider';
 export function Stats() {
@@ -225,15 +227,22 @@ export function QuickActions() {
   );
 }
 function UsageWindow({ window }: { window: MobileUsage['windows'][number] }) {
-  const used = Math.min(100, Math.max(0, window.usedPercent));
+  const { colors } = useApp();
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <Label muted style={{ fontSize: 13 }} numberOfLines={1}>
         {window.label}
       </Label>
-      <UsageBar percent={used} />
-      <Label muted style={{ fontSize: 13, minWidth: 34, textAlign: 'right' }}>
-        {Math.round(used)}%
+      <UsageBar used={window.usedPercent} />
+      <Label
+        style={{
+          fontSize: 13,
+          minWidth: 34,
+          textAlign: 'right',
+          color: usageColor(window.usedPercent, colors.danger),
+        }}
+      >
+        {remaining(window.usedPercent)}%
       </Label>
     </View>
   );

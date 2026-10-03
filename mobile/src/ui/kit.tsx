@@ -17,9 +17,17 @@ export const providerSymbol = (
   provider === 'claude'
     ? { ios: 'asterisk', android: 'emergency' }
     : { ios: 'sparkles', android: 'auto_awesome' };
-export function UsageBar({ percent, height = 6 }: { percent: number; height?: number }) {
+/** Same thresholds as the desktop usage footer: warn from 80 % used, danger from 95 %. */
+export function usageColor(used: number, danger: string): string {
+  return used >= 95 ? danger : used >= 80 ? amber : green;
+}
+/** Percent still left in a window, as the desktop shows by default. */
+export function remaining(used: number): number {
+  return Math.round(100 - Math.min(100, Math.max(0, used)));
+}
+/** Bar filled with what is left; colored by how much is used. */
+export function UsageBar({ used, height = 6 }: { used: number; height?: number }) {
   const { colors } = useApp();
-  const used = Math.min(100, Math.max(0, percent));
   return (
     <View
       style={{
@@ -33,8 +41,8 @@ export function UsageBar({ percent, height = 6 }: { percent: number; height?: nu
       <View
         style={{
           height,
-          width: `${used}%`,
-          backgroundColor: used >= 90 ? colors.danger : used >= 70 ? amber : green,
+          width: `${remaining(used)}%`,
+          backgroundColor: usageColor(used, colors.danger),
         }}
       />
     </View>
