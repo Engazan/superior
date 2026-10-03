@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0] - 2026-10-03
+
+### Added
+
+- **Codex chat on mobile.** Follow Codex sessions in the mobile chat view with
+  prompts, replies and tool summaries supplied by the desktop from local
+  session transcripts.
+- **Codex state hooks.** On macOS and Linux, Superior installs its agent-state
+  hook for Codex alongside Claude to report working, waiting and completed
+  turns. The hook can be removed from Settings.
+
+### Changed
+
+- **Shared mobile chat labels.** Chat availability, status messages and input
+  placeholders now cover both Claude Code and Codex in all five languages.
+- **Remaining usage on mobile.** Dashboard and usage screens show the percentage
+  still available, with the same warning and danger thresholds as the desktop.
+- **Desktop project layout.** The desktop app, build scripts and dependencies
+  now live in `desktop/`. Development instructions, CI and release workflows
+  use the new location.
+
+### Fixed
+
+- **iOS encryption metadata.** The mobile app declares its encryption as
+  documentation-exempt for distribution outside France.
+
 ## [0.33.0] - 2026-10-02
 
 ### Added
