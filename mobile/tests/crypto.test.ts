@@ -3,7 +3,7 @@ import {
   mobileAuth,
   encryptMobile,
   decryptMobile,
-} from '../../src/main/services/mobileRelayCrypto';
+} from '../../desktop/src/main/services/mobileRelayCrypto';
 import {
   auth,
   decrypt,

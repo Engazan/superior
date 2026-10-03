@@ -16,6 +16,9 @@ jobs:
     name: Lint, test and build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: desktop
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +27,7 @@ jobs:
           # Electron 43 and the Vite 7 toolchain require Node 22.12 or newer.
           node-version: 22.12.0
           cache: npm
+          cache-dependency-path: desktop/package-lock.json
 
       - name: Install Linux build dependencies
         run: |
@@ -40,10 +44,10 @@ jobs:
         run: npm test
 
       - name: Test relay
-        run: npm ci --prefix server && npm test --prefix server
+        run: npm ci --prefix ../server && npm test --prefix ../server
 
       - name: Build relay container
-        run: docker build -t superior-relay:ci server
+        run: docker build -t superior-relay:ci ../server
 
       - name: Build
         run: npm run build
@@ -59,6 +63,9 @@ jobs:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: desktop
     steps:
       - uses: actions/checkout@v4
 
@@ -66,6 +73,7 @@ jobs:
         with:
           node-version: 22.12.0
           cache: npm
+          cache-dependency-path: desktop/package-lock.json
 
       - name: Install dependencies
         run: npm ci

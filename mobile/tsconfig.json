@@ -10,7 +10,7 @@
         "./assets/*"
       ],
       "@shared/*": [
-        "../src/shared/*"
+        "../desktop/src/shared/*"
       ]
     }
   },

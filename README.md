@@ -34,6 +34,20 @@ xattr -dr com.apple.quarantine /Applications/Superior.app
 The Windows build is unsigned, so SmartScreen may warn on first run — choose
 **More info → Run anyway**.
 
+## Project structure
+
+The repository is split into three applications, each with its own dependencies
+and commands:
+
+- [`desktop/`](desktop/) — Electron desktop app, including source, build scripts,
+  packaging assets and configuration.
+- [`mobile/`](mobile/README.md) — Expo / React Native companion for iOS and Android.
+- [`server/`](server/README.md) — encrypted relay connecting the desktop and mobile apps.
+
+The main README, changelog and shared documentation remain at the repository root.
+GitHub CI and release workflows remain in [`.github/workflows/`](.github/workflows/)
+and build the desktop app from `desktop/`.
+
 ## Stack
 
 Electron + React + TypeScript + Vite (`electron-vite`) + Tailwind CSS, with `node-pty`
@@ -41,7 +55,10 @@ for true-TTY process execution and `@xterm/xterm` for terminal rendering.
 
 ## Scripts
 
+Run the desktop commands from `desktop/`:
+
 ```bash
+cd desktop
 npm install      # installs dependencies (Node 22.12+)
 npm run dev      # launch the app in development (HMR)
 npm run build    # type-check + build main/preload/renderer into out/
@@ -191,11 +208,12 @@ share an account also share its quota, so percentages are never summed.
 ## Source layout
 
 ```
-src/shared/                  # domain types, typed IPC contract, daemon protocol
-src/main/                    # Electron main process: services + IPC handlers
-src/daemon/                  # persistent PTY process and scrollback buffer
-src/preload/index.ts         # explicit contextBridge capabilities
-src/renderer/src/            # React UI, hooks, terminal and file/git views
+desktop/src/shared/          # domain types, typed IPC contract, daemon protocol
+desktop/src/main/            # Electron main process: services + IPC handlers
+desktop/src/daemon/          # persistent PTY process and scrollback buffer
+desktop/src/preload/index.ts # explicit contextBridge capabilities
+desktop/src/renderer/src/    # React UI, hooks, terminal and file/git views
+mobile/                      # Expo / React Native iOS and Android companion
 server/                      # encrypted mobile relay and Dokploy deployment
 ```
 
@@ -205,8 +223,8 @@ Superior's terminal daemon keeps PTY sessions and recent scrollback alive across
 desktop app restarts. The desktop can now connect to a self-hosted relay over
 WSS, pair a phone, stream existing sessions and accept terminal input. Both
 desktop and phone make outbound connections, so users need no VPN or router port
-forwarding. The daemon's local socket stays private. A React Native mobile app
-is **not included yet**; its protocol is documented for later implementation.
+forwarding. The daemon's local socket stays private. The [React Native mobile app](mobile/README.md) is in `mobile/`; its pairing,
+encryption and messaging protocol is documented in `docs/mobile-companion.md`.
 
 Open **Mobile access** above Workspaces in the left sidebar (or **Settings → Mobile access**) to set the address, enable the connection,
 generate a five-minute pairing QR code and revoke devices. Official builds receive the relay

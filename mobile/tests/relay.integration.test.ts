@@ -8,7 +8,7 @@ import { createRelay } from '../../server/src/index.mjs';
 import {
   decryptMobile,
   encryptMobile,
-} from '../../src/main/services/mobileRelayCrypto';
+} from '../../desktop/src/main/services/mobileRelayCrypto';
 import { auth, type Pairing } from '../src/relay/crypto';
 import { HostStorage, type KeyStore } from '../src/relay/storage';
 import { RelayClient } from '../src/relay/client';

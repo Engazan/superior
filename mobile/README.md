@@ -68,7 +68,7 @@ npm run export:web
 
 `npm ci` generates the local terminal document through `postinstall`. The source
 is `src/terminal/document.ts`; no CDN, external script or remote terminal page is
-loaded. Metro watches `../src/shared` for public DTOs. Tests include desktop/native
+loaded. Metro watches `../desktop/src/shared` for public DTOs. Tests include desktop/native
 crypto interoperability, durable counter reservations, stream continuity, operation
 journaling and real local relay pairing/reconnect/revocation. CI runs mobile checks
 and Hermes bundle generation separately from desktop checks.
