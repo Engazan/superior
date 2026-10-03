@@ -15,7 +15,7 @@ import { daemonClient } from './daemonClient'
 import { listWorkspaces, isValidWorkspaceDir, isWithinWorkspaceFolder } from './workspace.service'
 import { startUsageTracking, stopAllUsageTracking } from './usage.service'
 import { ensureClaudeStatusline, restoreAllClaudeStatuslines } from './statusline.service'
-import { ensureClaudeStateHooks } from './claude-hooks.service'
+import { ensureClaudeStateHooks, ensureCodexStateHooks } from './claude-hooks.service'
 import { agentStateEnv } from './agent-state.service'
 import { getSettings } from './settings.service'
 import {
@@ -190,7 +190,10 @@ export async function startAgent(args: StartAgentArgs): Promise<StartAgentResult
   const usageEnabled = getSettings().usageTracking
   if (usageEnabled && !remote) ensureClaudeStatusline(command)
   const hooksEnabled = getSettings().agentHooks && !remote
-  if (hooksEnabled) ensureClaudeStateHooks(command)
+  if (hooksEnabled) {
+    ensureClaudeStateHooks(command)
+    ensureCodexStateHooks(command)
+  }
 
   // A bad command can die before the spawn reply is processed — the daemon may
   // deliver `spawned` and `exit` in one socket chunk, so the exit fans out

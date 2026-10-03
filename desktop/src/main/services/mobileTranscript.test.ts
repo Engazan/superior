@@ -6,7 +6,13 @@ import * as path from 'path'
 const m = vi.hoisted(() => ({ dir: '' }))
 vi.mock('./agent-state.service', () => ({ agentStateDir: () => m.dir }))
 
-import { isTranscriptPath, parseTranscriptLines, readTranscript } from './mobileTranscript'
+import {
+  isCodexTranscriptPath,
+  isTranscriptPath,
+  parseCodexLines,
+  parseTranscriptLines,
+  readTranscript
+} from './mobileTranscript'
 
 const line = (value: object): string => JSON.stringify(value)
 const user = (uuid: string, content: unknown, extra: object = {}): string =>
@@ -49,6 +55,40 @@ describe('parseTranscriptLines', () => {
       assistant('a', [{ type: 'text', text: 'Reading' }, { type: 'tool_use', name: 'Read', input: { file_path: '/x.ts' } }])
     ])
     expect(messages.map((msg) => msg.id)).toEqual(['a:0', 'a:1'])
+  })
+})
+
+const codexItem = (item: object): string =>
+  line({ timestamp: '2026-10-02T10:00:00.000Z', type: 'event_msg', payload: { type: 'item_completed', item } })
+
+describe('parseCodexLines', () => {
+  it('keeps user and agent messages and summarizes tools from completed items', () => {
+    const messages = parseCodexLines([
+      line({ type: 'session_meta', payload: { id: 't' } }),
+      line({ type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: '# AGENTS.md instructions' }] } }),
+      codexItem({ type: 'UserMessage', id: 'u', content: [{ type: 'text', text: 'Add a tab' }] }),
+      codexItem({ type: 'Reasoning', id: 'r', summary_text: [] }),
+      codexItem({ type: 'CommandExecution', id: 'c', command: ['/bin/zsh', '-lc', 'rg   --files'] }),
+      codexItem({ type: 'Extension', id: 'w', kind: 'web.search', query: 'expo tabs' }),
+      codexItem({ type: 'FileChange', id: 'f', changes: [{ path: '/a.ts' }, { path: '/b.ts' }] }),
+      codexItem({ type: 'AgentMessage', id: 'a', content: [{ type: 'Text', text: 'Done.' }] })
+    ])
+    expect(messages.map(({ role, tool, text }) => [role, tool, text])).toEqual([
+      ['user', undefined, 'Add a tab'],
+      ['tool', 'Shell', 'rg --files'],
+      ['tool', 'WebSearch', 'expo tabs'],
+      ['tool', 'Edit', '/a.ts, /b.ts'],
+      ['assistant', undefined, 'Done.']
+    ])
+  })
+})
+
+describe('isCodexTranscriptPath', () => {
+  it('accepts only rollouts inside a Codex sessions folder', () => {
+    expect(isCodexTranscriptPath('/home/u/.codex/sessions/2026/10/02/rollout-x-1.jsonl')).toBe(true)
+    expect(isCodexTranscriptPath('/home/u/.codex/archived_sessions/rollout-x-1.jsonl')).toBe(true)
+    expect(isCodexTranscriptPath('/home/u/.codex/sessions/2026/10/02/other.jsonl')).toBe(false)
+    expect(isCodexTranscriptPath('/home/u/notes/sessions/rollout-x.jsonl')).toBe(false)
   })
 })
 
@@ -95,6 +135,30 @@ describe('readTranscript', () => {
     expect(next.messages.map((msg) => msg.text)).toEqual(['three'])
     expect(next.more).toBe(false)
     expect(readTranscript(session, next.offset, 'conv').messages).toEqual([])
+  })
+
+  it('finds a Codex rollout by the hook session id when no path is reported', () => {
+    const thread = '01a0b356-2994-7de3-829d-9277e1c56718'
+    const now = new Date()
+    const day = path.join(
+      root,
+      '.codex',
+      'sessions',
+      String(now.getFullYear()),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    )
+    fs.mkdirSync(day, { recursive: true })
+    fs.writeFileSync(
+      path.join(day, `rollout-2026-10-02T10-00-00-${thread}.jsonl`),
+      `${codexItem({ type: 'UserMessage', id: 'u', content: [{ type: 'text', text: 'hi' }] })}\n`
+    )
+    vi.stubEnv('CODEX_HOME', path.join(root, '.codex'))
+    fs.writeFileSync(path.join(m.dir, `${session}.json`), JSON.stringify({ hook_event_name: 'Stop', session_id: thread }))
+    const page = readTranscript(session)
+    vi.unstubAllEnvs()
+    expect(page.available).toBe(true)
+    expect(page.messages.map((msg) => msg.text)).toEqual(['hi'])
   })
 
   it('restarts from the tail when the transcript changes', () => {

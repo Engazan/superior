@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
-import { resolveClaudeConfigDir } from './claude-paths'
+import { expandHome, homeDir, resolveClaudeConfigDir } from './claude-paths'
 
 /**
  * Claude reports its exact turn state (working / waiting for permission / done)
@@ -9,11 +9,16 @@ import { resolveClaudeConfigDir } from './claude-paths'
  * settings.json. The hook only writes where Superior's per-terminal env vars
  * point, so a Claude started outside Superior just drains stdin and continues.
  *
+ * Codex accepts the same hook shape in `<CODEX_HOME>/hooks.json`, so the same
+ * inline hook reports Codex turns too. Codex asks the user once to trust it.
+ *
  * POSIX only: Windows keeps title- and output-based detection.
  */
 
 // Only events Claude has shipped for a long time, so older CLIs never see an unknown key.
 const EVENTS = ['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'Stop', 'SessionEnd']
+// SessionStart carries no state but reports the transcript path before the first prompt.
+const CODEX_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'Stop']
 const TOOL_EVENTS = new Set(['PreToolUse', 'PostToolUse', 'PermissionRequest'])
 const MARKER = 'SUPERIOR_AGENT_STATE_DIR'
 
@@ -31,16 +36,19 @@ function isOurGroup(group: unknown): boolean {
     hooks[0].command.includes(MARKER)
 }
 
-/** Settings with exactly one current Superior hook per event; null when `hooks` is not ours to edit. */
-export function withStateHooks(settings: Settings): Settings | null {
+/**
+ * Settings with exactly one current Superior hook per event; null when `hooks` is not ours to edit.
+ * Codex hooks carry no matcher and fire for every tool.
+ */
+export function withStateHooks(settings: Settings, codex = false): Settings | null {
   const base = settings.hooks ?? {}
   if (typeof base !== 'object' || Array.isArray(base)) return null
   const hooks: Record<string, unknown> = { ...(base as Record<string, unknown>) }
-  for (const event of EVENTS) {
+  for (const event of codex ? CODEX_EVENTS : EVENTS) {
     const current = hooks[event] ?? []
     if (!Array.isArray(current)) return null
     const group: Group = {
-      ...(TOOL_EVENTS.has(event) ? { matcher: '*' } : {}),
+      ...(!codex && TOOL_EVENTS.has(event) ? { matcher: '*' } : {}),
       hooks: [{ type: 'command', command: CLAUDE_STATE_HOOK, timeout: 5 }]
     }
     hooks[event] = [...current.filter((g) => !isOurGroup(g)), group]
@@ -74,8 +82,12 @@ function readSettings(file: string): Settings | null {
   }
 }
 
-function rewrite(configDir: string, change: (s: Settings) => Settings | null): boolean {
-  const file = path.join(configDir, 'settings.json')
+function rewrite(
+  configDir: string,
+  change: (s: Settings) => Settings | null,
+  name = 'settings.json'
+): boolean {
+  const file = path.join(configDir, name)
   const settings = readSettings(file)
   const next = settings && change(settings)
   if (!next) return false
@@ -111,4 +123,43 @@ export function removeAllClaudeStateHooks(): void {
     try { return !rewrite(dir, withoutStateHooks) } catch { return true }
   })
   try { writeJsonFile(registryFile(), remaining, 'Claude hook registry') } catch { /* retried next time */ }
+}
+
+/**
+ * CODEX_HOME for a command that runs the Codex CLI, or null. An inline
+ * `CODEX_HOME=...` wins; otherwise the env var, then `~/.codex`.
+ */
+export function resolveCodexHome(command: string): string | null {
+  const segment = (command.trim().split('&&').pop() ?? '').trim()
+  const override = segment.match(/CODEX_HOME=(?:"([^"]*)"|'([^']*)'|(\S+))/)
+  const exe = segment.split(/\s+/).find((tok) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(tok) && tok !== 'env') ?? ''
+  if (path.basename(exe.replace(/["']/g, '')).toLowerCase() !== 'codex') return null
+  if (override) return expandHome(override[1] ?? override[2] ?? override[3] ?? '')
+  return process.env.CODEX_HOME ? expandHome(process.env.CODEX_HOME) : path.join(homeDir(), '.codex')
+}
+
+const codexRegistryFile = (): string => userDataFile('codex-state-hooks.json')
+const codexDirs = (): string[] =>
+  readJsonFile<string[]>(codexRegistryFile(), [], (v) => Array.isArray(v) ? v.filter((d) => typeof d === 'string') : [])
+
+/** Install the hooks into an existing CODEX_HOME's hooks.json. Best effort; a no-op for non-Codex commands. */
+export function ensureCodexStateHooks(command: string): void {
+  if (process.platform === 'win32') return
+  const home = resolveCodexHome(command)
+  // Never create a Codex home for a CLI that has not run yet.
+  if (!home || !fs.existsSync(home)) return
+  try {
+    if (!rewrite(home, (s) => withStateHooks(s, true), 'hooks.json')) return
+    const dirs = codexDirs()
+    if (!dirs.includes(home)) writeJsonFile(codexRegistryFile(), [...dirs, home], 'Codex hook registry')
+  } catch { /* Detection falls back to the terminal title and output. */ }
+}
+
+/** Remove the hooks from every Codex home they were installed into. */
+export function removeAllCodexStateHooks(): void {
+  if (process.platform === 'win32') return
+  const remaining = codexDirs().filter((dir) => {
+    try { return !rewrite(dir, withoutStateHooks, 'hooks.json') } catch { return true }
+  })
+  try { writeJsonFile(codexRegistryFile(), remaining, 'Codex hook registry') } catch { /* retried next time */ }
 }

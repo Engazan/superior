@@ -30,7 +30,12 @@ import {
 import { applyGlobalHotkey } from '../services/global-hotkey.service'
 import { syncUsageTracking } from '../services/agent.service'
 import { handle } from './handle'
-import { ensureClaudeStateHooks, removeAllClaudeStateHooks } from '../services/claude-hooks.service'
+import {
+  ensureClaudeStateHooks,
+  ensureCodexStateHooks,
+  removeAllClaudeStateHooks,
+  removeAllCodexStateHooks
+} from '../services/claude-hooks.service'
 import { boundedString, invalidPayload, isRecord } from './validation'
 
 const THEMES = new Set(['light', 'dark', 'system', 'transparent', 'gradient', 'gradient-light'])
@@ -107,9 +112,14 @@ export function registerSettingsIpc(getWindow: () => BrowserWindow | null): void
   handle(IPC.SETTINGS_SET_AGENT_HOOKS, (enabled: boolean): AppSettings => {
     if (typeof enabled !== 'boolean') return invalidPayload()
     const next = setAgentHooks(enabled)
-    // Claude reads hooks at startup, so this applies to newly launched sessions.
-    if (enabled) ensureClaudeStateHooks('claude')
-    else removeAllClaudeStateHooks()
+    // Claude and Codex read hooks at startup, so this applies to newly launched sessions.
+    if (enabled) {
+      ensureClaudeStateHooks('claude')
+      ensureCodexStateHooks('codex')
+    } else {
+      removeAllClaudeStateHooks()
+      removeAllCodexStateHooks()
+    }
     return next
   })
 

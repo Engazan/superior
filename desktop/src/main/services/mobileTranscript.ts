@@ -1,14 +1,18 @@
 import * as fs from 'fs'
+import * as os from 'os'
 import * as path from 'path'
 import type { MobileChatMessage, MobileTranscript } from '@shared/mobileRelay'
 import { agentStateDir } from './agent-state.service'
 
 /**
- * Turns a Claude transcript (JSONL) into chat messages for the mobile app.
+ * Turns a Claude transcript or a Codex rollout (JSONL) into chat messages for
+ * the mobile app.
  *
- * The terminal's Claude hook payload (see agent-state.service) names the exact
- * `transcript_path`, so no cwd guessing is needed. Only files that look like a
- * Claude transcript (`<config>/projects/<dir>/<id>.jsonl`) are ever read.
+ * The terminal's hook payload (see agent-state.service) names the exact
+ * `transcript_path`; for Codex its `session_id` also ends the rollout file name.
+ * Only files that look like a Claude transcript
+ * (`<config>/projects/<dir>/<id>.jsonl`) or a Codex rollout
+ * (`<CODEX_HOME>/sessions/…/rollout-*.jsonl`) are ever read.
  */
 
 const TAIL_BYTES = 256_000
@@ -16,7 +20,7 @@ const CHUNK_BYTES = 512_000
 const PAGE_BYTES = 48_000
 const TEXT_MAX = 6_000
 const SUMMARY_MAX = 200
-const SUMMARY_KEYS = ['command', 'file_path', 'path', 'pattern', 'url', 'query', 'description', 'prompt']
+const SUMMARY_KEYS = ['command', 'file_path', 'path', 'pattern', 'url', 'query', 'description', 'prompt', 'tool', 'name']
 
 type Block = { type?: unknown; text?: unknown; name?: unknown; input?: unknown }
 type Entry = {
@@ -92,6 +96,112 @@ export function parseTranscriptLines(lines: string[]): MobileChatMessage[] {
   return out
 }
 
+type Kind = 'claude' | 'codex'
+type CodexItem = { type?: unknown; id?: unknown; content?: unknown; command?: unknown; kind?: unknown } & Record<string, unknown>
+
+function itemText(content: unknown): string {
+  if (!Array.isArray(content)) return ''
+  return content
+    .filter((c) => c && typeof c === 'object' && /^text$/i.test(String((c as { type?: unknown }).type)))
+    .map((c) => String((c as { text?: unknown }).text ?? ''))
+    .join('\n')
+    .trim()
+}
+
+function codexTool(item: CodexItem): { tool: string; text: string } {
+  if (item.type === 'CommandExecution') {
+    const cmd = Array.isArray(item.command) ? item.command.map(String) : []
+    // Codex runs `<shell> -lc "<command>"`; show just the command.
+    const text = cmd.length >= 3 && /^-l?c$/.test(cmd[cmd.length - 2]) ? cmd[cmd.length - 1] : cmd.join(' ')
+    return { tool: 'Shell', text: clip(text.replace(/\s+/g, ' ').trim(), SUMMARY_MAX) }
+  }
+  if (item.type === 'Extension' && item.kind === 'web.search') return { tool: 'WebSearch', text: toolSummary(item) }
+  if (item.type === 'FileChange' && Array.isArray(item.changes))
+    return {
+      tool: 'Edit',
+      text: clip(item.changes.map((c) => String((c as { path?: unknown }).path ?? '')).filter(Boolean).join(', '), SUMMARY_MAX)
+    }
+  return { tool: clip(String(item.type), 80), text: toolSummary(item) }
+}
+
+/** Pure: map Codex rollout lines to chat messages, from the completed-item events only. */
+export function parseCodexLines(lines: string[]): MobileChatMessage[] {
+  const out: MobileChatMessage[] = []
+  for (const line of lines) {
+    if (!line.trim()) continue
+    let entry: { type?: unknown; timestamp?: unknown; payload?: { type?: unknown; item?: CodexItem } }
+    try {
+      entry = JSON.parse(line)
+    } catch {
+      continue
+    }
+    const item = entry.payload?.item
+    if (entry.type !== 'event_msg' || entry.payload?.type !== 'item_completed' || !item || typeof item.type !== 'string')
+      continue
+    if (item.type === 'Reasoning') continue
+    const id = typeof item.id === 'string' ? item.id : String(out.length)
+    const at = typeof entry.timestamp === 'string' ? Date.parse(entry.timestamp) || 0 : 0
+    if (item.type === 'UserMessage' || item.type === 'AgentMessage') {
+      const text = itemText(item.content)
+      if (text) out.push({ id, role: item.type === 'UserMessage' ? 'user' : 'assistant', text: clip(text, TEXT_MAX), at })
+    } else {
+      out.push({ id, role: 'tool', ...codexTool(item), at })
+    }
+  }
+  return out
+}
+
+function codexHomes(): string[] {
+  return [...new Set([process.env.CODEX_HOME, path.join(os.homedir(), '.codex')].filter(Boolean) as string[])]
+}
+
+/** Accept only `rollout-*.jsonl` inside a Codex home's `sessions` or `archived_sessions`. */
+export function isCodexTranscriptPath(file: string): boolean {
+  if (!path.isAbsolute(file) || !/^rollout-.+\.jsonl$/.test(path.basename(file))) return false
+  for (let dir = path.dirname(file); dir !== path.dirname(dir); dir = path.dirname(dir)) {
+    if (!['sessions', 'archived_sessions'].includes(path.basename(dir))) continue
+    const home = path.dirname(dir)
+    return path.basename(home).startsWith('.codex') || codexHomes().includes(home)
+  }
+  return false
+}
+
+const rollouts = new Map<string, string>()
+/** Find a Codex rollout by thread id in the last week's date folders. */
+function findCodexRollout(threadId: string): string | null {
+  const cached = rollouts.get(threadId)
+  if (cached && fs.existsSync(cached)) return cached
+  const suffix = `-${threadId}.jsonl`
+  for (const home of codexHomes()) {
+    for (let day = 0; day < 7; day++) {
+      const date = new Date(Date.now() - day * 86_400_000)
+      const dir = path.join(
+        home,
+        'sessions',
+        String(date.getFullYear()),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+      )
+      let names: string[]
+      try {
+        names = fs.readdirSync(dir)
+      } catch {
+        continue
+      }
+      const name = names.find((n) => n.startsWith('rollout-') && n.endsWith(suffix))
+      if (name) {
+        rollouts.set(threadId, path.join(dir, name))
+        return path.join(dir, name)
+      }
+    }
+  }
+  return null
+}
+
+function kindOf(file: string): Kind | null {
+  return isTranscriptPath(file) ? 'claude' : isCodexTranscriptPath(file) ? 'codex' : null
+}
+
 /** Accept only `<config>/projects/<dir>/<file>.jsonl` under a `.claude*` config dir. */
 export function isTranscriptPath(file: string): boolean {
   if (!path.isAbsolute(file) || path.extname(file) !== '.jsonl') return false
@@ -100,14 +210,22 @@ export function isTranscriptPath(file: string): boolean {
   return path.basename(projects) === 'projects' && path.basename(path.dirname(projects)).startsWith('.claude')
 }
 
-function transcriptPath(sessionId: string): string | null {
+function transcriptPath(sessionId: string): { file: string; kind: Kind } | null {
   try {
     const hook = JSON.parse(fs.readFileSync(path.join(agentStateDir(), `${sessionId}.json`), 'utf-8')) as {
       transcript_path?: unknown
+      session_id?: unknown
     }
-    if (typeof hook.transcript_path !== 'string') return null
-    const real = fs.realpathSync(hook.transcript_path)
-    return isTranscriptPath(hook.transcript_path) && isTranscriptPath(real) ? real : null
+    const reported =
+      typeof hook.transcript_path === 'string'
+        ? hook.transcript_path
+        : typeof hook.session_id === 'string' && /^[0-9a-f-]{36}$/i.test(hook.session_id)
+          ? findCodexRollout(hook.session_id)
+          : null
+    if (!reported) return null
+    const kind = kindOf(reported)
+    const real = fs.realpathSync(reported)
+    return kind && kindOf(real) === kind ? { file: real, kind } : null
   } catch {
     return null
   }
@@ -120,8 +238,10 @@ const EMPTY: MobileTranscript = { available: false, transcriptId: null, messages
  * different transcript) it starts near the end so long sessions open fast.
  */
 export function readTranscript(sessionId: string, offset?: number, transcriptId?: string): MobileTranscript {
-  const file = transcriptPath(sessionId)
-  if (!file) return EMPTY
+  const found = transcriptPath(sessionId)
+  if (!found) return EMPTY
+  const { file, kind } = found
+  const parse = kind === 'codex' ? parseCodexLines : parseTranscriptLines
   const id = path.basename(file, '.jsonl')
   let size: number
   try {
@@ -152,7 +272,7 @@ export function readTranscript(sessionId: string, offset?: number, transcriptId?
   let cursor = start
   let bytes = 0
   for (const line of text.split('\n').slice(0, -1)) {
-    const parsed = parseTranscriptLines([line])
+    const parsed = parse([line])
     const weight = parsed.reduce((sum, m) => sum + Buffer.byteLength(JSON.stringify(m)), 0)
     if (bytes + weight > PAGE_BYTES && messages.length) break
     messages.push(...parsed)

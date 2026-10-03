@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { agentStateFromHook } from '@shared/agent-state'
 
 vi.mock('electron', () => ({ app: { getPath: () => os.tmpdir(), isReady: () => false } }))
-import { CLAUDE_STATE_HOOK, withStateHooks, withoutStateHooks } from './claude-hooks.service'
+import { CLAUDE_STATE_HOOK, resolveCodexHome, withStateHooks, withoutStateHooks } from './claude-hooks.service'
 
 const userHook = { matcher: 'Bash', hooks: [{ type: 'command', command: 'echo mine' }] }
 
@@ -19,6 +19,23 @@ describe('Claude state hooks', () => {
     expect(once.model).toBe('opus')
     expect(hooks.PreToolUse).toEqual([userHook, { matcher: '*', hooks: [{ type: 'command', command: CLAUDE_STATE_HOOK, timeout: 5 }] }])
     expect(Object.keys(hooks).sort()).toEqual(['PermissionRequest', 'PostToolUse', 'PreToolUse', 'SessionEnd', 'Stop', 'UserPromptSubmit'])
+  })
+
+  it('writes Codex hooks without matchers, including SessionStart', () => {
+    const codex = withStateHooks({ hooks: { Stop: [userHook] } }, true)!
+    const hooks = codex.hooks as Record<string, { matcher?: string }[]>
+    expect(Object.keys(hooks).sort()).toEqual(['PermissionRequest', 'PostToolUse', 'PreToolUse', 'SessionStart', 'Stop', 'UserPromptSubmit'])
+    expect(hooks.PreToolUse[0].matcher).toBeUndefined()
+    expect(hooks.Stop[0]).toEqual(userHook)
+    expect(withoutStateHooks(codex)).toEqual({ hooks: { Stop: [userHook] } })
+  })
+
+  it('resolves the Codex home only for Codex commands', () => {
+    expect(resolveCodexHome('claude')).toBeNull()
+    expect(resolveCodexHome('CODEX_HOME=/tmp/cx codex --yolo')).toBe('/tmp/cx')
+    vi.stubEnv('CODEX_HOME', '')
+    expect(resolveCodexHome('codex')).toBe(path.join(os.homedir(), '.codex'))
+    vi.unstubAllEnvs()
   })
 
   it('removes only its own hooks', () => {
