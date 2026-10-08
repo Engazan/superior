@@ -32,7 +32,7 @@ describe('Claude state hooks', () => {
 
   it('resolves the Codex home only for Codex commands', () => {
     expect(resolveCodexHome('claude')).toBeNull()
-    expect(resolveCodexHome('CODEX_HOME=/tmp/cx codex --yolo')).toBe('/tmp/cx')
+    expect(resolveCodexHome('CODEX_HOME=/tmp/cx codex --yolo')).toBe(path.normalize('/tmp/cx'))
     vi.stubEnv('CODEX_HOME', '')
     expect(resolveCodexHome('codex')).toBe(path.join(os.homedir(), '.codex'))
     vi.unstubAllEnvs()

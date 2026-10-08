@@ -9,6 +9,12 @@
     "email": "Engazan.eu@icloud.com"
   },
   "license": "MIT",
+  "homepage": "https://github.com/Engazan/superior",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Engazan/superior.git",
+    "directory": "desktop"
+  },
   "engines": {
     "node": ">=22.12.0"
   },
