@@ -1,6 +1,7 @@
 export { Button } from './Button'
 export { IconButton } from './IconButton'
 export { Select } from './Select'
+export { Combobox, type ComboboxOption } from './Combobox'
 export { SectionHeader } from './SectionHeader'
 export { SettingsCard, SettingRow } from './SettingRow'
 export { Modal } from './Modal'

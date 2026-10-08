@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../../i18n'
-import { BranchIcon, Button, Input, Modal, Select } from '../ui'
+import { BranchIcon, Button, Combobox, Input, Modal } from '../ui'
 import { FolderGlyph, WorkspaceGlyph, folderLabel, folderTitle } from './parts'
 import type { BranchInfo, Folder, WorktreeAddArgs } from '../../types'
 
@@ -251,24 +251,27 @@ export function WorkspaceCreateModal({
                 />
               ) : (
                 <>
-                  <Select
+                  <Combobox
                     id="worktree-branch"
+                    autoFocus
                     value={picked}
-                    onChange={(event) => setPicked(event.target.value)}
+                    onChange={setPicked}
+                    options={branches.map((item) => ({
+                      value: item.name,
+                      hint: item.isCheckedOut ? t('worktree.branchInUse') : undefined,
+                      disabled: item.isCheckedOut
+                    }))}
+                    placeholder={
+                      loadingBranches
+                        ? t('worktree.loadingBranches')
+                        : available.length === 0
+                          ? t('worktree.noBranchesAvailable')
+                          : t('branch.search')
+                    }
+                    emptyText={t('branch.none')}
                     disabled={loadingBranches || branchLoadFailed || available.length === 0}
                     className="font-mono"
-                  >
-                    {loadingBranches && <option value="">{t('worktree.loadingBranches')}</option>}
-                    {!loadingBranches && available.length === 0 && (
-                      <option value="">{t('worktree.noBranchesAvailable')}</option>
-                    )}
-                    {branches.map((item) => (
-                      <option key={item.name} value={item.name} disabled={item.isCheckedOut}>
-                        {item.name}
-                        {item.isCheckedOut ? ` — ${t('worktree.branchInUse')}` : ''}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                   {branchLoadFailed && (
                     <p className="mt-1.5 text-xs text-danger">{t('worktree.branchLoadFailed')}</p>
                   )}
