@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0] - 2026-10-08
+
+### Added
+
+- **Searchable branch picker.** When creating a branch-isolated workspace from
+  an existing branch, type to filter the branch list and pick with the arrow
+  keys and Enter. Branches already checked out elsewhere stay visible but
+  cannot be selected.
+
+### Changed
+
+- **Expo SDK 57 patch updates.** The mobile app uses the latest Expo SDK 57
+  patch releases of `expo`, `expo-router`, `expo-updates`, `expo-constants`,
+  `expo-linking` and `@expo/ui`.
+
 ## [0.34.0] - 2026-10-03
 
 ### Added
