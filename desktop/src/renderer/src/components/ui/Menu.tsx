@@ -84,11 +84,17 @@ export function Menu({ items, anchor, onClose }: Props): React.JSX.Element {
   }, [onClose, layer])
 
   // Focus the first item so keyboard users land inside the menu; restore focus
-  // to the opener when the menu closes so keyboard flow isn't dropped.
+  // to the opener when the menu closes so keyboard flow isn't dropped — unless
+  // the chosen action already moved focus elsewhere (e.g. an inline rename
+  // input), which the restore would otherwise blur straight away.
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null
-    ref.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
-    return () => opener?.focus()
+    const menu = ref.current
+    menu?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    return () => {
+      const active = document.activeElement
+      if (!active || active === document.body || menu?.contains(active)) opener?.focus()
+    }
   }, [])
 
   return createPortal(

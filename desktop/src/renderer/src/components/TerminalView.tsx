@@ -121,6 +121,13 @@ interface Props {
 // Memoized with rects compared by value (the grid rebuilds them each render):
 // every terminal stays mounted across workspace/tab switches, so without this
 // each App render re-runs the render of every terminal in every workspace.
+/** True while focus sits in a text field outside the given terminal host. */
+function isEditingOutside(host: HTMLElement | null): boolean {
+  const el = document.activeElement as HTMLElement | null
+  if (!el || host?.contains(el)) return false
+  return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+}
+
 function rectEqual(a?: Rect, b?: Rect): boolean {
   if (a === b) return true
   if (!a || !b) return false
@@ -489,6 +496,9 @@ export const TerminalView = memo(function TerminalView({
     const term = termRef.current
     if (!term) return
     const t = window.setTimeout(() => {
+      // Never yank focus out of a field the user is typing in elsewhere
+      // (sidebar rename, search boxes) — the deferred grab would blur it.
+      if (isEditingOutside(hostRef.current)) return
       try {
         term.focus()
       } catch {
