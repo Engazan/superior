@@ -19,7 +19,8 @@ interface Props {
       the state so it survives the row moving between staged/unstaged lists */
   open?: boolean
   onToggleOpen?: () => void
-  /** hover action rendered at the row's right edge (e.g. stage/unstage) */
+  /** row action at the right edge (e.g. stage/unstage), revealed on hover
+      or while keyboard focus is anywhere in the row */
   action?: ReactNode
   onComment?: (hunk: GitDiffHunk, lineIndex: number) => void
   hasComment?: (hunk: GitDiffHunk, lineIndex: number) => boolean
@@ -51,9 +52,10 @@ export function DiffFileView({
     <div className="border-b border-edge">
       <div className="group flex w-full items-center">
         <button
+          type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+          className="flex h-7 min-w-0 flex-1 items-center gap-2 px-2 text-left text-xs transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
           title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
         >
           <span className={`shrink-0 font-mono font-semibold ${meta.className}`}>{meta.letter}</span>
@@ -67,7 +69,11 @@ export function DiffFileView({
             {file.deletions > 0 && <span className="text-danger">−{file.deletions}</span>}
           </span>
         </button>
-        {action && <span className="shrink-0 pr-1.5">{action}</span>}
+        {action && (
+          <span className="shrink-0 pr-1.5 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+            {action}
+          </span>
+        )}
       </div>
 
       {open &&

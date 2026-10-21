@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
 import { ipcErrorMessage as errorText } from '../ipcError'
-import { Button, Input, Modal, SectionHeader, PlusIcon } from './ui'
+import {
+  Button,
+  ChoiceCards,
+  Field,
+  Input,
+  Modal,
+  Notice,
+  PlusIcon,
+  SectionHeader
+} from './ui'
 import type {
   CustomMemoryPreset,
   CustomMemoryProvider,
@@ -28,6 +37,9 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
   const [creating, setCreating] = useState(false)
   const [provider, setProvider] = useState<CustomMemoryProvider>('claude')
   const [name, setName] = useState('')
+  // Create failures render inside the modal — the section-level error sits behind it.
+  const [createError, setCreateError] = useState<string | null>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
 
   const refresh = async (): Promise<void> => {
     setLoading(true)
@@ -76,7 +88,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
     // disables, which would create the preset twice.
     if (!name.trim() || busyId === 'create') return
     setBusyId('create')
-    setError(null)
+    setCreateError(null)
     try {
       const result = await window.api.createCustomMemoryPreset(provider, name)
       setItems(result.memories)
@@ -84,7 +96,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
       setCreating(false)
       setName('')
     } catch (err) {
-      setError(errorText(err))
+      setCreateError(errorText(err))
     } finally {
       setBusyId(null)
     }
@@ -93,14 +105,10 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
   return (
     <section className="settings-subsection">
       <SectionHeader level={3} title={t('memory.title')} description={t('memory.description')}
-        actions={<Button variant="secondary" onClick={() => { setError(null); setCreating(true) }}><PlusIcon />{t('memory.add')}</Button>}
+        actions={<Button variant="secondary" onClick={() => { setError(null); setCreateError(null); setCreating(true) }}><PlusIcon />{t('memory.add')}</Button>}
       />
 
-      {error && (
-        <div className="mb-3 rounded-md border border-dangerBorder bg-dangerBg px-3 py-2 text-xs text-danger">
-          {error}
-        </div>
-      )}
+      {error && <Notice className="mb-3">{error}</Notice>}
 
       <div className="settings-island">
         {loading ? (
@@ -122,7 +130,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="break-all font-medium text-fg">{item.aliasName}</span>
-                    <span className="rounded-sm bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
+                    <span className="rounded-full bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
                       {PROVIDER_UI[item.provider].label}
                     </span>
                   </div>
@@ -169,90 +177,77 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
       {creating && (
         <Modal
           title={t('memory.createTitle')}
-          onClose={() => setCreating(false)}
+          onClose={() => busyId !== 'create' && setCreating(false)}
+          dismissable={busyId !== 'create'}
+          initialFocusRef={nameRef}
           closeLabel={t('common.cancel')}
           footer={
             <>
-              <Button variant="ghost" onClick={() => setCreating(false)}>
+              <Button
+                variant="ghost"
+                disabled={busyId === 'create'}
+                onClick={() => setCreating(false)}
+              >
                 {t('common.cancel')}
               </Button>
               <Button
+                type="submit"
+                form="memory-create-form"
                 disabled={!name.trim()}
                 loading={busyId === 'create'}
-                onClick={() => void create()}
               >
                 {busyId === 'create' ? t('memory.creating') : t('memory.create')}
               </Button>
             </>
           }
         >
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-fgdim">
-                  {t('memory.provider')}
-                </label>
-                <div className="grid grid-cols-2 gap-2" role="radiogroup">
-                  {(Object.keys(PROVIDER_UI) as CustomMemoryProvider[]).map((value) => {
-                    const item = PROVIDER_UI[value]
-                    const selected = provider === value
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => setProvider(value)}
-                        className={`flex items-center gap-3 rounded-lg border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
-                          selected
-                            ? 'border-accent bg-accentBg text-fg shadow-xs'
-                            : 'border-edge bg-bar text-fgdim hover:border-fgmuted hover:bg-hover hover:text-fg'
-                        }`}
-                      >
-                        <PresetIcon
-                          iconType="image"
-                          icon={builtinIcon(item.iconId)?.dataUrl}
-                          className="h-9 w-9 shrink-0"
-                        />
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold">{item.label}</span>
-                          <span className="mt-0.5 block truncate font-mono text-[10px] text-fgmuted">
-                            ~/{item.directoryPrefix}name
-                          </span>
-                        </span>
-                        <span
-                          className={`ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                            selected ? 'border-accent bg-accent' : 'border-fgmuted'
-                          }`}
-                          aria-hidden
-                        >
-                          {selected && <span className="h-1.5 w-1.5 rounded-full bg-panel" />}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-fgdim">
-                  {t('memory.name')}
-                </label>
-                <Input
-                  autoFocus
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') void create()
-                  }}
-                  placeholder="work"
-                />
-                <p className="mt-1.5 text-xs text-fgmuted">
-                  {t('memory.nameHint', {
-                    directory: `${PROVIDER_UI[provider].directoryPrefix}${name.trim() || 'name'}`,
-                    alias: `${provider}-${name.trim() || 'name'}`
-                  })}
-                </p>
-              </div>
-            </div>
+          <form
+            id="memory-create-form"
+            className="space-y-5"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void create()
+            }}
+          >
+            <Field label={t('memory.provider')}>
+              <ChoiceCards
+                aria-label={t('memory.provider')}
+                value={provider}
+                onChange={setProvider}
+                options={(Object.keys(PROVIDER_UI) as CustomMemoryProvider[]).map((value) => ({
+                  value,
+                  label: PROVIDER_UI[value].label,
+                  description: `~/${PROVIDER_UI[value].directoryPrefix}name`,
+                  icon: (
+                    <PresetIcon
+                      iconType="image"
+                      icon={builtinIcon(PROVIDER_UI[value].iconId)?.dataUrl}
+                      className="h-5 w-5"
+                    />
+                  )
+                }))}
+              />
+            </Field>
+            <Field
+              label={t('memory.name')}
+              htmlFor="memory-name"
+              hint={t('memory.nameHint', {
+                directory: `${PROVIDER_UI[provider].directoryPrefix}${name.trim() || 'name'}`,
+                alias: `${provider}-${name.trim() || 'name'}`
+              })}
+            >
+              <Input
+                id="memory-name"
+                ref={nameRef}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="work"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+            {createError && <Notice>{createError}</Notice>}
+          </form>
         </Modal>
       )}
     </section>

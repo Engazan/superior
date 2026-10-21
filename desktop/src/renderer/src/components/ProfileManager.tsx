@@ -2,10 +2,12 @@ import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import {
   Button,
+  CheckIcon,
   ColorSwatchPicker,
   IconButton,
   Input,
   Modal,
+  PlusIcon,
   TrashIcon,
   useConfirm,
   useDismiss,
@@ -94,7 +96,7 @@ export function ProfileManager({
       title={
         <span className="flex items-center gap-2.5">
           {t('profile.manageTitle')}
-          <span className="rounded-md border border-edge bg-bar px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-fgmuted">{profiles.length}</span>
+          <span className="rounded-full border border-edge bg-bar px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-fgmuted">{profiles.length}</span>
         </span>
       }
       description={t('profile.manageDescription')}
@@ -102,24 +104,24 @@ export function ProfileManager({
       closeLabel={t('window.close')}
       initialFocusRef={newNameRef}
       footer={
-        <form className="w-full rounded-xl border border-edge bg-bar/60 p-3.5"
+        // The add row lives in the footer so it stays reachable however long
+        // the list grows; the footer bar already provides the surface.
+        <form className="flex w-full min-w-0 items-center gap-2"
           onSubmit={(event) => { event.preventDefault(); submitNew() }}>
-          <label className="mb-2 block text-xs font-medium text-fgdim" htmlFor="new-profile-name">{t('profile.add')}</label>
-          <div className="flex min-w-0 items-center gap-2">
-            <Input
-              ref={newNameRef}
-              id="new-profile-name"
-              className="min-w-0 flex-1"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={t('profile.addPlaceholder')}
-              autoComplete="off"
-            />
-            <Button type="submit" className="shrink-0 whitespace-nowrap" disabled={!newName.trim()}>
-              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden><path d="M8 3v10M3 8h10" /></svg>
-              {t('profile.add')}
-            </Button>
-          </div>
+          <Input
+            ref={newNameRef}
+            id="new-profile-name"
+            aria-label={t('profile.add')}
+            className="min-w-0 flex-1"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder={t('profile.addPlaceholder')}
+            autoComplete="off"
+          />
+          <Button type="submit" className="shrink-0 whitespace-nowrap" disabled={!newName.trim()}>
+            <PlusIcon />
+            {t('profile.add')}
+          </Button>
         </form>
       }
     >
@@ -130,7 +132,7 @@ export function ProfileManager({
               type="button"
               aria-label={`${t('profile.color')}: ${p.name}`}
               title={t('profile.color')}
-              aria-haspopup="menu"
+              aria-haspopup="dialog"
               aria-expanded={colorPicker?.id === p.id}
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect()
@@ -166,8 +168,8 @@ export function ProfileManager({
               />
             </div>
             {p.id === activeProfileId && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-accentBg px-2 py-1 text-[10px] font-medium text-accent">
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m2.5 6 2 2 5-5" /></svg>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accentBg px-2 py-1 text-[10px] font-medium text-accent">
+                <CheckIcon size={11} />
                 {t('profile.active')}
               </span>
             )}
@@ -192,7 +194,8 @@ export function ProfileManager({
           return (
             <div
               ref={pickerRef}
-              role="menu"
+              role="dialog"
+              aria-label={`${t('profile.color')}: ${p.name}`}
               style={{ top: colorPicker.y, left: colorPicker.x }}
               className="solid-surface fixed z-60 w-44 -translate-x-full rounded-lg border border-edge bg-panel p-2 shadow-2xl"
             >

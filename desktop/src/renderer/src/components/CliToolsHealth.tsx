@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { builtinIcon } from '@shared/icons'
 import { useI18n } from '../i18n'
-import { Button, StatusPill, SectionHeader, RefreshIcon } from './ui'
+import { Button, Notice, StatusPill, SectionHeader, RefreshIcon } from './ui'
 import type { CliToolId, CliToolStatus } from '../types'
 
 /**
@@ -26,6 +26,17 @@ export function CliToolsHealth(): React.JSX.Element {
     void refresh()
   }, [refresh])
 
+  // A forced re-check probes the login shell again and can take a moment.
+  const [rechecking, setRechecking] = useState(false)
+  const recheck = async (): Promise<void> => {
+    setRechecking(true)
+    try {
+      await refresh(true)
+    } finally {
+      setRechecking(false)
+    }
+  }
+
   const fix = async (id: CliToolId): Promise<void> => {
     setBusyId(id)
     setNote(null)
@@ -45,12 +56,12 @@ export function CliToolsHealth(): React.JSX.Element {
   return (
     <section className="settings-subsection">
       <SectionHeader level={3} title={t('cli.title')} description={t('cli.description')}
-        actions={<Button variant="secondary" size="sm" onClick={() => void refresh(true)}><RefreshIcon />{t('cli.recheck')}</Button>}
+        actions={<Button variant="secondary" size="sm" loading={rechecking} onClick={() => void recheck()}>{!rechecking && <RefreshIcon />}{t('cli.recheck')}</Button>}
       />
 
       <div className="settings-island">
         {tools === null ? (
-          <div className="px-3 py-4 text-sm text-fgmuted">{t('cli.checking')}</div>
+          <p role="status" className="px-4 py-4 text-sm text-fgmuted">{t('cli.checking')}</p>
         ) : (
           <ul>
             {tools.map((tool) => {
@@ -58,7 +69,7 @@ export function CliToolsHealth(): React.JSX.Element {
               return (
                 <li
                   key={tool.id}
-                  className="flex flex-wrap items-center gap-3 border-b border-edge px-3 py-2.5 text-sm last:border-b-0"
+                  className="flex flex-wrap items-center gap-3 border-b border-edge px-4 py-3 text-sm transition last:border-b-0 hover:bg-hover"
                 >
                   {icon && <img src={icon.dataUrl} alt="" className="h-5 w-5 shrink-0" />}
                   <div className="min-w-0 flex-1">
@@ -102,16 +113,9 @@ export function CliToolsHealth(): React.JSX.Element {
       </div>
 
       {note && (
-        <p
-          role="status"
-          className={`mt-2 rounded-md border px-3 py-2 text-xs ${
-            note.tone === 'danger'
-              ? 'border-dangerBorder bg-dangerBg text-danger'
-              : 'border-statusBorder bg-statusBg text-status'
-          }`}
-        >
+        <Notice tone={note.tone} className="mt-3">
           {note.text}
-        </p>
+        </Notice>
       )}
     </section>
   )

@@ -6,7 +6,7 @@ import { useTheme } from '../theme'
 import { THEME_OPTIONS } from '../themeOptions'
 import { ipcErrorMessage } from '../ipcError'
 import type { CustomMemoryPreset, CustomMemoryProvider, Language, PresetsState, ThemeMode } from '../types'
-import { Button, CheckIcon, ChevronIcon, FolderIcon, Input, Modal, PlusIcon, Toggle } from './ui'
+import { Button, CheckIcon, ChevronIcon, Field, FolderIcon, Input, Modal, Notice, PlusIcon, Toggle } from './ui'
 import { PresetIcon } from './PresetIcon'
 
 interface Props {
@@ -194,7 +194,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
             {t(step === 0 ? 'onboarding.languageDescription' : step === 1 ? 'onboarding.themeDescription' : 'onboarding.accountsDescription')}
           </p>
 
-          {error && <p role="alert" className="mb-4 rounded-lg border border-dangerBorder bg-dangerBg p-3 text-sm text-danger">{error}</p>}
+          {error && <Notice className="mb-4">{error}</Notice>}
 
           <fieldset disabled={busy} className="min-w-0 disabled:opacity-70">
             <legend className="sr-only">{t(STEPS[step])}</legend>
@@ -246,7 +246,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
                       </div>
                     </div>
 
-                    {listError ? <div role="alert" className="text-sm text-danger">{listError}<Button variant="secondary" className="mt-2" onClick={() => setReload((value) => value + 1)}>{t('onboarding.retry')}</Button></div> : loading ? <p role="status" className="text-sm text-fgdim">{t('memory.loading')}</p> : (
+                    {listError ? <Notice action={<Button size="sm" variant="secondary" onClick={() => setReload((value) => value + 1)}>{t('onboarding.retry')}</Button>}>{listError}</Notice> : loading ? <p role="status" className="text-sm text-fgdim">{t('memory.loading')}</p> : (
                       <>
                         <form onSubmit={(event) => { event.preventDefault(); create() }} className="space-y-3 rounded-xl border border-edge p-4">
                           <h3 className="text-sm font-semibold text-fg">{t('onboarding.addAccount')}</h3>
@@ -258,10 +258,11 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
                               </button>
                             ))}
                           </div>
-                          <label htmlFor="onboarding-account-name" className="block text-xs font-medium text-fgdim">{t('onboarding.accountName')}</label>
-                          <Input ref={accountInput} id="onboarding-account-name" value={name} maxLength={64} onChange={(event) => { setName(event.target.value); setNotice(null) }} placeholder={t('onboarding.namePlaceholder')} aria-describedby="onboarding-directory" invalid={!!name.trim() && (!suffix || duplicate)} />
-                          <div id="onboarding-directory" className="flex min-w-0 items-center gap-2 text-xs text-fgdim"><FolderIcon className="shrink-0 text-accent" /><code className="break-all">~/{directory}</code></div>
-                          {name.trim() && (!suffix || duplicate) && <p role="alert" className="text-xs text-danger">{t(duplicate ? 'onboarding.duplicate' : 'onboarding.invalidName')}</p>}
+                          <Field label={t('onboarding.accountName')} htmlFor="onboarding-account-name"
+                            error={name.trim() && (!suffix || duplicate) ? t(duplicate ? 'onboarding.duplicate' : 'onboarding.invalidName') : undefined}>
+                            <Input ref={accountInput} id="onboarding-account-name" value={name} maxLength={64} onChange={(event) => { setName(event.target.value); setNotice(null) }} placeholder={t('onboarding.namePlaceholder')} aria-describedby="onboarding-directory" invalid={!!name.trim() && (!suffix || duplicate)} autoComplete="off" spellCheck={false} />
+                            <div id="onboarding-directory" className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-fgdim"><FolderIcon className="shrink-0 text-accent" /><code className="break-all">~/{directory}</code></div>
+                          </Field>
                           <p className="text-xs leading-5 text-fgdim">{t('onboarding.createHint')}</p>
                           <Button type="submit" disabled={!suffix || duplicate} className="w-full"><PlusIcon size={14} />{t('onboarding.createAccount')}</Button>
                         </form>
@@ -281,7 +282,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
                         <div className="flex items-center justify-between gap-3 rounded-lg bg-bar p-3"><span className="text-xs text-fg">{t('onboarding.showUsage')}</span><Toggle checked={showUsage} onChange={setShowUsage} label={t('onboarding.showUsage')} /></div>
                       </>
                     )}
-                    <p className="rounded-lg border border-accentBorder bg-accentBg p-3 text-xs leading-5 text-fg">{t('onboarding.signInHint')}</p>
+                    <Notice tone="info">{t('onboarding.signInHint')}</Notice>
                   </>
                 )}
               </div>

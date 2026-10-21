@@ -6,13 +6,16 @@ interface Props {
   className?: string
 }
 
-/** Renders a preset's icon — an emoji/character or a custom image. */
+/**
+ * Renders a preset's icon — an emoji/character or a custom image. Always
+ * decorative (the preset name sits next to it), so it's hidden from AT.
+ */
 export function PresetIcon({ iconType, icon, className }: Props): React.JSX.Element {
   if (iconType === 'image' && icon) {
     return <img src={icon} alt="" className={`object-contain ${className ?? 'h-4 w-4'}`} />
   }
   return (
-    <span className={`inline-flex items-center justify-center leading-none ${className ?? ''}`}>
+    <span aria-hidden className={`inline-flex items-center justify-center leading-none ${className ?? ''}`}>
       {icon || '▰'}
     </span>
   )

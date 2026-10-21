@@ -4,12 +4,15 @@ import { usePrompts } from '../hooks/usePrompts'
 import {
   Button,
   EmptyState,
+  Field,
   IconButton,
   Input,
   Modal,
+  Notice,
   PencilIcon,
   SectionHeader,
   PlusIcon,
+  Textarea,
   TrashIcon,
   useConfirm,
   useToast
@@ -55,6 +58,7 @@ export function PromptsSection(): React.JSX.Element {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          type="search"
           placeholder={t('prompts.pickerPlaceholder')}
           aria-label={t('prompts.pickerPlaceholder')}
           className="mb-3 max-w-md"
@@ -68,7 +72,7 @@ export function PromptsSection(): React.JSX.Element {
       ) : (
         <ul className="settings-island divide-y divide-edge">
           {filteredPrompts.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 px-4 py-3">
+            <li key={p.id} className="flex items-center gap-3 px-4 py-3 transition hover:bg-hover">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-fg">{p.name}</div>
                 <div className="truncate text-xs text-fgmuted">{p.text}</div>
@@ -122,55 +126,77 @@ function PromptForm({
   const { t } = useI18n()
   const [name, setName] = useState(prompt?.name ?? '')
   const [text, setText] = useState(prompt?.text ?? '')
-  const canSave = name.trim().length > 0 && text.trim().length > 0
+  const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const canSave = !busy && name.trim().length > 0 && text.trim().length > 0
 
-  const submit = (): void => {
+  const submit = async (): Promise<void> => {
     if (!canSave) return
-    void onSave({
-      id: prompt?.id ?? crypto.randomUUID(),
-      name: name.trim(),
-      text,
-      createdAt: prompt?.createdAt ?? Date.now()
-    })
+    setBusy(true)
+    setSaveError(null)
+    try {
+      await onSave({
+        id: prompt?.id ?? crypto.randomUUID(),
+        name: name.trim(),
+        text,
+        createdAt: prompt?.createdAt ?? Date.now()
+      })
+    } catch (err) {
+      // The parent closes the modal on success; a failure keeps the draft.
+      setSaveError((err as Error).message)
+      setBusy(false)
+    }
   }
 
   return (
     <Modal
       title={prompt ? t('prompts.editTitle') : t('prompts.addTitle')}
-      onClose={onCancel}
+      onClose={() => !busy && onCancel()}
       closeLabel={t('common.cancel')}
+      dismissable={!busy}
       footer={
         <>
-          <Button variant="ghost" onClick={onCancel}>
+          <Button variant="ghost" disabled={busy} onClick={onCancel}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={!canSave} onClick={submit}>
+          <Button loading={busy} disabled={!canSave} onClick={() => void submit()}>
             {t('common.save')}
           </Button>
         </>
       }
     >
-      <div className="space-y-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-fgdim">{t('prompts.name')}</label>
+      <form
+        className="space-y-5"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void submit()
+        }}
+      >
+        <Field label={t('prompts.name')} htmlFor="prompt-name">
           <Input
+            id="prompt-name"
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('prompts.namePlaceholder')}
+            autoComplete="off"
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-fgdim">{t('prompts.text')}</label>
-          <textarea
+        </Field>
+        <Field label={t('prompts.text')} htmlFor="prompt-text">
+          <Textarea
+            id="prompt-text"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}
             placeholder={t('prompts.textPlaceholder')}
-            className="w-full resize-y rounded-md border border-edge bg-bar px-2.5 py-2 text-sm text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
           />
-        </div>
-      </div>
+        </Field>
+
+        {saveError && <Notice>{saveError}</Notice>}
+
+        {/* Hidden submit so Enter in the name field submits the form. */}
+        <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
+      </form>
     </Modal>
   )
 }

@@ -3,7 +3,7 @@ import type { Extension } from '@codemirror/state'
 import { ImageFilePreview } from './ImageFilePreview'
 import { UnsupportedFilePreview } from './UnsupportedFilePreview'
 import { useI18n } from '../i18n'
-import { IconButton, useConfirm, useToast } from './ui'
+import { Button, CloseIcon, IconButton, Notice, useConfirm, useToast } from './ui'
 import { eventToChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import { loadCodeMirrorLanguage } from '../codeMirrorLanguage'
 import {
@@ -235,11 +235,16 @@ export function FilePreviewPanel({
   }, [active, editable, shortcuts.saveFile, save])
 
   const renderBody = (): React.JSX.Element => {
-    if (loading || !data) {
-      return <div className="grid h-full place-items-center text-xs text-fgmuted">{t('preview.loading')}</div>
+    if (loading) {
+      return <PreviewLoading />
     }
-    if (data.error) {
-      return <div className="grid h-full place-items-center px-6 text-center text-xs text-danger">{data.error}</div>
+    if (!data || data.error) {
+      // A rejected read leaves data null — show it as unavailable, not "Loading…".
+      return (
+        <div className="grid h-full place-items-center p-6">
+          <Notice className="max-w-sm">{data?.error ?? t('preview.notAvailable')}</Notice>
+        </div>
+      )
     }
 
     switch (effectiveType) {
@@ -327,7 +332,19 @@ export function FilePreviewPanel({
         </IconButton>
 
       </div>
-      {saveError && <div role="alert" className="border-b border-dangerBorder bg-dangerBg px-3 py-2 text-xs text-danger">{saveError}</div>}
+      {saveError && (
+        <div className="shrink-0 border-b border-edge p-2">
+          <Notice
+            action={
+              <IconButton size="sm" label={t('common.dismiss')} onClick={() => setSaveError(null)}>
+                <CloseIcon size={12} />
+              </IconButton>
+            }
+          >
+            {saveError}
+          </Notice>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1">{renderBody()}</div>
     </div>
@@ -335,17 +352,28 @@ export function FilePreviewPanel({
 }
 
 function PreviewLoading(): React.JSX.Element {
-  return <div className="grid h-full place-items-center" aria-busy="true" />
+  const { t } = useI18n()
+  return (
+    <div role="status" aria-busy="true" className="grid h-full place-items-center text-xs text-fgmuted">
+      {t('preview.loading')}
+    </div>
+  )
 }
 
 function TruncatedWarning({ onOpenRaw }: { onOpenRaw: () => void }): React.JSX.Element {
   const { t } = useI18n()
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-warnBorder bg-warnBg/60 px-3 py-1.5 text-[11px] text-warn">
-      <span>{t('preview.truncated')}</span>
-      <button onClick={onOpenRaw} className="shrink-0 font-medium underline-offset-2 hover:underline">
-        {t('preview.openRaw')}
-      </button>
+    <div className="shrink-0 border-b border-edge p-2">
+      <Notice
+        tone="warn"
+        action={
+          <Button variant="secondary" size="xs" onClick={onOpenRaw}>
+            {t('preview.openRaw')}
+          </Button>
+        }
+      >
+        {t('preview.truncated')}
+      </Notice>
     </div>
   )
 }

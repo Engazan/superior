@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useAttentionColor } from '../attentionColor'
 import {
@@ -12,10 +12,14 @@ import {
 import { WORKSPACE_SORTS, mergeVisibleOrder, sortWorkspaces, type WorkspaceSort } from '../workspaceSort'
 import { useWorkspaceDrag } from './sidebar/useWorkspaceDrag'
 import {
+  Button,
   CheckIcon,
+  CloseIcon,
+  EmptyState,
   ExternalLinkIcon,
+  FolderIcon,
   GearIcon,
-  GripIcon,
+  IconButton,
   Menu,
   PencilIcon,
   PlusIcon,
@@ -27,17 +31,10 @@ import {
   type MenuItem
 } from './ui'
 import { useShortcutTitle } from '../shortcuts'
-import {
-  DiffStat,
-  FolderGlyph,
-  RemoteBadge,
-  RunningBadge,
-  WorkingSpinner,
-  folderLabel,
-  folderTitle,
-  initial
-} from './sidebar/parts'
+import { FolderHeader } from './sidebar/FolderHeader'
+import { SidebarRail } from './sidebar/SidebarRail'
 import { SidebarUpdate } from './sidebar/SidebarUpdate'
+import { WorkspaceRow } from './sidebar/WorkspaceRow'
 import { WorktreeSetup } from './WorktreeSetup'
 import { WorkspaceCreateModal } from './sidebar/WorkspaceCreateModal'
 import { FolderEditModal } from './sidebar/FolderEditModal'
@@ -387,7 +384,7 @@ export const Sidebar = memo(function Sidebar({
     {
       id: 'add-workspace',
       label: t('sidebar.addWorkspace'),
-      icon: <span className="text-sm leading-none">+</span>,
+      icon: <PlusIcon size={13} />,
       onSelect: () => startAdd(folder.path)
     },
     'separator',
@@ -490,123 +487,34 @@ export const Sidebar = memo(function Sidebar({
     </>
   )
 
-  // Collapsed: workspace initials with the same activity and selection cues.
   if (collapsed) {
     return (
-      <aside
-        className="superior-sidebar flex w-14 shrink-0 select-none flex-col items-stretch overflow-hidden bg-bar transition-[width] duration-200 ease-out"
-      >
-        {overlays}
-        <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
-          <button
-            type="button"
-            onClick={onOpenMobileAccess}
-            title="Mobile access"
-            aria-label="Mobile access"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-          >
-            <PhoneIcon size={18} />
-          </button>
-          <button
-            onClick={onOpenProject}
-            title={t('sidebar.openProject')}
-            aria-label={t('sidebar.openProject')}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-          >
-            +
-          </button>
-        </div>
-
-        <nav className="min-h-0 flex-1 overflow-y-auto py-2">
-          <div className="flex flex-col items-center gap-2">
-            {folders.map((folder, i) => {
-              const folderWorkspaces = projectWorkspaces(folder.path)
-              const folderBusy = folderWorkspaces.some((w) => busyWorkspaceIds.has(w.id))
-              const folderAttn = folderWorkspaces.some((w) => attentionWorkspaceIds.has(w.id))
-              return (
-                <div key={folder.path} className="flex w-full flex-col items-center gap-1.5">
-                  {i > 0 && <div className="my-1 h-px w-6 bg-edge" />}
-
-                  {/* Project marker — folder glyph; jumps to its first workspace.
-                      With no workspaces it expands the sidebar instead of no-oping. */}
-                  <button
-                    onClick={() => {
-                      if (folderWorkspaces[0]) selectWorkspace(folderWorkspaces[0].id)
-                      else onExpand()
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
-                    }}
-                    title={folderTitle(folder)}
-                    aria-label={folderLabel(folder)}
-                    style={folder.color ? { color: folder.color } : undefined}
-                    className="relative flex h-7 w-8 items-center justify-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-                  >
-                    <FolderGlyph folder={folder} />
-                    {folderAttn ? (
-                      <span
-                        style={{ '--attn': attentionColor } as CSSProperties}
-                        className="attention-pulse-dot absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar"
-                      />
-                    ) : folderBusy ? (
-                      <WorkingSpinner className="absolute -right-0.5 -top-0.5 h-3 w-3" />
-                    ) : null}
-                  </button>
-
-                  {/* Workspaces — square initial badges */}
-                  {folderWorkspaces.map((ws) => {
-                    const active = ws.id === activeWorkspaceId
-                    const busy = busyWorkspaceIds.has(ws.id)
-                    const attn = attentionWorkspaceIds.has(ws.id)
-                    return (
-                      <button
-                        key={ws.id}
-                        onClick={() => selectWorkspace(ws.id)}
-                        onContextMenu={(e) => {
-                          e.preventDefault()
-                          setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
-                        }}
-                        aria-current={active || undefined}
-                        title={`${folderLabel(folder)} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`}
-                        style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                        className={`relative flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                          active
-                            ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder'
-                            : 'text-fgdim hover:bg-hover hover:text-fg'
-                        }`}
-                      >
-                        {initial(ws.name)}
-                        {active && <span aria-hidden className="absolute inset-y-2 -left-2 w-0.5 rounded-full bg-accent" />}
-                        {attn ? (
-                          <span
-                            style={{ '--attn': attentionColor } as CSSProperties}
-                            className="attention-pulse-dot absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar"
-                          />
-                        ) : busy ? (
-                          <WorkingSpinner className="absolute -right-1 -top-1 h-3.5 w-3.5" />
-                        ) : null}
-                      </button>
-                    )
-                  })}
-                </div>
-              )
-            })}
-          </div>
-        </nav>
-        <SidebarUpdate update={update} collapsed />
-        <div className="shrink-0 border-t border-edge p-2">
-          <button
-            onClick={onOpenSettings}
-            title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
-            aria-label={t('sidebar.settings')}
-            className="mx-auto flex h-8 w-8 items-center justify-center rounded-md text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-          >
-            <GearIcon size={18} />
-          </button>
-        </div>
-      </aside>
+      <SidebarRail
+        folders={folders}
+        projectWorkspaces={(path) => projectWorkspaces(path)}
+        activeWorkspaceId={activeWorkspaceId}
+        busyWorkspaceIds={busyWorkspaceIds}
+        attentionWorkspaceIds={attentionWorkspaceIds}
+        attentionColor={attentionColor}
+        update={update}
+        overlays={overlays}
+        onSelectWorkspace={selectWorkspace}
+        onExpand={onExpand}
+        onOpenProject={onOpenProject}
+        onOpenSettings={onOpenSettings}
+        onOpenMobileAccess={onOpenMobileAccess}
+        onFolderMenu={(path, anchor) => setFolderMenu({ path, anchor })}
+        onWorkspaceMenu={(id, anchor) => setWsMenu({ id, anchor })}
+      />
     )
+  }
+
+  // A folder with no workspaces stays listed (so one can be added back); only
+  // an active search/favorites filter hides projects without matches.
+  const filterActive = !!normalizedQuery || favoritesOnly
+  const clearFilters = (): void => {
+    setWorkspaceQuery('')
+    setFavoritesOnly(false)
   }
 
   return (
@@ -621,56 +529,58 @@ export const Sidebar = memo(function Sidebar({
           className="mb-2 flex w-full items-center gap-2.5 rounded-md px-2 py-2.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           <span className="shrink-0 text-fgmuted"><PhoneIcon size={18} /></span>
-          <span>Mobile access</span>
-          <span className="ml-auto rounded-full bg-[#171717] px-2 py-0.5 text-[11px] font-semibold leading-4 text-white">New</span>
+          <span className="min-w-0 truncate">{t('sidebar.mobileAccess')}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-accentSolid px-2 py-0.5 text-[11px] font-semibold leading-4 text-white">{t('sidebar.newBadge')}</span>
         </button>
-        <div className="flex h-7 items-center justify-between pl-2">
+        <div className="flex h-7 items-center gap-0.5 pl-2">
           <span className="flex-1 text-xs font-semibold text-fgmuted">
             {t('palette.sectionWorkspaces')}
           </span>
-          <button
+          <IconButton
             type="button"
+            size="sm"
             onClick={(e) => setSortMenu(e.currentTarget)}
+            label={t('sidebar.sortBy')}
             title={`${t('sidebar.sortBy')}: ${sortLabels[sortMode]}`}
-            aria-label={t('sidebar.sortBy')}
             aria-haspopup="menu"
-            className="grid h-6 w-6 place-items-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+            aria-expanded={sortMenu !== null}
           >
             <SlidersIcon size={14} />
-          </button>
-          <button
-            onClick={onOpenProject}
-            title={t('sidebar.openProject')}
-            aria-label={t('sidebar.openProject')}
-            className="grid h-6 w-6 place-items-center rounded-md text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-          >
+          </IconButton>
+          <IconButton type="button" size="sm" onClick={onOpenProject} label={t('sidebar.openProject')}>
             <PlusIcon size={15} />
-          </button>
+          </IconButton>
         </div>
         {workspaceToolsVisible && (
           <div className="mt-2 space-y-1.5">
             <div className="relative">
               <SearchIcon
                 size={13}
-                className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-fgmuted"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fgmuted"
               />
               <input
                 value={workspaceQuery}
                 onChange={(event) => setWorkspaceQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && workspaceQuery) {
+                    event.stopPropagation()
+                    setWorkspaceQuery('')
+                  }
+                }}
                 placeholder={t('sidebar.searchWorkspaces')}
                 aria-label={t('sidebar.searchWorkspaces')}
-                className="h-8 w-full rounded-full border border-edge bg-panel pl-8 pr-7 text-xs text-fg shadow-xs placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                className="h-8 w-full rounded-md border border-edge bg-panel pl-8 pr-8 text-xs text-fg shadow-xs placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
               />
               {workspaceQuery && (
-                <button
+                <IconButton
                   type="button"
+                  size="sm"
                   onClick={() => setWorkspaceQuery('')}
-                  aria-label={t('sidebar.clearSearch')}
-                  title={t('sidebar.clearSearch')}
-                  className="absolute right-1 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                  label={t('sidebar.clearSearch')}
+                  className="absolute right-1 top-1/2 -translate-y-1/2"
                 >
-                  ×
-                </button>
+                  <CloseIcon size={12} />
+                </IconButton>
               )}
             </div>
             <div className="flex items-center gap-1">
@@ -678,18 +588,16 @@ export const Sidebar = memo(function Sidebar({
                 type="button"
                 onClick={() => setFavoritesOnly((value) => !value)}
                 aria-pressed={favoritesOnly}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${favoritesOnly ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'}`}
+                className={`flex h-6 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 text-[11px] font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${favoritesOnly ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'}`}
               >
                 <StarIcon size={12} className={favoritesOnly ? 'fill-current' : ''} />
                 {t('sidebar.filterFavorites')}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setWorkspaceQuery('')
-                  setFavoritesOnly(false)
-                }}
-                className="rounded px-1.5 py-1 text-[11px] text-fgmuted hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                onClick={clearFilters}
+                disabled={!filterActive}
+                className="flex h-6 items-center rounded-full px-2 text-[11px] font-medium text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fgmuted"
               >
                 {t('sidebar.showAll')}
               </button>
@@ -698,45 +606,57 @@ export const Sidebar = memo(function Sidebar({
         )}
       </div>
 
-      <nav ref={navRef} className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
+      <nav ref={navRef} aria-label={t('palette.sectionWorkspaces')} className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
         {folders.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 px-3 py-8 text-center">
-            <p className="text-xs leading-5 text-fgmuted">{t('sidebar.noWorkspaces')}</p>
-            <button
-              onClick={onOpenProject}
-              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-            >
-              {t('sidebar.openProject')}
-            </button>
+          <div className="px-2 pt-2">
+            <EmptyState
+              icon={<FolderIcon size={18} />}
+              title={t('sidebar.noWorkspaces')}
+              action={
+                <Button type="button" variant="secondary" size="sm" onClick={onOpenProject}>
+                  <PlusIcon size={13} />
+                  {t('sidebar.openProject')}
+                </Button>
+              }
+            />
           </div>
         ) : (
           <div className="space-y-2.5">
-            {workspaceToolsVisible &&
-              !workspaceQuery &&
-              !favoritesOnly &&
-              recentWorkspaces.length > 0 && (
-              <div className="border-b border-edge px-3 pb-2">
-                <div className="mb-1 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fgmuted">
+            {workspaceToolsVisible && !filterActive && recentWorkspaces.length > 0 && (
+              <div className="border-b border-edge pb-2">
+                <div className="flex h-7 items-center px-2 text-xs font-semibold text-fgmuted">
                   {t('sidebar.recentlyVisited')}
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-px">
                   {recentWorkspaces.map((workspace) => (
                     <button
                       key={workspace.id}
                       type="button"
                       onClick={() => selectWorkspace(workspace.id)}
-                      className="flex min-h-7 w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                      aria-current={workspace.id === activeWorkspaceId || undefined}
+                      title={workspace.name}
+                      className="flex min-h-7 w-full items-center gap-2 rounded-md py-1 pl-4 pr-1 text-left text-[13px] leading-4 text-fg2 transition hover:bg-hover/70 hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
                     >
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                      <span aria-hidden className="flex w-3.5 shrink-0 justify-center">
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                      </span>
                       <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
-            {filteredWorkspaceIds.size === 0 ? (
-              <div className="px-3 py-8 text-center text-xs leading-5 text-fgmuted">
-                {t('sidebar.noMatches')}
+            {filterActive && filteredWorkspaceIds.size === 0 ? (
+              <div className="px-2 pt-2">
+                <EmptyState
+                  icon={<SearchIcon size={18} />}
+                  title={t('sidebar.noMatches')}
+                  action={
+                    <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                      {t('sidebar.showAll')}
+                    </Button>
+                  }
+                />
               </div>
             ) : (
             displayFolders.map((folder) => {
@@ -745,253 +665,69 @@ export const Sidebar = memo(function Sidebar({
               const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
               const folderActive = folderWorkspaces.some((w) => w.id === activeWorkspaceId)
               const beingDragged = folderDrag?.path === folder.path
-              if (folderWorkspaces.length === 0) return null
+              if (folderWorkspaces.length === 0 && filterActive) return null
               return (
                 <div
                   key={folder.path}
                   data-folder-path={folder.path}
                   className={beingDragged ? 'rounded-lg opacity-60 ring-1 ring-accentBorder' : undefined}
                 >
-                  {/* Folder header — click to collapse / expand; the grip drags to reorder */}
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={open}
-                    onClick={() => toggleFolder(folder)}
-                    onKeyDown={(e) => {
-                      if (e.target !== e.currentTarget) return
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        toggleFolder(folder)
-                      } else if (e.key === 'ArrowLeft' && open) {
-                        e.preventDefault()
-                        toggleFolder(folder)
-                      } else if (e.key === 'ArrowRight' && !open) {
-                        e.preventDefault()
-                        toggleFolder(folder)
-                      } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
-                        e.preventDefault()
-                        setFolderMenu({ path: folder.path, anchor: e.currentTarget })
-                      }
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      setFolderMenu({ path: folder.path, anchor: { x: e.clientX, y: e.clientY } })
-                    }}
-                    title={folderTitle(folder)}
-                    aria-haspopup="menu"
-                    className="group relative flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 text-fg transition hover:bg-hover/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
-                  >
-                    <span style={folder.color ? { color: folder.color } : undefined} className="text-fgdim">
-                      <FolderGlyph folder={folder} size={15} />
-                    </span>
-                    <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] ${
-                      folderActive ? 'text-fg' : 'text-fg2'
-                    }`}>
-                      {folderLabel(folder)}
-                    </span>
-                    {(!open || folderWorkspaces.length > 1) && (
-                      <span className="mr-1 shrink-0 px-1 text-[11px] font-medium tabular-nums text-fgdim transition group-hover:opacity-0 group-focus-within:opacity-0">
-                        {folderWorkspaces.length}
-                      </span>
-                    )}
-                    {!open && folderRunning > 0 && (
-                      <RunningBadge count={folderRunning} title={t('sidebar.runningTerminals')} />
-                    )}
-                    {/* Drag handle — the drag itself runs on window listeners
-                        (see beginFolderDrag), the list live-reorders under the pointer. */}
-                    <span className="absolute right-1 flex items-center rounded-md bg-panel opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                      <span
-                        title={t('sidebar.reorderFolder')}
-                        onClick={(e) => e.stopPropagation()}
-                        onPointerDown={beginFolderDrag(folder.path)}
-                        className={`flex h-5 w-4 shrink-0 touch-none items-center justify-center text-fgmuted ${
-                          beingDragged ? 'cursor-grabbing' : 'cursor-grab'
-                        }`}
-                      >
-                        <GripIcon size={12} />
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          startAdd(folder.path)
-                        }}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-                        aria-label={t('sidebar.addWorkspace')}
-                        title={t('sidebar.addWorkspace')}
-                      >
-                        <PlusIcon size={13} />
-                      </button>
-                    </span>
-                  </div>
+                  <FolderHeader
+                    folder={folder}
+                    open={open}
+                    active={folderActive}
+                    dragging={beingDragged}
+                    workspaceCount={folderWorkspaces.length}
+                    runningCount={folderRunning}
+                    onToggle={() => toggleFolder(folder)}
+                    onMenu={(anchor) => setFolderMenu({ path: folder.path, anchor })}
+                    onAddWorkspace={() => startAdd(folder.path)}
+                    onGripPointerDown={beginFolderDrag(folder.path)}
+                  />
 
                   {/* Workspaces — compact, indented rows under their project. */}
                   {open && (
                     <ul className="mt-0.5 space-y-px">
-                      {folderWorkspaces.map((ws) => {
-                        const active = ws.id === activeWorkspaceId
-                        const draggingThis = workspaceDrag?.id === ws.id
-                        const attn = attentionWorkspaceIds.has(ws.id)
-                        const busy = busyWorkspaceIds.has(ws.id)
-                        const runningCount = counts[ws.id] ?? 0
-                        const stat = gitStats[ws.id]
-                        const hasDiff = !!stat?.isRepository && (stat.additions > 0 || stat.deletions > 0)
-                        // Two-line rows align the status dot with the name, not the row centre.
-                        const twoLines = folder.kind === 'remote' || !!ws.branch || hasDiff
-                        return (
-                          <li key={ws.id} data-workspace-id={ws.id}>
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              aria-current={active || undefined}
-                              onPointerDown={beginWorkspaceDrag(folder.path, ws.id, folderWorkspaces.map((w) => w.id))}
-                              onClick={() => selectWorkspace(ws.id)}
-                              onKeyDown={(e) => {
-                                if (editingId === ws.id || e.target !== e.currentTarget) return
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  selectWorkspace(ws.id)
-                                } else if (e.key === 'F2') {
-                                  e.preventDefault()
-                                  startRename(ws)
-                                } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
-                                  e.preventDefault()
-                                  setWsMenu({ id: ws.id, anchor: e.currentTarget })
-                                }
-                              }}
-                              onContextMenu={(e) => {
-                                e.preventDefault()
-                                setWsMenu({ id: ws.id, anchor: { x: e.clientX, y: e.clientY } })
-                              }}
-                              style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                              className={`group relative flex cursor-pointer items-center gap-2 rounded-md py-1 pl-4 pr-1.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-                                draggingThis ? 'opacity-60 ring-1 ring-accentBorder ' : ''
-                              }${
-                                active
-                                  ? 'bg-accentBg text-fg'
-                                  : 'text-fg2 hover:bg-hover/70'
-                              }`}
-                            >
-                              <span className={`flex h-4 w-3.5 shrink-0 items-center justify-center ${twoLines ? 'self-start' : ''}`}>
-                                {attn ? (
-                                  <span
-                                    role="img"
-                                    aria-label={t('terminal.statusFinished')}
-                                    title={t('terminal.statusFinished')}
-                                    style={{ '--attn': attentionColor } as CSSProperties}
-                                    className="attention-pulse-dot h-2 w-2 rounded-full"
-                                  />
-                                ) : busy ? (
-                                  <span role="img" aria-label={t('sidebar.workingTerminals')} title={t('sidebar.workingTerminals')}>
-                                    <WorkingSpinner className="h-3 w-3" />
-                                  </span>
-                                ) : (
-                                  <span
-                                    aria-hidden
-                                    className={`h-2 w-2 rounded-full ${runningCount > 0 ? 'bg-status' : 'bg-fgmuted/45'}`}
-                                  />
-                                )}
-                              </span>
-                              {editingId === ws.id ? (
-                                <input
-                                  autoFocus
-                                  value={draft}
-                                  onChange={(e) => setDraft(e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onBlur={commitRename}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') commitRename()
-                                    else if (e.key === 'Escape') setEditingId(null)
-                                  }}
-                                  className="min-w-0 flex-1 select-text rounded-sm border border-edge bg-panel px-1.5 py-0.5 text-sm text-fg focus:border-accent focus:outline-hidden"
-                                />
-                              ) : (
-                                // Two-line row: name on top; branch + diff stat on a
-                                // second, smaller line so nothing overlaps at 224px.
-                                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                  <span
-                                    onDoubleClick={(e) => {
-                                      e.stopPropagation()
-                                      startRename(ws)
-                                    }}
-                                    className={`truncate text-[13px] leading-4 ${
-                                      active ? 'font-semibold text-fg' : 'font-medium text-fg2'
-                                    }`}
-                                    // The tooltip shows the workspace itself (its branch/
-                                    // path live only on the collapsed rail otherwise);
-                                    // rename stays discoverable via the kebab menu.
-                                    title={
-                                      ws.branch ? `${ws.name} · ${ws.branch}` : ws.name
-                                    }
-                                  >
-                                    {ws.name}
-                                  </span>
-                                  {twoLines && (
-                                    <span className="flex min-w-0 items-center gap-2">
-                                      {folder.kind === 'remote' && (
-                                        <RemoteBadge title={folderTitle(folder)} />
-                                      )}
-                                      {ws.branch && (
-                                        <span
-                                          title={t('sidebar.worktreeBadge')}
-                                          className="min-w-0 truncate text-[11px] leading-4 text-fgmuted"
-                                        >
-                                          {ws.branch}
-                                        </span>
-                                      )}
-                                      {hasDiff && (
-                                        <DiffStat
-                                          stat={stat}
-                                          title={t('sidebar.diffStat')}
-                                        />
-                                      )}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Setup and workspace actions live in the right-click menu. */}
-                              {editingId !== ws.id && workspaceToolsVisible && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    toggleFavorite(ws.id)
-                                  }}
-                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-fgmuted transition hover:bg-edge hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                                    favoriteWorkspaceIds.has(ws.id)
-                                      ? 'text-accent opacity-100'
-                                      : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-                                  }`}
-                                  aria-label={
-                                    favoriteWorkspaceIds.has(ws.id)
-                                      ? t('sidebar.unfavorite')
-                                      : t('sidebar.favorite')
-                                  }
-                                  title={
-                                    favoriteWorkspaceIds.has(ws.id)
-                                      ? t('sidebar.unfavorite')
-                                      : t('sidebar.favorite')
-                                  }
-                                  aria-pressed={favoriteWorkspaceIds.has(ws.id)}
-                                >
-                                  <StarIcon
-                                    size={12}
-                                    className={favoriteWorkspaceIds.has(ws.id) ? 'fill-current' : ''}
-                                  />
-                                </button>
-                              )}
-
-                              {editingId !== ws.id && runningCount > 0 && (
-                                <span className="ml-auto shrink-0">
-                                  <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />
-                                </span>
-                              )}
-                            </div>
-                          </li>
-                        )
-                      })}
-
+                      {folderWorkspaces.map((ws) => (
+                        <WorkspaceRow
+                          key={ws.id}
+                          ws={ws}
+                          folder={folder}
+                          active={ws.id === activeWorkspaceId}
+                          dragging={workspaceDrag?.id === ws.id}
+                          attention={attentionWorkspaceIds.has(ws.id)}
+                          busy={busyWorkspaceIds.has(ws.id)}
+                          attentionColor={attentionColor}
+                          runningCount={counts[ws.id] ?? 0}
+                          stat={gitStats[ws.id]}
+                          editing={editingId === ws.id}
+                          draft={draft}
+                          onDraftChange={setDraft}
+                          onCommitRename={commitRename}
+                          onCancelRename={() => setEditingId(null)}
+                          favorite={workspaceToolsVisible ? favoriteWorkspaceIds.has(ws.id) : null}
+                          onToggleFavorite={() => toggleFavorite(ws.id)}
+                          onPointerDown={beginWorkspaceDrag(folder.path, ws.id, folderWorkspaces.map((w) => w.id))}
+                          onSelect={() => selectWorkspace(ws.id)}
+                          onStartRename={() => startRename(ws)}
+                          onMenu={(anchor) => setWsMenu({ id: ws.id, anchor })}
+                        />
+                      ))}
+                      {/* An emptied project keeps a direct way to add a workspace back. */}
+                      {folderWorkspaces.length === 0 && (
+                        <li>
+                          <button
+                            type="button"
+                            onClick={() => startAdd(folder.path)}
+                            className="flex min-h-7 w-full items-center gap-2 rounded-md py-1 pl-4 pr-1 text-left text-[13px] leading-4 text-fgmuted transition hover:bg-hover/70 hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                          >
+                            <span aria-hidden className="flex w-3.5 shrink-0 justify-center">
+                              <PlusIcon size={12} />
+                            </span>
+                            {t('sidebar.addWorkspace')}
+                          </button>
+                        </li>
+                      )}
                     </ul>
                   )}
                 </div>
@@ -1004,6 +740,7 @@ export const Sidebar = memo(function Sidebar({
       <SidebarUpdate update={update} />
       <div className="shrink-0 border-t border-edge p-2">
         <button
+          type="button"
           onClick={onOpenSettings}
           title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
+import { CloseIcon, IconButton, RefreshIcon } from './ui'
 
 /** Short, quiet two-note chime. Autoplay restrictions must never break the UI. */
 function chime(): () => void {
@@ -38,11 +39,14 @@ export function UsageResetNotice({ message, onClose }: { message: string; onClos
   return createPortal(<div className="pointer-events-none fixed inset-x-0 top-12 z-[150] flex justify-center px-4">
     <div role="status" aria-live="polite" aria-atomic="true"
       className="solid-surface flex w-full max-w-lg items-center gap-4 rounded-3xl border border-accentBorder bg-panel px-6 py-4 shadow-2xl">
-      <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accentBg text-xl text-accent">↻</span>
+      <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accentBg text-accent">
+        <RefreshIcon size={20} />
+      </span>
       <div className="min-w-0 flex-1"><p className="text-base font-semibold text-fg">{t('footer.resetNotice')}</p>
         <p className="mt-1 break-words text-sm text-fgmuted">{message}</p></div>
-      <button type="button" onClick={onClose} aria-label={t('footer.close')}
-        className="pointer-events-auto rounded-full px-2 py-1 text-lg text-fgdim hover:bg-hover hover:text-fg">×</button>
+      <IconButton type="button" onClick={onClose} label={t('footer.close')} className="pointer-events-auto">
+        <CloseIcon size={14} />
+      </IconButton>
     </div>
   </div>, document.body)
 }

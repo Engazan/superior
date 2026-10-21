@@ -47,7 +47,7 @@ export function FolderGlyph({ folder, size = 14 }: { folder: Folder; size?: numb
     )
   }
   if (folder.kind === 'remote') return <RemoteGlyph size={size} />
-  return <FolderIcon className="shrink-0" />
+  return <FolderIcon size={size} className="shrink-0" />
 }
 
 function RemoteGlyph({ size }: { size: number }): React.JSX.Element {
@@ -74,6 +74,7 @@ function RemoteGlyph({ size }: { size: number }): React.JSX.Element {
 export function RunningBadge({ count, title }: { count: number; title: string }): React.JSX.Element {
   return (
     <span
+      role="img"
       title={title}
       aria-label={`${title}: ${count}`}
       className="flex h-5 shrink-0 items-center justify-center gap-1 rounded px-1 text-[11px] font-medium leading-none tabular-nums text-fgdim"

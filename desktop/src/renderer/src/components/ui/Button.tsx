@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
-type Size = 'sm' | 'md'
+type Size = 'xs' | 'sm' | 'md'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
@@ -18,6 +18,8 @@ const VARIANT: Record<Variant, string> = {
 }
 
 const SIZE: Record<Size, string> = {
+  /** compact toolbar / inline-notice actions */
+  xs: 'h-6 px-2 text-[11px]',
   sm: 'h-7 px-2.5 text-xs',
   md: 'h-8 px-3 text-sm'
 }

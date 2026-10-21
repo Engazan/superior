@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { IconButton } from './IconButton'
 import { CloseIcon } from './icons'
@@ -51,7 +51,9 @@ export function Modal({
   const titleId = useId()
   const descId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
-  const restoreRef = useRef<HTMLElement | null>(null)
+  // Captured during the first render — before any child `autoFocus` moves
+  // focus into the panel — so closing always returns focus to the opener.
+  const [opener] = useState(() => document.activeElement as HTMLElement | null)
   // Registered on the overlay stack so only the frontmost layer reacts to
   // Escape — closing a confirm dialog must never also close the modal under it.
   const layer = useOverlayLayer()
@@ -96,14 +98,18 @@ export function Modal({
 
   // Focus into the dialog on mount; restore focus on unmount.
   useEffect(() => {
-    restoreRef.current = document.activeElement as HTMLElement | null
-    const target =
-      initialFocusRef?.current ??
-      panelRef.current?.querySelector<HTMLElement>(
-        'input, select, textarea, button:not([data-modal-close])'
-      )
-    target?.focus()
-    return () => restoreRef.current?.focus()
+    // A field with `autoFocus` already holds focus by now — keep it instead of
+    // jumping to the first control.
+    const focusedInside = panelRef.current?.contains(document.activeElement)
+    if (initialFocusRef?.current || !focusedInside) {
+      const target =
+        initialFocusRef?.current ??
+        panelRef.current?.querySelector<HTMLElement>(
+          'input, select, textarea, button:not([data-modal-close])'
+        )
+      target?.focus()
+    }
+    return () => opener?.focus()
     // mount-only by design
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

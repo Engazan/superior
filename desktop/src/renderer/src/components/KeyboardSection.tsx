@@ -95,9 +95,9 @@ export function KeyboardSection(): React.JSX.Element {
     <div className="settings-section">
       <SectionHeader title={t('settings.keyboard')} description={t('keyboard.desc')} />
 
-      {/* System-wide hotkey — registered with the OS, works while the app is
-          hidden. Separate from the in-app action table below. */}
-      <div className="mb-4">
+      <div className="space-y-3">
+        {/* System-wide hotkey — registered with the OS, works while the app is
+            hidden. Separate from the in-app action table below. */}
         <SettingsCard>
           <SettingRow title={t('keyboard.globalHotkey')} description={t('keyboard.globalHotkeyDesc')}>
             {globalHotkey && (
@@ -105,71 +105,92 @@ export function KeyboardSection(): React.JSX.Element {
                 {t('keyboard.globalHotkeyClear')}
               </Button>
             )}
-            <button
+            <ChordButton
+              action={t('keyboard.globalHotkey')}
+              recording={recordingFor === 'global'}
+              chord={globalHotkey ? formatChord(globalHotkey) : t('keyboard.globalHotkeyUnset')}
               onClick={() => setRecordingFor(recordingFor === 'global' ? null : 'global')}
-              className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                recordingFor === 'global'
-                  ? 'border-statusBorder bg-statusBg text-status'
-                  : 'border-edge text-fg hover:bg-hover'
-              }`}
-            >
-              {recordingFor === 'global'
-                ? t('keyboard.recording')
-                : globalHotkey
-                  ? formatChord(globalHotkey)
-                  : t('keyboard.globalHotkeyUnset')}
-            </button>
+            />
           </SettingRow>
         </SettingsCard>
-      </div>
 
-      <div className="settings-island">
-        <div className="flex items-center gap-3 border-b border-edge bg-bar px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
-          <span className="min-w-0 flex-1">{t('keyboard.colAction')}</span>
-          <span className="shrink-0">{t('keyboard.colShortcut')}</span>
+        <div className="settings-island">
+          <div className="flex items-center gap-3 border-b border-edge bg-bar px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
+            <span className="min-w-0 flex-1">{t('keyboard.colAction')}</span>
+            <span className="shrink-0">{t('keyboard.colShortcut')}</span>
+          </div>
+          <ul>
+            {ACTIONS.map(({ id, labelKey }) => {
+              const isRecording = recordingFor === id
+              return (
+                <li
+                  key={id}
+                  className="settings-shortcut-row flex items-center gap-3 border-b border-edge px-4 py-3 text-sm transition last:border-b-0 hover:bg-hover"
+                >
+                  <span className="min-w-0 flex-1 text-fg">{t(labelKey)}</span>
+                  <ChordButton
+                    action={t(labelKey)}
+                    recording={isRecording}
+                    chord={formatChord(shortcuts[id])}
+                    onClick={() => setRecordingFor(isRecording ? null : id)}
+                  />
+                  <IconButton
+                    size="sm"
+                    label={`${t('keyboard.reset')}: ${t(labelKey)}`}
+                    title={t('keyboard.reset')}
+                    onClick={() => {
+                      setRecordingFor(null)
+                      resetShortcut(id)
+                    }}
+                  >
+                    <RestartIcon size={13} />
+                  </IconButton>
+                </li>
+              )
+            })}
+            {/* Fixed binding, listed so the grid-focus feature is discoverable. */}
+            <li className="settings-shortcut-row flex items-center gap-3 px-4 py-3 text-sm">
+              <span className="min-w-0 flex-1 text-fg">{t('keyboard.focusCell')}</span>
+              <span className="min-w-24 rounded-md border border-edge px-2.5 py-1 text-center font-mono text-xs text-fgdim">
+                {formatChord('ctrl+1')}–{formatChord('ctrl+9').split(/[\s+]/).pop()}
+              </span>
+              <span className="w-6 shrink-0" aria-hidden />
+            </li>
+          </ul>
         </div>
-        <ul>
-          {ACTIONS.map(({ id, labelKey }) => {
-            const isRecording = recordingFor === id
-            return (
-              <li
-                key={id}
-                className="settings-shortcut-row flex items-center gap-3 border-b border-edge px-4 py-3 text-sm last:border-b-0"
-              >
-                <span className="min-w-0 flex-1 text-fg">{t(labelKey)}</span>
-                <button
-                  onClick={() => setRecordingFor(isRecording ? null : id)}
-                  className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                    isRecording
-                      ? 'border-statusBorder bg-statusBg text-status'
-                      : 'border-edge text-fg hover:bg-hover'
-                  }`}
-                >
-                  {isRecording ? t('keyboard.recording') : formatChord(shortcuts[id])}
-                </button>
-                <IconButton
-                  size="sm"
-                  label={t('keyboard.reset')}
-                  onClick={() => {
-                    setRecordingFor(null)
-                    resetShortcut(id)
-                  }}
-                >
-                  <RestartIcon size={13} />
-                </IconButton>
-              </li>
-            )
-          })}
-          {/* Fixed binding, listed so the grid-focus feature is discoverable. */}
-          <li className="settings-shortcut-row flex items-center gap-3 px-4 py-3 text-sm">
-            <span className="min-w-0 flex-1 text-fg">{t('keyboard.focusCell')}</span>
-            <span className="min-w-24 rounded-md border border-edge px-2.5 py-1 text-center font-mono text-xs text-fgdim">
-              {formatChord('ctrl+1')}–{formatChord('ctrl+9').split(/[\s+]/).pop()}
-            </span>
-            <span className="w-6 shrink-0" aria-hidden />
-          </li>
-        </ul>
       </div>
     </div>
+  )
+}
+
+/** The recordable chord pill; the accessible name pairs the action with its keys. */
+function ChordButton({
+  action,
+  chord,
+  recording,
+  onClick
+}: {
+  action: string
+  /** formatted chord (or an "unset" label) shown while not recording */
+  chord: string
+  recording: boolean
+  onClick: () => void
+}): React.JSX.Element {
+  const { t } = useI18n()
+  const text = recording ? t('keyboard.recording') : chord
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={recording}
+      aria-label={`${action}: ${text}`}
+      className={`min-w-24 rounded-md border px-2.5 py-1 text-center font-mono text-xs transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
+        recording
+          ? 'border-statusBorder bg-statusBg text-status'
+          : 'border-edge text-fg hover:bg-hover'
+      }`}
+    >
+      {text}
+    </button>
   )
 }

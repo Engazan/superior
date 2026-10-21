@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
 type Variant = 'ghost' | 'danger-ghost'
-type Size = 'sm' | 'md'
+type Size = 'xs' | 'sm' | 'md'
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label'> {
   /** Accessible name; also the tooltip unless `title` overrides it. */
@@ -16,6 +16,7 @@ const VARIANT: Record<Variant, string> = {
 }
 
 const SIZE: Record<Size, string> = {
+  xs: 'h-5 w-5',
   sm: 'h-6 w-6',
   md: 'h-7 w-7'
 }

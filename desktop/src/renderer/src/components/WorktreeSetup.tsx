@@ -3,7 +3,15 @@ import type { WorktreeSetupSnapshot } from '@shared/worktree-setup'
 import type { Workspace } from '../types'
 import { ipcErrorMessage } from '../ipcError'
 import { useI18n } from '../i18n'
-import { Button, Modal } from './ui'
+import { Button, Field, Modal, Notice, StatusPill, Textarea } from './ui'
+
+const STATUS_TONE = {
+  pending: 'accent',
+  running: 'accent',
+  ready: 'success',
+  failed: 'danger',
+  unprepared: 'neutral'
+} as const
 
 /** Keyed by workspace by the caller: drafts/results never bleed between projects. */
 export function WorktreeSetup({ workspace, onClose }: { workspace: Workspace; onClose: () => void }): React.JSX.Element {
@@ -43,6 +51,8 @@ export function WorktreeSetup({ workspace, onClose }: { workspace: Workspace; on
   const state = snapshot?.state
   const running = state?.status === 'running' || state?.status === 'pending'
   const status = state?.status ?? 'unprepared'
+  // The first poll hasn't answered yet: the textareas would show empty drafts.
+  const loading = !snapshot && !error
   const edit = (): void => {
     setCommands(snapshot?.config.commands.join('\n') ?? '')
     setFiles(snapshot?.config.copyFiles.join('\n') ?? '')
@@ -59,6 +69,7 @@ export function WorktreeSetup({ workspace, onClose }: { workspace: Workspace; on
     } finally { setBusy(false) }
   }
   const save = (): void => {
+    if (busy || loading) return
     void action(async () => {
       await window.api.saveWorktreeSetup(workspace.id, {
         commands: commands.split('\n').map(s => s.trim()).filter(Boolean),
@@ -71,34 +82,46 @@ export function WorktreeSetup({ workspace, onClose }: { workspace: Workspace; on
 
   return (
     <Modal size="lg" title={editing ? t('setup.configure') : t('setup.title')} onClose={onClose}
+        closeLabel={t('common.cancel')}
         footer={editing ? <>
-          {workspace.worktreePath && <Button variant="secondary" onClick={() => setEditing(false)}>{t('setup.details')}</Button>}
-          <Button disabled={busy || (!snapshot && !error)} onClick={save}>{t('setup.save')}</Button>
+          {workspace.worktreePath
+            ? <Button variant="ghost" onClick={() => setEditing(false)}>{t('setup.details')}</Button>
+            : <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>}
+          <Button type="submit" form="worktree-setup-form" loading={busy} disabled={loading}>{t('setup.save')}</Button>
         </> : <>
-          <Button variant="secondary" onClick={edit}>{t('setup.configure')}</Button>
+          <Button variant="ghost" onClick={edit}>{t('setup.configure')}</Button>
           {workspace.worktreePath && (running
-            ? <Button disabled={busy} variant="secondary" onClick={() => void action(() => window.api.cancelWorktreeSetup(workspace.id))}>{t('setup.cancel')}</Button>
-            : <Button disabled={busy} onClick={() => void action(() => window.api.retryWorktreeSetup(workspace.id))}>{t(state?.status === 'failed' ? 'setup.retry' : 'setup.run')}</Button>)}
+            ? <Button loading={busy} variant="secondary" onClick={() => void action(() => window.api.cancelWorktreeSetup(workspace.id))}>{t('setup.cancel')}</Button>
+            : <Button loading={busy} onClick={() => void action(() => window.api.retryWorktreeSetup(workspace.id))}>{t(state?.status === 'failed' ? 'setup.retry' : 'setup.run')}</Button>)}
         </>}>
-        <div className="space-y-4">
-          {editing ? <>
-            <p className="text-sm text-fgdim">{t('setup.description')}</p>
-            <label className="block text-sm" htmlFor="setup-commands">{t('setup.commands')}</label>
-            <textarea id="setup-commands" className="w-full rounded border border-edge bg-base p-2 font-mono text-xs text-fg" rows={5}
-              value={commands} onChange={e => setCommands(e.target.value)} placeholder={'npm ci\nnpm run build'} />
-            <label className="block text-sm" htmlFor="setup-files">{t('setup.files')}</label>
-            <textarea id="setup-files" className="w-full rounded border border-edge bg-base p-2 font-mono text-xs text-fg" rows={3}
-              value={files} onChange={e => setFiles(e.target.value)} placeholder={'.env.local\nconfig/local.json'} />
-            <p className="text-xs text-fgdim">{t('setup.copyHint')}</p>
-          </> : <>
-            <p role="status" className="text-sm text-fgdim">{t(`setup.${status}`)}</p>
-            {state?.step && <p className="break-words font-mono text-xs text-fgdim">{state.step}</p>}
-            {state?.error && <p role="alert" className="text-sm text-danger">{state.error}</p>}
-            <pre aria-label={t('setup.output')} className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded bg-base p-3 font-mono text-xs text-fg">{state?.output || t('setup.noOutput')}</pre>
-            <p className="text-xs text-fgdim">{t('setup.retryHint')}</p>
-          </>}
-          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-        </div>
+        {editing ? (
+          <form id="worktree-setup-form" className="space-y-5"
+            onSubmit={(e) => { e.preventDefault(); save() }}>
+            <p className="text-xs leading-5 text-fgdim">{t('setup.description')}</p>
+            <Field label={t('setup.commands')} htmlFor="setup-commands">
+              <Textarea id="setup-commands" className="font-mono text-xs" rows={5} spellCheck={false}
+                disabled={loading} value={commands} onChange={e => setCommands(e.target.value)}
+                placeholder={loading ? t('common.loading') : 'npm ci\nnpm run build'} />
+            </Field>
+            <Field label={t('setup.files')} htmlFor="setup-files" hint={t('setup.copyHint')}>
+              <Textarea id="setup-files" className="font-mono text-xs" rows={3} spellCheck={false}
+                disabled={loading} value={files} onChange={e => setFiles(e.target.value)}
+                placeholder={loading ? t('common.loading') : '.env.local\nconfig/local.json'} />
+            </Field>
+            {error && <Notice>{error}</Notice>}
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div role="status" className="flex flex-wrap items-center gap-2">
+              <StatusPill tone={STATUS_TONE[status]} dot>{t(`setup.${status}`)}</StatusPill>
+              {state?.step && <span className="min-w-0 break-words font-mono text-xs text-fgdim">{state.step}</span>}
+            </div>
+            {state?.error && <Notice>{state.error}</Notice>}
+            <pre aria-label={t('setup.output')} className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-edge bg-base p-3 font-mono text-xs text-fg">{state?.output || t('setup.noOutput')}</pre>
+            <p className="text-xs text-fgmuted">{t('setup.retryHint')}</p>
+            {error && <Notice>{error}</Notice>}
+          </div>
+        )}
     </Modal>
   )
 }

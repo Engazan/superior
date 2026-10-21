@@ -7,7 +7,7 @@ import { terminalOptions, terminalPalette } from '../terminalAppearance'
 import { createTerminalRendering } from '../terminalRendering'
 import { useTheme } from '../theme'
 import { useI18n, type MessageKey } from '../i18n'
-import { Button, Input, SectionHeader, Select, SettingRow, SettingsCard, Toggle } from './ui'
+import { Button, Input, Notice, SectionHeader, Select, SettingRow, SettingsCard, Toggle } from './ui'
 
 function TerminalPreview({ settings }: { settings: TerminalSettings }): React.JSX.Element {
   const host = useRef<HTMLDivElement>(null)
@@ -106,13 +106,13 @@ export function TerminalSettingsSection(): React.JSX.Element {
     </SettingRow>
   return <div className="settings-section">
     <SectionHeader title={label('title')} description={label('description')} />
-    {error && <div role="alert" className="mb-3 text-sm text-danger">
+    {error && <Notice className="mb-5"
+      action={!loaded && <Button size="sm" variant="secondary" onClick={() => void loadTerminalSettings()}>{label('retry')}</Button>}>
       {label('error')}
-      {!loaded && <Button onClick={() => void loadTerminalSettings()}>{label('retry')}</Button>}
-    </div>}
-    {!loaded ? <p role="status">{label('loading')}</p> : <div className="space-y-5">
+    </Notice>}
+    {!loaded ? <p role="status" className="text-sm text-fgmuted">{label('loading')}</p> : <div className="space-y-5">
       <TerminalPreview settings={settings} />
-      <h3 className="text-sm font-semibold">{label('typography')}</h3>
+      <h3 className="text-sm font-semibold text-fg">{label('typography')}</h3>
       <SettingsCard>
         <SettingRow title={label('fontFamily')} description={label('fontHint')}>
           <div className="w-64 max-w-full"><ValueInput aria-label={label('fontFamily')} maxLength={256} value={settings.fontFamily}
@@ -121,19 +121,19 @@ export function TerminalSettingsSection(): React.JSX.Element {
         {numberRow('fontSize')}{numberRow('fontWeight')}{numberRow('fontWeightBold')}{numberRow('lineHeight')}
         {enumRow('ligatures', 'terminalSettings.ligatureHint')}{enumRow('cursorStyle')}{toggleRow('cursorBlink')}{numberRow('cursorOpacity')}
       </SettingsCard>
-      <h3 className="text-sm font-semibold">{label('appearance')}</h3>
+      <h3 className="text-sm font-semibold text-fg">{label('appearance')}</h3>
       <SettingsCard>
         {enumRow('theme')}{enumRow('darkTheme')}{enumRow('lightTheme')}
         {numberRow('minimumContrastRatio', 'terminalSettings.contrastHint')}{numberRow('inactivePaneOpacity')}
       </SettingsCard>
-      <h3 className="text-sm font-semibold">{label('interaction')}</h3>
+      <h3 className="text-sm font-semibold text-fg">{label('interaction')}</h3>
       <SettingsCard>
         {numberRow('scrollback', 'terminalSettings.historyHint')}{numberRow('scrollSensitivity')}
         {numberRow('fastScrollSensitivity')}{numberRow('tuiScrollSensitivity')}
         {toggleRow('copyOnSelect')}{toggleRow('rightClickToPaste', 'terminalSettings.pasteHint')}
         {toggleRow('focusFollowsMouse')}{toggleRow('allowOsc52Clipboard', 'terminalSettings.oscHint')}
       </SettingsCard>
-      <h3 className="text-sm font-semibold">{label('advanced')}</h3>
+      <h3 className="text-sm font-semibold text-fg">{label('advanced')}</h3>
       <SettingsCard>
         {window.api.platform === 'darwin' && enumRow('macOptionAsAlt', 'terminalSettings.optionHint')}
         {enumRow('gpuAcceleration', 'terminalSettings.gpuHint')}

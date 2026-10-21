@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useDismiss } from './ui'
 import type { Prompt } from '../types'
+import {
+  PaletteFooter,
+  PaletteHint,
+  PaletteMessage,
+  PaletteOption,
+  PaletteSearch,
+  PaletteShell,
+  handlePaletteKey,
+  useActiveRowInView
+} from './CommandPalette'
 
 interface Props {
   /** Insert the chosen prompt's text into the active terminal.
@@ -18,6 +27,7 @@ interface Props {
  */
 export function PromptPicker({ onPick, onClose }: Props): React.JSX.Element {
   const { t } = useI18n()
+  const listId = useId()
   const [prompts, setPrompts] = useState<Prompt[] | null>(null)
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -31,7 +41,11 @@ export function PromptPicker({ onPick, onClose }: Props): React.JSX.Element {
   useDismiss(panelRef, true, onClose, { outside: false })
 
   useEffect(() => {
-    window.api.listPrompts().then((state) => setPrompts(state.prompts))
+    window.api
+      .listPrompts()
+      .then((state) => setPrompts(state.prompts))
+      // A failed load would otherwise sit on "Loading…" forever.
+      .catch(() => setPrompts([]))
   }, [])
 
   const filtered = useMemo(() => {
@@ -48,12 +62,7 @@ export function PromptPicker({ onPick, onClose }: Props): React.JSX.Element {
     setIndex((i) => Math.min(i, Math.max(0, filtered.length - 1)))
   }, [filtered.length])
 
-  // Keep the highlighted row scrolled into view.
-  useEffect(() => {
-    listRef.current
-      ?.querySelector('[data-active="true"]')
-      ?.scrollIntoView({ block: 'nearest' })
-  }, [index])
+  useActiveRowInView(listRef, index)
 
   const pick = (prompt: Prompt | undefined, submit: boolean): void => {
     if (!prompt) return
@@ -61,65 +70,61 @@ export function PromptPicker({ onPick, onClose }: Props): React.JSX.Element {
     onClose()
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-100 flex items-start justify-center bg-black/40 pt-28"
-      onClick={onClose}
+  const optionId = (i: number): string => `${listId}-${i}`
+
+  return (
+    <PaletteShell
+      label={t('prompts.pickerPlaceholder')}
+      width="max-w-md"
+      height="max-h-96"
+      panelRef={panelRef}
+      onClose={onClose}
     >
-      <div
-        ref={panelRef}
-        onClick={(e) => e.stopPropagation()}
-        className="solid-surface flex max-h-96 w-96 flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
-      >
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            e.stopPropagation()
-            if (e.key === 'Escape') onClose()
-            else if (e.key === 'ArrowDown') {
-              e.preventDefault()
-              setIndex((i) => Math.min(i + 1, filtered.length - 1))
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault()
-              setIndex((i) => Math.max(i - 1, 0))
-            } else if (e.key === 'Enter') {
-              e.preventDefault()
-              pick(filtered[index], e.shiftKey)
-            }
-          }}
-          placeholder={t('prompts.pickerPlaceholder')}
-          className="border-b border-edge bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-fgmuted focus:outline-hidden"
-        />
+      <PaletteSearch
+        listId={listId}
+        activeId={filtered[index] ? optionId(index) : undefined}
+        expanded={filtered.length > 0}
+        aria-label={t('prompts.pickerPlaceholder')}
+        placeholder={t('prompts.pickerPlaceholder')}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) =>
+          handlePaletteKey(e, filtered.length, setIndex, (ev) => pick(filtered[index], ev.shiftKey), onClose)
+        }
+      />
 
-        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">
-          {prompts !== null && filtered.length === 0 && (
-            <div className="px-3 py-6 text-center text-sm text-fgmuted">
-              {t('prompts.empty')}
-            </div>
-          )}
-          {filtered.map((p, i) => (
-            <button
-              key={p.id}
-              data-active={i === index || undefined}
-              onMouseEnter={() => setIndex(i)}
-              onClick={(e) => pick(p, e.shiftKey)}
-              className={`block w-full px-3 py-2 text-left transition ${
-                i === index ? 'bg-hover' : ''
-              }`}
-            >
-              <span className="block truncate text-sm text-fg">{p.name}</span>
-              <span className="block truncate text-xs text-fgmuted">{p.text}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="border-t border-edge px-3 py-1.5 text-[10px] text-fgmuted">
-          {t('prompts.pickerHint')}
-        </div>
+      <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-1.5">
+        {prompts === null ? (
+          <PaletteMessage>{t('common.loading')}</PaletteMessage>
+        ) : prompts.length === 0 ? (
+          <PaletteMessage>{t('prompts.empty')}</PaletteMessage>
+        ) : (
+          filtered.length === 0 && <PaletteMessage>{t('search.noResults')}</PaletteMessage>
+        )}
+        {filtered.length > 0 && (
+          <div id={listId} role="listbox" aria-label={t('prompts.pickerPlaceholder')}>
+            {filtered.map((p, i) => (
+              <PaletteOption
+                key={p.id}
+                id={optionId(i)}
+                active={i === index}
+                onHover={() => setIndex(i)}
+                onSelect={(e) => pick(p, e.shiftKey)}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-fg">{p.name}</span>
+                  <span className="block truncate text-xs text-fgmuted">{p.text}</span>
+                </span>
+              </PaletteOption>
+            ))}
+          </div>
+        )}
       </div>
-    </div>,
-    document.body
+
+      <PaletteFooter>
+        <span className="mr-auto">{t('prompts.pickerHint')}</span>
+        <PaletteHint keys="Esc">{t('palette.close')}</PaletteHint>
+      </PaletteFooter>
+    </PaletteShell>
   )
 }

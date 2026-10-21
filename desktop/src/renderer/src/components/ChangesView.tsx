@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { createReviewAnchor, sameReviewAnchor, type ReviewAnchor, type ReviewNote } from '../diffReview'
 import { DiffFileView } from './DiffFileView'
-import { BranchIcon, Button, IconButton, RefreshIcon, useToast } from './ui'
+import { BranchIcon, Button, EmptyState, IconButton, Notice, RefreshIcon, Textarea, useToast } from './ui'
 import type { GitDiff, GitDiffFile } from '../types'
 
 interface Props {
@@ -34,6 +34,9 @@ function MinusMark(): React.JSX.Element {
   )
 }
 
+/** Submit chord for the commit box, shown next to the button. */
+const SUBMIT_HINT = window.api.platform === 'darwin' ? '⌘↵' : 'Ctrl+Enter'
+
 /** Section header row: label + count + a bulk stage/unstage-all action. */
 function SectionHead({
   label,
@@ -47,14 +50,15 @@ function SectionHead({
   onAction: () => void
 }): React.JSX.Element {
   return (
-    <div className="flex items-center justify-between bg-bar px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
+    <div className="flex h-6 items-center justify-between bg-bar px-2 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
       <span>
         {label} ({count})
       </span>
       {count > 0 && (
         <button
+          type="button"
           onClick={onAction}
-          className="rounded-sm px-1.5 py-0.5 normal-case tracking-normal text-fgdim transition hover:bg-hover hover:text-fg"
+          className="rounded-full px-1.5 py-0.5 normal-case tracking-normal text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           {actionLabel}
         </button>
@@ -85,15 +89,31 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
   }, [folderPath])
 
   if (!diff && loading) {
-    return <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.loading')}</div>
-  }
-  if (!diff) {
-    return <div className="px-3 py-4 text-xs text-fgmuted">{t('changes.notRepository')}</div>
-  }
-  if (diff && (!diff.isRepository || diff.error)) {
     return (
-      <div className="px-3 py-4 text-xs text-fgmuted">
-        {diff.error ?? t('changes.notRepository')}
+      <div role="status" className="px-3 py-4 text-xs text-fgmuted">
+        {t('changes.loading')}
+      </div>
+    )
+  }
+  if (diff?.error) {
+    return (
+      <div className="p-3">
+        <Notice
+          action={
+            <Button variant="secondary" size="xs" onClick={onRefresh}>
+              {t('common.retry')}
+            </Button>
+          }
+        >
+          {diff.error}
+        </Notice>
+      </div>
+    )
+  }
+  if (!diff || !diff.isRepository) {
+    return (
+      <div className="p-3">
+        <EmptyState icon={<BranchIcon size={20} />} title={t('changes.notRepository')} />
       </div>
     )
   }
@@ -180,10 +200,10 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b border-edge px-3 py-2 text-xs">
+      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-edge px-2 text-xs">
         {diff?.branch && (
           <span
-            className="flex min-w-0 items-center gap-1.5 font-medium text-fgdim"
+            className="flex min-w-0 items-center gap-1.5 px-1 font-medium text-fgdim"
             title={diff.upstream ? `${diff.branch} → ${diff.upstream}` : diff.branch}
           >
             <BranchIcon size={14} className="shrink-0" />
@@ -195,8 +215,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
         {canPull && (
           <Button
             variant="secondary"
-            size="sm"
-            className="h-6! shrink-0 px-1.5! text-[11px]!"
+            size="xs"
+            className="shrink-0"
             loading={syncing === 'pull'}
             disabled={syncing !== null}
             onClick={() => void doSync('pull')}
@@ -208,8 +228,8 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
         {canPush && (
           <Button
             variant="secondary"
-            size="sm"
-            className="h-6! shrink-0 px-1.5! text-[11px]!"
+            size="xs"
+            className="shrink-0"
             loading={syncing === 'push'}
             disabled={syncing !== null}
             onClick={() => void doSync('push')}
@@ -224,24 +244,21 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
           {totals.additions > 0 && totals.deletions > 0 && ' '}
           {totals.deletions > 0 && <span className="text-danger">−{totals.deletions}</span>}
         </span>
-        <button
-          onClick={onRefresh}
-          title={t('changes.refresh')}
-          aria-label={t('changes.refresh')}
-          className="shrink-0 rounded-sm p-0.5 text-fgmuted transition hover:bg-hover hover:text-fg"
-        >
-          <RefreshIcon className="block h-3.5 w-3.5" />
-        </button>
+        <IconButton size="sm" label={t('changes.refresh')} onClick={onRefresh}>
+          <RefreshIcon size={14} />
+        </IconButton>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {diff.truncated && (
-          <div className="border-b border-warnBorder bg-warnBg/60 px-3 py-2 text-[11px] text-warn">
-            {t('changes.truncated')}
+          <div className="p-2">
+            <Notice tone="warn">{t('changes.truncated')}</Notice>
           </div>
         )}
         {totals.files === 0 ? (
-          <div className="px-3 py-4 text-[11px] text-fgmuted">{t('changes.empty')}</div>
+          <div className="p-3">
+            <EmptyState icon={<BranchIcon size={20} />} title={t('changes.empty')} />
+          </div>
         ) : (
           <>
             <SectionHead
@@ -286,16 +303,20 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
       {/* Commit box — a message plus anything to commit enables it; with an
           empty stage it stages everything first. */}
       <div className="shrink-0 space-y-1.5 border-t border-edge p-2">
-        <textarea
+        <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void doCommit()
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              void doCommit()
+            }
           }}
           rows={2}
           aria-label={t('changes.commitPlaceholder')}
+          aria-keyshortcuts="Meta+Enter Control+Enter"
           placeholder={t('changes.commitPlaceholder')}
-          className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="resize-none px-2! py-1.5! text-xs!"
         />
         <Button
           size="sm"
@@ -307,9 +328,10 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
           {staged.length === 0 && unstaged.length > 0
             ? t('changes.stageAllCommit')
             : t('changes.commit')}
+          <kbd className="font-mono text-[10px] font-normal opacity-70">{SUBMIT_HINT}</kbd>
         </Button>
         {totals.files > 0 && !message.trim() && (
-          <p className="text-[10px] text-fgmuted">{t('changes.commitHint')}</p>
+          <p className="px-0.5 text-[10px] text-fgmuted">{t('changes.commitHint')}</p>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
-import { BranchIcon, useDismiss } from './ui'
+import { BranchIcon, Button, CheckIcon, ChevronIcon, Notice, PlusIcon, useDismiss } from './ui'
 import type { BranchInfo } from '../types'
 
 interface Props {
@@ -10,40 +10,6 @@ interface Props {
   currentBranch: string
   /** Called after a successful switch so the title bar re-reads git status. */
   onSwitched: () => void
-}
-
-function Caret(): React.JSX.Element {
-  return (
-    <svg
-      className="block h-2.5 w-2.5 shrink-0 text-fgmuted"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  )
-}
-
-function GroupCaret({ open }: { open: boolean }): React.JSX.Element {
-  return (
-    <svg
-      className={`block h-2.5 w-2.5 shrink-0 transition-transform ${open ? '' : '-rotate-90'}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  )
 }
 
 /**
@@ -75,6 +41,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
   const [conflict, setConflict] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Close on outside click / Escape.
   useDismiss(ref, open, () => setOpen(false))
@@ -187,14 +154,17 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
     return (
       <button
         key={b.name}
+        type="button"
         disabled={disabled}
         onClick={() => void doSwitch(target, false)}
-        className={`flex w-full items-center gap-2 py-1.5 pl-7 pr-3 text-left text-xs transition ${
+        aria-current={b.isCurrent || undefined}
+        title={b.name}
+        className={`flex w-full items-center gap-2 py-1.5 pl-7 pr-3 text-left text-xs transition focus-visible:bg-hover focus-visible:outline-hidden ${
           disabled ? 'cursor-default text-fgmuted' : 'text-fg hover:bg-hover'
         }`}
       >
         <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
-          {b.isCurrent ? '✓' : ''}
+          {b.isCurrent && <CheckIcon size={13} />}
         </span>
         <span className="truncate">{b.isRemote ? target : b.name}</span>
         {b.isCurrent && <span className="ml-auto shrink-0 text-fgmuted">{t('branch.current')}</span>}
@@ -214,10 +184,12 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
     return (
       <div key={key}>
         <button
+          type="button"
           onClick={() => toggleGroup(key)}
-          className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] font-medium uppercase tracking-wide text-fgmuted transition hover:text-fgdim"
+          aria-expanded={isOpen}
+          className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] font-medium uppercase tracking-wide text-fgmuted transition hover:text-fgdim focus-visible:bg-hover focus-visible:outline-hidden"
         >
-          <GroupCaret open={isOpen} />
+          <ChevronIcon size={10} direction={isOpen ? 'down' : 'right'} className="shrink-0" />
           <span className="truncate">{label}</span>
           <span className="ml-auto shrink-0 tabular-nums">{items.length}</span>
         </button>
@@ -229,34 +201,65 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
   return (
     <div ref={ref} className="app-no-drag relative flex items-center">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        title={t('branch.switch')}
-        aria-label={t('branch.switch')}
-        aria-haspopup="menu"
+        title={`${t('branch.switch')}: ${currentBranch}`}
+        aria-label={`${t('branch.switch')}: ${currentBranch}`}
+        aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex h-7 min-w-0 max-w-64 items-center gap-1.5 rounded-sm px-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex h-8 min-w-0 max-w-64 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg aria-expanded:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{currentBranch}</span>
-        <Caret />
+        <ChevronIcon size={10} className="shrink-0 text-fgmuted" />
       </button>
 
       {open && (
-        <div className="solid-surface absolute left-0 top-8 z-50 flex max-h-[60vh] w-72 flex-col overflow-hidden rounded-md border border-edge bg-panel shadow-lg">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-label={t('branch.switch')}
+          className="solid-surface absolute left-0 top-full z-50 mt-1 flex max-h-[60vh] w-72 flex-col overflow-hidden rounded-lg border border-edge bg-panel shadow-xl"
+        >
           <div className="border-b border-edge p-1.5">
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter creates the typed branch; ArrowDown hops into the list.
+                if (e.key === 'Enter' && canCreate && busy === null) {
+                  e.preventDefault()
+                  void doCreate()
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  panelRef.current?.querySelector<HTMLButtonElement>('[data-branch-list] button:not(:disabled)')?.focus()
+                }
+              }}
               placeholder={t('branch.search')}
-              className="w-full rounded-sm border border-edge bg-bar px-2 py-1 text-xs text-fg outline-hidden placeholder:text-fgmuted focus:border-accent"
+              aria-label={t('branch.search')}
+              className="h-7 w-full rounded-md border border-edge bg-bar px-2 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
               autoComplete="off"
+              spellCheck={false}
             />
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto py-1">
+          <div
+            data-branch-list
+            className="min-h-0 flex-1 overflow-y-auto py-1"
+            onKeyDown={(e) => {
+              // Arrow keys rove the rows; ArrowUp off the top returns to the search.
+              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+              e.preventDefault()
+              const rows = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
+              const idx = rows.indexOf(document.activeElement as HTMLButtonElement)
+              const next = e.key === 'ArrowDown' ? rows[Math.min(idx + 1, rows.length - 1)] : rows[idx - 1]
+              if (next) next.focus()
+              else panelRef.current?.querySelector('input')?.focus()
+            }}
+          >
             {branches === null ? (
-              <div className="px-3 py-2 text-xs text-fgmuted">{t('branch.loading')}</div>
+              <div role="status" className="px-3 py-2 text-xs text-fgmuted">{t('branch.loading')}</div>
             ) : filtered.length === 0 ? (
               <div className="px-3 py-2 text-xs text-fgmuted">{t('branch.none')}</div>
             ) : groups.remotes.length === 0 ? (
@@ -273,11 +276,14 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
 
           {canCreate && (
             <button
+              type="button"
               onClick={() => void doCreate()}
               disabled={busy !== null}
-              className="flex w-full items-center gap-2 border-t border-edge px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover disabled:opacity-50"
+              className="flex w-full items-center gap-2 border-t border-edge px-3 py-1.5 text-left text-xs text-fg transition hover:bg-hover focus-visible:bg-hover focus-visible:outline-hidden disabled:opacity-50"
             >
-              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">+</span>
+              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-accent">
+                <PlusIcon size={13} />
+              </span>
               <span className="truncate">
                 {busy === newName
                   ? t('branch.creating')
@@ -286,31 +292,29 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
             </button>
           )}
 
-          {conflict && (
-            <div className="border-t border-edge bg-warnBg/60 p-2.5 text-xs">
-              <p className="mb-2 text-warn">{t('branch.dirtyBody', { branch: conflict })}</p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setConflict(null)}
-                  className="rounded-sm px-2 py-1 text-fgdim transition hover:bg-hover hover:text-fg"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={() => void doSwitch(conflict, true)}
-                  disabled={busy !== null}
-                  className="rounded-sm bg-warn px-2 py-1 font-medium text-bar transition hover:opacity-90 disabled:opacity-50"
-                >
-                  {t('branch.stashAndSwitch')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {note && <div className="border-t border-edge p-2.5 text-xs text-fgdim">{note}</div>}
-          {error && (
-            <div className="border-t border-edge p-2.5 text-xs text-danger">
-              {t('branch.switchFailed', { message: error })}
+          {(conflict || note || error) && (
+            <div className="space-y-2 border-t border-edge p-2">
+              {conflict && (
+                <Notice tone="warn">
+                  <p>{t('branch.dirtyBody', { branch: conflict })}</p>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setConflict(null)}>
+                      {t('common.cancel')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      loading={busy === conflict}
+                      disabled={busy !== null}
+                      onClick={() => void doSwitch(conflict, true)}
+                    >
+                      {t('branch.stashAndSwitch')}
+                    </Button>
+                  </div>
+                </Notice>
+              )}
+              {note && <Notice tone="info">{note}</Notice>}
+              {error && <Notice tone="danger">{t('branch.switchFailed', { message: error })}</Notice>}
             </div>
           )}
         </div>

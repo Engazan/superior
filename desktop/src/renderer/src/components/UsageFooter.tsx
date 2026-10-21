@@ -3,7 +3,7 @@ import { useI18n } from '../i18n'
 import { useOverlayLayer } from '../overlayStack'
 import type { AccountUsage, UiState, UsageProfile, UsageWindow } from '../types'
 import { builtinIcon } from '@shared/icons'
-import { IconButton, RefreshIcon, useConfirm, useToast } from './ui'
+import { Button, ChevronIcon, CloseIcon, IconButton, Notice, RefreshIcon, useConfirm, useToast } from './ui'
 import { resetWindows } from '../usageReset'
 import { UsageResetNotice } from './UsageResetNotice'
 
@@ -301,8 +301,9 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
         })}
       </div>
       <button type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}
-        className="shrink-0 rounded px-2 py-1 hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
-        {t('footer.options')} ▴
+        className="flex h-6 shrink-0 items-center gap-1 rounded-full px-2 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
+        {t('footer.options')}
+        <ChevronIcon size={11} direction="up" />
       </button>
       {!open && hover && hoveredProfile && <div id="usage-profile-tooltip" role="tooltip"
         onMouseEnter={clearHoverTimer} onMouseLeave={hideHover}
@@ -336,10 +337,12 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
       {open && <UsageDetail onClose={closeRef.current}>
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <span className="text-sm font-semibold text-fg">{t('footer.title')}</span>
-          <div className="flex gap-2">
-            <button type="button" disabled={loading || applying} onClick={() => setRefresh((value) => value + 1)}
-              className="rounded px-2 py-1 hover:bg-hover disabled:opacity-40">{loading ? t('footer.loading') : t('footer.refresh')}</button>
-            <button type="button" onClick={closeRef.current} aria-label={t('footer.close')} className="rounded px-2 hover:bg-hover">×</button>
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="ghost" size="sm" loading={loading} disabled={applying}
+              onClick={() => setRefresh((value) => value + 1)}>{loading ? t('footer.loading') : t('footer.refresh')}</Button>
+            <IconButton type="button" onClick={closeRef.current} label={t('footer.close')}>
+              <CloseIcon size={14} />
+            </IconButton>
           </div>
         </div>
         <div className="flex items-center justify-between gap-4 border-b border-edge px-4 py-2">
@@ -371,7 +374,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
                       }} />
                     <span className="truncate">{profile.name}</span>
                   </label>
-                  {reading?.plan && <span className="shrink-0 rounded border border-edge px-1.5 py-0.5">{reading.plan}</span>}
+                  {reading?.plan && <span className="shrink-0 rounded-full border border-edge px-2 py-0.5">{reading.plan}</span>}
                 </div>
                 <div className="mt-1 truncate text-[10px] text-fgdim" title={profile.directoryPath}>{profile.directoryPath}</div>
                 {reading?.status === 'ready' ? displayed.map((limit) => (
@@ -387,12 +390,14 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
                     {limit.resetsAt && <div className="mt-1 text-[10px] text-fgdim">{t('usage.resets')} {new Date(limit.resetsAt).toLocaleString(lang)}</div>}
                   </div>
                 )) : <div className="mt-2 text-fgdim">{status(reading)}</div>}
-                {profile.provider === 'codex' && <div className="mt-3 rounded border border-edge p-2">
+                {profile.provider === 'codex' && <div className="mt-3 rounded-lg border border-edge p-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-fg">{t('footer.tickets')}: {reading?.resetCredits?.availableCount ?? '—'}</span>
-                    <button type="button" disabled={applying || loading || !reading?.authFingerprint || !reading.resetCredits?.availableCount}
-                      onClick={() => { if (reading) void applyTicket(profile, reading) }}
-                      className="rounded border border-edge px-2 py-1 text-fg hover:bg-hover disabled:opacity-40">{t(applying ? 'footer.applying' : 'footer.applyTicket')}</button>
+                    <Button type="button" variant="secondary" size="sm" loading={applying}
+                      disabled={loading || !reading?.authFingerprint || !reading.resetCredits?.availableCount}
+                      onClick={() => { if (reading) void applyTicket(profile, reading) }}>
+                      {t(applying ? 'footer.applying' : 'footer.applyTicket')}
+                    </Button>
                   </div>
                   {!reading?.resetCredits ? <p className="mt-1 text-fgdim">{t('footer.ticketsUnknown')}</p>
                     : reading.resetCredits.availableCount === 0 ? <p className="mt-1 text-fgdim">{t('footer.noTickets')}</p>
@@ -407,11 +412,11 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
               </section>
             )
           })}
-          {failed && <p className="px-4 py-2 text-danger">{t('footer.unavailable')}</p>}
+          {failed && <div className="px-4 py-3"><Notice tone="danger">{t('footer.unavailable')}</Notice></div>}
         </div>
-        <div className="border-t border-edge px-4 py-3">
-          <p className="mb-2 text-[10px] text-fgdim">{t('footer.sharedLimit')}</p>
-          <button type="button" onClick={() => { setOpen(false); onManage() }} className="rounded px-2 py-1 text-fg hover:bg-hover">{t('footer.manage')}</button>
+        <div className="flex items-center justify-between gap-3 border-t border-edge bg-bar px-4 py-3">
+          <p className="min-w-0 text-[10px] leading-4 text-fgdim">{t('footer.sharedLimit')}</p>
+          <Button type="button" variant="ghost" size="sm" className="shrink-0" onClick={() => { setOpen(false); onManage() }}>{t('footer.manage')}</Button>
         </div>
       </UsageDetail>}
     </footer>

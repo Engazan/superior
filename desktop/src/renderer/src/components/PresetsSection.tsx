@@ -124,81 +124,81 @@ export function PresetsSection({
     <div className="settings-section">
       <SectionHeader
         title={t('settings.terminalPresets')}
+        description={t('presets.desc')}
         actions={<Button onClick={() => setEditing('new')}><PlusIcon />{t('presets.add')}</Button>}
       />
 
-      <div className="settings-island">
-        {displayed.length === 0 ? <EmptyState title={t('presets.empty')} /> : (
-          <ul className="divide-y divide-edge">
-            {displayed.map((p) => (
-              <li
-                key={p.id}
-                onDragOver={(e) => dragOverRow(e, p.id)}
-                onDrop={(e) => e.preventDefault()}
-                className={`settings-preset-row grid items-center gap-3 px-4 py-3 transition ${
-                  dragId === p.id ? 'opacity-40' : 'hover:bg-bar/60'
-                }`}
+      {/* EmptyState draws its own dashed card — never nest it in the island. */}
+      {displayed.length === 0 ? <EmptyState title={t('presets.empty')} /> : (
+        <ul className="settings-island divide-y divide-edge">
+          {displayed.map((p) => (
+            <li
+              key={p.id}
+              onDragOver={(e) => dragOverRow(e, p.id)}
+              onDrop={(e) => e.preventDefault()}
+              className={`settings-preset-row grid items-center gap-3 px-4 py-3 transition ${
+                dragId === p.id ? 'opacity-40' : 'hover:bg-hover'
+              }`}
+            >
+              <button
+                type="button"
+                draggable
+                tabIndex={0}
+                onDragStart={(e) => {
+                  startDrag(p.id)
+                  // No floating ghost — just sort the rows in place.
+                  e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0)
+                  e.dataTransfer.effectAllowed = 'move'
+                }}
+                onDragEnd={endDrag}
+                // Arrow keys reorder too — the drag grip alone is mouse-only.
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    moveBy(p.id, -1)
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    moveBy(p.id, 1)
+                  }
+                }}
+                className="cursor-grab select-none rounded py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                title={t('presets.dragReorder')}
+                aria-label={t('presets.dragReorder')}
               >
-                <button
-                  type="button"
-                  draggable
-                  tabIndex={0}
-                  onDragStart={(e) => {
-                    startDrag(p.id)
-                    // No floating ghost — just sort the rows in place.
-                    e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0)
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  onDragEnd={endDrag}
-                  // Arrow keys reorder too — the drag grip alone is mouse-only.
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowUp') {
-                      e.preventDefault()
-                      moveBy(p.id, -1)
-                    } else if (e.key === 'ArrowDown') {
-                      e.preventDefault()
-                      moveBy(p.id, 1)
-                    }
-                  }}
-                  className="cursor-grab select-none rounded py-2 text-center text-fgmuted hover:text-fg active:cursor-grabbing focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
-                  title={t('presets.dragReorder')}
-                  aria-label={t('presets.dragReorder')}
+                <span className="inline-flex justify-center">
+                  <GripIcon />
+                </span>
+              </button>
+              <PresetIcon iconType={p.iconType} icon={p.icon} className="h-6 w-6 text-lg" />
+              <div className="min-w-0">
+                <div className="break-words text-sm font-medium text-fg">{p.name}</div>
+                {p.description && <p className="mt-0.5 text-xs leading-relaxed text-fgdim [overflow-wrap:anywhere]">{p.description}</p>}
+                <p title={p.command} className="mt-1 truncate font-mono text-[11px] text-fgmuted">{p.command}</p>
+              </div>
+              <div className="settings-preset-actions flex items-center justify-end gap-1">
+                <span className="mr-2"><Toggle checked={p.active} onChange={(checked) => onToggleActive(p.id, checked)} label={t('presets.markActive', { name: p.name })} /></span>
+                <IconButton
+                  size="sm"
+                  label={`${t('common.edit')} ${p.name}`}
+                  title={t('common.edit')}
+                  onClick={() => setEditing(p)}
                 >
-                  <span className="inline-flex justify-center">
-                    <GripIcon />
-                  </span>
-                </button>
-                <PresetIcon iconType={p.iconType} icon={p.icon} className="h-6 w-6 text-lg" />
-                <div className="min-w-0">
-                  <div className="break-words text-sm font-medium text-fg">{p.name}</div>
-                  {p.description && <p className="mt-0.5 text-xs leading-relaxed text-fgdim [overflow-wrap:anywhere]">{p.description}</p>}
-                  <p title={p.command} className="mt-1 truncate font-mono text-[11px] text-fgmuted">{p.command}</p>
-                </div>
-                <div className="settings-preset-actions flex items-center justify-end gap-1">
-                  <span className="mr-2"><Toggle checked={p.active} onChange={(checked) => onToggleActive(p.id, checked)} label={t('presets.markActive', { name: p.name })} /></span>
-                    <IconButton
-                      size="sm"
-                      label={`${t('common.edit')} ${p.name}`}
-                      title={t('common.edit')}
-                      onClick={() => setEditing(p)}
-                    >
-                      <PencilIcon size={13} />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      variant="danger-ghost"
-                      label={`${t('common.delete')} ${p.name}`}
-                      title={t('common.delete')}
-                      onClick={() => void removePreset(p)}
-                    >
-                      <TrashIcon size={13} />
-                    </IconButton>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  <PencilIcon size={13} />
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  variant="danger-ghost"
+                  label={`${t('common.delete')} ${p.name}`}
+                  title={t('common.delete')}
+                  onClick={() => void removePreset(p)}
+                >
+                  <TrashIcon size={13} />
+                </IconButton>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <CustomMemoryPresets onPresetsChanged={onPresetsChanged} />
 

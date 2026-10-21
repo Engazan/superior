@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n'
+import { Button } from './ui'
 
 interface Props {
   /** Short explanation shown under the title (already localized). */
@@ -27,12 +28,9 @@ export function UnsupportedFilePreview({ reason, onOpenRaw }: Props): React.JSX.
         </svg>
         <div className="text-sm font-medium text-fg">{t('preview.notAvailable')}</div>
         {reason && <div className="max-w-xs text-xs text-fgmuted">{reason}</div>}
-        <button
-          onClick={onOpenRaw}
-          className="mt-1 rounded-sm border border-edge px-3 py-1.5 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg"
-        >
+        <Button variant="secondary" size="sm" className="mt-1" onClick={onOpenRaw}>
           {t('preview.openRaw')}
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
-import { Button } from './ui'
+import { Button, ChevronIcon, CloseIcon, IconButton } from './ui'
 
 /** Non-blocking Windows warning: agents inherit the app's administrator token. */
 export function ElevationNotice({ onClose, onNever }: { onClose: () => void; onNever: () => void }): React.JSX.Element {
@@ -20,8 +20,8 @@ export function ElevationNotice({ onClose, onNever }: { onClose: () => void; onN
           <p className="text-sm font-semibold text-fg">{t('elevation.title')}</p>
           <p className="mt-1 text-xs leading-relaxed text-fgmuted">{t('elevation.body')}</p>
           <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
-            className="mt-2 text-xs font-semibold text-warn hover:underline">
-            {open ? '▾' : '▸'} {t('elevation.howTo')}
+            className="mt-2 inline-flex items-center gap-1 rounded-sm text-xs font-semibold text-warn hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
+            <ChevronIcon size={11} direction={open ? 'down' : 'right'} /> {t('elevation.howTo')}
           </button>
           {open && <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-relaxed text-fgmuted">
             <li>{t('elevation.step1')}</li>
@@ -29,8 +29,9 @@ export function ElevationNotice({ onClose, onNever }: { onClose: () => void; onN
             <li>{t('elevation.step3')}</li>
           </ol>}
         </div>
-        <button type="button" onClick={onClose} aria-label={t('elevation.later')}
-          className="-mr-1 -mt-1 rounded-full px-2 py-0.5 text-lg text-fgdim hover:bg-hover hover:text-fg">×</button>
+        <IconButton type="button" onClick={onClose} label={t('elevation.later')} className="-mr-1 -mt-1">
+          <CloseIcon size={14} />
+        </IconButton>
       </div>
       <div className="mt-3 flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onNever}>{t('elevation.never')}</Button>

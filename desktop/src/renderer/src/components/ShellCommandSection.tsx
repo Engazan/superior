@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
-import { Button, SectionHeader, SettingRow, SettingsCard, StatusPill } from './ui'
+import { Button, Notice, SectionHeader, SettingRow, SettingsCard, StatusPill } from './ui'
 import type { ShellCommandStatus } from '../types'
 
 /**
@@ -82,16 +82,9 @@ export function ShellCommandSection(): React.JSX.Element {
       </SettingsCard>
 
       {note && (
-        <p
-          role="status"
-          className={`mt-3 rounded-md border px-3 py-2 text-xs ${
-            note.tone === 'danger'
-              ? 'border-dangerBorder bg-dangerBg text-danger'
-              : 'border-statusBorder bg-statusBg text-status'
-          }`}
-        >
+        <Notice tone={note.tone} className="mt-3">
           {note.text}
-        </p>
+        </Notice>
       )}
     </div>
   )

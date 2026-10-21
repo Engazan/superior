@@ -70,18 +70,20 @@ export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
     [highlight]
   )
 
+  // Compact two-way toggle; ui/SegmentedControl has no size small enough for
+  // this 32px sub-toolbar, so it stays local but gets pressed state + focus ring.
   const segBtn = (active: boolean): string =>
-    `px-2 py-0.5 text-[11px] font-medium rounded transition ${
-      active ? 'bg-accentBg text-accent' : 'text-fgmuted hover:text-fg'
+    `h-6 rounded-full px-2.5 text-[11px] font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
+      active ? 'bg-accentBg text-accent' : 'text-fgmuted hover:bg-hover hover:text-fg'
     }`
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center gap-1 border-b border-edge px-3 py-1.5">
-        <button className={segBtn(!raw)} onClick={() => setRaw(false)}>
+      <div className="flex h-8 shrink-0 items-center gap-1 border-b border-edge px-2">
+        <button type="button" aria-pressed={!raw} className={segBtn(!raw)} onClick={() => setRaw(false)}>
           {t('preview.rendered')}
         </button>
-        <button className={segBtn(raw)} onClick={() => setRaw(true)}>
+        <button type="button" aria-pressed={raw} className={segBtn(raw)} onClick={() => setRaw(true)}>
           {t('preview.raw')}
         </button>
       </div>
@@ -108,5 +110,10 @@ export function MarkdownFilePreview({ content }: Props): React.JSX.Element {
 }
 
 function PreviewLoading(): React.JSX.Element {
-  return <div className="grid h-full place-items-center" aria-busy="true" />
+  const { t } = useI18n()
+  return (
+    <div role="status" aria-busy="true" className="grid h-full place-items-center text-xs text-fgmuted">
+      {t('preview.loading')}
+    </div>
+  )
 }

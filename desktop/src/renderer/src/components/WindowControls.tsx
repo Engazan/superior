@@ -74,6 +74,7 @@ export function WindowControls(): React.JSX.Element {
   return (
     <div className="flex h-full items-stretch">
       <button
+        type="button"
         className={btn}
         onClick={() => window.api.windowMinimize()}
         aria-label={t('window.minimize')}
@@ -82,6 +83,7 @@ export function WindowControls(): React.JSX.Element {
         <MinimizeIcon />
       </button>
       <button
+        type="button"
         className={btn}
         onClick={() => window.api.windowToggleMaximize()}
         aria-label={maximized ? t('window.restore') : t('window.maximize')}
@@ -90,6 +92,7 @@ export function WindowControls(): React.JSX.Element {
         {maximized ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
       <button
+        type="button"
         className="app-no-drag grid h-full w-10 place-items-center p-0 text-fgdim transition hover:bg-dangerSolid hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-danger"
         onClick={() => window.api.windowClose()}
         aria-label={t('window.close')}

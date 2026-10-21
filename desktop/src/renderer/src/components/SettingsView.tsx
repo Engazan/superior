@@ -352,7 +352,7 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
               {t('appearance.resetColor')}
             </Button>
             <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
-            <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge">
+            <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge focus-within:ring-2 focus-within:ring-accent/50">
               <span
                 className="attention-pulse-dot h-5 w-5 rounded-full"
                 style={{ ['--attn' as string]: attentionColor }}
@@ -507,6 +507,20 @@ export function SettingsView({
     }
   ]
 
+  // Arrow keys / Home / End move between nav items (Tab still leaves the nav).
+  const onNavKeyDown = (e: React.KeyboardEvent<HTMLElement>): void => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[data-settings-nav]'))
+    const idx = items.indexOf(document.activeElement as HTMLButtonElement)
+    if (idx === -1) return
+    e.preventDefault()
+    const next =
+      e.key === 'Home' ? 0
+      : e.key === 'End' ? items.length - 1
+      : (idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+    items[next].focus()
+  }
+
   return (
     <div className="settings-layout flex min-h-0 min-w-0 flex-1 gap-2">
       <div className="settings-mobile-nav superior-settings-panel items-center gap-3 bg-bar p-2">
@@ -521,6 +535,7 @@ export function SettingsView({
       <aside className="settings-navigation superior-settings-panel flex w-52 shrink-0 flex-col overflow-hidden bg-bar">
         <div className="border-b border-edge px-2 py-2">
           <button
+            type="button"
             onClick={onBack}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
@@ -528,7 +543,11 @@ export function SettingsView({
             {t('settings.back')}
           </button>
         </div>
-        <nav aria-label={t('sidebar.settings')} className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        <nav
+          aria-label={t('sidebar.settings')}
+          onKeyDown={onNavKeyDown}
+          className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
+        >
           {groups.map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
               <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-fgmuted">
@@ -540,6 +559,8 @@ export function SettingsView({
                   return (
                     <li key={item.id}>
                       <button
+                        type="button"
+                        data-settings-nav
                         onClick={() => setSection(item.id)}
                         aria-current={section === item.id ? 'page' : undefined}
                         className={`relative flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition ${

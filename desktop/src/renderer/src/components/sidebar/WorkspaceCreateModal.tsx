@@ -9,6 +9,7 @@ import {
   FieldTag,
   Input,
   Modal,
+  Notice,
   SegmentedControl
 } from '../ui'
 import { WorkspaceGlyph, folderLabel } from './parts'
@@ -262,14 +263,7 @@ export function WorkspaceCreateModal({
           />
         </Field>
 
-        {createError && (
-          <div
-            role="alert"
-            className="rounded-lg border border-dangerBorder bg-dangerBg px-3 py-2.5 text-xs leading-5 text-danger"
-          >
-            {createError}
-          </div>
-        )}
+        {createError && <Notice>{createError}</Notice>}
 
         {/* Hidden submit so Enter in any field submits the form. */}
         <button type="submit" className="hidden" aria-hidden tabIndex={-1} />

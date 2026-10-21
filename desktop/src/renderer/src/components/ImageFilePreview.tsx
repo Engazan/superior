@@ -14,8 +14,11 @@ export function ImageFilePreview({ dataUrl, alt }: Props): React.JSX.Element {
     // A bad extension guess produces a broken data URL — show a message
     // instead of the browser's broken-image glyph.
     return (
-      <div className="grid h-full place-items-center px-6 text-center text-xs text-fgmuted">
-        {t('preview.binary')}
+      <div className="grid h-full place-items-center p-6 text-center">
+        <div className="flex flex-col items-center gap-1">
+          <div className="text-sm font-medium text-fg">{t('preview.notAvailable')}</div>
+          <div className="max-w-xs text-xs text-fgmuted">{t('preview.binary')}</div>
+        </div>
       </div>
     )
   }

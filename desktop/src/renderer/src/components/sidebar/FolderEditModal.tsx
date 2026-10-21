@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useI18n } from '../../i18n'
-import { Button, ColorSwatchPicker, FolderIcon, Input, Modal } from '../ui'
+import { Button, ColorSwatchPicker, Field, FolderIcon, Input, Modal } from '../ui'
 import type { Folder, FolderUpdate } from '../../types'
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
 export function FolderEditModal({ folder, onCancel, onSave }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [name, setName] = useState(folder.displayName ?? '')
+  const nameRef = useRef<HTMLInputElement>(null)
   // undefined = leave icon untouched; string = new icon; null = clear icon.
   const [icon, setIcon] = useState<string | null | undefined>(undefined)
   const [color, setColor] = useState<string | null>(folder.color ?? null)
@@ -43,6 +44,7 @@ export function FolderEditModal({ folder, onCancel, onSave }: Props): React.JSX.
       title={t('folder.editModalTitle')}
       description={t('folder.editModalDescription')}
       onClose={onCancel}
+      initialFocusRef={nameRef}
       closeLabel={t('common.cancel')}
       footer={
         <>
@@ -53,10 +55,15 @@ export function FolderEditModal({ folder, onCancel, onSave }: Props): React.JSX.
         </>
       }
     >
-      <div className="space-y-5">
-        <div>
-          <span className="mb-1.5 block text-xs font-semibold text-fgdim">{t('folder.icon')}</span>
-          <div className="flex items-center gap-3">
+      <form
+        className="space-y-5"
+        onSubmit={(event) => {
+          event.preventDefault()
+          submit()
+        }}
+      >
+        <Field label={t('folder.icon')}>
+          <div role="group" aria-label={t('folder.icon')} className="flex items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-hover text-fgdim ring-1 ring-inset ring-edge">
               {previewIcon ? (
                 <img src={previewIcon} alt="" className="h-full w-full object-cover" />
@@ -64,56 +71,50 @@ export function FolderEditModal({ folder, onCancel, onSave }: Props): React.JSX.
                 <FolderIcon />
               )}
             </span>
-            <Button variant="secondary" onClick={() => void pickIcon()}>
+            <Button type="button" variant="secondary" onClick={() => void pickIcon()}>
               {t('folder.uploadIcon')}
             </Button>
             {previewIcon && (
-              <Button variant="ghost" onClick={() => setIcon(null)}>
+              <Button type="button" variant="ghost" onClick={() => setIcon(null)}>
                 {t('folder.removeIcon')}
               </Button>
             )}
           </div>
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="folder-name" className="mb-1.5 block text-xs font-semibold text-fgdim">
-            {t('folder.displayName')}
-          </label>
+        <Field
+          label={t('folder.displayName')}
+          htmlFor="folder-name"
+          hint={t('folder.displayNameHint')}
+        >
           <Input
             id="folder-name"
-            autoFocus
+            ref={nameRef}
             value={name}
             placeholder={folder.name}
             onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') submit()
-            }}
             autoComplete="off"
           />
-          <p className="mt-1.5 text-xs text-fgmuted">{t('folder.displayNameHint')}</p>
-        </div>
+        </Field>
 
-        <div>
-          <span className="mb-1.5 block text-xs font-semibold text-fgdim">{t('folder.color')}</span>
-          <ColorSwatchPicker color={color} onChange={setColor} />
-        </div>
-
-        <div className="rounded-lg border border-edge bg-bar p-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-hover text-fgdim">
-              <FolderIcon />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
-                {t('folder.path')}
-              </p>
-              <p className="mt-0.5 truncate text-xs text-fg" title={folder.path}>
-                {folder.path}
-              </p>
-            </div>
+        <Field label={t('folder.color')}>
+          <div role="group" aria-label={t('folder.color')}>
+            <ColorSwatchPicker color={color} onChange={setColor} />
           </div>
-        </div>
-      </div>
+        </Field>
+
+        <Field label={t('folder.path')}>
+          <div className="flex items-center gap-2 rounded-md border border-edge bg-bar px-3 py-2 text-fgdim">
+            <FolderIcon />
+            <span className="min-w-0 flex-1 truncate font-mono text-xs text-fg" title={folder.path}>
+              {folder.path}
+            </span>
+          </div>
+        </Field>
+
+        {/* Hidden submit so Enter in any field submits the form. */}
+        <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
+      </form>
     </Modal>
   )
 }

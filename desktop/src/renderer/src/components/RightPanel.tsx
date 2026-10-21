@@ -6,7 +6,7 @@ import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { HistoryView } from './HistoryView'
 import { TasksView } from './TasksView'
-import { BranchIcon, FolderIcon, HistoryIcon, TasksIcon } from './ui'
+import { BranchIcon, FolderIcon, HistoryIcon, Notice, TasksIcon } from './ui'
 import { useI18n } from '../i18n'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
 import type { AgentSession, AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
@@ -158,20 +158,28 @@ export function RightPanel({
       active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
     }`
 
-  // One Tab stop + arrow keys, per the tabs pattern.
+  // One Tab stop + arrow/Home/End keys, per the tabs pattern.
   const TABS: Tab[] = ['files', 'changes', 'history', 'tasks']
   const onTabKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    const idx = TABS.indexOf(tab)
+    const next =
+      e.key === 'ArrowLeft' ? TABS[(idx - 1 + TABS.length) % TABS.length]
+        : e.key === 'ArrowRight' ? TABS[(idx + 1) % TABS.length]
+          : e.key === 'Home' ? TABS[0]
+            : e.key === 'End' ? TABS[TABS.length - 1]
+              : null
+    if (!next) return
     e.preventDefault()
-    const delta = e.key === 'ArrowLeft' ? -1 : 1
-    const next = TABS[(TABS.indexOf(tab) + delta + TABS.length) % TABS.length]
     selectTab(next)
     ;(e.currentTarget.parentElement?.querySelector(`[data-tab="${next}"]`) as HTMLElement)?.focus()
   }
   const tabA11y = (id: Tab): Record<string, unknown> => ({
+    type: 'button',
     role: 'tab',
+    id: `right-panel-tab-${id}`,
     'data-tab': id,
     'aria-selected': tab === id,
+    'aria-controls': 'right-panel-tabpanel',
     'aria-label': t(`rightPanel.${id}` as Parameters<typeof t>[0]),
     tabIndex: tab === id ? 0 : -1,
     title: t(`rightPanel.${id}` as Parameters<typeof t>[0]),
@@ -210,9 +218,17 @@ export function RightPanel({
         </button>
       </div>
 
+      {/* One panel region for every tab; each view supplies the same
+          anatomy: h-10 toolbar, scrolling list, optional composer footer. */}
+      <div
+        role="tabpanel"
+        id="right-panel-tabpanel"
+        aria-labelledby={`right-panel-tab-${tab}`}
+        className="flex min-h-0 flex-1 flex-col"
+      >
       {isRemoteWorkspace ? (
-        <div className="px-3 py-4 text-xs leading-5 text-fgmuted">
-          {t('remote.localOnlyPanel')}
+        <div className="p-3">
+          <Notice tone="info">{t('remote.localOnlyPanel')}</Notice>
         </div>
       ) : tab === 'changes' ? (
         <>
@@ -239,6 +255,7 @@ export function RightPanel({
       ) : (
         <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}
+      </div>
     </aside>
   )
 }

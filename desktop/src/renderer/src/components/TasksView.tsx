@@ -2,7 +2,7 @@ import { ipcErrorMessage } from '../ipcError'
 import { useMemo, useState } from 'react'
 import { useI18n, type TFunction } from '../i18n'
 import { PresetIcon } from './PresetIcon'
-import { Button, IconButton, Select } from './ui'
+import { Button, EmptyState, IconButton, Select, TasksIcon, Textarea } from './ui'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
 import { WORKTREE_ERROR, type AgentTask, type TerminalPreset } from '../types'
 
@@ -36,6 +36,9 @@ function errorMessage(t: TFunction, raw: string): string {
       return raw
   }
 }
+
+/** Submit chord for the enqueue box, shown next to the button. */
+const SUBMIT_HINT = window.api.platform === 'darwin' ? '⌘↵' : 'Ctrl+Enter'
 
 function CrossMark(): React.JSX.Element {
   return (
@@ -105,7 +108,7 @@ function StatusDot({ status }: { status: AgentTask['status'] }): React.JSX.Eleme
 /** Section header row matching the Changes view's group style. */
 function GroupHead({ label, count }: { label: string; count: number }): React.JSX.Element {
   return (
-    <div className="bg-bar px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
+    <div className="flex h-6 items-center bg-bar px-2 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
       {label} ({count})
     </div>
   )
@@ -138,7 +141,11 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
 
   if (!folderPath) {
-    return <div className="px-3 py-4 text-xs text-fgmuted">{t('tasks.noFolder')}</div>
+    return (
+      <div className="p-3">
+        <EmptyState icon={<TasksIcon size={20} />} title={t('tasks.noFolder')} />
+      </div>
+    )
   }
 
   const effectivePresetId = presetId || activePresets[0]?.id || ''
@@ -147,14 +154,18 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
   const doAdd = async (): Promise<void> => {
     if (!canAdd) return
     setAdding(true)
-    await queue.addTask({
-      folderPath,
-      prompt,
-      presetId: effectivePresetId,
-      useWorktree
-    })
-    setAdding(false)
-    setPrompt('')
+    try {
+      await queue.addTask({
+        folderPath,
+        prompt,
+        presetId: effectivePresetId,
+        useWorktree
+      })
+      setPrompt('')
+    } finally {
+      // A rejected add must not leave the button spinning.
+      setAdding(false)
+    }
   }
 
   const presetOf = (task: AgentTask): TerminalPreset | undefined =>
@@ -180,7 +191,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
   const row = (task: AgentTask, queueIndex?: number, queueLength?: number): React.JSX.Element => {
     const preset = presetOf(task)
     return (
-      <div key={task.id} className="group flex items-start gap-2 border-b border-edge/50 px-2 py-2">
+      <div key={task.id} className="group flex items-start gap-2 border-b border-edge/50 px-2 py-2 transition hover:bg-hover/50">
         <StatusDot status={task.status} />
         <div className="min-w-0 flex-1">
           <div className="wrap-break-word text-xs text-fg" title={task.prompt}>
@@ -207,7 +218,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
             </div>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
           {task.status === 'queued' && queueIndex !== undefined && queueLength !== undefined && (
             <>
               <IconButton
@@ -255,23 +266,26 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Header: pause/resume the whole queue + clear this folder's finished tasks. */}
-      <div className="flex items-center gap-2 border-b border-edge px-3 py-2 text-xs">
-        <span className="min-w-0 truncate font-medium text-fgdim">
-          {queue.paused ? t('tasks.paused') : t('tasks.title')}
+      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-edge px-2 text-xs">
+        <span className="flex min-w-0 items-center gap-1.5 px-1 font-medium text-fgdim">
+          <TasksIcon size={14} className="shrink-0" />
+          <span className="truncate">{queue.paused ? t('tasks.paused') : t('tasks.title')}</span>
         </span>
         <span className="ml-auto shrink-0" />
         {finished.length > 0 && (
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
+            className="shrink-0 font-medium!"
             onClick={() => void queue.clearFinished(folderPath)}
-            className="shrink-0 rounded-sm px-1.5 py-0.5 text-[11px] text-fgdim transition hover:bg-hover hover:text-fg"
           >
             {t('tasks.clearFinished')}
-          </button>
+          </Button>
         )}
         <Button
           variant="secondary"
-          size="sm"
-          className="h-6! shrink-0 px-1.5! text-[11px]!"
+          size="xs"
+          className="shrink-0"
           onClick={() => void queue.setPaused(!queue.paused)}
         >
           {queue.paused ? t('tasks.resume') : t('tasks.pause')}
@@ -280,7 +294,9 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {folderTasks.length === 0 ? (
-          <div className="px-3 py-4 text-[11px] text-fgmuted">{t('tasks.empty')}</div>
+          <div className="p-3">
+            <EmptyState icon={<TasksIcon size={20} />} title={t('tasks.empty')} />
+          </div>
         ) : (
           <>
             {running.length > 0 && (
@@ -307,18 +323,24 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
 
       {/* Enqueue box — prompt + preset + optional fresh worktree workspace. */}
       <div className="shrink-0 space-y-1.5 border-t border-edge p-2">
-        <textarea
+        <Textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void doAdd()
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault()
+              void doAdd()
+            }
           }}
           rows={2}
+          aria-label={t('tasks.promptPlaceholder')}
+          aria-keyshortcuts="Meta+Enter Control+Enter"
           placeholder={t('tasks.promptPlaceholder')}
-          className="w-full resize-none rounded-md border border-edge bg-bar px-2 py-1.5 text-xs text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="resize-none px-2! py-1.5! text-xs!"
         />
         <div className="flex items-center gap-2">
           <Select
+            aria-label={t('launcher.tabPreset')}
             value={effectivePresetId}
             onChange={(e) => setPresetId(e.target.value)}
             className="h-7! flex-1 text-xs!"
@@ -343,8 +365,9 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
             {t('tasks.worktree')}
           </label>
         </div>
-        <Button size="sm" className="w-full" disabled={!canAdd} onClick={() => void doAdd()}>
+        <Button size="sm" className="w-full" disabled={!canAdd} loading={adding} onClick={() => void doAdd()}>
           {t('tasks.add')}
+          <kbd className="font-mono text-[10px] font-normal opacity-70">{SUBMIT_HINT}</kbd>
         </Button>
         <p className="px-0.5 text-[10px] leading-snug text-fgmuted">{t('tasks.hint')}</p>
       </div>

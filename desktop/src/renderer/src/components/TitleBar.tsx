@@ -11,6 +11,10 @@ import type { GitStatus, Profile } from '../types'
 
 const isMac = window.api.platform === 'darwin'
 
+/** Every titlebar icon button shares one 32px height, width, radius and focus ring. */
+const TB_BTN =
+  'app-no-drag grid h-8 w-9 shrink-0 place-items-center rounded-full p-0 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent'
+
 interface Props {
   workspaceMode: WorkspaceMode
   onWorkspaceModeChange: (mode: WorkspaceMode) => void
@@ -117,11 +121,11 @@ export function TitleBar({
               <>
                 <span className="mx-2 h-4 w-px shrink-0 bg-edge" aria-hidden />
                 {gitLoading && !gitStatus ? (
-                  <span className="flex h-full items-center px-1 text-xs text-fgmuted">
+                  <span role="status" className="flex h-full items-center px-1 text-xs text-fgmuted">
                     {t('titlebar.gitLoading')}
                   </span>
                 ) : gitStatus?.isRepository ? (
-                  <div className="flex h-full min-w-0 max-w-72 items-center gap-1.5 px-1 text-xs font-medium text-fgdim">
+                  <div className="flex h-full min-w-0 max-w-72 items-center gap-1.5 text-xs font-medium text-fgdim">
                     {branchSwitchable && gitDir ? (
                       <BranchSwitcher
                         gitDir={gitDir}
@@ -129,12 +133,12 @@ export function TitleBar({
                         onSwitched={onBranchSwitched}
                       />
                     ) : (
-                      <>
+                      <span className="flex h-8 min-w-0 items-center gap-1.5 px-2">
                         <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
                         <span className="truncate" title={gitStatus.branch ?? 'HEAD'}>
                           {gitStatus.branch ?? 'HEAD'}
                         </span>
-                      </>
+                      </span>
                     )}
                     {!!gitStatus.additions && (
                       <span className="shrink-0 text-status">+{gitStatus.additions}</span>
@@ -145,10 +149,11 @@ export function TitleBar({
                   </div>
                 ) : (
                   <button
+                    type="button"
                     onClick={onInitGit}
                     disabled={gitLoading || !!gitStatus?.error}
                     title={gitStatus?.error ?? t('titlebar.initGitTitle')}
-                    className="flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-50"
+                    className="flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent"
                   >
                     <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
                     <span>
@@ -174,7 +179,7 @@ export function TitleBar({
             {(['terminals', 'code', 'browser'] as const).map((mode) => (
               <button key={mode} type="button" aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
                 onClick={() => onWorkspaceModeChange(mode)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>
+                className={`h-[26px] rounded-md px-3 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>
                 {mode === 'terminals' ? 'CLI' : mode === 'code' ? 'Code' : 'Browser'}
               </button>
             ))}
@@ -187,21 +192,23 @@ export function TitleBar({
         {showToggle && (
           <>
             <button
+              type="button"
               onClick={onOpenPromptPicker}
               disabled={!promptPickerEnabled}
               title={t('prompts.insert')}
               aria-label={t('prompts.insert')}
-              className="app-no-drag my-1.5 grid h-8 w-9 place-items-center rounded-full p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+              className={`${TB_BTN} text-fgdim`}
             >
               <PromptIcon size={15} />
             </button>
             <button
+              type="button"
               onClick={onToggleBroadcast}
               disabled={!broadcastEnabled}
               aria-pressed={broadcastActive}
               title={t('broadcast.toggle')}
               aria-label={t('broadcast.toggle')}
-              className={`app-no-drag my-1.5 grid h-8 w-9 place-items-center rounded-full p-0 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent ${
+              className={`${TB_BTN} ${
                 broadcastActive ? 'bg-warnBg text-warn' : 'text-fgdim'
               }`}
             >
@@ -214,6 +221,7 @@ export function TitleBar({
             discoverable without knowing its shortcut. */}
         {showToggle && (
           <button
+            type="button"
             onClick={onOpenLauncher}
             disabled={!launcherEnabled}
             title={
@@ -222,7 +230,7 @@ export function TitleBar({
                 : t('terminal.noWorkspace')
             }
             aria-label={t('terminal.addTerminal')}
-            className="app-no-drag my-1.5 grid h-8 w-9 place-items-center rounded-full p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+            className={`${TB_BTN} text-fgdim`}
           >
             <svg
               className="block h-[16px] w-[16px]"
@@ -253,11 +261,12 @@ export function TitleBar({
 
         {showToggle && (
           <button
+            type="button"
             onClick={onToggleRight}
             aria-expanded={rightOpen}
             title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
             aria-label={t('common.toggleRightSidebar')}
-            className="group app-no-drag my-1.5 grid h-8 w-9 place-items-center rounded-full p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+            className={`group ${TB_BTN} text-fgdim`}
           >
             <svg
               className="block h-[15px] w-[15px] transition-transform duration-150 group-active:scale-90"

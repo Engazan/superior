@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import type { MobileRelayInvite, MobileRelayStatus } from '@shared/mobileRelay'
-import { Button, CheckIcon, Modal, PhoneIcon, SectionHeader } from './ui'
+import { Button, CheckIcon, Field, IconButton, Input, Modal, Notice, PhoneIcon, SectionHeader, Textarea, TrashIcon, useConfirm } from './ui'
 
 export function MobileAccessModal({ onClose }: { onClose: () => void }): React.JSX.Element {
   return <Modal onClose={onClose} title="Mobile access" description="Your workspace, connected to your phone." size="lg">
@@ -10,6 +10,7 @@ export function MobileAccessModal({ onClose }: { onClose: () => void }): React.J
 }
 
 export function MobileRelaySection({ embedded = false }: { embedded?: boolean }): React.JSX.Element {
+  const confirm = useConfirm()
   const [status, setStatus] = useState<MobileRelayStatus | null>(null)
   const [url, setUrl] = useState('')
   const [invite, setInvite] = useState<MobileRelayInvite | null>(null)
@@ -126,6 +127,22 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
   const enabled = status?.enabled === true
   const devices = status?.devices.filter(device => device.paired) ?? []
   const remaining = invite ? Math.max(0, Math.ceil((invite.expiresAt - now) / 1000)) : 0
+  const urlId = embedded ? 'mobile-modal-relay-url' : 'mobile-relay-url'
+  const saveUrl = (): void => {
+    if (busy || !status || url.trim() === status.url) return
+    void run(() => window.api.setMobileRelayUrl(url.trim()), enabled)
+  }
+  // Unpairing cuts the phone off until it scans a new code — confirm first.
+  const removeDevice = async (deviceId: string, name: string): Promise<void> => {
+    const ok = await confirm({
+      title: 'Remove phone',
+      message: `Remove “${name}”? It will need a new pairing code to reconnect.`,
+      confirmLabel: 'Remove',
+      tone: 'danger'
+    })
+    if (!ok) return
+    await run(async () => { const next = await window.api.revokeMobileRelayDevice(deviceId); if (active.current) setPaired(false); return next })
+  }
   const connection = !status ? 'Loading connection…' : connected ? 'Connected' : enabled ? status.error ? 'Connection unavailable' : 'Connecting…' : 'Mobile access is off'
 
   return <div className={embedded ? 'space-y-5' : 'settings-section space-y-5'}>
@@ -145,7 +162,7 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
     </ol>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-edge p-4">
       <div>
-        <p role="status" className="flex items-center gap-2 text-sm font-medium text-fg"><span aria-hidden className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : enabled ? 'bg-amber-500' : 'bg-fgmuted'}`} />{connection}</p>
+        <p role="status" className="flex items-center gap-2 text-sm font-medium text-fg"><span aria-hidden className={`h-2 w-2 rounded-full ${connected ? 'bg-status' : enabled ? 'bg-warn' : 'bg-fgmuted'}`} />{connection}</p>
         <p className="mt-1 text-xs text-fgdim">{enabled ? 'Your terminals stay on this computer.' : 'Enable access to create your pairing code.'}</p>
       </div>
       <Button variant={enabled ? 'secondary' : 'primary'} loading={busy && !invite} disabled={!status} onClick={() => void run(async () => {
@@ -157,8 +174,8 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
         return window.api.setMobileRelayEnabled(false)
       }, !enabled)}>{enabled ? 'Turn off' : 'Enable mobile access'}</Button>
     </div>
-    {paired ? <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
-      <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500"><CheckIcon size={24} /></span>
+    {paired ? <div role="status" className="rounded-xl border border-statusBorder bg-statusBg p-6 text-center">
+      <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-statusBg text-status ring-1 ring-inset ring-statusBorder"><CheckIcon size={24} /></span>
       <h4 className="text-base font-semibold text-fg">Your phone is paired</h4>
       <p className="mt-2 text-sm text-fgdim">You can now connect to this computer from your phone.</p>
       <Button className="mt-4" variant="secondary" disabled={!connected || busy} onClick={() => void generate()}>Pair another phone</Button>
@@ -170,23 +187,27 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
         <p className="mt-3 text-xs tabular-nums text-fgdim">Valid for {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</p>
         <p className="mt-1 text-xs text-fgmuted">This code grants access to your computer. Keep it private.</p>
         <Button className="mt-3" size="sm" variant="ghost" loading={busy} onClick={() => void generate()}>Generate a new code</Button>
-        <details className="mt-3 text-left text-xs text-fgdim"><summary className="cursor-pointer">Can’t scan? Use pairing data</summary><textarea readOnly aria-label="Pairing data" className="mt-2 h-20 w-full rounded-lg border border-edge bg-panel p-2 font-mono text-xs text-fg" value={invite.pairing} onFocus={e => e.currentTarget.select()} /></details>
+        <details className="mt-3 text-left text-xs text-fgdim"><summary className="cursor-pointer rounded-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">Can’t scan? Use pairing data</summary><Textarea readOnly aria-label="Pairing data" rows={3} className="mt-2 resize-none font-mono text-xs" value={invite.pairing} onFocus={e => e.currentTarget.select()} /></details>
       </> : <div className="mt-5">{connected ? <Button loading={busy} onClick={() => void generate()}>{expired ? 'Generate new QR code' : 'Show pairing QR code'}</Button> : <span aria-hidden className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-edge border-t-fgmuted" />}</div>}
     </div>}
-    {(error || status?.error) && <p role="alert" className="rounded-lg border border-red-500/25 bg-red-500/5 p-3 text-xs text-red-500">{error || status?.error}</p>}
+    {(error || status?.error) && <Notice>{error || status?.error}</Notice>}
     {devices.length > 0 && <div className="space-y-2">
       <h4 className="text-xs font-semibold text-fgdim">Paired devices · {devices.length}</h4>
-      {devices.map((device, index) => <div key={device.id} className="flex items-center gap-3 rounded-lg border border-edge px-3 py-2.5">
-        <PhoneIcon size={18} /><div className="min-w-0 flex-1"><p className="text-sm text-fg">Phone {index + 1}</p><p className="truncate text-xs text-fgmuted" title={device.id}>Paired {new Date(device.createdAt).toLocaleDateString()} · {device.id.slice(0, 8)}</p></div>
-        <Button size="sm" variant="ghost" disabled={busy || !connected} onClick={() => void run(async () => { const next = await window.api.revokeMobileRelayDevice(device.id); if (active.current) setPaired(false); return next })}>Remove</Button>
-      </div>)}
+      <ul className="divide-y divide-edge overflow-hidden rounded-lg border border-edge">
+        {devices.map((device, index) => <li key={device.id} className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-hover">
+          <PhoneIcon size={18} className="shrink-0 text-fgdim" /><div className="min-w-0 flex-1"><p className="text-sm text-fg">Phone {index + 1}</p><p className="truncate text-xs text-fgmuted" title={device.id}>Paired {new Date(device.createdAt).toLocaleDateString()} · {device.id.slice(0, 8)}</p></div>
+          <IconButton size="sm" variant="danger-ghost" label={`Remove Phone ${index + 1}`} title="Remove" disabled={busy || !connected} onClick={() => void removeDevice(device.id, `Phone ${index + 1}`)}><TrashIcon size={13} /></IconButton>
+        </li>)}
+      </ul>
     </div>}
     <details open={!status || !status.url || !!status.error || !!error} className="rounded-lg border border-edge px-3 py-3 text-xs text-fgdim">
-      <summary className="cursor-pointer font-medium">Connection settings</summary>
-      <label htmlFor={embedded ? 'mobile-modal-relay-url' : 'mobile-relay-url'} className="mt-3 block">Relay address</label>
-      <div className="mt-1.5 flex gap-2"><input id={embedded ? 'mobile-modal-relay-url' : 'mobile-relay-url'} className="min-w-0 flex-1 rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg focus:outline-hidden focus:ring-2 focus:ring-accent/50" value={url} onChange={e => setUrl(e.target.value)} placeholder="wss://superior-relay.engazan.eu" disabled={busy || !status} spellCheck={false} />
-        <Button variant="secondary" disabled={busy || !status || url.trim() === status.url} onClick={() => void run(() => window.api.setMobileRelayUrl(url.trim()), enabled)}>Save</Button></div>
-      <p className="mt-2 leading-relaxed">Use your relay’s secure wss:// address. Save changes to reconnect.</p>
+      <summary className="cursor-pointer rounded-sm font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">Connection settings</summary>
+      <form className="mt-3" onSubmit={e => { e.preventDefault(); saveUrl() }}>
+        <Field label="Relay address" htmlFor={urlId} hint="Use your relay’s secure wss:// address. Save changes to reconnect.">
+          <div className="flex gap-2"><Input id={urlId} className="min-w-0 flex-1" value={url} onChange={e => setUrl(e.target.value)} placeholder="wss://superior-relay.engazan.eu" disabled={busy || !status} spellCheck={false} autoComplete="off" />
+            <Button type="submit" variant="secondary" disabled={busy || !status || url.trim() === status.url}>Save</Button></div>
+        </Field>
+      </form>
     </details>
     <p className="text-xs leading-relaxed text-fgmuted">Open Superior Mobile on your phone and scan the pairing code above.</p>
   </div>

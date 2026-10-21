@@ -4,7 +4,18 @@ import { useI18n } from '../i18n'
 import { useOverlayCount } from '../overlayStack'
 import { reviewTargets } from '../diffReview'
 import { noteActivityInput } from '../activityStore'
-import { Button, Modal, Select, useToast } from './ui'
+import {
+  Button,
+  ChevronIcon,
+  Field,
+  IconButton,
+  Modal,
+  Notice,
+  RefreshIcon,
+  Select,
+  Textarea,
+  useToast
+} from './ui'
 import type { AgentSession, BrowserRequest, BrowserSelection, BrowserState, Workspace } from '../types'
 
 interface BrowserLink { workspaceId: string; url: string }
@@ -127,14 +138,15 @@ function BrowserWorkspace({ browserLink, workspace, visible, sessions, onSent }:
   }
   return <div className="absolute inset-0 flex min-h-0 flex-col bg-panel" style={{ display: visible ? undefined : 'none' }}>
     <form onSubmit={navigate} className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-edge bg-bar p-2" aria-label={t('browser.navigation')}>
-      <Button type="button" size="sm" variant="secondary" disabled={!state.canGoBack} title={t('browser.back')} aria-label={t('browser.back')}
-        onClick={() => void request({ workspaceId: workspace.id, type: 'back' })}>←</Button>
-      <Button type="button" size="sm" variant="secondary" disabled={!state.canGoForward} title={t('browser.forward')} aria-label={t('browser.forward')}
-        onClick={() => void request({ workspaceId: workspace.id, type: 'forward' })}>→</Button>
-      <Button type="button" size="sm" variant="secondary" disabled={!state.url} title={t('browser.reload')} aria-label={t('browser.reload')}
-        onClick={() => void request({ workspaceId: workspace.id, type: 'reload' })}>↻</Button>
+      <IconButton type="button" label={t('browser.back')} disabled={!state.canGoBack}
+        onClick={() => void request({ workspaceId: workspace.id, type: 'back' })}><ChevronIcon direction="left" /></IconButton>
+      <IconButton type="button" label={t('browser.forward')} disabled={!state.canGoForward}
+        onClick={() => void request({ workspaceId: workspace.id, type: 'forward' })}><ChevronIcon direction="right" /></IconButton>
+      <IconButton type="button" label={t('browser.reload')} disabled={!state.url}
+        onClick={() => void request({ workspaceId: workspace.id, type: 'reload' })}><RefreshIcon /></IconButton>
       <input ref={addressInput} aria-label={t('browser.address')} value={address} onChange={(event) => setAddress(event.target.value)} spellCheck={false}
-        className="h-8 min-w-36 flex-1 rounded-md border border-edge bg-panel px-2 text-sm text-fg focus:outline-accent" />
+        autoComplete="off"
+        className="h-8 min-w-36 flex-1 rounded-md border border-edge bg-panel px-3 text-sm text-fg transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50" />
       <Button type="submit" size="sm">{t('browser.go')}</Button>
       <Button type="button" size="sm" variant={state.designMode ? 'primary' : 'secondary'} aria-pressed={state.designMode}
         disabled={!state.url || state.url === 'about:blank' || state.loading || !!state.error}
@@ -177,32 +189,32 @@ function DesignDialog({ selection, instruction, onInstruction, targets, onClose,
     finally { sendingRef.current = false; setSending(false) }
   }
   return <Modal title={t('browser.designTitle')} description={t('browser.designDescription')} size="xl" onClose={onClose}
-    dismissable={!sending} initialFocusRef={input} footer={<><Button variant="secondary" disabled={sending} onClick={onClose}>{t('common.cancel')}</Button>
-      <Button loading={sending} disabled={sending || !target || !instruction.trim()} onClick={() => void send()}>{t('review.send')}</Button></>}>
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="min-w-0">
-        <p className="mb-2 break-all text-xs text-fgmuted">{selection.selector}</p>
-        <div className="flex max-h-60 justify-center overflow-auto rounded border border-edge bg-white p-2">
+    dismissable={!sending} initialFocusRef={input} closeLabel={t('common.cancel')}
+    footer={<><Button variant="ghost" disabled={sending} onClick={onClose}>{t('common.cancel')}</Button>
+      <Button loading={sending} disabled={!target || !instruction.trim()} onClick={() => void send()}>{t('review.send')}</Button></>}>
+    <div className="grid gap-5 sm:grid-cols-2">
+      <div className="min-w-0 space-y-2">
+        <p className="break-all font-mono text-xs text-fgmuted">{selection.selector}</p>
+        <div className="flex max-h-60 justify-center overflow-auto rounded-lg border border-edge bg-white p-2">
           <img src={selection.screenshot} alt={t('browser.screenshot')} className="max-w-full object-contain" />
         </div>
-        <p className="my-2 break-all text-[11px] text-fgmuted">{selection.url}</p>
-        <details className="rounded border border-edge p-2 text-xs text-fgdim"><summary className="cursor-pointer">HTML / CSS</summary>
+        <p className="break-all text-[11px] text-fgmuted">{selection.url}</p>
+        <details className="rounded-lg border border-edge p-2 text-xs text-fgdim"><summary className="cursor-pointer rounded-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">HTML / CSS</summary>
           <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">{selection.html}{'\n\n'}{selection.styles}</pre>
         </details>
       </div>
-      <div className="min-w-0">
-        <label className="block text-xs text-fgdim">{t('browser.instruction')}
-          <textarea ref={input} value={instruction} onChange={(event) => onInstruction(event.target.value)} maxLength={10000} rows={6}
-            className="mt-1 w-full resize-y rounded border border-edge bg-bar p-2 text-sm text-fg focus:outline-accent" />
-        </label>
-        <label className="mt-3 block text-xs text-fgdim">{t('review.target')}
-          <Select className="mt-1" value={targetId} disabled={sending} onChange={(event) => setTargetId(event.target.value)}>
+      <div className="min-w-0 space-y-5">
+        <Field label={t('browser.instruction')} htmlFor="design-instruction">
+          <Textarea id="design-instruction" ref={input} value={instruction} onChange={(event) => onInstruction(event.target.value)} maxLength={10000} rows={6} />
+        </Field>
+        <Field label={t('review.target')} htmlFor="design-target">
+          <Select id="design-target" value={targetId} disabled={sending || !targets.length} onChange={(event) => setTargetId(event.target.value)}>
             <option value="">{t('review.select')}</option>
             {targets.map((item) => <option key={item.id} value={item.id}>{item.label}{item.nickname ? ` — ${item.nickname}` : ''} · {item.id.slice(0, 8)}</option>)}
           </Select>
-        </label>
-        {!targets.length && <p className="mt-2 text-xs text-warn">{t('review.noAgents')}</p>}
-        {error && <p role="alert" className="mt-2 text-xs text-danger">{t('review.failed')}</p>}
+        </Field>
+        {!targets.length && <Notice tone="warn">{t('review.noAgents')}</Notice>}
+        {error && <Notice>{t('review.failed')}</Notice>}
       </div>
     </div>
   </Modal>

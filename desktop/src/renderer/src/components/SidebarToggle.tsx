@@ -12,9 +12,10 @@ export function SidebarToggle({ onClick, expanded }: Props): React.JSX.Element {
   const shortcutTitle = useShortcutTitle()
   return (
     <button
+      type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className="group app-no-drag grid h-full w-8 place-items-center rounded-sm p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+      className="group app-no-drag grid h-8 w-9 shrink-0 place-items-center rounded-full p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       aria-label={t('common.toggleSidebar')}
       title={shortcutTitle(t('common.toggleSidebar'), 'toggleSidebar')}
     >

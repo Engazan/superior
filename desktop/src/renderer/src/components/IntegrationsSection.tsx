@@ -9,11 +9,16 @@ import {
 import {
   Button,
   EmptyState,
+  Field,
+  FieldTag,
   IconButton,
   Input,
+  Notice,
+  PencilIcon,
   SectionHeader,
   PlusIcon,
   Select,
+  StatusPill,
   TrashIcon,
   useConfirm,
   useToast
@@ -59,23 +64,27 @@ function IntegrationForm({
   onCancel
 }: {
   initial: Integration
-  onSave: (integration: Integration) => void
+  onSave: (integration: Integration) => Promise<void>
   onCancel: () => void
 }): React.JSX.Element {
   const { t } = useI18n()
   const [draft, setDraft] = useState<Integration>(initial)
   const [test, setTest] = useState<TestState>({ phase: 'idle' })
+  const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const patch = (p: Partial<Integration>): void => {
     setDraft((d) => ({ ...d, ...p }))
     setTest({ phase: 'idle' })
+    setSaveError(null)
   }
 
   const urlRequired = draft.provider !== 'github'
   const canSave =
-    draft.name.trim() &&
-    (draft.token.trim() || draft.hasToken) &&
-    (!urlRequired || draft.baseUrl.trim())
+    !busy &&
+    !!draft.name.trim() &&
+    !!(draft.token.trim() || draft.hasToken) &&
+    (!urlRequired || !!draft.baseUrl.trim())
 
   const runTest = async (): Promise<void> => {
     setTest({ phase: 'testing' })
@@ -87,16 +96,38 @@ function IntegrationForm({
     setTest({ phase: 'done', result })
   }
 
+  const submit = async (): Promise<void> => {
+    if (!canSave) return
+    setBusy(true)
+    setSaveError(null)
+    try {
+      await onSave({
+        ...draft,
+        name: draft.name.trim(),
+        baseUrl: draft.baseUrl.trim(),
+        token: draft.token.trim()
+      })
+    } catch (err) {
+      // On success the parent unmounts the form; a failure keeps the draft.
+      setSaveError((err as Error).message)
+      setBusy(false)
+    }
+  }
+
   return (
-    <div className="settings-island p-4">
-      <div className="grid gap-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-fg">
-            {t('integrations.provider')}
-          </label>
+    <form
+      className="settings-island p-4"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void submit()
+      }}
+    >
+      <div className="space-y-5">
+        <Field label={t('integrations.provider')} htmlFor="integration-provider">
           <div className="flex items-center gap-3">
             <ProviderLogo provider={draft.provider} />
             <Select
+              id="integration-provider"
               value={draft.provider}
               onChange={(e) => patch({ provider: e.target.value as IntegrationProvider })}
             >
@@ -107,25 +138,25 @@ function IntegrationForm({
               ))}
             </Select>
           </div>
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-fg">
-            {t('integrations.name')}
-          </label>
+        <Field label={t('integrations.name')} htmlFor="integration-name">
           <Input
+            id="integration-name"
             value={draft.name}
             onChange={(e) => patch({ name: e.target.value })}
             placeholder={t('integrations.namePlaceholder')}
+            autoComplete="off"
           />
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-fg">
-            {t('integrations.url')}
-            {!urlRequired && <span className="ml-1 text-fgmuted">({t('integrations.optional')})</span>}
-          </label>
+        <Field
+          label={t('integrations.url')}
+          htmlFor="integration-url"
+          aside={!urlRequired ? <FieldTag>{t('integrations.optional')}</FieldTag> : undefined}
+        >
           <Input
+            id="integration-url"
             value={draft.baseUrl}
             onChange={(e) => patch({ baseUrl: e.target.value })}
             placeholder={
@@ -136,14 +167,13 @@ function IntegrationForm({
                   : 'http://localhost:3000'
             }
             spellCheck={false}
+            autoComplete="off"
           />
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-fg">
-            {t('integrations.token')}
-          </label>
+        <Field label={t('integrations.token')} htmlFor="integration-token">
           <Input
+            id="integration-token"
             type="password"
             value={draft.token}
             onChange={(e) => patch({ token: e.target.value })}
@@ -151,51 +181,41 @@ function IntegrationForm({
             spellCheck={false}
             autoComplete="off"
           />
-        </div>
+        </Field>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="space-y-3">
           <Button
+            type="button"
             variant="secondary"
             loading={test.phase === 'testing'}
             disabled={!draft.token.trim()}
-            onClick={runTest}
+            onClick={() => void runTest()}
           >
             {test.phase === 'testing' ? t('integrations.testing') : t('integrations.test')}
           </Button>
-          {test.phase === 'done' && test.result.ok && (
-            <span className="text-sm text-status">
-              {test.result.username
-                ? t('integrations.testOk', { user: test.result.username })
-                : t('integrations.testOkNoUser')}
-            </span>
-          )}
-          {test.phase === 'done' && !test.result.ok && (
-            <span className="text-sm text-danger">
-              {describeIntegrationError(test.result.error ?? 'network', t)}
-            </span>
+          {test.phase === 'done' && (
+            <Notice tone={test.result.ok ? 'success' : 'danger'}>
+              {test.result.ok
+                ? test.result.username
+                  ? t('integrations.testOk', { user: test.result.username })
+                  : t('integrations.testOkNoUser')
+                : describeIntegrationError(test.result.error ?? 'network', t)}
+            </Notice>
           )}
         </div>
+
+        {saveError && <Notice>{saveError}</Notice>}
       </div>
 
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel}>
+      <div className="mt-5 flex justify-end gap-2">
+        <Button type="button" variant="ghost" disabled={busy} onClick={onCancel}>
           {t('integrations.cancel')}
         </Button>
-        <Button
-          disabled={!canSave}
-          onClick={() =>
-            onSave({
-              ...draft,
-              name: draft.name.trim(),
-              baseUrl: draft.baseUrl.trim(),
-              token: draft.token.trim()
-            })
-          }
-        >
+        <Button type="submit" loading={busy} disabled={!canSave}>
           {t('integrations.save')}
         </Button>
       </div>
-    </div>
+    </form>
   )
 }
 
@@ -205,9 +225,13 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
   const toast = useToast()
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [editing, setEditing] = useState<Integration | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    window.api.listIntegrations().then((s) => setIntegrations(s.integrations))
+    void window.api
+      .listIntegrations()
+      .then((s) => setIntegrations(s.integrations))
+      .finally(() => setLoaded(true))
   }, [])
 
   const apply = (next: Integration[]): void => {
@@ -252,31 +276,41 @@ export function IntegrationsSection({ onChanged }: { onChanged?: () => void }): 
         }
       />
 
-      {integrations.length === 0 && !editing && <EmptyState title={t('integrations.empty')} />}
+      {!loaded ? (
+        <p role="status" className="text-sm text-fgmuted">
+          {t('common.loading')}
+        </p>
+      ) : (
+        integrations.length === 0 && !editing && <EmptyState title={t('integrations.empty')} />
+      )}
 
       {integrations.length > 0 && (
         <ul className="settings-island divide-y divide-edge">
           {integrations.map((it) => (
-            <li key={it.id} className="flex items-center gap-3 px-4 py-3">
+            <li key={it.id} className="flex items-center gap-3 px-4 py-3 transition hover:bg-hover">
               <ProviderLogo provider={it.provider} className="h-9 w-9" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-medium text-fg">{it.name}</span>
-                  <span className="shrink-0 rounded-full bg-accentBg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-                    {providerLabel(it.provider)}
-                  </span>
+                  <StatusPill tone="accent">{providerLabel(it.provider)}</StatusPill>
                 </div>
                 <div className="truncate text-xs text-fgmuted">
                   {it.baseUrl || 'https://api.github.com'}
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(it)}>
-                {t('integrations.edit')}
-              </Button>
+              <IconButton
+                size="sm"
+                label={`${t('integrations.edit')} ${it.name}`}
+                title={t('integrations.edit')}
+                onClick={() => setEditing(it)}
+              >
+                <PencilIcon size={13} />
+              </IconButton>
               <IconButton
                 size="sm"
                 variant="danger-ghost"
-                label={t('integrations.remove')}
+                label={`${t('integrations.remove')} ${it.name}`}
+                title={t('integrations.remove')}
                 onClick={() => void remove(it)}
               >
                 <TrashIcon size={13} />

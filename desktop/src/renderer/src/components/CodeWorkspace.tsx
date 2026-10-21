@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, type CSSProperties } from 'react'
 import type { CodeAction, CodeTab, CodeWorkspaceState, EditorGroup } from '../codeWorkspace'
 import { useI18n } from '../i18n'
-import { CloseIcon, IconButton } from './ui'
+import { Button, CloseIcon, IconButton } from './ui'
 import { FileTypeIcon } from './FileTypeIcon'
 
 const FilePreviewPanel = lazy(() => import('./FilePreviewPanel').then((m) => ({ default: m.FilePreviewPanel })))
@@ -48,7 +48,8 @@ export function CodeWorkspace({ state, visible, dispatch, onClose, onDirtyChange
             <div role="tablist" aria-label={t('code.group', { n: group + 1 })} className="flex min-w-0 flex-1 overflow-x-auto">
               {state.tabs.filter((tab) => tab.group === group).map((tab) => (
                 <div key={tab.file.path} className={`flex shrink-0 items-center border-r border-edge ${state.selected[group] === tab.file.path ? 'bg-panel text-fg' : 'text-fgmuted'}`}>
-                  <button role="tab" aria-selected={state.selected[group] === tab.file.path}
+                  <button type="button" role="tab" aria-selected={state.selected[group] === tab.file.path}
+                    data-path={tab.file.path}
                     tabIndex={state.selected[group] === tab.file.path ? 0 : -1}
                     draggable onDragStart={(event) => { event.dataTransfer.setData(TAB_DRAG_TYPE, tab.file.path); event.dataTransfer.effectAllowed = 'move' }}
                     onClick={() => dispatch({ type: 'select', path: tab.file.path })}
@@ -58,9 +59,14 @@ export function CodeWorkspace({ state, visible, dispatch, onClose, onDirtyChange
                       const next = event.key === 'ArrowRight' ? tabs[(index + 1) % tabs.length]
                         : event.key === 'ArrowLeft' ? tabs[(index + tabs.length - 1) % tabs.length]
                           : event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs.at(-1) : undefined
-                      if (next) { event.preventDefault(); dispatch({ type: 'select', path: next.file.path }) }
+                      if (!next) return
+                      event.preventDefault()
+                      dispatch({ type: 'select', path: next.file.path })
+                      // Roving focus: keyboard focus follows the selected tab.
+                      event.currentTarget.closest('[role="tablist"]')
+                        ?.querySelector<HTMLElement>(`[data-path="${CSS.escape(next.file.path)}"]`)?.focus()
                     }}
-                    title={tab.file.path} className="flex h-10 max-w-56 items-center gap-2 px-3 text-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">
+                    title={tab.file.path} className="flex h-10 max-w-56 items-center gap-2 px-3 text-xs transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50">
                     <FileTypeIcon name={tab.file.name} />
                     <span className="truncate">{tab.file.name}</span>
                     {dirtyPaths.has(tab.file.path) && <span aria-label={t('preview.unsaved')} className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
@@ -76,7 +82,7 @@ export function CodeWorkspace({ state, visible, dispatch, onClose, onDirtyChange
           </div>
           {!state.selected[group] && <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-sm text-fgmuted" onPointerDown={() => dispatch({ type: 'focus', group })}>
             <span>{t('code.empty')}</span>
-            <button className="rounded-md border border-edge px-3 py-1.5 text-xs text-fg hover:bg-hover" onClick={() => { dispatch({ type: 'focus', group }); onOpenFiles() }}>{t('code.openFiles')}</button>
+            <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'focus', group }); onOpenFiles() }}>{t('code.openFiles')}</Button>
           </div>}
         </section>
       ))}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
-import { RefreshIcon } from './ui'
+import { Button, CloseIcon, EmptyState, FolderIcon, IconButton, Notice, RefreshIcon, SearchIcon } from './ui'
 import { FileTypeIcon, FolderTypeIcon } from './FileTypeIcon'
 import type { FsEntry } from '../types'
 
@@ -71,10 +71,12 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): React.
   return (
     <div>
       <button
+        type="button"
         onClick={() => void activate()}
         title={entry.name}
         aria-expanded={entry.isDirectory ? open : undefined}
-        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+        aria-current={selected || undefined}
+        className={`flex h-7 w-full items-center gap-1.5 pr-2 text-left text-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
           selected ? 'bg-accentBg text-accent' : 'text-fgdim'
         }`}
         style={{ paddingLeft: depth * 12 + 8 }}
@@ -90,11 +92,11 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): React.
 
       {open &&
         (error ? (
-          <div className="py-1 text-[11px] text-danger" style={{ paddingLeft: (depth + 1) * 12 + 8 }}>
+          <div role="alert" className="py-1 text-[11px] text-danger" style={{ paddingLeft: (depth + 1) * 12 + 8 }}>
             {t('files.loadFailed')}
           </div>
         ) : loading && children === null ? (
-          <div className="py-1 text-[11px] text-fgmuted" style={{ paddingLeft: (depth + 1) * 12 + 8 }}>
+          <div role="status" className="py-1 text-[11px] text-fgmuted" style={{ paddingLeft: (depth + 1) * 12 + 8 }}>
             {t('files.loading')}
           </div>
         ) : children && children.length === 0 ? (
@@ -132,9 +134,11 @@ function SearchRow({
   const dir = rel.slice(0, rel.length - entry.name.length).replace(/\/$/, '')
   return (
     <button
+      type="button"
       onClick={() => onOpenFile(entry)}
       title={rel}
-      className={`flex w-full items-center gap-1.5 px-2 py-1 text-left text-xs transition hover:bg-hover hover:text-fg ${
+      aria-current={selected || undefined}
+      className={`flex h-7 w-full items-center gap-1.5 px-2 text-left text-xs transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
         selected ? 'bg-accentBg text-accent' : 'text-fgdim'
       }`}
     >
@@ -156,6 +160,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
   const [results, setResults] = useState<FsEntry[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [truncated, setTruncated] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
   // Bumped by the refresh button: reloads the root and remounts the tree (its
   // key), which drops every TreeNode's cached children — files created by
   // agents in the terminals otherwise never appear.
@@ -195,6 +200,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
     const q = query.trim()
     if (!folderPath || !q) {
       setResults(null)
+      setSearchFailed(false)
       setSearching(false)
       return
     }
@@ -207,6 +213,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
           if (!active) return
           setResults(res.entries)
           setTruncated(res.truncated === true)
+          setSearchFailed(false)
           setSearching(false)
         })
         .catch((err) => {
@@ -214,6 +221,7 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
           console.error('[search] failed:', err)
           setResults([])
           setTruncated(false)
+          setSearchFailed(true)
           setSearching(false)
         })
     }, 200)
@@ -224,53 +232,57 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
   }, [query, folderPath])
 
   if (!folderPath) {
-    return <div className="px-3 py-4 text-xs text-fgmuted">{t('files.noFolder')}</div>
+    return (
+      <div className="p-3">
+        <EmptyState icon={<FolderIcon size={20} />} title={t('files.noFolder')} />
+      </div>
+    )
   }
 
   const searchActive = query.trim().length > 0
+  const reload = (): void => setRefreshToken((n) => n + 1)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-edge p-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-sm border border-edge bg-panel px-2 py-1">
-          <svg className="h-3.5 w-3.5 shrink-0 text-fgmuted" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="7" cy="7" r="4.5" />
-            <path d="m10.5 10.5 3 3" />
-          </svg>
+      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-edge px-2">
+        <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-full border border-edge bg-panel pl-2.5 pr-0.5 transition focus-within:ring-2 focus-within:ring-accent/50">
+          <SearchIcon size={14} className="shrink-0 text-fgmuted" />
           <input
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && query) {
+                e.preventDefault()
+                setQuery('')
+              }
+            }}
+            aria-label={t('files.search')}
             placeholder={t('files.search')}
-            className="min-w-0 flex-1 bg-transparent text-xs text-fg placeholder:text-fgmuted focus:outline-hidden"
+            className="min-w-0 flex-1 bg-transparent text-xs text-fg placeholder:text-fgmuted focus:outline-hidden [&::-webkit-search-cancel-button]:hidden"
           />
           {searchActive && (
-            <button
-              onClick={() => setQuery('')}
-              aria-label={t('files.clearSearch')}
-              title={t('files.clearSearch')}
-              className="shrink-0 text-fgmuted transition hover:text-fg"
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M4 4l8 8M12 4l-8 8" />
-              </svg>
-            </button>
+            <IconButton size="xs" label={t('files.clearSearch')} onClick={() => setQuery('')}>
+              <CloseIcon size={12} />
+            </IconButton>
           )}
         </div>
-        <button
-          onClick={() => setRefreshToken((n) => n + 1)}
-          title={t('files.refresh')}
-          aria-label={t('files.refresh')}
-          className="shrink-0 rounded-sm p-1 text-fgmuted transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          <RefreshIcon className="block h-3.5 w-3.5" />
-        </button>
+        <IconButton size="sm" label={t('files.refresh')} onClick={reload}>
+          <RefreshIcon size={14} />
+        </IconButton>
       </div>
 
       {searchActive ? (
         searching && results === null ? (
-          <div className="px-3 py-4 text-xs text-fgmuted">{t('files.searching')}</div>
+          <div role="status" className="px-3 py-4 text-xs text-fgmuted">{t('files.searching')}</div>
+        ) : searchFailed ? (
+          <div className="p-3">
+            <Notice>{t('files.searchFailed')}</Notice>
+          </div>
         ) : results && results.length === 0 ? (
-          <div className="px-3 py-4 text-xs text-fgmuted">{t('files.noResults')}</div>
+          <div className="p-3">
+            <EmptyState icon={<SearchIcon size={20} />} title={t('files.noResults')} />
+          </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto py-1">
             {results?.map((entry) => (
@@ -288,11 +300,23 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
           </div>
         )
       ) : loadError ? (
-        <div className="px-3 py-4 text-xs text-danger">{t('files.loadFailed')}</div>
+        <div className="p-3">
+          <Notice
+            action={
+              <Button variant="secondary" size="xs" onClick={reload}>
+                {t('common.retry')}
+              </Button>
+            }
+          >
+            {t('files.loadFailed')}
+          </Notice>
+        </div>
       ) : loading && entries === null ? (
-        <div className="px-3 py-4 text-xs text-fgmuted">{t('files.loading')}</div>
+        <div role="status" className="px-3 py-4 text-xs text-fgmuted">{t('files.loading')}</div>
       ) : entries && entries.length === 0 ? (
-        <div className="px-3 py-4 text-xs text-fgmuted">{t('files.empty')}</div>
+        <div className="p-3">
+          <EmptyState icon={<FolderIcon size={20} />} title={t('files.empty')} />
+        </div>
       ) : (
         <div key={refreshToken} className="min-h-0 flex-1 overflow-y-auto py-1">
           {entries?.map((entry) => (

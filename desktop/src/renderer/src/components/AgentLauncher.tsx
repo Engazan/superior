@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
 import {
@@ -8,6 +8,8 @@ import {
   IconButton,
   Input,
   SegmentedControl,
+  Select,
+  Toggle,
   useConfirm,
   useToast
 } from './ui'
@@ -40,10 +42,13 @@ interface Props {
 /** Terminal counts offered in the launcher (capped at 8, even if the grid allows more). */
 const COUNTS = Array.from({ length: Math.min(MAX_GRID, 8) }, (_, i) => i + 1)
 
+/** Section label shared by the launcher's groups (Field's label role). */
+const LABEL = 'mb-1.5 block text-xs font-medium text-fg2'
+
 /** Tiny tile diagram mirroring the real grid arrangement for a terminal count. */
 function CountDiagram({ n }: { n: number }): React.JSX.Element {
   return (
-    <div className="flex h-7 w-9 flex-col gap-0.5">
+    <div className="flex h-7 w-9 flex-col gap-0.5" aria-hidden>
       {distribute(n).map((cols, r) => (
         <div key={r} className="flex flex-1 gap-0.5">
           {Array.from({ length: cols }).map((_, c) => (
@@ -51,6 +56,24 @@ function CountDiagram({ n }: { n: number }): React.JSX.Element {
           ))}
         </div>
       ))}
+    </div>
+  )
+}
+
+/** Label + switch row for the "launch on open" option. */
+function LaunchOnOpen({
+  checked,
+  onChange,
+  label
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  label: string
+}): React.JSX.Element {
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3">
+      <span className="text-xs text-fgdim">{label}</span>
+      <Toggle checked={checked} onChange={onChange} label={label} />
     </div>
   )
 }
@@ -76,6 +99,7 @@ export function AgentLauncher({
   const { t } = useI18n()
   const toast = useToast()
   const confirm = useConfirm()
+  const ids = useId()
   const active = presets.filter((p) => p.active)
   const [tab, setTab] = useState<Tab>('preset')
   // In the Preset tab, whether the inline builder ("+ New") is open.
@@ -84,6 +108,7 @@ export function AgentLauncher({
   const [name, setName] = useState('')
   // "+ New" builder: also mark the saved layout as this workspace's startup layout.
   const [launchOnOpen, setLaunchOnOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const [count, setCount] = useState(1)
   const [slots, setSlots] = useState<string[]>(() => {
@@ -158,17 +183,22 @@ export function AgentLauncher({
   // Save the built layout as a preset, then launch it.
   const saveAndStart = async (): Promise<void> => {
     const { presetIds, nicknames } = buildConfig()
-    if (presetIds.length === 0) return
+    if (presetIds.length === 0 || saving) return
     const layoutName = name.trim() || t('launcher.untitledPreset')
     const id = crypto.randomUUID()
-    await onSaveLayoutPreset({
-      id,
-      name: layoutName,
-      presetIds,
-      // Only persist nicknames when at least one slot has a custom one.
-      nicknames: nicknames?.some(Boolean) ? nicknames : undefined,
-      createdAt: Date.now()
-    })
+    setSaving(true)
+    try {
+      await onSaveLayoutPreset({
+        id,
+        name: layoutName,
+        presetIds,
+        // Only persist nicknames when at least one slot has a custom one.
+        nicknames: nicknames?.some(Boolean) ? nicknames : undefined,
+        createdAt: Date.now()
+      })
+    } finally {
+      setSaving(false)
+    }
     if (launchOnOpen) onSetStartupLayout(id)
     setCreating(false)
     toast.success(t('toast.layoutSaved', { name: layoutName }))
@@ -182,28 +212,37 @@ export function AgentLauncher({
 
   if (active.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-sm text-fgmuted">{t('launcher.noPresets')}</p>
-        <Button variant="primary" onClick={onManagePresets}>
-          {t('terminal.managePresets')}
-        </Button>
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <EmptyState
+            title={t('launcher.noPresets')}
+            action={<Button onClick={onManagePresets}>{t('terminal.managePresets')}</Button>}
+          />
+        </div>
       </div>
     )
   }
+
+  const countLabelId = `${ids}-count`
+  const canStart = slots.some(Boolean)
 
   // Shared builder: grid-count picker + a terminal preset per slot.
   const builder = (
     <>
       <div className="mb-5">
-        <div className="mb-2 text-xs text-fgmuted">{t('launcher.howMany')}</div>
-        <div className="grid grid-cols-4 gap-2">
+        <div id={countLabelId} className={LABEL}>
+          {t('launcher.howMany')}
+        </div>
+        <div role="group" aria-labelledby={countLabelId} className="grid grid-cols-4 gap-2">
           {COUNTS.map((n) => (
             <button
               key={n}
+              type="button"
+              aria-pressed={count === n}
               onClick={() => chooseCount(n)}
-              className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 transition ${
+              className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
                 count === n
-                  ? 'border-fgdim bg-hover text-fg'
+                  ? 'border-accent bg-accentBg/70 text-fg'
                   : 'border-edge text-fgdim hover:bg-hover hover:text-fg'
               }`}
             >
@@ -217,31 +256,35 @@ export function AgentLauncher({
       <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
         {slots.map((id, i) => {
           const p = active.find((x) => x.id === id)
+          const slotLabel = t('launcher.terminalN', { n: i + 1 })
           return (
             <div key={i} className="flex items-center gap-2">
-              <span className="w-16 shrink-0 text-xs text-fgmuted">
-                {t('launcher.terminalN', { n: i + 1 })}
-              </span>
+              <label htmlFor={`${ids}-slot-${i}`} className="w-16 shrink-0 text-xs text-fgmuted">
+                {slotLabel}
+              </label>
               <span className="shrink-0">
                 <PresetIcon iconType={p?.iconType} icon={p?.icon} className="h-4 w-4 text-base" />
               </span>
-              <select
+              <Select
+                id={`${ids}-slot-${i}`}
                 value={id}
                 onChange={(e) => setSlot(i, e.target.value)}
-                className="min-w-0 flex-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg focus:border-fgdim focus:outline-hidden"
+                className="min-w-0 flex-1"
               >
                 {active.map((pr) => (
                   <option key={pr.id} value={pr.id}>
                     {pr.name}
                   </option>
                 ))}
-              </select>
+              </Select>
               {/* Optional per-slot nickname; placeholder hints the preset's own default. */}
-              <input
+              <Input
                 value={nicks[i] ?? ''}
                 onChange={(e) => setNick(i, e.target.value)}
                 placeholder={p?.nickname || t('launcher.nicknamePlaceholder')}
-                className="w-24 shrink-0 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-hidden"
+                aria-label={`${slotLabel}: ${t('launcher.nicknamePlaceholder')}`}
+                autoComplete="off"
+                className="w-24! shrink-0"
               />
             </div>
           )
@@ -257,9 +300,9 @@ export function AgentLauncher({
       <div className="flex max-h-full w-full max-w-md flex-col overflow-y-auto rounded-xl bg-bar/40 p-6">
         {workingDir && (
           <div className="mb-5">
-            <div className="mb-2 text-xs text-fgmuted">{t('launcher.workingFolder')}</div>
+            <div className={LABEL}>{t('launcher.workingFolder')}</div>
             <div
-              className="truncate rounded-md border border-edge bg-panel px-2 py-1.5 text-xs text-fgdim"
+              className="truncate rounded-md border border-edge bg-panel px-3 py-1.5 font-mono text-xs text-fgdim"
               title={workingDir}
             >
               {workingDir}
@@ -284,8 +327,8 @@ export function AgentLauncher({
 
         {tab === 'preset' && !creating && (
           <>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs text-fgmuted">{t('launcher.savedPresets')}</span>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-xs font-medium text-fg2">{t('launcher.savedPresets')}</span>
               <Button variant="secondary" size="sm" onClick={openCreate}>
                 {t('launcher.newPreset')}
               </Button>
@@ -293,91 +336,101 @@ export function AgentLauncher({
             {layoutPresets.length === 0 ? (
               <EmptyState title={t('launcher.noLayouts')} />
             ) : (
-              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {layoutPresets.map((layout) => (
-                  <div
-                    key={layout.id}
-                    onClick={() => setSelectedLayoutId(layout.id)}
-                    // Double-click = select + launch in one gesture.
-                    onDoubleClick={() =>
-                      onStart({
-                        presetIds: layout.presetIds.filter(Boolean),
-                        nicknames: layout.nicknames
-                      })
-                    }
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition ${
-                      selectedLayoutId === layout.id
-                        ? 'border-fgdim bg-hover'
-                        : 'border-edge hover:bg-hover'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-fg">{layout.name}</div>
-                      <div className="mt-1 flex items-center gap-1">
-                        {layout.presetIds.map((id, i) => {
-                          const p = active.find((x) => x.id === id)
-                          return (
-                            <PresetIcon
-                              key={i}
-                              iconType={p?.iconType}
-                              icon={p?.icon}
-                              className="h-3.5 w-3.5 text-sm"
-                            />
-                          )
-                        })}
-                        <span className="ml-1 text-xs text-fgmuted">
-                          {t('launcher.terminalCount', { n: layout.presetIds.length })}
-                        </span>
-                      </div>
-                    </div>
-                    <IconButton
-                      size="sm"
-                      label={t('launcher.deletePreset')}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void (async () => {
-                          // A hover X one pixel from the row is too easy to hit
-                          // for an unrecoverable delete — confirm first.
-                          const ok = await confirm({
-                            title: t('launcher.deletePreset'),
-                            message: t('launcher.deletePresetConfirm', { name: layout.name }),
-                            confirmLabel: t('common.delete'),
-                            tone: 'danger'
-                          })
-                          if (!ok) return
-                          if (selectedLayoutId === layout.id) setSelectedLayoutId(null)
-                          void onDeleteLayoutPreset(layout.id)
-                        })()
-                      }}
+              <div
+                role="group"
+                aria-label={t('launcher.savedPresets')}
+                className="max-h-64 space-y-2 overflow-y-auto pr-1"
+              >
+                {layoutPresets.map((layout) => {
+                  const selected = selectedLayoutId === layout.id
+                  return (
+                    <div
+                      key={layout.id}
+                      className={`flex items-center gap-2 rounded-lg border pr-2 transition ${
+                        selected ? 'border-accent bg-accentBg/70' : 'border-edge hover:bg-hover'
+                      }`}
                     >
-                      <CloseIcon size={12} />
-                    </IconButton>
-                  </div>
-                ))}
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setSelectedLayoutId(layout.id)}
+                        // Double-click = select + launch in one gesture.
+                        onDoubleClick={() =>
+                          onStart({
+                            presetIds: layout.presetIds.filter(Boolean),
+                            nicknames: layout.nicknames
+                          })
+                        }
+                        className="min-w-0 flex-1 rounded-lg px-3 py-2 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+                      >
+                        <div className="truncate text-sm text-fg">{layout.name}</div>
+                        <div className="mt-1 flex items-center gap-1">
+                          {layout.presetIds.map((id, i) => {
+                            const p = active.find((x) => x.id === id)
+                            return (
+                              <PresetIcon
+                                key={i}
+                                iconType={p?.iconType}
+                                icon={p?.icon}
+                                className="h-3.5 w-3.5 text-sm"
+                              />
+                            )
+                          })}
+                          <span className="ml-1 text-xs text-fgmuted">
+                            {t('launcher.terminalCount', { n: layout.presetIds.length })}
+                          </span>
+                        </div>
+                      </button>
+                      <IconButton
+                        size="sm"
+                        label={`${t('launcher.deletePreset')}: ${layout.name}`}
+                        onClick={() => {
+                          void (async () => {
+                            // A hover X one pixel from the row is too easy to hit
+                            // for an unrecoverable delete — confirm first.
+                            const ok = await confirm({
+                              title: t('launcher.deletePreset'),
+                              message: t('launcher.deletePresetConfirm', { name: layout.name }),
+                              confirmLabel: t('common.delete'),
+                              tone: 'danger'
+                            })
+                            if (!ok) return
+                            if (selectedLayoutId === layout.id) setSelectedLayoutId(null)
+                            void onDeleteLayoutPreset(layout.id)
+                          })()
+                        }}
+                      >
+                        <CloseIcon size={12} />
+                      </IconButton>
+                    </div>
+                  )
+                })}
               </div>
             )}
             {/* Auto-launch the selected layout whenever this workspace opens empty. */}
             {selectedLayoutId && (
-              <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-fgdim">
-                <input
-                  type="checkbox"
-                  checked={startupLayoutId === selectedLayoutId}
-                  onChange={(e) =>
-                    onSetStartupLayout(e.target.checked ? selectedLayoutId : null)
-                  }
-                  className="h-3.5 w-3.5 accent-(--c-accent-solid)"
-                />
-                {t('launcher.launchOnOpen')}
-              </label>
+              <LaunchOnOpen
+                label={t('launcher.launchOnOpen')}
+                checked={startupLayoutId === selectedLayoutId}
+                onChange={(checked) => onSetStartupLayout(checked ? selectedLayoutId : null)}
+              />
             )}
-            <Button className="mt-3 w-full" disabled={!selectedLayoutId} onClick={startSelectedLayout}>
+            <Button className="mt-4 w-full" disabled={!selectedLayoutId} onClick={startSelectedLayout}>
               {t('launcher.start')}
             </Button>
           </>
         )}
 
         {showingBuilder && (
-          <>
+          // A form so Enter in the name/nickname fields starts (or saves) the layout.
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!canStart) return
+              if (creating) void saveAndStart()
+              else startCustom()
+            }}
+          >
             {builder}
 
             {creating && (
@@ -386,35 +439,29 @@ export function AgentLauncher({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t('launcher.presetNamePlaceholder')}
+                  aria-label={t('launcher.presetNamePlaceholder')}
+                  autoComplete="off"
                   className="mt-4"
                 />
-                <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-fgdim">
-                  <input
-                    type="checkbox"
-                    checked={launchOnOpen}
-                    onChange={(e) => setLaunchOnOpen(e.target.checked)}
-                    className="h-3.5 w-3.5 accent-(--c-accent-solid)"
-                  />
-                  {t('launcher.launchOnOpen')}
-                </label>
+                <LaunchOnOpen
+                  label={t('launcher.launchOnOpen')}
+                  checked={launchOnOpen}
+                  onChange={setLaunchOnOpen}
+                />
               </>
             )}
 
             <div className="mt-5 flex gap-2">
               {creating && (
-                <Button variant="secondary" onClick={() => setCreating(false)}>
+                <Button type="button" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>
                   {t('launcher.cancel')}
                 </Button>
               )}
-              <Button
-                className="flex-1"
-                disabled={slots.filter(Boolean).length === 0}
-                onClick={creating ? () => void saveAndStart() : startCustom}
-              >
+              <Button type="submit" className="flex-1" loading={saving} disabled={!canStart}>
                 {creating ? t('launcher.saveAndStart') : t('launcher.start')}
               </Button>
             </div>
-          </>
+          </form>
         )}
       </div>
     </div>

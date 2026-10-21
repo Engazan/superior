@@ -1,7 +1,17 @@
 import { useCallback, useMemo, useState } from 'react'
 import { PresetIcon } from './PresetIcon'
 import { useI18n } from '../i18n'
-import { Button, EmptyState, SectionHeader, Input, RefreshIcon, useConfirm, useToast } from './ui'
+import {
+  Button,
+  CloseIcon,
+  EmptyState,
+  IconButton,
+  Input,
+  RefreshIcon,
+  SectionHeader,
+  useConfirm,
+  useToast
+} from './ui'
 import type { AgentSession, Folder, Workspace } from '../types'
 
 interface Props {
@@ -81,7 +91,7 @@ export function DaemonsSection({
   }
 
   return (
-    <>
+    <div className="settings-section">
       <SectionHeader
         title={t('settings.daemons')}
         description={t('daemons.desc')}
@@ -100,13 +110,16 @@ export function DaemonsSection({
         }
       />
 
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={t('daemons.search')}
-        aria-label={t('daemons.search')}
-        className="mb-4 max-w-md"
-      />
+      {(sessions.length > 0 || query) && (
+        <Input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('daemons.search')}
+          aria-label={t('daemons.search')}
+          className="mb-3 max-w-md"
+        />
+      )}
       {list.length === 0 ? (
         <EmptyState title={query ? t('palette.noResults') : loading ? t('daemons.loading') : t('daemons.empty')} />
       ) : (
@@ -115,7 +128,7 @@ export function DaemonsSection({
             {list.map((s) => (
               <li
                 key={s.id}
-                className="settings-daemon-row flex items-center gap-3 border-b border-edge px-4 py-3 text-sm last:border-b-0"
+                className="settings-daemon-row flex items-center gap-3 border-b border-edge px-4 py-3 text-sm transition last:border-b-0 hover:bg-hover"
               >
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full bg-status" />
@@ -130,19 +143,20 @@ export function DaemonsSection({
                     </span>
                   </span>
                 </span>
-                <span className="w-16 shrink-0 text-right">
-                  <button
-                    onClick={() => void kill(s)}
-                    className="rounded-md px-2 py-0.5 text-xs text-danger transition hover:bg-dangerBg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-danger/50"
-                  >
-                    {t('daemons.kill')}
-                  </button>
-                </span>
+                <IconButton
+                  size="sm"
+                  variant="danger-ghost"
+                  label={`${t('daemons.kill')} ${s.label}`}
+                  title={t('daemons.kill')}
+                  onClick={() => void kill(s)}
+                >
+                  <CloseIcon size={13} />
+                </IconButton>
               </li>
             ))}
           </ul>
         </div>
       )}
-    </>
+    </div>
   )
 }

@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { describeIntegrationError, providerLabel } from '../integrations'
-import { useOverlayLayer } from '../overlayStack'
-import { Button, CloseIcon, IconButton, Input } from './ui'
+import {
+  Button,
+  EmptyState,
+  Field,
+  FieldTag,
+  Input,
+  Modal,
+  Notice,
+  SegmentedControl,
+  Select
+} from './ui'
 import type { CloneArgs, Integration, RemoteFolderAddArgs, RemoteRepo } from '../types'
 
 interface Props {
@@ -32,7 +41,7 @@ export function OpenProjectModal({
   initialSource = 'local'
 }: Props): React.JSX.Element {
   const { t } = useI18n()
-  const titleId = useId()
+  const remoteFormId = useId()
   const [source, setSource] = useState<Source>(initialSource)
   const [integrationId, setIntegrationId] = useState(integrations[0]?.id ?? '')
   const [repos, setRepos] = useState<RemoteRepo[]>([])
@@ -51,18 +60,9 @@ export function OpenProjectModal({
   const repoRequestRef = useRef(0)
 
   const hasIntegrations = integrations.length > 0
-
-  // Registered on the overlay stack so Escape only closes the frontmost layer
-  // — a confirm dialog above this modal must not cascade-close it too.
-  const layer = useOverlayLayer()
-  useEffect(() => {
-    const closeOnEscape = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape' || !layer.isTop()) return
-      if (!cloningId && !remoteBusy && !remoteTesting) onClose()
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose, cloningId, remoteBusy, remoteTesting, layer])
+  // While a clone/remote request is in flight the modal can't be dismissed.
+  const busy = !!cloningId || remoteBusy || remoteTesting
+  const remoteReady = !!remoteHost.trim() && !!remotePath.trim()
 
   // Load the selected integration's repositories whenever the git tab is active
   // and its integration changes.
@@ -128,6 +128,7 @@ export function OpenProjectModal({
   }
 
   const addRemote = async (): Promise<void> => {
+    if (!remoteReady || busy) return
     setRemoteBusy(true)
     setRemoteError(null)
     setRemoteOk(false)
@@ -137,68 +138,80 @@ export function OpenProjectModal({
     else onClose()
   }
 
-  const tabClass = (active: boolean): string =>
-    `flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-      active ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder' : 'text-fgdim hover:bg-hover hover:text-fg'
-    }`
+  const cancel = (
+    <Button variant="ghost" disabled={busy} onClick={onClose}>
+      {t('common.cancel')}
+    </Button>
+  )
+
+  const footer =
+    source === 'local' ? (
+      <>
+        {cancel}
+        <Button onClick={openFolder}>{t('openProject.chooseFolder')}</Button>
+      </>
+    ) : source === 'remote' ? (
+      <>
+        {cancel}
+        <Button
+          variant="secondary"
+          loading={remoteTesting}
+          disabled={remoteBusy || !remoteReady}
+          onClick={() => void testRemote()}
+        >
+          {t('remote.test')}
+        </Button>
+        <Button
+          type="submit"
+          form={remoteFormId}
+          loading={remoteBusy}
+          disabled={remoteTesting || !remoteReady}
+        >
+          {t('remote.add')}
+        </Button>
+      </>
+    ) : (
+      cancel
+    )
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-5 backdrop-blur-[2px]"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !cloningId && !remoteBusy && !remoteTesting) onClose()
-      }}
+    <Modal
+      size="lg"
+      title={t('openProject.title')}
+      onClose={() => !busy && onClose()}
+      closeLabel={t('common.cancel')}
+      dismissable={!busy}
+      footer={footer}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="solid-surface flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-panel shadow-2xl"
-      >
-        <div className="flex items-center justify-between border-b border-edge px-5 py-3">
-          <h2 id={titleId} className="text-sm font-semibold text-fg">
-            {t('openProject.title')}
-          </h2>
-          <IconButton
-            size="sm"
-            label={t('integrations.cancel')}
-            onClick={() => !cloningId && !remoteBusy && !remoteTesting && onClose()}
-          >
-            <CloseIcon size={14} />
-          </IconButton>
-        </div>
-
-        <div className="flex gap-1 border-b border-edge px-5 py-3">
-          <button onClick={() => setSource('local')} className={tabClass(source === 'local')}>
-            {t('openProject.thisPc')}
-          </button>
-          <button onClick={() => setSource('git')} className={tabClass(source === 'git')}>
-            {t('openProject.fromGit')}
-          </button>
-          <button onClick={() => setSource('remote')} className={tabClass(source === 'remote')}>
-            {t('openProject.remoteSsh')}
-          </button>
-        </div>
+      <div className="space-y-5">
+        <SegmentedControl
+          fill
+          aria-label={t('openProject.title')}
+          value={source}
+          onChange={setSource}
+          options={[
+            { value: 'local', label: t('openProject.thisPc') },
+            { value: 'git', label: t('openProject.fromGit') },
+            { value: 'remote', label: t('openProject.remoteSsh') }
+          ]}
+        />
 
         {source === 'local' ? (
-          <div className="flex flex-col items-start gap-3 px-5 py-6">
-            <p className="text-sm text-fgmuted">{t('openProject.thisPcHint')}</p>
-            <Button onClick={openFolder}>{t('openProject.chooseFolder')}</Button>
-          </div>
+          <p className="text-xs leading-5 text-fgdim">{t('openProject.thisPcHint')}</p>
         ) : source === 'remote' ? (
           <form
-            className="space-y-4 px-5 py-5"
+            id={remoteFormId}
+            className="space-y-5"
             onSubmit={(event) => {
               event.preventDefault()
               void addRemote()
             }}
           >
-            <p className="text-sm text-fgmuted">{t('remote.hint')}</p>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-fgdim">
-                {t('remote.host')}
-              </label>
+            <p className="text-xs leading-5 text-fgdim">{t('remote.hint')}</p>
+            <Field label={t('remote.host')} htmlFor="remote-host">
               <Input
+                id="remote-host"
+                autoFocus
                 value={remoteHost}
                 onChange={(event) => {
                   setRemoteHost(event.target.value)
@@ -209,12 +222,10 @@ export function OpenProjectModal({
                 autoComplete="off"
                 spellCheck={false}
               />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-fgdim">
-                {t('remote.path')}
-              </label>
+            </Field>
+            <Field label={t('remote.path')} htmlFor="remote-path">
               <Input
+                id="remote-path"
                 value={remotePath}
                 onChange={(event) => {
                   setRemotePath(event.target.value)
@@ -226,129 +237,126 @@ export function OpenProjectModal({
                 spellCheck={false}
                 className="font-mono"
               />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-fgdim">
-                {t('remote.name')}
-              </label>
+            </Field>
+            <Field
+              label={t('remote.name')}
+              htmlFor="remote-name"
+              aside={<FieldTag>{t('worktree.optional')}</FieldTag>}
+            >
               <Input
+                id="remote-name"
                 value={remoteName}
                 onChange={(event) => setRemoteName(event.target.value)}
                 placeholder={t('remote.namePlaceholder')}
+                autoComplete="off"
               />
-            </div>
-            {remoteError && <p className="text-sm text-danger">{remoteError}</p>}
-            {remoteOk && <p className="text-sm text-status">{t('remote.testOk')}</p>}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                loading={remoteTesting}
-                disabled={remoteBusy || !remoteHost.trim() || !remotePath.trim()}
-                onClick={() => void testRemote()}
-              >
-                {t('remote.test')}
-              </Button>
-              <Button
-                type="submit"
-                loading={remoteBusy}
-                disabled={remoteTesting || !remoteHost.trim() || !remotePath.trim()}
-              >
-                {t('remote.add')}
-              </Button>
-            </div>
+            </Field>
+            {remoteError && <Notice>{remoteError}</Notice>}
+            {remoteOk && <Notice tone="success">{t('remote.testOk')}</Notice>}
           </form>
         ) : !hasIntegrations ? (
-          <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
-            <p className="text-sm text-fgmuted">{t('openProject.noIntegrations')}</p>
-            <Button variant="secondary" onClick={onAddIntegration}>
-              {t('openProject.addIntegration')}
-            </Button>
-          </div>
+          <EmptyState
+            title={t('openProject.noIntegrations')}
+            action={
+              <Button size="sm" variant="secondary" onClick={onAddIntegration}>
+                {t('openProject.addIntegration')}
+              </Button>
+            }
+          />
         ) : (
           <>
-            <div className="border-b border-edge px-5 py-3">
-              <label className="mb-1.5 block text-xs font-medium text-fgdim">
-                {t('clone.integration')}
-              </label>
-              <select
+            <Field label={t('clone.integration')} htmlFor="clone-integration">
+              <Select
+                id="clone-integration"
                 value={integrationId}
                 onChange={(e) => setIntegrationId(e.target.value)}
                 disabled={!!cloningId}
-                className="w-full rounded-lg border border-edge bg-bar px-3 py-2 text-sm text-fg outline-hidden transition focus:border-accent focus:ring-2 focus:ring-accentBorder disabled:opacity-60"
               >
                 {integrations.map((it) => (
                   <option key={it.id} value={it.id}>
                     {it.name} · {providerLabel(it.provider)}
                   </option>
                 ))}
-              </select>
+              </Select>
+            </Field>
+
+            <div className="space-y-2">
               <Input
+                autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('clone.search')}
-                className="mt-2"
+                aria-label={t('clone.search')}
                 spellCheck={false}
               />
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-              {loading && (
-                <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.loading')}</p>
-              )}
-              {!loading && listError && (
-                <div className="flex flex-col items-center gap-3 px-3 py-8 text-center">
-                  <p className="max-w-sm text-sm text-danger">{describeIntegrationError(listError, t)}</p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button size="sm" variant="secondary" onClick={loadRepositories}>
-                      {t('clone.retry')}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={onAddIntegration}>
-                      {t('clone.openIntegrationSettings')}
-                    </Button>
+              {/* Own scroll box so the search field stays put above a long list. */}
+              <div className="max-h-72 overflow-y-auto rounded-lg border border-edge p-1">
+                {loading && (
+                  <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.loading')}</p>
+                )}
+                {!loading && listError && (
+                  <div className="p-2">
+                    <Notice
+                      action={
+                        <div className="flex flex-col items-end gap-1.5">
+                          <Button size="sm" variant="secondary" onClick={loadRepositories}>
+                            {t('clone.retry')}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={onAddIntegration}>
+                            {t('clone.openIntegrationSettings')}
+                          </Button>
+                        </div>
+                      }
+                    >
+                      {describeIntegrationError(listError, t)}
+                    </Notice>
                   </div>
-                </div>
-              )}
-              {!loading && !listError && filtered.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.noRepos')}</p>
-              )}
-              {!loading &&
-                !listError &&
-                filtered.map((repo) => (
-                  <button
-                    key={repo.id}
-                    onClick={() => clone(repo)}
-                    disabled={!!cloningId}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-hover disabled:cursor-default disabled:opacity-50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium text-fg">{repo.fullName}</span>
-                        {repo.private && (
-                          <span className="shrink-0 rounded-full bg-edge px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fgdim">
-                            {t('clone.private')}
-                          </span>
+                )}
+                {!loading && !listError && filtered.length === 0 && (
+                  <p className="px-3 py-6 text-center text-sm text-fgmuted">{t('clone.noRepos')}</p>
+                )}
+                {!loading &&
+                  !listError &&
+                  filtered.map((repo) => (
+                    <button
+                      key={repo.id}
+                      type="button"
+                      onClick={() => void clone(repo)}
+                      disabled={!!cloningId}
+                      aria-busy={cloningId === repo.id || undefined}
+                      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-default disabled:opacity-50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium text-fg">{repo.fullName}</span>
+                          {repo.private && (
+                            <span className="shrink-0 rounded-full bg-edge px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fgdim">
+                              {t('clone.private')}
+                            </span>
+                          )}
+                        </div>
+                        {repo.description && (
+                          <div className="truncate text-xs text-fgmuted">{repo.description}</div>
                         )}
                       </div>
-                      {repo.description && (
-                        <div className="truncate text-xs text-fgmuted">{repo.description}</div>
+                      {cloningId === repo.id && (
+                        <span className="flex shrink-0 items-center gap-1.5 text-xs text-accent">
+                          <span
+                            className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                            aria-hidden
+                          />
+                          {t('clone.cloning')}
+                        </span>
                       )}
-                    </div>
-                    {cloningId === repo.id && (
-                      <span className="shrink-0 text-xs text-accent">{t('clone.cloning')}</span>
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  ))}
+              </div>
             </div>
 
-            {cloneError && (
-              <div className="border-t border-edge px-5 py-2 text-sm text-danger">
-                {describeIntegrationError(cloneError, t)}
-              </div>
-            )}
+            {cloneError && <Notice>{describeIntegrationError(cloneError, t)}</Notice>}
           </>
         )}
       </div>
-    </div>
+    </Modal>
   )
 }
