@@ -7,7 +7,7 @@ import { getAgentStates } from './agent-state.service'
 import { listWorkspaces } from './workspace.service'
 import { MobileRelayDaemon } from './mobileRelayDaemon'
 import { decryptMobile, encryptMobile, mobileAuth, mobileAuthHash } from './mobileRelayCrypto'
-import { readMobileRelayConfig, writeMobileRelayConfig, type MobileDevice, type MobileRelayConfig } from './mobileRelayStore'
+import { normalizeDeviceName, readMobileRelayConfig, writeMobileRelayConfig, type MobileDevice, type MobileRelayConfig } from './mobileRelayStore'
 
 declare const __SUPERIOR_RELAY_URL__: string
 
@@ -300,7 +300,7 @@ export const mobileRelay = {
   status(): MobileRelayStatus {
     return { enabled: config.enabled, connected, url: effectiveUrl(), hostId: config.hostId,
       error: lastError || undefined,
-      devices: config.devices.map(({ id, createdAt, paired }) => ({ id, createdAt, paired })) }
+      devices: config.devices.map(({ id, name, createdAt, paired }) => ({ id, name, createdAt, paired })) }
   },
   setEnabled(enabled: boolean): MobileRelayStatus {
     config.enabled = enabled
@@ -325,6 +325,14 @@ export const mobileRelay = {
     config.devices.push({ id, master, createdAt: Date.now(), paired: false, processedInputs: [], lastPhoneSeq: 0 })
     writeMobileRelayConfig(config)
     return { deviceId: id, expiresAt, pairing: JSON.stringify({ v: 1, url: effectiveUrl(), hostId: config.hostId, deviceId: id, master }) }
+  },
+  /** Local label only — the relay and the phone never see it, so no connection is needed. */
+  rename(id: string, name: string): MobileRelayStatus {
+    const target = device(id)
+    if (!target) throw new Error('Unknown device.')
+    target.name = normalizeDeviceName(name)
+    writeMobileRelayConfig(config)
+    return this.status()
   },
   async revoke(id: string): Promise<MobileRelayStatus> {
     if (!device(id)) throw new Error('Unknown device.')

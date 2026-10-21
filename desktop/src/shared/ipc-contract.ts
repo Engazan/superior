@@ -174,6 +174,7 @@ export interface IpcInvokeMap {
   [IPC.MOBILE_RELAY_SET_URL]: Invocation<[url: string], MobileRelayStatus>
   [IPC.MOBILE_RELAY_INVITE]: Invocation<[], MobileRelayInvite>
   [IPC.MOBILE_RELAY_REVOKE]: Invocation<[deviceId: string], MobileRelayStatus>
+  [IPC.MOBILE_RELAY_RENAME]: Invocation<[deviceId: string, name: string], MobileRelayStatus>
   [IPC.SETTINGS_SET_THEME]: Invocation<[theme: ThemeMode], AppSettings>
   [IPC.SETTINGS_SET_LANGUAGE]: Invocation<[language: Language], AppSettings>
   [IPC.SETTINGS_SET_SHORTCUTS]: Invocation<[shortcuts: ShortcutMap], AppSettings>

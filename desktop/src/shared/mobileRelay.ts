@@ -4,7 +4,7 @@ export interface MobileRelayStatus {
   url: string
   hostId: string
   error?: string
-  devices: { id: string; createdAt: number; paired: boolean }[]
+  devices: { id: string; name?: string; createdAt: number; paired: boolean }[]
 }
 
 export interface MobileRelayInvite {

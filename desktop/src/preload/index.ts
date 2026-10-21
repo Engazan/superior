@@ -352,6 +352,9 @@ const api = {
   revokeMobileRelayDevice(deviceId: string): Promise<MobileRelayStatus> {
     return ipcRenderer.invoke(IPC.MOBILE_RELAY_REVOKE, deviceId)
   },
+  renameMobileRelayDevice(deviceId: string, name: string): Promise<MobileRelayStatus> {
+    return ipcRenderer.invoke(IPC.MOBILE_RELAY_RENAME, deviceId, name)
+  },
 
   setTheme(theme: ThemeMode): Promise<AppSettings> {
     return ipcRenderer.invoke(IPC.SETTINGS_SET_THEME, theme)

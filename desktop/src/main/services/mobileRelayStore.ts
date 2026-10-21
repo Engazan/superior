@@ -5,11 +5,22 @@ import { userDataFile } from '../lib/jsonStore'
 
 export interface MobileDevice {
   id: string
+  /** user-chosen label shown in Settings; absent → "Phone N" */
+  name?: string
   master: string
   createdAt: number
   paired: boolean
   processedInputs: string[]
   lastPhoneSeq: number
+}
+
+export const MOBILE_DEVICE_NAME_MAX = 64
+
+/** Trimmed, length-capped device label; empty means "no custom name". */
+export function normalizeDeviceName(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const name = value.trim().slice(0, MOBILE_DEVICE_NAME_MAX)
+  return name || undefined
 }
 
 export interface MobileRelayConfig {
@@ -33,6 +44,7 @@ export function readMobileRelayConfig(): MobileRelayConfig {
         hostToken: raw.hostToken,
         devices: raw.devices.filter((d): d is MobileDevice => !!d && typeof d.id === 'string' && typeof d.master === 'string').map((d) => ({
           ...d,
+          name: normalizeDeviceName(d.name),
           processedInputs: Array.isArray(d.processedInputs) ? d.processedInputs : [],
           lastPhoneSeq: Number.isSafeInteger(d.lastPhoneSeq) && d.lastPhoneSeq >= 0 ? d.lastPhoneSeq : 0
         }))

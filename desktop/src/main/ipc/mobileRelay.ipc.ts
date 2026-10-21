@@ -17,4 +17,9 @@ export function registerMobileRelayIpc(): void {
     if (typeof deviceId !== 'string' || !/^[0-9a-f-]{36}$/i.test(deviceId)) throw new Error('Invalid device ID.')
     return mobileRelay.revoke(deviceId)
   })
+  handle(IPC.MOBILE_RELAY_RENAME, (deviceId: string, name: string) => {
+    if (typeof deviceId !== 'string' || !/^[0-9a-f-]{36}$/i.test(deviceId)) throw new Error('Invalid device ID.')
+    if (typeof name !== 'string' || name.length > 1_000) throw new Error('Invalid device name.')
+    return mobileRelay.rename(deviceId, name)
+  })
 }

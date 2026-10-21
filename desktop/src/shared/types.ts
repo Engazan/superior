@@ -1031,6 +1031,7 @@ export const IPC = {
   MOBILE_RELAY_SET_URL: 'mobile-relay:set-url',
   MOBILE_RELAY_INVITE: 'mobile-relay:invite',
   MOBILE_RELAY_REVOKE: 'mobile-relay:revoke',
+  MOBILE_RELAY_RENAME: 'mobile-relay:rename',
   SETTINGS_SET_THEME: 'settings:set-theme',
   SETTINGS_SET_LANGUAGE: 'settings:set-language',
   SETTINGS_SET_SHORTCUTS: 'settings:set-shortcuts',

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import type { MobileRelayInvite, MobileRelayStatus } from '@shared/mobileRelay'
-import { Button, CheckIcon, Field, IconButton, Input, Modal, Notice, PhoneIcon, SectionHeader, Textarea, TrashIcon, useConfirm } from './ui'
+import { Button, CheckIcon, CloseIcon, Field, IconButton, Input, Modal, Notice, PencilIcon, PhoneIcon, SectionHeader, Textarea, TrashIcon, useConfirm } from './ui'
 
 export function MobileAccessModal({ onClose }: { onClose: () => void }): React.JSX.Element {
   return <Modal onClose={onClose} title="Mobile access" description="Your workspace, connected to your phone." size="lg">
@@ -194,10 +194,9 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
     {devices.length > 0 && <div className="space-y-2">
       <h4 className="text-xs font-semibold text-fgdim">Paired devices · {devices.length}</h4>
       <ul className="divide-y divide-edge overflow-hidden rounded-lg border border-edge">
-        {devices.map((device, index) => <li key={device.id} className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-hover">
-          <PhoneIcon size={18} className="shrink-0 text-fgdim" /><div className="min-w-0 flex-1"><p className="text-sm text-fg">Phone {index + 1}</p><p className="truncate text-xs text-fgmuted" title={device.id}>Paired {new Date(device.createdAt).toLocaleDateString()} · {device.id.slice(0, 8)}</p></div>
-          <IconButton size="sm" variant="danger-ghost" label={`Remove Phone ${index + 1}`} title="Remove" disabled={busy || !connected} onClick={() => void removeDevice(device.id, `Phone ${index + 1}`)}><TrashIcon size={13} /></IconButton>
-        </li>)}
+        {devices.map((device, index) => <PairedDeviceRow key={device.id} device={device} fallbackName={`Phone ${index + 1}`} busy={busy} connected={connected}
+          onRename={name => run(() => window.api.renameMobileRelayDevice(device.id, name))}
+          onRemove={name => void removeDevice(device.id, name)} />)}
       </ul>
     </div>}
     <details open={!status || !status.url || !!status.error || !!error} className="rounded-lg border border-edge px-3 py-3 text-xs text-fgdim">
@@ -211,4 +210,43 @@ export function MobileRelaySection({ embedded = false }: { embedded?: boolean })
     </details>
     <p className="text-xs leading-relaxed text-fgmuted">Open Superior Mobile on your phone and scan the pairing code above.</p>
   </div>
+}
+
+type PairedDevice = MobileRelayStatus['devices'][number]
+
+/** One paired phone: its label (renamable inline), pairing date and actions. */
+function PairedDeviceRow({ device, fallbackName, busy, connected, onRename, onRemove }: {
+  device: PairedDevice
+  fallbackName: string
+  busy: boolean
+  connected: boolean
+  onRename: (name: string) => Promise<void>
+  onRemove: (name: string) => void
+}): React.JSX.Element {
+  const name = device.name || fallbackName
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const startEdit = (): void => { setDraft(device.name ?? ''); setEditing(true) }
+  const save = async (): Promise<void> => {
+    if (draft.trim() !== (device.name ?? '')) await onRename(draft)
+    setEditing(false)
+  }
+  return <li className="group flex items-center gap-3 px-3 py-2.5 transition hover:bg-hover">
+    <PhoneIcon size={18} className="shrink-0 text-fgdim" />
+    {editing ? <form className="flex min-w-0 flex-1 items-center gap-2" onSubmit={e => { e.preventDefault(); void save() }}>
+      <Input autoFocus aria-label={`Name for ${name}`} value={draft} maxLength={64} placeholder={fallbackName} disabled={busy}
+        onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setEditing(false) } }}
+        className="h-7 min-w-0 flex-1" autoComplete="off" spellCheck={false} />
+      <IconButton type="submit" size="sm" label="Save name" disabled={busy}><CheckIcon size={13} /></IconButton>
+      <IconButton type="button" size="sm" label="Cancel" disabled={busy} onClick={() => setEditing(false)}><CloseIcon size={13} /></IconButton>
+    </form> : <>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm text-fg" title={name} onDoubleClick={startEdit}>{name}</p>
+        <p className="truncate text-xs text-fgmuted" title={device.id}>Paired {new Date(device.createdAt).toLocaleDateString()} · {device.id.slice(0, 8)}</p>
+      </div>
+      <IconButton size="sm" label={`Rename ${name}`} title="Rename" disabled={busy} onClick={startEdit}
+        className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"><PencilIcon size={13} /></IconButton>
+      <IconButton size="sm" variant="danger-ghost" label={`Remove ${name}`} title="Remove" disabled={busy || !connected} onClick={() => onRemove(name)}><TrashIcon size={13} /></IconButton>
+    </>}
+  </li>
 }
