@@ -146,7 +146,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
       dismissable={replay && !busy}
       initialFocusRef={heading}
       footer={
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 border-t border-edge pt-4">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {step > 0 && <Button variant="ghost" disabled={busy} onClick={back}><ChevronIcon direction="left" />{t('onboarding.back')}</Button>}
             <span className="text-xs text-fgdim">{t('onboarding.step', { current: step + 1, total: 3 })}</span>

@@ -56,6 +56,7 @@ export function SegmentedControl<T extends string>({
         return (
           <button
             key={opt.value}
+            type="button"
             role="radio"
             aria-checked={active}
             data-value={opt.value}

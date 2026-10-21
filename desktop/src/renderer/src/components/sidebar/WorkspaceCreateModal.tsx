@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../../i18n'
-import { BranchIcon, Button, Combobox, Input, Modal } from '../ui'
-import { FolderGlyph, WorkspaceGlyph, folderLabel, folderTitle } from './parts'
+import {
+  BranchIcon,
+  Button,
+  ChoiceCards,
+  Combobox,
+  Field,
+  FieldTag,
+  Input,
+  Modal,
+  SegmentedControl
+} from '../ui'
+import { WorkspaceGlyph, folderLabel } from './parts'
 import type { BranchInfo, Folder, WorktreeAddArgs } from '../../types'
 
 export type WorkspaceCreateKind = 'standard' | 'branch'
@@ -13,55 +23,6 @@ interface Props {
   onCancel: () => void
   onCreateStandard: (folderPath: string, name: string) => Promise<string | null>
   onCreateWorktree: (args: WorktreeAddArgs) => Promise<string | null>
-}
-
-/** Radio-card selector for the workspace type, rendered inside the modal. */
-function TypeSelector({
-  value,
-  onChange,
-  allowBranch
-}: {
-  value: WorkspaceCreateKind
-  onChange: (value: WorkspaceCreateKind) => void
-  allowBranch: boolean
-}): React.JSX.Element {
-  const { t } = useI18n()
-  const options = (
-    [
-      ['standard', 'workspace.standardType', 'workspace.standardTypeDescription', <WorkspaceGlyph key="s" />],
-      ['branch', 'workspace.branchType', 'workspace.branchTypeDescription', <BranchIcon key="b" size={11} />]
-    ] as const
-  ).filter(([kind]) => allowBranch || kind !== 'branch')
-  return (
-    <fieldset>
-      <legend className="mb-2 text-xs font-semibold text-fgdim">{t('workspace.type')}</legend>
-      <div className={`grid gap-2 ${allowBranch ? 'grid-cols-2' : 'grid-cols-1'}`} role="radiogroup">
-        {options.map(([kind, label, description, icon]) => {
-          const selected = value === kind
-          return (
-            <button
-              key={kind}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(kind)}
-              className={`rounded-lg border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                selected
-                  ? 'border-accent bg-accentBg/70'
-                  : 'border-edge bg-bar hover:border-fgmuted hover:bg-hover'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span className={selected ? 'text-accent' : 'text-fgmuted'}>{icon}</span>
-                <span className="text-sm font-semibold text-fg">{t(label)}</span>
-              </span>
-              <span className="mt-1.5 block text-[11px] leading-4 text-fgdim">{t(description)}</span>
-            </button>
-          )
-        })}
-      </div>
-    </fieldset>
-  )
 }
 
 /**
@@ -153,11 +114,55 @@ export function WorkspaceCreateModal({
     else onCancel()
   }
 
+  const branchField =
+    mode === 'new' ? (
+      <Input
+        id="worktree-branch"
+        autoFocus
+        value={newBranch}
+        placeholder={t('sidebar.worktreeBranchPlaceholder')}
+        onChange={(event) => {
+          setNewBranch(event.target.value)
+          setCreateError(null)
+        }}
+        className="font-mono"
+        autoComplete="off"
+        spellCheck={false}
+      />
+    ) : (
+      <Combobox
+        id="worktree-branch"
+        autoFocus
+        value={picked}
+        onChange={(value) => {
+          setPicked(value)
+          setCreateError(null)
+        }}
+        options={branches.map((item) => ({
+          value: item.name,
+          hint: item.isCheckedOut ? t('worktree.branchInUse') : undefined,
+          disabled: item.isCheckedOut
+        }))}
+        placeholder={
+          loadingBranches
+            ? t('worktree.loadingBranches')
+            : available.length === 0
+              ? t('worktree.noBranchesAvailable')
+              : t('branch.search')
+        }
+        emptyText={t('branch.none')}
+        disabled={loadingBranches || branchLoadFailed || available.length === 0}
+        className="font-mono"
+      />
+    )
+
   return (
     <Modal
       size="lg"
       title={t('workspace.createModalTitle')}
-      description={t('workspace.createModalDescription')}
+      description={
+        <span title={folder.path}>{t('workspace.createIn', { folder: folderLabel(folder) })}</span>
+      }
       onClose={() => !busy && onCancel()}
       closeLabel={t('common.cancel')}
       dismissable={!busy}
@@ -185,116 +190,60 @@ export function WorkspaceCreateModal({
           void submit()
         }}
       >
-        <TypeSelector value={kind} onChange={switchKind} allowBranch={allowBranch} />
-
-        {allowBranch && kind === 'branch' && (
-          <>
-            <fieldset>
-              <legend className="mb-2 text-xs font-semibold text-fgdim">
-                {t('worktree.branchSource')}
-              </legend>
-              <div className="grid grid-cols-2 gap-2" role="radiogroup">
-                {(
-                  [
-                    ['new', 'sidebar.createNewBranch', 'worktree.newBranchDescription'],
-                    ['existing', 'sidebar.useExistingBranch', 'worktree.existingBranchDescription']
-                  ] as const
-                ).map(([value, label, description]) => {
-                  const selected = mode === value
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => setMode(value)}
-                      className={`rounded-lg border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
-                        selected
-                          ? 'border-accent bg-accentBg/70'
-                          : 'border-edge bg-bar hover:border-fgmuted hover:bg-hover'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                            selected ? 'border-accent bg-accent' : 'border-fgmuted'
-                          }`}
-                          aria-hidden
-                        >
-                          {selected && <span className="h-1.5 w-1.5 rounded-full bg-panel" />}
-                        </span>
-                        <span className="text-sm font-semibold text-fg">{t(label)}</span>
-                      </span>
-                      <span className="mt-1.5 block pl-6 text-[11px] leading-4 text-fgdim">
-                        {t(description)}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </fieldset>
-
-            <div>
-              <label htmlFor="worktree-branch" className="mb-1.5 block text-xs font-semibold text-fgdim">
-                {mode === 'new' ? t('worktree.newBranchName') : t('worktree.existingBranchName')}
-              </label>
-              {mode === 'new' ? (
-                <Input
-                  id="worktree-branch"
-                  autoFocus
-                  value={newBranch}
-                  placeholder={t('sidebar.worktreeBranchPlaceholder')}
-                  onChange={(event) => setNewBranch(event.target.value)}
-                  className="font-mono"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              ) : (
-                <>
-                  <Combobox
-                    id="worktree-branch"
-                    autoFocus
-                    value={picked}
-                    onChange={setPicked}
-                    options={branches.map((item) => ({
-                      value: item.name,
-                      hint: item.isCheckedOut ? t('worktree.branchInUse') : undefined,
-                      disabled: item.isCheckedOut
-                    }))}
-                    placeholder={
-                      loadingBranches
-                        ? t('worktree.loadingBranches')
-                        : available.length === 0
-                          ? t('worktree.noBranchesAvailable')
-                          : t('branch.search')
-                    }
-                    emptyText={t('branch.none')}
-                    disabled={loadingBranches || branchLoadFailed || available.length === 0}
-                    className="font-mono"
-                  />
-                  {branchLoadFailed && (
-                    <p className="mt-1.5 text-xs text-danger">{t('worktree.branchLoadFailed')}</p>
-                  )}
-                </>
-              )}
-              <p className="mt-1.5 text-xs text-fgmuted">
-                {mode === 'new' ? t('worktree.newBranchHint') : t('worktree.existingBranchHint')}
-              </p>
-            </div>
-          </>
+        {allowBranch && (
+          <ChoiceCards
+            aria-label={t('workspace.type')}
+            value={kind}
+            onChange={switchKind}
+            options={[
+              {
+                value: 'standard',
+                label: t('workspace.standardType'),
+                description: t('workspace.standardTypeDescription'),
+                icon: <WorkspaceGlyph />
+              },
+              {
+                value: 'branch',
+                label: t('workspace.branchType'),
+                description: t('workspace.branchTypeDescription'),
+                icon: <BranchIcon size={12} />
+              }
+            ]}
+          />
         )}
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-3">
-            <label htmlFor="workspace-name" className="text-xs font-semibold text-fgdim">
-              {kind === 'standard' ? t('workspace.name') : t('worktree.workspaceName')}
-            </label>
-            {kind === 'branch' && (
-              <span className="text-[10px] uppercase tracking-wide text-fgmuted">
-                {t('worktree.optional')}
-              </span>
-            )}
-          </div>
+        {allowBranch && kind === 'branch' && (
+          <Field
+            label={t('worktree.branch')}
+            htmlFor="worktree-branch"
+            aside={
+              <SegmentedControl
+                size="sm"
+                aria-label={t('worktree.branch')}
+                value={mode}
+                onChange={(value) => {
+                  setMode(value)
+                  setCreateError(null)
+                }}
+                options={[
+                  { value: 'new', label: t('sidebar.createNewBranch') },
+                  { value: 'existing', label: t('sidebar.useExistingBranch') }
+                ]}
+              />
+            }
+            error={mode === 'existing' && branchLoadFailed ? t('worktree.branchLoadFailed') : undefined}
+            hint={mode === 'new' ? t('worktree.newBranchHint') : t('worktree.existingBranchHint')}
+          >
+            {branchField}
+          </Field>
+        )}
+
+        <Field
+          label={t('workspace.name')}
+          htmlFor="workspace-name"
+          aside={kind === 'branch' ? <FieldTag>{t('worktree.optional')}</FieldTag> : undefined}
+          error={duplicate ? t('workspace.duplicateName') : undefined}
+        >
           <Input
             id="workspace-name"
             autoFocus={kind === 'standard'}
@@ -311,49 +260,7 @@ export function WorkspaceCreateModal({
             invalid={duplicate}
             autoComplete="off"
           />
-          <p className={`mt-1.5 text-xs ${duplicate ? 'text-danger' : 'text-fgmuted'}`}>
-            {kind === 'standard'
-              ? duplicate
-                ? t('workspace.duplicateName')
-                : t('workspace.nameHint')
-              : t('worktree.workspaceNameHint')}
-          </p>
-        </div>
-
-        {kind === 'standard' && (
-          <div className="rounded-lg border border-edge bg-bar p-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-hover text-fgdim">
-                <FolderGlyph folder={folder} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-fg">{folderLabel(folder)}</p>
-                <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folderTitle(folder)}</p>
-              </div>
-              <span className="shrink-0 rounded-full bg-accentBg px-2 py-0.5 text-[10px] font-semibold text-accent ring-1 ring-inset ring-accentBorder">
-                {t('workspace.sharedFolder')}
-              </span>
-            </div>
-            <p className="mt-3 border-t border-edge pt-3 text-xs leading-5 text-fgdim">
-              {t('workspace.sharedFolderDescription')}
-            </p>
-          </div>
-        )}
-
-        {kind === 'branch' && branch && (
-          <div className="flex items-center gap-3 rounded-lg border border-edge bg-bar px-3 py-2.5">
-            <span className="text-accent">
-              <BranchIcon size={11} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-mono text-xs font-medium text-fg">{branch}</p>
-              <p className="mt-0.5 truncate text-[11px] text-fgmuted">{folder.path}</p>
-            </div>
-            <span className="shrink-0 rounded-full bg-statusBg px-2 py-0.5 text-[10px] font-semibold text-status ring-1 ring-inset ring-statusBorder">
-              {t('worktree.isolated')}
-            </span>
-          </div>
-        )}
+        </Field>
 
         {createError && (
           <div
