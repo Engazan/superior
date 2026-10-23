@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0] - 2026-10-23
+
+### Added
+
+- **Custom memory folders.** Custom memory terminal presets can use any
+  folder (Desktop, another drive) besides `~/.claude-<name>` and
+  `~/.codex-<name>`: type a path or pick one. An existing folder, such as an
+  existing profile, is used as-is; a missing one is created. Custom folders
+  can be removed from the list without touching their data.
+- **WSL memory folders on Windows.** A `\\wsl.localhost\<distro>\…` folder
+  launches Claude or Codex inside that WSL distribution, and its alias goes
+  into the distribution user's shell config.
+- **Rename paired phones.** Paired mobile devices get an optional local name,
+  editable inline in Mobile access settings.
+
+### Changed
+
+- **Unified desktop UI.** Modals, settings sections, sidebar rows and
+  right-panel tabs share one form and layout style with consistent loading,
+  empty and error states. The workspace create dialog is redesigned.
+- **Landing page.** The website uses the Superior app color palette.
+- **Expo SDK 57 package versions.** Mobile dependencies match the versions
+  expected by Expo SDK 57.
+
+### Fixed
+
+- **Quoted commands on Windows.** Terminal presets and task prompts that
+  contain double quotes, including custom memory presets, run correctly in
+  `cmd.exe`.
+- **Inline workspace rename.** The rename field keeps focus instead of
+  committing the old name right away.
+- **Sidebar folders.** A folder no longer disappears after its last workspace
+  is removed.
+- **File preview.** A file that fails to load shows an error instead of
+  loading forever.
+- **Memory preset errors.** Errors while creating a memory preset show inside
+  the dialog instead of behind it.
+
 ## [0.35.1] - 2026-10-08
 
 ### Fixed
