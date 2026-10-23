@@ -555,21 +555,30 @@ const api = {
     return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_LIST)
   },
 
+  /** Without `folder` creates `~/.<provider>-<name>`; with it, uses or creates that folder. */
   createCustomMemoryPreset(
     provider: CustomMemoryProvider,
-    name: string
+    name: string,
+    folder?: string
   ): Promise<CustomMemoryMutationResult> {
-    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_CREATE, { provider, name })
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_CREATE, { provider, name, folder })
   },
 
-  addCustomMemoryAlias(directoryName: string): Promise<CustomMemoryPreset[]> {
-    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_ALIAS, directoryName)
+  addCustomMemoryAlias(id: string): Promise<CustomMemoryPreset[]> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_ALIAS, id)
   },
 
-  addCustomMemoryTerminalPreset(
-    directoryName: string
-  ): Promise<CustomMemoryMutationResult> {
-    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET, directoryName)
+  addCustomMemoryTerminalPreset(id: string): Promise<CustomMemoryMutationResult> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET, id)
+  },
+
+  /** Forget a custom-path memory folder (the folder itself is kept). */
+  removeCustomMemoryPreset(id: string): Promise<CustomMemoryPreset[]> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_REMOVE, id)
+  },
+
+  pickCustomMemoryFolder(): Promise<string | null> {
+    return ipcRenderer.invoke(IPC.CUSTOM_MEMORY_PICK_FOLDER)
   },
 
   /** Whether claude/codex are installed and resolvable in the app's terminal. */

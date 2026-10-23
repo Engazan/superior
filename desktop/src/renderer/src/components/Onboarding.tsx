@@ -60,7 +60,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
   const accountInput = useRef<HTMLInputElement>(null)
   const suffix = customMemoryName(name)
   const directory = `.${provider}-${suffix || 'work'}`
-  const duplicate = items.some((item) => item.directoryName === directory)
+  const duplicate = items.some((item) => item.id === `${provider}:${suffix}`)
 
   useEffect(() => {
     let live = true
@@ -108,7 +108,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
 
   const addExisting = (item: CustomMemoryPreset): void => {
     void run(async () => {
-      const result = await window.api.addCustomMemoryTerminalPreset(item.directoryName)
+      const result = await window.api.addCustomMemoryTerminalPreset(item.id)
       setItems(result.memories)
       onPresetsChanged(result.presets)
       setNotice(t('onboarding.created', { name: item.aliasName }))
@@ -273,7 +273,7 @@ export function Onboarding({ replay = false, onPresetsChanged, onClose }: Props)
                             {items.map((item) => (
                               <div key={item.id} className="flex items-center gap-2 rounded-lg border border-edge p-2.5">
                                 <PresetIcon iconType="image" icon={builtinIcon(item.provider)?.dataUrl} className="h-6 w-6 shrink-0" />
-                                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-fg">{item.aliasName}</p><p className="truncate font-mono text-[11px] text-fgdim">~/{item.directoryName}</p></div>
+                                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-fg">{item.aliasName}</p><p className="truncate font-mono text-[11px] text-fgdim">{item.displayPath}</p></div>
                                 {item.terminalPresetExists ? <span className="flex items-center gap-1 text-xs text-status"><CheckIcon size={12} />{t('onboarding.ready')}</span> : <Button size="sm" variant="secondary" onClick={() => addExisting(item)}>{t('onboarding.useExisting')}</Button>}
                               </div>
                             ))}

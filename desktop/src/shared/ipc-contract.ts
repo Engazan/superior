@@ -211,14 +211,16 @@ export interface IpcInvokeMap {
   [IPC.LAYOUT_PRESETS_DELETE]: Invocation<[id: string], LayoutPresetsState>
   [IPC.CUSTOM_MEMORY_LIST]: Invocation<[], CustomMemoryPreset[]>
   [IPC.CUSTOM_MEMORY_CREATE]: Invocation<
-    [args: { provider: CustomMemoryProvider; name: string }],
+    [args: { provider: CustomMemoryProvider; name: string; folder?: string }],
     CustomMemoryMutationResult
   >
-  [IPC.CUSTOM_MEMORY_ADD_ALIAS]: Invocation<[directoryName: string], CustomMemoryPreset[]>
+  [IPC.CUSTOM_MEMORY_ADD_ALIAS]: Invocation<[id: string], CustomMemoryPreset[]>
   [IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET]: Invocation<
-    [directoryName: string],
+    [id: string],
     CustomMemoryMutationResult
   >
+  [IPC.CUSTOM_MEMORY_REMOVE]: Invocation<[id: string], CustomMemoryPreset[]>
+  [IPC.CUSTOM_MEMORY_PICK_FOLDER]: Invocation<[], string | null>
   [IPC.CLI_TOOLS_CHECK]: Invocation<[force?: boolean], CliToolStatus[]>
   [IPC.CLI_TOOL_FIX]: Invocation<[id: CliToolId], CliToolFixResult>
 

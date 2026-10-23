@@ -149,12 +149,15 @@ function ptyEnv(extra: unknown): Record<string, string> {
  *  - Windows: COMSPEC (cmd.exe) with `/c` for a command, or PowerShell for a
  *    plain interactive terminal. The `-l` family of flags is POSIX-only.
  */
-function resolveShell(command: string): { shell: string; shellArgs: string[] } {
+function resolveShell(command: string): { shell: string; shellArgs: string[] | string } {
   const hasCommand = command.trim().length > 0
   if (process.platform === 'win32') {
     if (hasCommand) {
+      // A verbatim command line (like `shell: true`): node-pty would escape inner
+      // quotes as \", which cmd.exe doesn't understand (`set "VAR=…"`, quoted
+      // prompts). `/s` strips just the outer pair and runs the rest as typed.
       const shell = process.env.COMSPEC || 'cmd.exe'
-      return { shell, shellArgs: ['/d', '/s', '/c', command] }
+      return { shell, shellArgs: `/d /s /c "${command}"` }
     }
     return { shell: 'powershell.exe', shellArgs: ['-NoLogo'] }
   }
@@ -167,7 +170,7 @@ function resolveShell(command: string): { shell: string; shellArgs: string[] } {
 // off for the daemon's lifetime once a spawn proves the bundled files missing.
 let useConptyDll = process.platform === 'win32'
 
-function spawnPty(file: string, args: string[], options: pty.IWindowsPtyForkOptions): pty.IPty {
+function spawnPty(file: string, args: string[] | string, options: pty.IWindowsPtyForkOptions): pty.IPty {
   if (useConptyDll) {
     try {
       return pty.spawn(file, args, { ...options, useConptyDll: true })

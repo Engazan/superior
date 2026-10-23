@@ -27,7 +27,9 @@ import {
   addCustomMemoryAlias,
   addCustomMemoryTerminalPreset,
   createCustomMemoryPreset,
-  listCustomMemoryPresets
+  listCustomMemoryPresets,
+  pickCustomMemoryFolder,
+  removeCustomMemoryPreset
 } from '../services/custom-memory.service'
 import { checkCliTools, fixCliTool } from '../services/cli-tools.service'
 import { handle } from './handle'
@@ -88,28 +90,35 @@ export function registerPresetsIpc(): void {
   handle(
     IPC.CUSTOM_MEMORY_CREATE,
     (
-      payload: { provider: string; name: string }
+      payload: { provider: string; name: string; folder?: string }
     ): CustomMemoryMutationResult =>
       isRecord(payload) &&
       (payload.provider === 'claude' || payload.provider === 'codex') &&
-      boundedString(payload.name, 1_000)
-        ? createCustomMemoryPreset(payload.provider, payload.name)
+      boundedString(payload.name, 1_000) &&
+      (payload.folder === undefined || boundedString(payload.folder, 4_096))
+        ? createCustomMemoryPreset(payload.provider, payload.name, payload.folder)
         : invalidPayload()
   )
 
   handle(
     IPC.CUSTOM_MEMORY_ADD_ALIAS,
-    (directoryName: string): CustomMemoryPreset[] =>
-      boundedString(directoryName, 1_000) ? addCustomMemoryAlias(directoryName) : invalidPayload()
+    (id: string): CustomMemoryPreset[] =>
+      boundedString(id, 1_000) ? addCustomMemoryAlias(id) : invalidPayload()
   )
 
   handle(
     IPC.CUSTOM_MEMORY_ADD_TERMINAL_PRESET,
-    (directoryName: string): CustomMemoryMutationResult =>
-      boundedString(directoryName, 1_000)
-        ? addCustomMemoryTerminalPreset(directoryName)
-        : invalidPayload()
+    (id: string): CustomMemoryMutationResult =>
+      boundedString(id, 1_000) ? addCustomMemoryTerminalPreset(id) : invalidPayload()
   )
+
+  handle(
+    IPC.CUSTOM_MEMORY_REMOVE,
+    (id: string): CustomMemoryPreset[] =>
+      boundedString(id, 1_000) ? removeCustomMemoryPreset(id) : invalidPayload()
+  )
+
+  handle(IPC.CUSTOM_MEMORY_PICK_FOLDER, (): Promise<string | null> => pickCustomMemoryFolder())
 
   handle(IPC.CLI_TOOLS_CHECK, (force?: boolean): Promise<CliToolStatus[]> =>
     checkCliTools(force === true)

@@ -313,14 +313,22 @@ export interface TasksState {
 
 export type CustomMemoryProvider = 'claude' | 'codex'
 
-/** A provider-specific config directory discovered in the user's home folder. */
+/**
+ * A provider-specific config directory: discovered in the user's home folder
+ * (`~/.claude-<name>`), or registered at any custom path, including a WSL
+ * distro folder on Windows.
+ */
 export interface CustomMemoryPreset {
   id: string
   provider: CustomMemoryProvider
   name: string
   directoryName: string
   directoryPath: string
+  /** `~/<directoryName>` for home folders, else the full path. */
+  displayPath: string
+  location: 'home' | 'custom' | 'wsl'
   aliasName: string
+  /** Empty when no shell config can host an alias (a WSL folder outside a user home). */
   aliasCommand: string
   aliasExists: boolean
   aliasFiles: string[]
@@ -1075,6 +1083,8 @@ export const IPC = {
   CUSTOM_MEMORY_CREATE: 'custom-memory:create',
   CUSTOM_MEMORY_ADD_ALIAS: 'custom-memory:add-alias',
   CUSTOM_MEMORY_ADD_TERMINAL_PRESET: 'custom-memory:add-terminal-preset',
+  CUSTOM_MEMORY_REMOVE: 'custom-memory:remove',
+  CUSTOM_MEMORY_PICK_FOLDER: 'custom-memory:pick-folder',
   CLI_TOOLS_CHECK: 'cli-tools:check',
   CLI_TOOL_FIX: 'cli-tools:fix',
   WINDOW_MINIMIZE: 'window:minimize',

@@ -7,6 +7,7 @@ import {
   Button,
   ChoiceCards,
   Field,
+  FolderIcon,
   Input,
   Modal,
   Notice,
@@ -23,6 +24,14 @@ interface Props {
   onPresetsChanged: (state: PresetsState) => void
 }
 
+type MemoryLocation = 'home' | 'folder'
+
+/** Suggested name for a picked folder: `.claude-work` → `work`, `Claude Work` → `Claude Work`. */
+function nameFromFolder(folder: string): string {
+  const base = folder.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? ''
+  return base.replace(/^\.(claude|codex)-?/i, '').replace(/^\./, '')
+}
+
 const PROVIDER_UI = {
   claude: { label: 'Claude', directoryPrefix: '.claude-', iconId: 'claude' },
   codex: { label: 'Codex', directoryPrefix: '.codex-', iconId: 'codex' }
@@ -37,6 +46,8 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
   const [creating, setCreating] = useState(false)
   const [provider, setProvider] = useState<CustomMemoryProvider>('claude')
   const [name, setName] = useState('')
+  const [location, setLocation] = useState<MemoryLocation>('home')
+  const [folder, setFolder] = useState('')
   // Create failures render inside the modal — the section-level error sits behind it.
   const [createError, setCreateError] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
@@ -61,7 +72,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
     setBusyId(item.id)
     setError(null)
     try {
-      setItems(await window.api.addCustomMemoryAlias(item.directoryName))
+      setItems(await window.api.addCustomMemoryAlias(item.id))
     } catch (err) {
       setError(errorText(err))
     } finally {
@@ -73,7 +84,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
     setBusyId(item.id)
     setError(null)
     try {
-      const result = await window.api.addCustomMemoryTerminalPreset(item.directoryName)
+      const result = await window.api.addCustomMemoryTerminalPreset(item.id)
       setItems(result.memories)
       onPresetsChanged(result.presets)
     } catch (err) {
@@ -83,18 +94,49 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
     }
   }
 
+  const remove = async (item: CustomMemoryPreset): Promise<void> => {
+    setBusyId(item.id)
+    setError(null)
+    try {
+      setItems(await window.api.removeCustomMemoryPreset(item.id))
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const browse = async (): Promise<void> => {
+    try {
+      const picked = await window.api.pickCustomMemoryFolder()
+      if (!picked) return
+      setFolder(picked)
+      if (!name.trim()) setName(nameFromFolder(picked))
+    } catch (err) {
+      setCreateError(errorText(err))
+    }
+  }
+
+  const customFolder = location === 'folder'
+  const canCreate = !!name.trim() && (!customFolder || !!folder.trim())
+
   const create = async (): Promise<void> => {
     // busyId guard: Enter in the name input can fire again before the button
     // disables, which would create the preset twice.
-    if (!name.trim() || busyId === 'create') return
+    if (!canCreate || busyId === 'create') return
     setBusyId('create')
     setCreateError(null)
     try {
-      const result = await window.api.createCustomMemoryPreset(provider, name)
+      const result = await window.api.createCustomMemoryPreset(
+        provider,
+        name,
+        customFolder ? folder.trim() : undefined
+      )
       setItems(result.memories)
       onPresetsChanged(result.presets)
       setCreating(false)
       setName('')
+      setFolder('')
     } catch (err) {
       setCreateError(errorText(err))
     } finally {
@@ -133,17 +175,24 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
                     <span className="rounded-full bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
                       {PROVIDER_UI[item.provider].label}
                     </span>
+                    {item.location === 'wsl' && (
+                      <span className="rounded-full bg-bar px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-fgmuted">
+                        WSL
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-0.5 truncate font-mono text-[11px] text-fgdim">
-                    ~/{item.directoryName}
+                  <div className="mt-0.5 truncate font-mono text-[11px] text-fgdim" title={item.directoryPath}>
+                    {item.displayPath}
                   </div>
-                  <div className="mt-1 truncate font-mono text-[11px] text-fgmuted">
-                    {item.aliasCommand}
-                  </div>
+                  {item.aliasCommand && (
+                    <div className="mt-1 truncate font-mono text-[11px] text-fgmuted">
+                      {item.aliasCommand}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  {item.aliasExists ? (
+                  {!item.aliasCommand ? null : item.aliasExists ? (
                     <span className="text-xs font-medium text-status">
                       {t('memory.aliasExists', {
                         files: item.aliasFiles.join(', ')
@@ -165,6 +214,12 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
                   ) : (
                     <Button variant="secondary" size="sm" disabled={busyId === item.id} onClick={() => void addTerminalPreset(item)}>
                       {t('memory.addToTerminalPresets')}
+                    </Button>
+                  )}
+
+                  {item.location !== 'home' && (
+                    <Button variant="ghost" size="sm" disabled={busyId === item.id} onClick={() => void remove(item)}>
+                      {t('memory.remove')}
                     </Button>
                   )}
                 </div>
@@ -193,7 +248,7 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
               <Button
                 type="submit"
                 form="memory-create-form"
-                disabled={!name.trim()}
+                disabled={!canCreate}
                 loading={busyId === 'create'}
               >
                 {busyId === 'create' ? t('memory.creating') : t('memory.create')}
@@ -228,13 +283,53 @@ export function CustomMemoryPresets({ onPresetsChanged }: Props): React.JSX.Elem
                 }))}
               />
             </Field>
+            <Field label={t('memory.location')}>
+              <ChoiceCards
+                aria-label={t('memory.location')}
+                value={location}
+                onChange={setLocation}
+                options={[
+                  {
+                    value: 'home' as const,
+                    label: t('memory.locationHome'),
+                    description: `~/${PROVIDER_UI[provider].directoryPrefix}name`
+                  },
+                  {
+                    value: 'folder' as const,
+                    label: t('memory.locationFolder'),
+                    description: t('memory.locationFolderDescription')
+                  }
+                ]}
+              />
+            </Field>
+            {customFolder && (
+              <Field label={t('memory.folder')} htmlFor="memory-folder" hint={t('memory.folderHint')}>
+                <div className="flex gap-2">
+                  <Input
+                    id="memory-folder"
+                    value={folder}
+                    onChange={(event) => setFolder(event.target.value)}
+                    placeholder={window.api.platform === 'win32' ? '\\\\wsl.localhost\\Ubuntu\\home\\me\\.claude-work' : '~/Desktop/claude-work'}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="min-w-0 flex-1 font-mono"
+                  />
+                  <Button type="button" variant="secondary" onClick={() => void browse()}>
+                    <FolderIcon />
+                    {t('memory.browse')}
+                  </Button>
+                </div>
+              </Field>
+            )}
             <Field
               label={t('memory.name')}
               htmlFor="memory-name"
-              hint={t('memory.nameHint', {
-                directory: `${PROVIDER_UI[provider].directoryPrefix}${name.trim() || 'name'}`,
-                alias: `${provider}-${name.trim() || 'name'}`
-              })}
+              hint={customFolder
+                ? t('memory.aliasHint', { alias: `${provider}-${name.trim() || 'name'}` })
+                : t('memory.nameHint', {
+                  directory: `${PROVIDER_UI[provider].directoryPrefix}${name.trim() || 'name'}`,
+                  alias: `${provider}-${name.trim() || 'name'}`
+                })}
             >
               <Input
                 id="memory-name"

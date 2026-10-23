@@ -6,7 +6,7 @@ import { customMemoryName } from '@shared/custom-memory'
 
 const electron = vi.hoisted(() => ({ getPath: vi.fn() }))
 vi.mock('electron', () => ({ app: { getPath: electron.getPath, isReady: () => true }, dialog: {} }))
-import { createCustomMemoryPreset, addCustomMemoryTerminalPreset, listCustomMemoryPresets } from './custom-memory.service'
+import { createCustomMemoryPreset, addCustomMemoryTerminalPreset, listCustomMemoryPresets, removeCustomMemoryPreset } from './custom-memory.service'
 
 describe('account spaces used by onboarding', () => {
   let root: string
@@ -39,8 +39,8 @@ describe('account spaces used by onboarding', () => {
     fs.mkdirSync(directory)
     fs.writeFileSync(path.join(directory, 'config.toml'), '# user configuration')
     expect(listCustomMemoryPresets()[0]).toMatchObject({ id: 'codex:work', terminalPresetExists: false })
-    addCustomMemoryTerminalPreset('.codex-work')
-    const replay = addCustomMemoryTerminalPreset('.codex-work')
+    addCustomMemoryTerminalPreset('codex:work')
+    const replay = addCustomMemoryTerminalPreset('codex:work')
     expect(replay.presets.presets.filter((preset) => preset.customMemoryId === 'codex:work')).toHaveLength(1)
     expect(fs.readFileSync(path.join(directory, 'config.toml'), 'utf8')).toBe('# user configuration')
     expect(() => createCustomMemoryPreset('codex', 'Work')).toThrow('already exists')
@@ -51,5 +51,30 @@ describe('account spaces used by onboarding', () => {
     expect(customMemoryName('../')).toBe('')
     expect(() => createCustomMemoryPreset('claude', '../')).toThrow('valid name')
     expect(fs.readdirSync(home)).toEqual(['.zshrc'])
+  })
+
+  it('uses an existing folder outside home as-is and creates a missing one', () => {
+    const desktop = path.join(home, 'Desktop')
+    const existing = path.join(desktop, 'old-claude')
+    fs.mkdirSync(existing, { recursive: true })
+    fs.writeFileSync(path.join(existing, '.claude.json'), '{"keep":true}')
+
+    const result = createCustomMemoryPreset('claude', 'Old', existing)
+    const item = result.memories.find((memory) => memory.id === 'claude:old')
+    expect(item).toMatchObject({ location: 'custom', directoryPath: existing, displayPath: existing, aliasExists: true, terminalPresetExists: true })
+    expect(result.presets.presets.find((preset) => preset.customMemoryId === 'claude:old')?.command)
+      .toBe('CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude --dangerously-skip-permissions')
+    expect(fs.readFileSync(path.join(existing, '.claude.json'), 'utf8')).toBe('{"keep":true}')
+    expect(fs.readFileSync(path.join(home, '.zshrc'), 'utf8')).toContain(`alias claude-old='CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude'`)
+
+    createCustomMemoryPreset('codex', 'Fresh', '~/Desktop/codex-fresh')
+    expect(fs.statSync(path.join(desktop, 'codex-fresh')).isDirectory()).toBe(true)
+    expect(() => createCustomMemoryPreset('codex', 'Again', path.join(desktop, 'codex-fresh'))).toThrow('already')
+    expect(() => createCustomMemoryPreset('codex', 'Deep', path.join(desktop, 'missing', 'x'))).toThrow('does not exist')
+    expect(() => createCustomMemoryPreset('codex', 'Rel', 'relative/dir')).toThrow('absolute')
+
+    const remaining = removeCustomMemoryPreset('claude:old')
+    expect(remaining.map((memory) => memory.id)).toEqual(['codex:fresh'])
+    expect(fs.existsSync(existing)).toBe(true)
   })
 })
