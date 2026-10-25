@@ -62,10 +62,15 @@ describe('account spaces used by onboarding', () => {
     const result = createCustomMemoryPreset('claude', 'Old', existing)
     const item = result.memories.find((memory) => memory.id === 'claude:old')
     expect(item).toMatchObject({ location: 'custom', directoryPath: existing, displayPath: existing, aliasExists: true, terminalPresetExists: true })
-    expect(result.presets.presets.find((preset) => preset.customMemoryId === 'claude:old')?.command)
-      .toBe('CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude --dangerously-skip-permissions')
+    const command = result.presets.presets.find((preset) => preset.customMemoryId === 'claude:old')?.command
+    if (process.platform === 'win32') {
+      expect(command).toBe(`set "CLAUDE_CONFIG_DIR=${existing}" && claude --dangerously-skip-permissions`)
+      expect(item?.aliasCommand).toBe(`function claude-old { $env:CLAUDE_CONFIG_DIR="${existing}"; claude @args }`)
+    } else {
+      expect(command).toBe('CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude --dangerously-skip-permissions')
+      expect(fs.readFileSync(path.join(home, '.zshrc'), 'utf8')).toContain(`alias claude-old='CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude'`)
+    }
     expect(fs.readFileSync(path.join(existing, '.claude.json'), 'utf8')).toBe('{"keep":true}')
-    expect(fs.readFileSync(path.join(home, '.zshrc'), 'utf8')).toContain(`alias claude-old='CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude'`)
 
     createCustomMemoryPreset('codex', 'Fresh', '~/Desktop/codex-fresh')
     expect(fs.statSync(path.join(desktop, 'codex-fresh')).isDirectory()).toBe(true)
