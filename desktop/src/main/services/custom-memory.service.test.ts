@@ -6,6 +6,7 @@ import { customMemoryName } from '@shared/custom-memory'
 
 const electron = vi.hoisted(() => ({ getPath: vi.fn() }))
 vi.mock('electron', () => ({ app: { getPath: electron.getPath, isReady: () => true }, dialog: {} }))
+import { listPresets } from './presets.service'
 import { createCustomMemoryPreset, addCustomMemoryTerminalPreset, listCustomMemoryPresets, removeCustomMemoryPreset } from './custom-memory.service'
 
 describe('account spaces used by onboarding', () => {
@@ -64,7 +65,7 @@ describe('account spaces used by onboarding', () => {
     expect(item).toMatchObject({ location: 'custom', directoryPath: existing, displayPath: existing, aliasExists: true, terminalPresetExists: true })
     const command = result.presets.presets.find((preset) => preset.customMemoryId === 'claude:old')?.command
     if (process.platform === 'win32') {
-      expect(command).toBe(`set "CLAUDE_CONFIG_DIR=${existing}" && claude --dangerously-skip-permissions`)
+      expect(command).toBe(`set CLAUDE_CONFIG_DIR=${existing}&& claude --dangerously-skip-permissions`)
       expect(item?.aliasCommand).toBe(`function claude-old { $env:CLAUDE_CONFIG_DIR="${existing}"; claude @args }`)
     } else {
       expect(command).toBe('CLAUDE_CONFIG_DIR="$HOME/Desktop/old-claude" claude --dangerously-skip-permissions')
@@ -81,5 +82,16 @@ describe('account spaces used by onboarding', () => {
     const remaining = removeCustomMemoryPreset('claude:old')
     expect(remaining.map((memory) => memory.id)).toEqual(['codex:fresh'])
     expect(fs.existsSync(existing)).toBe(true)
+  })
+
+  it('rewrites legacy quoted Windows set commands to the working form', () => {
+    const legacy = 'set "CLAUDE_CONFIG_DIR=%USERPROFILE%\\.claude-work" && claude --dangerously-skip-permissions'
+    const preset = { id: 'p1', name: 'Claude work', description: '', command: legacy, iconType: 'emoji', icon: 'C', active: true }
+    fs.writeFileSync(path.join(root, 'data', 'presets.json'), JSON.stringify({
+      presets: [{ ...preset, customMemoryId: 'claude:work' }, { ...preset, id: 'p2' }]
+    }))
+    const [managed, manual] = listPresets().presets
+    expect(managed.command).toBe('set CLAUDE_CONFIG_DIR=%USERPROFILE%\\.claude-work&& claude --dangerously-skip-permissions')
+    expect(manual.command).toBe(legacy)
   })
 })

@@ -101,9 +101,10 @@ function aliasCommand(spec: ProviderSpec, name: string): string {
 
 function terminalCommand(spec: ProviderSpec, name: string): string {
   // This command is executed by the daemon: POSIX via a login shell, Windows via
-  // cmd.exe (`/c`), which needs `set "VAR=..." && cmd` rather than inline env.
+  // cmd.exe (`/c`), which needs `set VAR=...&& cmd` rather than inline env. No
+  // quotes, and no space before `&&` (it would end up in the value).
   if (isWindows) {
-    return `set "${spec.envVar}=%USERPROFILE%\\${spec.prefix}${name}" && ${spec.executable} ${spec.terminalArgs}`
+    return `set ${spec.envVar}=%USERPROFILE%\\${spec.prefix}${name}&& ${spec.executable} ${spec.terminalArgs}`
   }
   return `${spec.envVar}="$HOME/${spec.prefix}${name}" ${spec.executable} ${spec.terminalArgs}`
 }

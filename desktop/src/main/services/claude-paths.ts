@@ -40,7 +40,10 @@ export function resolveClaudeConfigDir(command: string): string | null {
   if (!trimmed) return null
 
   // An explicit override always wins, in either the POSIX (`VAR=val`) or the
-  // Windows (`set "VAR=val"`) form the custom-memory presets emit.
+  // Windows (`set VAR=val&& …`, older `set "VAR=val" && …`) form the
+  // custom-memory presets emit. The unquoted `set` value runs up to `&&`.
+  const setForm = trimmed.match(/\bset\s+CLAUDE_CONFIG_DIR=([^"&]+?)\s*&&/i)
+  if (setForm) return expandHome(setForm[1])
   const override = trimmed.match(/CLAUDE_CONFIG_DIR=(?:"([^"]*)"|'([^']*)'|([^\s"&]+))/)
   if (override) return expandHome(override[1] ?? override[2] ?? override[3] ?? '')
 

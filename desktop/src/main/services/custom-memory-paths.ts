@@ -71,7 +71,7 @@ export function wslConfigLabel(file: string): string {
  */
 const UNSAFE = {
   posix: /["'$`\\\n\r]/,
-  windows: /["%$`\n\r]/,
+  windows: /["%$`&|<>^\n\r]/,
   distro: /[^A-Za-z0-9._-]/
 }
 
@@ -116,7 +116,7 @@ export function customTerminalCommand(
       const inner = `${spec.envVar}='${wsl.linuxPath}' exec ${spec.executable} ${spec.terminalArgs} \\"$@\\"`
       return `wsl.exe -d ${wsl.distro} --exec bash -lic "${inner}" ${label}`
     }
-    return `set "${spec.envVar}=${dir}" && ${spec.executable} ${spec.terminalArgs}`
+    return `set ${spec.envVar}=${dir}&& ${spec.executable} ${spec.terminalArgs}`
   }
   return `${spec.envVar}="${posixPathExpr(dir, home)}" ${spec.executable} ${spec.terminalArgs}`
 }

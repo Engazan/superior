@@ -68,10 +68,19 @@ function isPreset(v: unknown): v is TerminalPreset {
   )
 }
 
+/**
+ * Earlier custom-memory presets emitted `set "VAR=val" && cli`, which fails to
+ * launch on Windows; rewrite them to the working `set VAR=val&& cli` form.
+ */
+const LEGACY_SET = /^set "([A-Z_]+)=([^"&|<>^]*)" && /
+
 /** Drop a preset's color if it isn't a valid hex string. */
 function sanitizePreset(preset: TerminalPreset): TerminalPreset {
-  const next: TerminalPreset =
+  let next: TerminalPreset =
     preset.iconType === 'image' ? { ...preset, icon: upgradeBuiltinIcon(preset.icon) } : preset
+  if (next.customMemoryId && LEGACY_SET.test(next.command)) {
+    next = { ...next, command: next.command.replace(LEGACY_SET, 'set $1=$2&& ') }
+  }
 
   if (next.color && !HEX_COLOR.test(next.color)) {
     const { color: _color, ...rest } = next

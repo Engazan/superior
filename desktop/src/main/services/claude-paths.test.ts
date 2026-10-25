@@ -34,6 +34,12 @@ describe('Claude path helpers', () => {
     expect(resolveClaudeConfigDir('set "CLAUDE_CONFIG_DIR=~/.claude-win" && claude')).toBe(
       path.join(home, '.claude-win')
     )
+    expect(resolveClaudeConfigDir('set CLAUDE_CONFIG_DIR=%USERPROFILE%\\.claude-x&& claude')).toBe(
+      path.normalize(`${home}\\.claude-x`)
+    )
+    expect(resolveClaudeConfigDir('set CLAUDE_CONFIG_DIR=~/My Profiles/claude&& claude')).toBe(
+      path.join(home, 'My Profiles', 'claude')
+    )
   })
 
   it('encodes transcript project directory names predictably', () => {
