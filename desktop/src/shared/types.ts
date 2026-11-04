@@ -94,6 +94,10 @@ export interface UiState {
   workspaceActivity?: Record<string, number>
   /** The Windows administrator-mode warning was turned off. */
   elevationWarningDismissed?: boolean
+  /** The Code editor workspace mode is turned off (saves memory). */
+  codeWorkspaceDisabled?: boolean
+  /** The embedded Browser workspace mode is turned off (saves memory). */
+  browserWorkspaceDisabled?: boolean
 }
 
 export interface AppSettings {

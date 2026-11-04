@@ -218,6 +218,8 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
   const [notifications, setNotifications] = useState<boolean | null>(null)
   const [sidebarWorkspaceTools, setSidebarWorkspaceTools] = useState<boolean | null>(null)
   const [elevationWarning, setElevationWarning] = useState<boolean | null>(null)
+  const [codeWorkspace, setCodeWorkspace] = useState<boolean | null>(null)
+  const [browserWorkspace, setBrowserWorkspace] = useState<boolean | null>(null)
   const [agentHooks, setAgentHooksState] = useState<boolean | null>(null)
   const [fileOpener, setFileOpenerState] = useState<FileOpener>('system')
   useEffect(() => {
@@ -226,6 +228,8 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
       setNotifications(s.notifications)
       setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools)
       setElevationWarning(!s.ui.elevationWarningDismissed)
+      setCodeWorkspace(!s.ui.codeWorkspaceDisabled)
+      setBrowserWorkspace(!s.ui.browserWorkspaceDisabled)
       setAgentHooksState(s.agentHooks)
       setFileOpenerState(s.fileOpener)
     })
@@ -251,6 +255,20 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
     window.api
       .setUiState({ elevationWarningDismissed: !next })
       .then((s) => setElevationWarning(!s.ui.elevationWarningDismissed))
+  }
+
+  const toggleCodeWorkspace = (next: boolean): void => {
+    setCodeWorkspace(next)
+    window.api
+      .setUiState({ codeWorkspaceDisabled: !next })
+      .then((s) => setCodeWorkspace(!s.ui.codeWorkspaceDisabled))
+  }
+
+  const toggleBrowserWorkspace = (next: boolean): void => {
+    setBrowserWorkspace(next)
+    window.api
+      .setUiState({ browserWorkspaceDisabled: !next })
+      .then((s) => setBrowserWorkspace(!s.ui.browserWorkspaceDisabled))
   }
 
   const toggleUsageTracking = (next: boolean): void => {
@@ -365,6 +383,24 @@ function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void 
                 aria-label={t('appearance.attentionColor')}
               />
             </label>
+          </SettingRow>
+        </SettingsCard>
+
+        <SettingsCard>
+          <SettingRow title={t('workspaceModes.code')} description={t('workspaceModes.codeDesc')}>
+            <Toggle
+              checked={codeWorkspace === true}
+              onChange={toggleCodeWorkspace}
+              label={t('workspaceModes.code')}
+            />
+          </SettingRow>
+
+          <SettingRow title={t('workspaceModes.browser')} description={t('workspaceModes.browserDesc')}>
+            <Toggle
+              checked={browserWorkspace === true}
+              onChange={toggleBrowserWorkspace}
+              label={t('workspaceModes.browser')}
+            />
           </SettingRow>
         </SettingsCard>
 

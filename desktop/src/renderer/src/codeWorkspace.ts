@@ -1,7 +1,12 @@
 import type { FsEntry } from './types'
 
 export type WorkspaceMode = 'terminals' | 'code' | 'browser'
-export const nextWorkspaceMode = (mode: WorkspaceMode): WorkspaceMode => mode === 'terminals' ? 'code' : mode === 'code' ? 'browser' : 'terminals'
+export const WORKSPACE_MODES: readonly WorkspaceMode[] = ['terminals', 'code', 'browser']
+/** Cycle to the next mode, skipping modes turned off in settings; the terminals mode is always available. */
+export function nextWorkspaceMode(mode: WorkspaceMode, disabled: readonly WorkspaceMode[] = []): WorkspaceMode {
+  const enabled = WORKSPACE_MODES.filter((item) => item === 'terminals' || !disabled.includes(item))
+  return enabled[(enabled.indexOf(mode) + 1) % enabled.length]
+}
 export type EditorGroup = 0 | 1
 export interface CodeTab {
   file: FsEntry

@@ -1,5 +1,5 @@
 import { browserUrl } from '@shared/browser'
-import { nextWorkspaceMode } from './codeWorkspace'
+import { nextWorkspaceMode, WORKSPACE_MODES, type WorkspaceMode } from './codeWorkspace'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { UsageFooter } from './components/UsageFooter'
@@ -152,14 +152,35 @@ export default function App(): React.JSX.Element {
   const { dispatch: dispatchCode, act: actCode } = code
   const [browserLink, setBrowserLink] = useState<{ workspaceId: string; url: string } | null>(null)
   const selectBrowserWorkspace = ws.selectWorkspace
+  // Code and Browser can be turned off in settings to save memory (notably on
+  // Windows); a turned-off mode is never mounted and falls back to the CLI.
+  const [disabledModes, setDisabledModes] = useState<WorkspaceMode[]>([])
+  useEffect(() => {
+    if (view !== 'main') return
+    let live = true
+    void window.api.getSettings().then((settings) => {
+      if (!live) return
+      const next: WorkspaceMode[] = [
+        ...(settings.ui.codeWorkspaceDisabled ? ['code' as const] : []),
+        ...(settings.ui.browserWorkspaceDisabled ? ['browser' as const] : [])
+      ]
+      setDisabledModes((current) => current.join() === next.join() ? current : next)
+    }).catch(() => {})
+    return () => { live = false }
+  }, [view])
+  const codeEnabled = !disabledModes.includes('code')
+  const browserEnabled = !disabledModes.includes('browser')
+  const workspaceMode: WorkspaceMode = disabledModes.includes(code.current.mode) ? 'terminals' : code.current.mode
   const openTerminalUrl = useCallback((workspaceId: string, url: string) => {
     const safeUrl = browserUrl(url)
+    // The main window's open handler hands http(s) links to the system browser.
+    if (!browserEnabled) { window.open(safeUrl, '_blank'); return }
     setBrowserLink({ workspaceId, url: safeUrl })
     void selectBrowserWorkspace(workspaceId)
     dispatchCode(workspaceId, { type: 'mode', mode: 'browser' })
-  }, [selectBrowserWorkspace, dispatchCode])
-  const codeActive = code.current.mode === 'code'
-  const terminalActive = code.current.mode === 'terminals'
+  }, [selectBrowserWorkspace, dispatchCode, browserEnabled])
+  const codeActive = workspaceMode === 'code'
+  const terminalActive = workspaceMode === 'terminals'
   const [filesRevealRequest, setFilesRevealRequest] = useState(0)
   const codeEmpty = code.current.tabs.length === 0
   useEffect(() => {
@@ -194,9 +215,10 @@ export default function App(): React.JSX.Element {
   }, [dispatchCode, confirm, onCodeDirtyChange, t])
   const setCodeFile = useCallback(async (file: FsEntry | null, line?: number): Promise<boolean> => {
     if (!ws.activeWorkspaceId) return false
+    if (file && !codeEnabled) { void window.api.openPath(file.path); return true }
     if (file) { actCode({ type: 'open', file, line }); return true }
     return currentCodePath ? closeCodeFile(ws.activeWorkspaceId, currentCodePath) : true
-  }, [ws.activeWorkspaceId, actCode, currentCodePath, closeCodeFile])
+  }, [ws.activeWorkspaceId, actCode, currentCodePath, closeCodeFile, codeEnabled])
   const openTerminalFileInCode = useCallback((target: FileLinkTarget) => {
     void setCodeFile(fileLinkTargetToEntry(target), target.line)
   }, [setCodeFile])
@@ -359,8 +381,8 @@ export default function App(): React.JSX.Element {
   // over sessions/tabs that aren't memo deps).
   const wsRef = useRef(ws)
   wsRef.current = ws
-  const codeActionsRef = useRef({ act: actCode, mode: code.current.mode })
-  codeActionsRef.current = { act: actCode, mode: code.current.mode }
+  const codeActionsRef = useRef({ act: actCode, mode: workspaceMode, disabledModes })
+  codeActionsRef.current = { act: actCode, mode: workspaceMode, disabledModes }
 
   // ⌘K command registry — every currently actionable thing, rebuilt from live
   // state. Terminal/git-scoped entries appear only when their target exists.
@@ -479,7 +501,7 @@ export default function App(): React.JSX.Element {
         title: t('code.switchMode'),
         section: t('palette.sectionView'),
         hint: formatChord(shortcuts.toggleWorkspaceMode),
-        run: () => codeActionsRef.current.act({ type: 'mode', mode: nextWorkspaceMode(codeActionsRef.current.mode) })
+        run: () => codeActionsRef.current.act({ type: 'mode', mode: nextWorkspaceMode(codeActionsRef.current.mode, codeActionsRef.current.disabledModes) })
       }] : []),
       {
         id: 'view:sidebar',
@@ -676,7 +698,7 @@ export default function App(): React.JSX.Element {
         if (view !== 'main' || !ws.activeWorkspaceId) return
         e.preventDefault()
         e.stopPropagation()
-        actCode({ type: 'mode', mode: nextWorkspaceMode(code.current.mode) })
+        actCode({ type: 'mode', mode: nextWorkspaceMode(workspaceMode, disabledModes) })
       } else if (chord === shortcuts.toggleSidebar) {
         if (view !== 'main') return
         e.preventDefault()
@@ -798,7 +820,8 @@ export default function App(): React.JSX.Element {
     ws.cycleProfile,
     codeActive,
     terminalActive,
-    code.current.mode,
+    workspaceMode,
+    disabledModes,
     currentCodePath,
     actCode,
     setCodeFile
@@ -808,7 +831,8 @@ export default function App(): React.JSX.Element {
     <div className="superior-app flex h-full flex-col text-fg">
       <TitleBar
         showToggle={view === 'main'}
-        workspaceMode={code.current.mode}
+        workspaceMode={workspaceMode}
+        workspaceModes={WORKSPACE_MODES.filter((mode) => !disabledModes.includes(mode))}
         onWorkspaceModeChange={(mode) => actCode({ type: 'mode', mode })}
         workspaceModeEnabled={!!ws.activeWorkspaceId}
         gitStatus={view === 'main' ? gitStatus : null}
@@ -931,17 +955,17 @@ export default function App(): React.JSX.Element {
                     onBroadcastModeChange={setBroadcastMode}
                   />
                 </div>
-                <Suspense fallback={<DeferredPanel />}>
+                {browserEnabled && <Suspense fallback={<DeferredPanel />}>
                   <BrowserDeck browserLink={browserLink} workspaces={ws.workspaces} activeWorkspaceId={ws.activeWorkspaceId}
-                    visible={code.current.mode === 'browser' && view === 'main'} sessions={ws.sessions}
+                    visible={workspaceMode === 'browser' && view === 'main'} sessions={ws.sessions}
                     onSent={(session) => {
                       if (session.workspaceId !== ws.activeWorkspaceId) return
                       actCode({ type: 'mode', mode: 'terminals' })
                       ws.selectTab(session.workspaceId, session.tabId)
                       ws.setActiveSessionId(session.id)
                     }} />
-                </Suspense>
-                {Object.entries(code.workspaces).map(([id, state]) => (
+                </Suspense>}
+                {codeEnabled && Object.entries(code.workspaces).map(([id, state]) => (
                   <Suspense key={id} fallback={<DeferredPanel />}>
                     <CodeWorkspace state={state}
                       visible={id === ws.activeWorkspaceId && codeActive && view === 'main'}

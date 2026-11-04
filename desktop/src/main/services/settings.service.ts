@@ -152,6 +152,9 @@ function normalizeUi(raw: unknown): UiState {
     }
     if (typeof obj.elevationWarningDismissed === 'boolean')
       next.elevationWarningDismissed = obj.elevationWarningDismissed
+    if (typeof obj.codeWorkspaceDisabled === 'boolean') next.codeWorkspaceDisabled = obj.codeWorkspaceDisabled
+    if (typeof obj.browserWorkspaceDisabled === 'boolean')
+      next.browserWorkspaceDisabled = obj.browserWorkspaceDisabled
     if (typeof obj.rightPanelWidth === 'number' && Number.isFinite(obj.rightPanelWidth))
       next.rightPanelWidth = Math.min(560, Math.max(280, Math.round(obj.rightPanelWidth)))
   }

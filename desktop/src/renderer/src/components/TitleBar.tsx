@@ -1,4 +1,4 @@
-import type { WorkspaceMode } from '../codeWorkspace'
+import { WORKSPACE_MODES, type WorkspaceMode } from '../codeWorkspace'
 import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
@@ -17,6 +17,8 @@ const TB_BTN =
 
 interface Props {
   workspaceMode: WorkspaceMode
+  /** Modes left on in settings; the switcher hides when only the CLI remains. */
+  workspaceModes?: readonly WorkspaceMode[]
   onWorkspaceModeChange: (mode: WorkspaceMode) => void
   workspaceModeEnabled: boolean
   /** Show the sidebar toggle (hidden in settings, where there is no sidebar). */
@@ -68,6 +70,7 @@ interface Props {
  */
 export function TitleBar({
   workspaceMode,
+  workspaceModes = WORKSPACE_MODES,
   onWorkspaceModeChange,
   workspaceModeEnabled,
   showToggle,
@@ -173,10 +176,10 @@ export function TitleBar({
         className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center max-[1100px]:static max-[1100px]:max-w-64 max-[1100px]:translate-x-0"
         onDoubleClick={onMaximize}
       >
-        {showToggle && (
+        {showToggle && workspaceModes.length > 1 && (
           <div role="group" aria-label={t('code.switchMode')} title={shortcutTitle(t('code.switchMode'), 'toggleWorkspaceMode')}
             className="superior-mode-switch app-no-drag mx-2 flex shrink-0 rounded-lg border border-edge bg-bar p-0.5">
-            {(['terminals', 'code', 'browser'] as const).map((mode) => (
+            {workspaceModes.map((mode) => (
               <button key={mode} type="button" aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
                 onClick={() => onWorkspaceModeChange(mode)}
                 className={`h-[26px] rounded-md px-3 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>

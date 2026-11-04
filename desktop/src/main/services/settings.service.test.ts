@@ -71,6 +71,16 @@ describe('first-run preferences and onboarding', () => {
     restarted.setUi({ elevationWarningDismissed: 'yes' } as never)
     expect(restarted.getSettings().ui.elevationWarningDismissed).toBeUndefined()
   })
+  it('persists turning off the Code and Browser workspace modes', async () => {
+    const settings = await import('./settings.service')
+    expect(settings.getSettings().ui.codeWorkspaceDisabled).toBeUndefined()
+    settings.setUi({ codeWorkspaceDisabled: true, browserWorkspaceDisabled: true })
+    vi.resetModules()
+    const restarted = await import('./settings.service')
+    expect(restarted.getSettings().ui).toMatchObject({ codeWorkspaceDisabled: true, browserWorkspaceDisabled: true })
+    restarted.setUi({ browserWorkspaceDisabled: 'yes' } as never)
+    expect(restarted.getSettings().ui.browserWorkspaceDisabled).toBeUndefined()
+  })
   it('persists workspace sorting, manual order and activity, dropping invalid values', async () => {
     const settings = await import('./settings.service')
     settings.setUi({ workspaceSort: 'manual', workspaceOrder: ['b', 'a', 'b', ''], workspaceActivity: { a: 5, b: Number.NaN } })
