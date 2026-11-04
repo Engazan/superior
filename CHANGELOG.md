@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0] - 2026-11-04
+
+### Added
+
+- **Turn off Code and Browser modes.** Settings → Appearance has toggles for
+  the Code and Browser workspace modes, which helps on Windows where they use
+  a lot of memory. A turned-off mode is never loaded. Files then open in the
+  default app and terminal links in the system browser. The mode switcher
+  hides once only the CLI remains.
+
 ## [0.36.1] - 2026-10-30
 
 ### Fixed
