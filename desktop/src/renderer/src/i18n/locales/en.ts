@@ -3,6 +3,9 @@ import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
 import { elevationEn } from '../elevation'
 export const en = {
+  "pr.awaitingReview": "Awaiting review",
+  "pr.otherHead": "Checks refer to a different commit than local HEAD.",
+  "pr.noChecks": "No checks reported.",
   "tasks.schedule": "Schedule & conditions",
   "tasks.startAt": "Start at (local time; empty = now)",
   "tasks.repeat": "Repeat",

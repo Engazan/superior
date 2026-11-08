@@ -331,3 +331,14 @@ Superior must remain running for scheduling and timeouts. Existing PTYs survive
 app shutdown, but no new scheduled jobs start while it is closed. On restart,
 tasks reconcile with the surviving daemon; a missing result is a failure, never
 an assumed success. Agent timeout enforcement resumes when Superior opens.
+
+## Pull request checks
+
+The Changes panel reads the current branch's pull request through your locally
+signed-in GitHub CLI (`gh`). It shows review state, individual checks and the
+fetch time, and warns if the PR commit differs from local HEAD. Refresh runs a
+new read; background refresh happens once a minute while the panel is mounted.
+Use **Send to agent** to include failed check names and links in an instruction.
+Missing authentication, a missing PR and network failures remain visible errors;
+they are never presented as passing checks. This feature does not push or mutate
+pull requests. GitLab merge requests are not supported by this panel.

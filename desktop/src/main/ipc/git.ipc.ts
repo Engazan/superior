@@ -1,3 +1,4 @@
+import { getPullRequest } from '../services/pull-request.service'
 import {
   IPC,
   type BranchSwitchResult,
@@ -27,6 +28,7 @@ import { handle } from './handle'
 import { boundedString, invalidPayload, isPathArgs, isRecord } from './validation'
 
 export function registerGitIpc(): void {
+  handle(IPC.GIT_PR, (folder, refresh) => boundedString(folder) && (refresh === undefined || typeof refresh === 'boolean') ? getPullRequest(folder, refresh) : invalidPayload())
   handle(IPC.GIT_STATUS, (folderPath: string): Promise<GitStatus> =>
     boundedString(folderPath) ? getGitStatus(folderPath) : invalidPayload()
   )

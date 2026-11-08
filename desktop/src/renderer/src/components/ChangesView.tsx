@@ -1,3 +1,4 @@
+import { PullRequestCard } from './PullRequestCard'
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { createReviewAnchor, sameReviewAnchor, type ReviewAnchor, type ReviewNote } from '../diffReview'
@@ -249,6 +250,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
         </IconButton>
       </div>
 
+      {folderPath && <PullRequestCard folderPath={folderPath} branch={diff.branch} />}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {diff.truncated && (
           <div className="p-2">

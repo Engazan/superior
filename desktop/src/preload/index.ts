@@ -528,6 +528,8 @@ const api = {
   },
 
   /** The persisted task queue (all folders) plus its pause flag. */
+  getPullRequest(folderPath: string, refresh = false) { return ipcRenderer.invoke(IPC.GIT_PR, folderPath, refresh) },
+
   listTasks(): Promise<TasksState> {
     return ipcRenderer.invoke(IPC.TASKS_LIST)
   },

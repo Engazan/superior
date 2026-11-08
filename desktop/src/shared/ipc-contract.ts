@@ -1,3 +1,4 @@
+import type { PullRequestState } from './pull-request'
 import type { WorktreeSetupConfig, WorktreeSetupSnapshot } from './worktree-setup'
 import type { TerminalSettings } from './terminalSettings'
 import { BROWSER_IPC, type BrowserRequest, type BrowserState, type BrowserDesignRequest } from './browser'
@@ -227,6 +228,7 @@ export interface IpcInvokeMap {
   [IPC.PROMPTS_LIST]: Invocation<[], PromptsState>
   [IPC.PROMPTS_SAVE]: Invocation<[prompt: Prompt], PromptsState>
   [IPC.PROMPTS_DELETE]: Invocation<[id: string], PromptsState>
+  [IPC.GIT_PR]: Invocation<[folderPath: string, refresh?: boolean], PullRequestState>
   [IPC.TASKS_LIST]: Invocation<[], TasksState>
   [IPC.TASKS_SAVE]: Invocation<[task: AgentTask], TasksState>
   [IPC.TASKS_DELETE]: Invocation<[id: string], TasksState>

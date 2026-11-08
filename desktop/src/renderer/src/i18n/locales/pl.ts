@@ -5,6 +5,9 @@ import { elevationPl } from '../elevation'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  "pr.awaitingReview": "Oczekuje na review",
+  "pr.otherHead": "Kontrole dotyczą innego commita niż lokalny HEAD.",
+  "pr.noChecks": "Brak zgłoszonych kontroli.",
   "tasks.schedule": "Harmonogram i warunki",
   "tasks.startAt": "Uruchom (czas lokalny; puste = teraz)",
   "tasks.repeat": "Powtarzanie",

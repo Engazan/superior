@@ -5,6 +5,9 @@ import { elevationHu } from '../elevation'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  "pr.awaitingReview": "Felülvizsgálatra vár",
+  "pr.otherHead": "Az ellenőrzések más commitra vonatkoznak, mint a helyi HEAD.",
+  "pr.noChecks": "Nincsenek ellenőrzések.",
   "tasks.schedule": "Ütemezés és feltételek",
   "tasks.startAt": "Kezdés (helyi idő; üres = most)",
   "tasks.repeat": "Ismétlés",

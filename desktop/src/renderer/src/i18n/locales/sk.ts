@@ -5,6 +5,9 @@ import { elevationSk } from '../elevation'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  "pr.awaitingReview": "Čaká na review",
+  "pr.otherHead": "Kontroly patria inému commitu než lokálny HEAD.",
+  "pr.noChecks": "Žiadne hlásené kontroly.",
   "tasks.schedule": "Plánovanie a podmienky",
   "tasks.startAt": "Spustiť (miestny čas; prázdne = teraz)",
   "tasks.repeat": "Opakovanie",

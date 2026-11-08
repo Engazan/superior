@@ -1019,6 +1019,7 @@ export const IPC = {
   WORKTREE_SETUP_SAVE: 'worktree:setup-save',
   WORKTREE_SETUP_RETRY: 'worktree:setup-retry',
   WORKTREE_SETUP_CANCEL: 'worktree:setup-cancel',
+  GIT_PR: 'git:pull-request',
   GIT_STATUS: 'git:status',
   GIT_INIT: 'git:init',
   GIT_DIFF: 'git:diff',
