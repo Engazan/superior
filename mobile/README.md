@@ -93,3 +93,10 @@ Bundle generation and local relay integration do not substitute for these native
 keyboard, camera and WebView checks. Production relay health can be checked without
 pairing at `https://superior-relay.engazan.eu/health`; a live desktop test requires
 its owner’s local pairing code.
+
+Prompt drafts are saved per host and terminal in SecureStore and restored when
+opening that terminal again. The composer identifies the host, project,
+workspace, branch and agent. Draft text is cleared only after terminal input is
+acknowledged; uncertain sends retain it for inspection before retrying. Drafts
+support up to 100,000 characters. Storage failures are reported instead of
+silently claiming the draft was saved.

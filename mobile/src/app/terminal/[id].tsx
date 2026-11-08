@@ -1,3 +1,4 @@
+import { useDraft } from '../../terminal/useDraft';
 import { useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -113,14 +114,17 @@ function Tool({
 export default function Terminal() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t, colors } = useApp();
+  const { t, colors, selected } = useApp();
   const state = useRelay();
   const session = state.catalog.sessions.find((s) => s.id === id);
   const fail = useError();
   const terminal = useRef<TerminalHandle>(null);
   const [ready, setReady] = useState(false);
   const [ended, setEnded] = useState(false);
-  const [prompt, setPrompt] = useState('');
+  const { prompt, setPrompt, draftReady } = useDraft(selected?.id ?? '', id, fail);
+  const inputLock = useRef(false);
+  const workspace = state.catalog.workspaces.find(w => w.id === session?.workspaceId);
+  const project = state.catalog.projects.find(p => p.path === workspace?.folderPath);
   const [search, setSearch] = useState('');
   const [finding, setFinding] = useState(false);
   const [mode, setMode] = useState<'cli' | 'chat'>('cli');
@@ -129,7 +133,8 @@ export default function Terminal() {
   const [busy, setBusy] = useState(false);
   const enabled = ready && !ended && state.connection === 'online';
   const input = async (data: string) => {
-    if (!enabled || busy) return;
+    if (!enabled || inputLock.current) return false;
+    inputLock.current = true;
     setBusy(true);
     try {
       await client.input(
@@ -139,9 +144,12 @@ export default function Terminal() {
           : data,
       );
       setCtrl(false);
+      return true;
     } catch (error) {
       fail(error);
+      return false;
     } finally {
+      inputLock.current = false;
       setBusy(false);
     }
   };
@@ -160,9 +168,8 @@ export default function Terminal() {
       },
     ]);
   const send = () => {
-    if (!enabled || busy) return;
-    void input(ctrl && prompt.length === 1 ? prompt : `${prompt}\r`);
-    setPrompt('');
+    if (!enabled || busy || !draftReady) return;
+    void input(ctrl && prompt.length === 1 ? prompt : `${prompt}\r`).then(sent => { if (sent) setPrompt(''); });
   };
   const font = (delta: number) => {
     const value = Math.min(24, Math.max(9, size + delta));
@@ -411,14 +418,17 @@ export default function Terminal() {
             }
           />
         )}
+        <Label muted style={{ fontSize: 11 }} numberOfLines={2}>
+          {[selected?.name, project?.name, workspace?.name, workspace?.branch, session?.nickname ?? session?.label].filter(Boolean).join(' · ')}
+        </Label>
         <Pill
           value={prompt}
           onChangeText={setPrompt}
           placeholder={chat ? t('messageAgent') : t('prompt')}
-          editable={enabled && !busy}
+          editable={enabled && !busy && draftReady}
           symbol={{ ios: 'arrow.up', android: 'arrow_upward' }}
           label={t('send')}
-          disabled={!enabled || busy || !prompt}
+          disabled={!enabled || busy || !draftReady || !prompt}
           onSubmit={send}
         />
       </View>
