@@ -1,3 +1,5 @@
+import { requestAgentContext } from '../agentContext'
+import { Menu } from './ui/Menu'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Extension } from '@codemirror/state'
 import { ImageFilePreview } from './ImageFilePreview'
@@ -50,6 +52,7 @@ export function FilePreviewPanel({
   active = true,
   onDirtyChange
 }: Props): React.JSX.Element {
+  const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null)
   const { t } = useI18n()
   const confirm = useConfirm()
   const shortcutTitle = useShortcutTitle()
@@ -278,6 +281,7 @@ export function FilePreviewPanel({
               {languageReady ? (
                 <Suspense fallback={<PreviewLoading />}>
                   <CodeFilePreview
+                    sourcePath={file.path}
                     content={editorText ?? data.content}
                     language={language?.value ?? null}
                     initialLine={initialLine}
@@ -301,7 +305,13 @@ export function FilePreviewPanel({
   }
 
   return (
-    <div data-preview-panel className="flex h-full min-h-0 w-full flex-col bg-panel">
+    <div data-preview-panel onContextMenu={event => {
+      if (type !== 'markdown') return
+      const text = window.getSelection()?.toString() ?? ''
+      if (!text.trim() || text.length > 100_000) return
+      event.preventDefault()
+      setSelectionMenu({ x: event.clientX, y: event.clientY, text })
+    }} className="flex h-full min-h-0 w-full flex-col bg-panel">
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-edge bg-bar/60 px-2">
         <div className="min-w-0 flex-1 truncate text-[11px] text-fgmuted" title={file.path}>
           {file.path}
@@ -347,6 +357,9 @@ export function FilePreviewPanel({
       )}
 
       <div className="min-h-0 flex-1">{renderBody()}</div>
+      {selectionMenu && <Menu anchor={selectionMenu} onClose={() => setSelectionMenu(null)} items={[{
+        id: 'send-context', label: t('context.send'), onSelect: () => requestAgentContext({ text: selectionMenu.text, source: file.path })
+      }]} />}
     </div>
   )
 }

@@ -5,6 +5,8 @@ import { elevationHu } from '../elevation'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  'context.send': 'Küldés az ügynöknek',
+  'context.instruction': 'Mit tegyen az ügynök?',
   ...setupHu,
   ...elevationHu,
   ...terminalSettingsHu,

@@ -302,3 +302,12 @@ Closing the app cancels active preparation processes. Interrupted preparation is
 shown as failed and requires an explicit retry; it never automatically starts an
 agent after reopening the app. Ordinary agent terminals retain their existing
 persistence behavior. This preparation workflow applies to local worktrees.
+
+## Send selected context to an agent
+
+Select text in a source editor, Markdown preview, or terminal and open its context
+menu → **Send to agent**. Choose a running local agent in that workspace and enter
+an instruction. The preview includes the source and editor line range (the visible
+buffer may include unsaved edits). Selections are limited to 100,000 characters.
+When right-click paste is enabled, use the terminal's modified context-menu click.
+A transport error leaves the dialog open; inspect the target before retrying.

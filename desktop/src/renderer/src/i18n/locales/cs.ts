@@ -5,6 +5,8 @@ import { elevationCs } from '../elevation'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  'context.send': 'Poslat agentovi',
+  'context.instruction': 'Co má agent udělat?',
   ...setupCs,
   ...elevationCs,
   ...terminalSettingsCs,

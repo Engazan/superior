@@ -1,3 +1,4 @@
+import { requestAgentContext } from '../agentContext'
 import { useTerminalSettings } from '../terminalSettingsStore'
 import { terminalOptions, terminalPalette } from '../terminalAppearance'
 import { createTerminalRendering } from '../terminalRendering'
@@ -761,6 +762,12 @@ export const TerminalView = memo(function TerminalView({
             anchor={copyMenu}
             onClose={() => setCopyMenu(null)}
             items={[
+              {
+                id: 'send-context',
+                label: t('context.send'),
+                disabled: !copyMenu.text.trim() || copyMenu.text.length > 100_000,
+                onSelect: () => requestAgentContext({ text: copyMenu.text, source: `Terminal: ${session.nickname ?? session.label}`, workspaceId: session.workspaceId })
+              },
               {
                 id: 'copy',
                 label: t('terminal.copy'),

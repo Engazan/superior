@@ -3,6 +3,8 @@ import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
 import { elevationEn } from '../elevation'
 export const en = {
+  'context.send': 'Send to agent',
+  'context.instruction': 'What should the agent do?',
   ...setupEn,
   ...elevationEn,
   ...terminalSettingsEn,

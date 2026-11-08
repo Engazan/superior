@@ -1,3 +1,4 @@
+import { AgentContextHost } from './components/AgentContextDialog'
 import { browserUrl } from '@shared/browser'
 import { nextWorkspaceMode, WORKSPACE_MODES, type WorkspaceMode } from './codeWorkspace'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -1149,6 +1150,7 @@ export default function App(): React.JSX.Element {
         </Suspense>
       )}
 
+      <AgentContextHost workspace={ws.activeWorkspace} workspaces={ws.workspaces} sessions={ws.sessions} />
       <AttentionBadgeSync />
       <TooltipLayer />
     </div>

@@ -1,4 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { requestAgentContext } from '../agentContext'
+import { Menu } from './ui/Menu'
+import { useI18n } from '../i18n'
+import { useEffect, useRef, useState } from 'react'
 import { EditorState, type Extension } from '@codemirror/state'
 import {
   Decoration,
@@ -20,6 +23,7 @@ import {
 
 interface Props {
   content: string
+  sourcePath?: string
   /** CodeMirror language extension, or null for plain text. */
   language: Extension | null
   /** One-based line to select and scroll into view after the editor mounts. */
@@ -127,6 +131,7 @@ function staticHighlight(
  */
 export function CodeFilePreview({
   content,
+  sourcePath,
   language,
   initialLine,
   revealRequestId,
@@ -139,6 +144,8 @@ export function CodeFilePreview({
   active = true,
   onChange
 }: Props): React.JSX.Element {
+  const { t } = useI18n()
+  const [menu, setMenu] = useState<{ x: number; y: number; text: string; firstLine: number; lastLine: number } | null>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const lastReveal = useRef<{ view: EditorView; line: number; requestId?: number } | null>(null)
@@ -229,5 +236,16 @@ export function CodeFilePreview({
     view.requestMeasure()
   }, [active, content, language, initialLine, revealRequestId, editable])
 
-  return <div ref={hostRef} className="h-full overflow-hidden" />
+  return <div className="h-full" onContextMenu={event => {
+    const view = viewRef.current
+    if (!sourcePath || !view) return
+    const { from, to } = view.state.selection.main
+    if (from === to || to - from > 100_000) return
+    event.preventDefault(); event.stopPropagation()
+    setMenu({ x: event.clientX, y: event.clientY, text: view.state.doc.sliceString(from, to),
+      firstLine: view.state.doc.lineAt(from).number, lastLine: view.state.doc.lineAt(Math.max(from, to - 1)).number })
+  }}><div ref={hostRef} className="h-full overflow-hidden" />
+    {menu && sourcePath && <Menu anchor={menu} onClose={() => setMenu(null)} items={[{ id: 'send-context', label: t('context.send'),
+      onSelect: () => requestAgentContext({ ...menu, source: sourcePath }) }]} />}
+  </div>
 }

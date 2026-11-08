@@ -5,6 +5,8 @@ import { elevationSk } from '../elevation'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  'context.send': 'Poslať agentovi',
+  'context.instruction': 'Čo má agent urobiť?',
   ...setupSk,
   ...elevationSk,
   ...terminalSettingsSk,
