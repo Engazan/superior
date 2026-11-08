@@ -126,6 +126,9 @@ export const strings = {
     "Review this request on desktop; it is too large for a complete phone preview.",
     "Approve once",
     "Decline",
+    'Help & privacy',
+    'Support',
+    'Privacy policy',
   ],
   sk: [
     'Projekty',
@@ -253,6 +256,9 @@ export const strings = {
     "Žiadosť skontrolujte na desktope; úplný náhľad je pre telefón príliš veľký.",
     "Schváliť raz",
     "Odmietnuť",
+    'Pomoc a súkromie',
+    'Podpora',
+    'Ochrana súkromia',
   ],
   cs: [
     'Projekty',
@@ -380,6 +386,9 @@ export const strings = {
     "Žádost zkontrolujte na desktopu; úplný náhled je pro telefon příliš velký.",
     "Schválit jednou",
     "Odmítnout",
+    'Nápověda a soukromí',
+    'Podpora',
+    'Ochrana soukromí',
   ],
   pl: [
     'Projekty',
@@ -507,6 +516,9 @@ export const strings = {
     "Sprawdź żądanie na komputerze; pełny podgląd jest zbyt duży dla telefonu.",
     "Zatwierdź raz",
     "Odrzuć",
+    'Pomoc i prywatność',
+    'Wsparcie',
+    'Polityka prywatności',
   ],
   hu: [
     'Projektek',
@@ -634,6 +646,9 @@ export const strings = {
     "Ezt a kérést az asztali alkalmazásban ellenőrizze; a teljes előnézet túl nagy a telefonhoz.",
     "Egyszeri jóváhagyás",
     "Elutasítás",
+    'Súgó és adatvédelem',
+    'Támogatás',
+    'Adatvédelmi tájékoztató',
   ],
 };
 export const keys = [
@@ -762,5 +777,8 @@ export const keys = [
   'nativeDesktop',
   'nativeApprove',
   'nativeDecline',
+  'helpPrivacy',
+  'support',
+  'privacyPolicy',
 ] as const;
 export type Key = (typeof keys)[number];

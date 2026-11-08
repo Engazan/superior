@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Label, SectionTitle, useError } from '../../../ui/components';
 import { Group, ListRow, MoreButton, Segmented } from '../../../ui/kit';
@@ -197,8 +199,21 @@ export default function Settings() {
           </Group>
         </>
       )}
+      <SectionTitle>{t('helpPrivacy')}</SectionTitle>
+      <Group>
+        <ListRow
+          title={t('support')}
+          symbol={{ ios: 'questionmark.circle', android: 'help_outline' }}
+          onPress={() => void Linking.openURL('https://superior.engazan.eu/support/').catch(fail)}
+        />
+        <ListRow
+          title={t('privacyPolicy')}
+          symbol={{ ios: 'hand.raised', android: 'privacy_tip' }}
+          onPress={() => void Linking.openURL('https://superior.engazan.eu/privacy/').catch(fail)}
+        />
+      </Group>
       <Label muted style={{ textAlign: 'center', fontSize: 12, marginTop: 8 }}>
-        Superior IDE · 1.0.0
+        Superior IDE · {Constants.expoConfig?.version ?? '—'}
         {state.capabilities
           ? ` · Desktop ${state.capabilities.desktopVersion}`
           : ''}
