@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  type ScrollViewInstance,
   Text,
   View,
 } from 'react-native';
@@ -259,7 +260,7 @@ export function ChatView({
   agentState?: string;
 }) {
   const { t, colors } = useApp();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   const pinned = useRef(true);
   if (transcript.available === null)
     return (

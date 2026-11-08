@@ -23,7 +23,8 @@ export const TerminalView = forwardRef<
   { id, enabled, cols, rows, onError, onReady, onReset, onEnd },
   ref,
 ) {
-  const web = useRef<WebView>(null);
+  // WebView 14 defaults P to undefined; WebViewProps & undefined becomes never.
+  const web = useRef<WebView<object>>(null);
   const ready = useRef(false);
   const stream = useRef(new TerminalStream());
   const awaiting = useRef(0);
@@ -97,7 +98,7 @@ export const TerminalView = forwardRef<
     };
   }, [id]);
   return (
-    <WebView
+    <WebView<object>
       ref={web}
       source={{ html }}
       originWhitelist={['about:blank']}

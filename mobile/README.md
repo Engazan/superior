@@ -1,6 +1,6 @@
 # Superior IDE
 
-Native iOS/Android companion built with Expo SDK 57 and Expo Router. It connects
+Native iOS/Android companion built with Expo SDK 58 and Expo Router. It connects
 through `wss://superior-relay.engazan.eu/ws` to a running, paired Superior desktop.
 The relay only transports encrypted packets; it never receives terminal input,
 output, project metadata or account usage in plaintext.
@@ -18,8 +18,15 @@ compatible simulator/device. `expo-dev-client` is included for the EAS developme
 builds use `npx eas-cli@latest build --profile preview --platform ios` (or
 `android`). EAS requires your Expo account and platform signing configuration.
 Generated native projects, pairing secrets and signing files stay out of Git.
-The Expo build-properties plugin enables the scene lifecycle required by Xcode 27
-and iOS 27; `expo prebuild` generates this configuration automatically.
+Expo SDK 58 enables the scene lifecycle required by Xcode 27 and iOS 27;
+`expo prebuild` generates this configuration automatically.
+
+Version 1.1.0 upgrades to Expo 58 and React Native 0.88.1. Use Node 22.13+ on
+the 22 line, 24.3+ on the 24 line, or 26+. Regenerate any native project generated
+with SDK 57 before building (`npx expo prebuild --clean`); preserve custom native
+changes first. Install a new development/production binary for this SDK upgrade.
+The app-version runtime policy separates 1.1.0 updates from existing 1.0.0 binaries.
+An OTA update alone cannot upgrade the native runtime.
 
 On the desktop, enable **Mobile access**, create a QR code, then use **Pair
 desktop** on the phone. Alternatively paste the pairing JSON. Check the relay
