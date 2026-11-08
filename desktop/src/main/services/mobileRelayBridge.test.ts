@@ -38,7 +38,10 @@ const m = vi.hoisted(() => ({
   usage: vi.fn(),
   publish: vi.fn(),
   save: vi.fn(),
+  chatAction: vi.fn(),
+  chatRead: vi.fn(),
 }))
+vi.mock('./native-chat.service', () => ({ nativeChatAction: m.chatAction, readNativeChat: m.chatRead, listNativeChats: () => [] }))
 vi.mock('electron', () => ({
   app: { getVersion: () => 'test' },
   BrowserWindow: {
@@ -260,5 +263,23 @@ describe('mobile desktop bridge', () => {
     await expect(
       handleMobileBridge('device', { type: 'catalog.get', token: 'missing' }),
     ).rejects.toThrow('expired_cursor')
+  })
+})
+
+describe('mobile chat mutations', () => {
+  it('journals a send once and returns the chat id', async () => {
+    m.chatAction.mockResolvedValue({ id: 'chat' })
+    const action = { type: 'send', id: 'chat', text: 'review', plan: false }
+    const result = await mutate({ type: 'chat.action', action })
+    expect(result.operation).toMatchObject({ operation: { state: 'done', result: { chatId: 'chat' } } })
+    await handleMobileBridge('device', { type: 'chat.action', action, requestId: result.requestId })
+    await settle()
+    expect(m.chatAction).toHaveBeenCalledTimes(1)
+  })
+  it('refuses an approval that cannot be previewed completely on the phone', async () => {
+    m.chatRead.mockReturnValue({ approvals: [{ id: 'approval', kind: 'files', detail: 'x'.repeat(6000) }] })
+    const result = await mutate({ type: 'chat.action', action: { type: 'answer', id: 'chat', requestId: 'approval', decision: 'accept' } })
+    expect(result.operation).toMatchObject({ operation: { state: 'failed', code: 'use_desktop' } })
+    expect(m.chatAction).not.toHaveBeenCalled()
   })
 })

@@ -24,10 +24,8 @@ function read(): TasksState {
 const isTask = isAgentTask
 
 /**
- * Persisted task queue. The queue *engine* (start next, watch exits) lives in
- * the renderer, which owns tabs and session state; this store is only the
- * durable record. Tasks stored as 'running' can be stale after a crash — the
- * renderer reconciles them against surviving daemon sessions on launch.
+ * Durable task records. The main-process task engine owns execution and
+ * reconciles running records against surviving daemon sessions after restart.
  */
 export function listTasks(): TasksState {
   return read()

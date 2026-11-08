@@ -94,7 +94,7 @@ function Inline({ text, color }: { text: string; color: string }) {
     </Text>
   );
 }
-function Markdown({ text, color }: { text: string; color: string }) {
+export function Markdown({ text, color }: { text: string; color: string }) {
   const { colors } = useApp();
   const blocks = text.split(/```[^\n]*\n?/);
   return (

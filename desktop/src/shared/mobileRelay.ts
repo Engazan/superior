@@ -1,3 +1,4 @@
+import type { ChatAction } from './native-chat'
 export interface MobileRelayStatus {
   enabled: boolean
   connected: boolean
@@ -118,10 +119,11 @@ export interface MobileOperation {
   requestId: string
   state: 'running' | 'done' | 'failed' | 'uncertain'
   startedAt: number
-  result?: { sessionId?: string }
+  result?: { sessionId?: string; chatId?: string }
   code?: string
 }
 export type MobileMutation =
+  | { type: 'chat.action'; action: ChatAction }
   | { type: 'profiles.create'; name: string }
   | { type: 'profiles.rename'; id: string; name: string }
   | { type: 'profiles.color'; id: string; color: string | null }
@@ -158,6 +160,9 @@ export const MOBILE_ACTIONS = [
   'removal.preview',
   'operations.get',
   'transcript.get',
+  'chat.list',
+  'chat.get',
+  'chat.action',
   'profiles.create',
   'profiles.rename',
   'profiles.color',

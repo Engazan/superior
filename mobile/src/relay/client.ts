@@ -1,3 +1,4 @@
+import type { MobileChatSummary, MobileNativeChat } from '@shared/mobile-native-chat';
 import {
   emptyMobileCatalog,
   type CatalogRow,
@@ -516,6 +517,35 @@ export class RelayClient {
       await this.storage.changePending(this.host.id, (ids) =>
         ids.filter((id) => id !== operation.requestId),
       );
+  }
+  async nativeChats(workspaceId: string): Promise<MobileChatSummary[]> {
+    const response = await this.request('chat.list', { workspaceId });
+    if (!Array.isArray(response.list)) throw new Error('invalid_packet');
+    return response.list as MobileChatSummary[];
+  }
+  async nativeChat(id: string): Promise<MobileNativeChat> {
+    const response = await this.request('chat.get', { id });
+    const chat = response.chat as MobileNativeChat;
+    if (!chat || chat.id !== id || !Array.isArray(chat.items) || !Array.isArray(chat.approvals)) throw new Error('invalid_packet');
+    return chat;
+  }
+  /** Poll the existing journal entry; never replay the mutation after a timeout. */
+  async waitOperation(operation: MobileOperation): Promise<MobileOperation> {
+    const generation = this.generation;
+    const deadline = Date.now() + 90_000;
+    let next = operation;
+    while (next.state === 'running') {
+      if (generation !== this.generation || this.state.connection !== 'online') throw new Error('desktop_offline');
+      if (Date.now() >= deadline) throw new Error('operation_uncertain');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await this.request('operations.get', { operationId: operation.requestId });
+      next = response.operation as MobileOperation;
+      if (!next || next.requestId !== operation.requestId) throw new Error('invalid_packet');
+      if (generation !== this.generation) throw new Error('desktop_offline');
+      await this.record(next);
+    }
+    if (next.state !== 'done') throw new Error(next.code || 'operation_uncertain');
+    return next;
   }
   async watchTerminal(id: string | null): Promise<void> {
     const previous = this.terminalId;

@@ -42,6 +42,10 @@ only deletes local credentials; revoke the phone on the desktop to remove access
   Existing desktop PTYs retain their dimensions; mobile resizes its own display only.
 - Read-only Claude/Codex usage for default and custom accounts, reset times, plans,
   credits and refresh timestamps. Provider credentials remain on the desktop.
+- Native Codex conversations through each workspace's **Chat** action: persistent
+  drafts, Plan mode, Stop, forks, approval/question cards and worker status.
+  Recent messages are bounded excerpts; full history and oversized approval
+  requests remain on desktop. Requires a desktop version with native chat support.
 - English, Slovak, Czech, Polish and Hungarian; system language and light/dark theme.
 
 The connection closes in the background and reconnects in the foreground with

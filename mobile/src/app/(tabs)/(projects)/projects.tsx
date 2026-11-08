@@ -197,6 +197,7 @@ function Workspace({
           disabled={!editable || preparing}
           onPress={() => manage('terminals.create', { workspaceId: w.id })}
         />
+        <TextLink title={t('chat')} onPress={() => router.push({ pathname: '/chat/[workspaceId]', params: { workspaceId: w.id } })} />
       </View>
     </View>
   );

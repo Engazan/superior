@@ -529,6 +529,7 @@ const api = {
   },
 
   /** The persisted task queue (all folders) plus its pause flag. */
+  getNativeChat(id: string) { return ipcRenderer.invoke(IPC.CHAT_GET, id) },
   listNativeChats(workspaceId: string) { return ipcRenderer.invoke(IPC.CHAT_LIST, workspaceId) },
   nativeChatAction(action: ChatAction) { return ipcRenderer.invoke(IPC.CHAT_ACTION, action) },
   getPullRequest(folderPath: string, refresh = false) { return ipcRenderer.invoke(IPC.GIT_PR, folderPath, refresh) },

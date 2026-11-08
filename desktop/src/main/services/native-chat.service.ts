@@ -93,7 +93,7 @@ async function connect(chat: NativeChat): Promise<CodexRpc> {
   const existing = clients.get(chat.id)
   if (starting.has(chat.id)) return starting.get(chat.id)!
   if (existing) return existing
-  if (clients.size >= 8) {
+  if (new Set([...clients.keys(), ...starting.keys()]).size >= 8) {
     const idle = all().find(c => clients.has(c.id) && c.status !== 'working' && c.status !== 'waiting' && !starting.has(c.id))
     if (idle) clients.get(idle.id)?.close()
     else throw new Error('At most eight chats can run at the same time.')
@@ -212,7 +212,11 @@ export async function nativeChatAction(action: ChatAction): Promise<NativeChat |
   } catch (error) { chat.error = (error as Error).message; if (!chat.approvals.length) chat.status = chat.stopRequested ? 'interrupted' : 'error'; persist(); throw error }
   finally { locks.delete(chat.id) }
 }
-export function stopNativeChats(): void { for (const client of clients.values()) client.close() }
+export function stopNativeChats(): void {
+  for (const chat of all()) if (chat.status === 'working' || chat.status === 'waiting') { chat.stopRequested = true; chat.status = 'interrupted' }
+  for (const client of clients.values()) client.close()
+  persist()
+}
 
 function workerSummaries(parentId: string) {
   const state = listWorkspaces()
@@ -270,4 +274,10 @@ async function workerTool(chat: NativeChat, params: RpcRecord): Promise<unknown>
     } catch (error) { worker.status = worker.stopRequested ? 'interrupted' : 'error'; worker.error = (error as Error).message; persist() }
   })().catch(error => console.error('[workers] failed to persist worker result:', error))
   return { dispatchId: worker.id, status: 'preparing', base: 'Coordinator committed HEAD; uncommitted edits are not copied.' }
+}
+
+export function readNativeChat(id: string): NativeChat {
+  const chat = get(id)
+  workspace(chat.workspaceId)
+  return { ...chat, workers: workerSummaries(chat.id) }
 }

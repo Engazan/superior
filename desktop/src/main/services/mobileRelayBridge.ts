@@ -1,3 +1,6 @@
+import { listNativeChats, readNativeChat, nativeChatAction } from './native-chat.service'
+import { mobileChatSnapshot, mobileApprovalNeedsDesktop } from '@shared/mobile-native-chat'
+import type { ChatAction } from '@shared/native-chat'
 import { app, BrowserWindow } from 'electron'
 import { randomUUID } from 'crypto'
 import { hostname } from 'os'
@@ -177,7 +180,7 @@ async function preview(msg: Record<string, unknown>) {
 }
 async function mutate(
   msg: Record<string, unknown>,
-): Promise<{ sessionId?: string } | undefined> {
+): Promise<{ sessionId?: string; chatId?: string } | undefined> {
   const state = workspace.listWorkspaces()
   const profile = () => {
     const p = state.profiles.find((p) => p.id === msg.id)
@@ -195,6 +198,16 @@ async function mutate(
     return w
   }
   switch (msg.type) {
+    case 'chat.action': {
+      const action = msg.action as ChatAction
+      if (!action || typeof action !== 'object') throw new Error('invalid_request')
+      if (action.type === 'answer') {
+        const approval = readNativeChat(text(action.id, 80)).approvals.find(a => a.id === action.requestId)
+        if (!approval || mobileApprovalNeedsDesktop(approval)) throw new Error('use_desktop')
+      }
+      const result = await nativeChatAction(action)
+      return result ? { chatId: result.id } : {}
+    }
     case 'profiles.create':
       workspace.addProfile(text(msg.name), false)
       break
@@ -412,6 +425,8 @@ export async function handleMobileBridge(
         offset + page.length < profiles.length ? offset + page.length : null,
     }
   }
+  if (msg.type === 'chat.list') return { type: 'chats', list: listNativeChats(text(msg.workspaceId, 80)).slice(-100).map(c => ({ id: c.id, title: c.title.slice(0, 80), status: c.status, plan: c.plan })) }
+  if (msg.type === 'chat.get') return { type: 'chat', chat: mobileChatSnapshot(readNativeChat(text(msg.id, 80))) }
   if (msg.type === 'transcript.get') {
     const sessionId = text(msg.sessionId, 80)
     if (!(await mobileSessions()).some((s) => s.id === sessionId))

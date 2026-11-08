@@ -1,36 +1,43 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { ChatAction, ChatApproval, NativeChat, WorkerSummary } from '@shared/native-chat'
+import type { ChatAction, ChatApproval, NativeChat, NativeChatSummary, WorkerSummary } from '@shared/native-chat'
 import type { Workspace } from '../types'
 import { useI18n } from '../i18n'
 import { Button, Notice, Select, Textarea } from './ui'
 
 export function NativeChatWorkspace({ workspace, onOpenWorker }: { workspace: Workspace; onOpenWorker: (workspaceId: string) => void }): React.JSX.Element {
   const { t } = useI18n()
-  const [chats, setChats] = useState<NativeChat[]>([])
+  const [chats, setChats] = useState<NativeChatSummary[]>([])
+  const [detail, setDetail] = useState<NativeChat | null>(null)
   const [selected, setSelected] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const locked = useRef(false)
-  const chat = chats.find(c => c.id === selected) ?? chats.at(-1)
+  const selectedId = chats.some(c => c.id === selected) ? selected : chats.at(-1)?.id
+  const chat = detail?.id === selectedId ? detail : null
   useEffect(() => {
     let active = true
     let timer: ReturnType<typeof setTimeout>
     const refresh = async (): Promise<void> => {
-      try { const next = await window.api.listNativeChats(workspace.id); if (active) setChats(next) }
+      try {
+        const next = await window.api.listNativeChats(workspace.id)
+        const id = next.some(c => c.id === selected) ? selected : next.at(-1)?.id
+        const nextDetail = id ? await window.api.getNativeChat(id) : null
+        if (active) { setChats(next); setDetail(nextDetail) }
+      }
       catch (e) { if (active) setError(String(e)) }
       if (active) timer = setTimeout(() => void refresh(), 500)
     }
     void refresh()
     return () => { active = false; clearTimeout(timer) }
-  }, [workspace.id])
+  }, [workspace.id, selected])
   const act = async (action: ChatAction): Promise<boolean> => {
     if (locked.current) return false
     locked.current = true; setBusy(true); setError('')
     try {
       const result = await window.api.nativeChatAction(action)
-      if (result) setSelected(result.id)
+      if (result && result.workspaceId === workspace.id) { setSelected(result.id); setDetail(result) }
       setChats(await window.api.listNativeChats(workspace.id))
       return true
     } catch (e) { setError(String(e)); return false }
@@ -75,7 +82,7 @@ function ChatBody({ chat, workspace, act, busy, onOpenWorker }: { chat: NativeCh
       {chat.items.map(item => <article key={item.id} className="rounded-lg border border-edge p-3 text-sm">
         <div className="mb-2 text-xs text-fgmuted">{item.kind} · {item.title}{!item.complete ? ' …' : ''}</div>
         {item.kind === 'tool' ? <details><summary className="cursor-pointer">{item.text.split('\n')[0].slice(0, 160)}</summary><pre className="overflow-auto whitespace-pre-wrap break-words text-xs">{item.text}</pre></details>
-          : <div className="prose prose-sm max-w-none text-fg"><ReactMarkdown remarkPlugins={[remarkGfm]}>{item.text}</ReactMarkdown></div>}
+          : <div className="min-w-0 break-words text-fg [&_p]:my-2 [&_h1]:my-3 [&_h1]:text-xl [&_h2]:my-3 [&_h2]:text-lg [&_h3]:my-2 [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-app [&_pre]:p-3 [&_code]:font-mono [&_code]:text-xs [&_a]:text-accent [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-edge [&_blockquote]:pl-3 [&_table]:block [&_table]:overflow-x-auto [&_td]:border [&_td]:border-edge [&_td]:p-2 [&_th]:border [&_th]:border-edge [&_th]:p-2"><ReactMarkdown remarkPlugins={[remarkGfm]}>{item.text}</ReactMarkdown></div>}
         {item.kind === 'assistant' && item.complete && !running && <Button size="xs" variant="ghost" disabled={busy} onClick={() => void act({ type: 'fork', id: chat.id, turnId: item.turnId })}>{t('chat.fork')}</Button>}
       </article>)}
       {chat.approvals.map(approval => <Approval key={approval.id} approval={approval} chatId={chat.id} act={act} busy={busy} />)}

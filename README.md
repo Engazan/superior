@@ -362,6 +362,12 @@ continue to use the existing terminal experience. Native chat does not import
 existing terminal conversations. Requires a Codex CLI supporting the app-server
 thread/turn protocol; incompatible versions report their protocol error.
 
+The mobile workspace **Chat** action opens the same conversations, with persistent
+drafts, Plan mode, Stop, history forks and approval/question cards. Mobile shows
+bounded recent excerpts; full history remains on desktop. Approvals too large to
+display completely can only be answered on desktop. Mutations use durable request
+IDs so reconnecting checks their outcome without replaying the action.
+
 ## Coordinator and workers
 
 In Chat, choose **Coordinator** to enable scoped worker tools. The coordinator can

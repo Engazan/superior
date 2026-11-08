@@ -1,4 +1,4 @@
-import type { NativeChat } from '@shared/native-chat'
+import type { NativeChatSummary } from '@shared/native-chat'
 import { useEffect, useRef, useState } from 'react'
 import { AGENT_CONTEXT_EVENT, contextPrompt, type AgentContext } from '../agentContext'
 import { reviewTargets } from '../diffReview'
@@ -28,7 +28,7 @@ function ContextDialog({ context, workspace, sessions, onClose }: {
   const { t } = useI18n()
   const targets = reviewTargets(sessions, workspace.id)
   const [targetId, setTargetId] = useState(targets.length === 1 ? targets[0].id : '')
-  const [chats, setChats] = useState<NativeChat[]>([])
+  const [chats, setChats] = useState<NativeChatSummary[]>([])
   useEffect(() => {
     let active = true
     void window.api.listNativeChats(workspace.id).then(next => { if (active) setChats(next) }).catch(() => {})

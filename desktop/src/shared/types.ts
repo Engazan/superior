@@ -1019,6 +1019,7 @@ export const IPC = {
   WORKTREE_SETUP_SAVE: 'worktree:setup-save',
   WORKTREE_SETUP_RETRY: 'worktree:setup-retry',
   WORKTREE_SETUP_CANCEL: 'worktree:setup-cancel',
+  CHAT_GET: 'chat:get',
   CHAT_LIST: 'chat:list',
   CHAT_ACTION: 'chat:action',
   GIT_PR: 'git:pull-request',

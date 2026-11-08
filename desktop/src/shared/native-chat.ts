@@ -63,3 +63,5 @@ export function chatItem(raw: Record<string, unknown>, turnId: string, complete:
   return { id: String(raw.id), turnId, kind: type === 'userMessage' ? 'user' : type === 'agentMessage' ? 'assistant' : type === 'plan' ? 'plan' : 'tool',
     title: type, text: text.slice(0, 500_000), complete }
 }
+
+export type NativeChatSummary = Pick<NativeChat, 'id' | 'workspaceId' | 'title' | 'plan' | 'status'>
