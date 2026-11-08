@@ -48,6 +48,7 @@ const Onboarding = lazy(() => import('./components/Onboarding').then(({ Onboardi
 const SettingsView = lazy(() =>
   import('./components/SettingsView').then(({ SettingsView }) => ({ default: SettingsView }))
 )
+const NativeChatWorkspace = lazy(() => import('./components/NativeChatWorkspace').then(m => ({ default: m.NativeChatWorkspace })))
 const BrowserDeck = lazy(() => import('./components/BrowserWorkspace').then(({ BrowserDeck }) => ({ default: BrowserDeck })))
 const RightPanel = lazy(() =>
   import('./components/RightPanel').then(({ RightPanel }) => ({ default: RightPanel }))
@@ -956,6 +957,9 @@ export default function App(): React.JSX.Element {
                     onBroadcastModeChange={setBroadcastMode}
                   />
                 </div>
+                {workspaceMode === 'chat' && ws.activeWorkspace && <Suspense fallback={<DeferredPanel />}>
+                  <NativeChatWorkspace key={ws.activeWorkspace.id} workspace={ws.activeWorkspace} />
+                </Suspense>}
                 {browserEnabled && <Suspense fallback={<DeferredPanel />}>
                   <BrowserDeck browserLink={browserLink} workspaces={ws.workspaces} activeWorkspaceId={ws.activeWorkspaceId}
                     visible={workspaceMode === 'browser' && view === 'main'} sessions={ws.sessions}

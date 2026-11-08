@@ -3,6 +3,13 @@ import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
 import { elevationEn } from '../elevation'
 export const en = {
+  "chat.new": "New chat",
+  "chat.intro": "Start a Codex chat using your local CLI sign-in. Tool requests and approvals appear here.",
+  "chat.fork": "Fork from here",
+  "chat.stop": "Stop",
+  "chat.approval": "Approval required",
+  "chat.approve": "Approve once",
+  "chat.decline": "Decline",
   "pr.awaitingReview": "Awaiting review",
   "pr.otherHead": "Checks refer to a different commit than local HEAD.",
   "pr.noChecks": "No checks reported.",

@@ -5,6 +5,13 @@ import { elevationCs } from '../elevation'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  "chat.new": "Nový chat",
+  "chat.intro": "Spusťte chat Codex přes místní přihlášení CLI. Zde se zobrazí nástroje a žádosti o schválení.",
+  "chat.fork": "Rozvětvit odsud",
+  "chat.stop": "Zastavit",
+  "chat.approval": "Vyžaduje schválení",
+  "chat.approve": "Schválit jednou",
+  "chat.decline": "Odmítnout",
   "pr.awaitingReview": "Čeká na review",
   "pr.otherHead": "Kontroly patří jinému commitu než lokální HEAD.",
   "pr.noChecks": "Žádné hlášené kontroly.",

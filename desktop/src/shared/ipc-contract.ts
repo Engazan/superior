@@ -1,3 +1,4 @@
+import type { ChatAction, NativeChat } from './native-chat'
 import type { PullRequestState } from './pull-request'
 import type { WorktreeSetupConfig, WorktreeSetupSnapshot } from './worktree-setup'
 import type { TerminalSettings } from './terminalSettings'
@@ -228,6 +229,8 @@ export interface IpcInvokeMap {
   [IPC.PROMPTS_LIST]: Invocation<[], PromptsState>
   [IPC.PROMPTS_SAVE]: Invocation<[prompt: Prompt], PromptsState>
   [IPC.PROMPTS_DELETE]: Invocation<[id: string], PromptsState>
+  [IPC.CHAT_LIST]: Invocation<[workspaceId: string], NativeChat[]>
+  [IPC.CHAT_ACTION]: Invocation<[action: ChatAction], NativeChat | null>
   [IPC.GIT_PR]: Invocation<[folderPath: string, refresh?: boolean], PullRequestState>
   [IPC.TASKS_LIST]: Invocation<[], TasksState>
   [IPC.TASKS_SAVE]: Invocation<[task: AgentTask], TasksState>

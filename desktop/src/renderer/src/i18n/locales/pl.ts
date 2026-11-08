@@ -5,6 +5,13 @@ import { elevationPl } from '../elevation'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  "chat.new": "Nowy czat",
+  "chat.intro": "Uruchom czat Codex z lokalnym logowaniem CLI. Tutaj pojawią się narzędzia i prośby o zatwierdzenie.",
+  "chat.fork": "Rozgałęź tutaj",
+  "chat.stop": "Zatrzymaj",
+  "chat.approval": "Wymaga zatwierdzenia",
+  "chat.approve": "Zatwierdź raz",
+  "chat.decline": "Odrzuć",
   "pr.awaitingReview": "Oczekuje na review",
   "pr.otherHead": "Kontrole dotyczą innego commita niż lokalny HEAD.",
   "pr.noChecks": "Brak zgłoszonych kontroli.",

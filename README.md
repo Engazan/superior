@@ -342,3 +342,22 @@ Use **Send to agent** to include failed check names and links in an instruction.
 Missing authentication, a missing PR and network failures remain visible errors;
 they are never presented as passing checks. This feature does not push or mutate
 pull requests. GitLab merge requests are not supported by this panel.
+
+## Native Codex chat
+
+Choose **Chat** in the workspace switcher and create a conversation. Superior
+starts the locally installed `codex app-server` with your existing CLI sign-in.
+It streams assistant text and tool cards, displays command/file approval requests
+and structured questions, and supports Stop, Plan mode and **Fork from here** on
+completed responses. Forking copies conversation history through that turn; it
+does not rewind files or create a new worktree. Conversations persist locally and
+resume on the next message after an app restart. Interrupted turns are never
+silently replayed. Drafts remain until the start request is acknowledged.
+
+Native chats use workspace-write sandboxing and user-directed on-request
+approvals. Unsupported permission/tool requests fail explicitly. At most eight
+chat connections run simultaneously; idle connections can be released and later
+resumed. The native adapter currently supports Codex; Claude and other presets
+continue to use the existing terminal experience. Native chat does not import
+existing terminal conversations. Requires a Codex CLI supporting the app-server
+thread/turn protocol; incompatible versions report their protocol error.

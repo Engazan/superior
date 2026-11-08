@@ -5,6 +5,13 @@ import { elevationHu } from '../elevation'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  "chat.new": "Új chat",
+  "chat.intro": "Indítson Codex chatet a helyi CLI bejelentkezéssel. Itt jelennek meg az eszközök és jóváhagyások.",
+  "chat.fork": "Elágazás innen",
+  "chat.stop": "Leállítás",
+  "chat.approval": "Jóváhagyás szükséges",
+  "chat.approve": "Egyszeri jóváhagyás",
+  "chat.decline": "Elutasítás",
   "pr.awaitingReview": "Felülvizsgálatra vár",
   "pr.otherHead": "Az ellenőrzések más commitra vonatkoznak, mint a helyi HEAD.",
   "pr.noChecks": "Nincsenek ellenőrzések.",

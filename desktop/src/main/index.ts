@@ -1,3 +1,5 @@
+import { registerNativeChatIpc } from './ipc/native-chat.ipc'
+import { stopNativeChats } from './services/native-chat.service'
 import { startTaskEngine, stopTaskEngine } from './services/task-engine.service'
 import { stopAllSetups } from './services/worktree-setup.service'
 import { browserService, registerBrowserIpc } from './ipc/browser.ipc'
@@ -195,6 +197,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   registerPresetsIpc()
   registerPromptsIpc()
   registerTasksIpc()
+  registerNativeChatIpc()
   registerIntegrationsIpc()
   registerWindowIpc()
   registerNotificationsIpc(() => mainWindow)
@@ -247,6 +250,7 @@ let setupsStopped = false
 app.on('before-quit', (event) => {
   quitting = true
   stopTaskEngine()
+  stopNativeChats()
   if (!setupsStopped) {
     event.preventDefault()
     void stopAllSetups().finally(() => { setupsStopped = true; app.quit() })

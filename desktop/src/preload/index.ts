@@ -1,3 +1,4 @@
+import type { ChatAction } from '@shared/native-chat'
 import type { WorktreeSetupConfig } from '@shared/worktree-setup'
 import type { AgentStateEvent } from '@shared/agent-state'
 import type { MobileRelayInvite, MobileRelayStatus } from '@shared/mobileRelay'
@@ -528,6 +529,8 @@ const api = {
   },
 
   /** The persisted task queue (all folders) plus its pause flag. */
+  listNativeChats(workspaceId: string) { return ipcRenderer.invoke(IPC.CHAT_LIST, workspaceId) },
+  nativeChatAction(action: ChatAction) { return ipcRenderer.invoke(IPC.CHAT_ACTION, action) },
   getPullRequest(folderPath: string, refresh = false) { return ipcRenderer.invoke(IPC.GIT_PR, folderPath, refresh) },
 
   listTasks(): Promise<TasksState> {
