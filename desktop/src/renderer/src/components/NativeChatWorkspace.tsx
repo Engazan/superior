@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { ChatAction, ChatApproval, NativeChat } from '@shared/native-chat'
+import type { ChatAction, ChatApproval, NativeChat, WorkerSummary } from '@shared/native-chat'
 import type { Workspace } from '../types'
 import { useI18n } from '../i18n'
 import { Button, Notice, Select, Textarea } from './ui'
 
-export function NativeChatWorkspace({ workspace }: { workspace: Workspace }): React.JSX.Element {
+export function NativeChatWorkspace({ workspace, onOpenWorker }: { workspace: Workspace; onOpenWorker: (workspaceId: string) => void }): React.JSX.Element {
   const { t } = useI18n()
   const [chats, setChats] = useState<NativeChat[]>([])
   const [selected, setSelected] = useState('')
@@ -42,14 +42,15 @@ export function NativeChatWorkspace({ workspace }: { workspace: Workspace }): Re
         {!chats.length && <option value="">Codex</option>}{chats.map(c => <option key={c.id} value={c.id}>{c.title} · {c.status}</option>)}
       </Select>
       <Button size="sm" disabled={busy} onClick={() => void act({ type: 'create', workspaceId: workspace.id })}>{t('chat.new')}</Button>
+      <Button size="sm" variant="secondary" disabled={busy} onClick={() => void act({ type: 'create', workspaceId: workspace.id, coordinator: true })}>{t('chat.coordinator')}</Button>
       {chat && <Button variant="ghost" size="sm" disabled={busy || chat.status === 'working' || chat.status === 'waiting'} onClick={() => void act({ type: 'delete', id: chat.id })}>{t('review.remove')}</Button>}
     </div>
     {error && <Notice>{error}</Notice>}
-    {chat ? <ChatBody key={chat.id} chat={chat} workspace={workspace} act={act} busy={busy} />
+    {chat ? <ChatBody key={chat.id} chat={chat} workspace={workspace} act={act} busy={busy} onOpenWorker={onOpenWorker} />
       : <p className="p-6 text-sm text-fgmuted">{t('chat.intro')}</p>}
   </div>
 }
-function ChatBody({ chat, workspace, act, busy }: { chat: NativeChat; workspace: Workspace; act: (action: ChatAction) => Promise<boolean>; busy: boolean }): React.JSX.Element {
+function ChatBody({ chat, workspace, act, busy, onOpenWorker }: { chat: NativeChat; workspace: Workspace; act: (action: ChatAction) => Promise<boolean>; busy: boolean; onOpenWorker: (workspaceId: string) => void }): React.JSX.Element {
   const { t } = useI18n()
   const draftKey = `superior.chat.draft.${chat.id}`
   const [text, setText] = useState(() => { try { return localStorage.getItem(draftKey) ?? '' } catch { return '' } })
@@ -69,6 +70,8 @@ function ChatBody({ chat, workspace, act, busy }: { chat: NativeChat; workspace:
   }
   return <>
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" onScroll={e => { const el = e.currentTarget; following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100 }}>
+      {!!chat.workers?.length && <section className="space-y-2"><h3 className="text-sm font-medium">{t('chat.workers')}</h3>{chat.workers.map(worker => <WorkerCard key={worker.id} worker={worker} chatId={chat.id} act={act} busy={busy} onOpen={onOpenWorker} />)}</section>}
+      {!!chat.inbox?.length && <details className="rounded border border-edge p-2 text-xs"><summary>{t('chat.inbox')} ({chat.inbox.length})</summary>{chat.inbox.map(m => <p key={m.id} className="whitespace-pre-wrap py-1">{m.from.slice(0, 8)} · {m.text}</p>)}</details>}
       {chat.items.map(item => <article key={item.id} className="rounded-lg border border-edge p-3 text-sm">
         <div className="mb-2 text-xs text-fgmuted">{item.kind} · {item.title}{!item.complete ? ' …' : ''}</div>
         {item.kind === 'tool' ? <details><summary className="cursor-pointer">{item.text.split('\n')[0].slice(0, 160)}</summary><pre className="overflow-auto whitespace-pre-wrap break-words text-xs">{item.text}</pre></details>
@@ -85,7 +88,7 @@ function ChatBody({ chat, workspace, act, busy }: { chat: NativeChat; workspace:
       <Textarea rows={3} value={text} maxLength={100000} disabled={busy} aria-label={t('context.instruction')} onChange={e => draft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) { e.preventDefault(); void send() } }} />
       <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={plan} disabled={busy || running} onChange={e => setPlan(e.target.checked)} />Plan mode</label>
-        {running ? <Button disabled={busy} onClick={() => void act({ type: 'stop', id: chat.id })}>{t('chat.stop')}</Button>
+        {(running || chat.workers?.some(w => w.status === 'working' || w.status === 'waiting')) ? <Button disabled={busy} onClick={() => void act({ type: 'stop', id: chat.id })}>{t('chat.stop')}</Button>
           : <Button disabled={busy || !text.trim()} onClick={() => void send()}>{t('context.send')}</Button>}
       </div>
     </div>
@@ -107,4 +110,18 @@ function Approval({ approval, chatId, act, busy }: { approval: ChatApproval; cha
         <Button variant="secondary" disabled={busy} onClick={() => void act({ type: 'answer', id: chatId, requestId: approval.id, decision: 'decline' })}>{t('chat.decline')}</Button></>}
     </div>
   </section>
+}
+
+function WorkerCard({ worker, chatId, act, busy, onOpen }: { worker: WorkerSummary; chatId: string; act: (action: ChatAction) => Promise<boolean>; busy: boolean; onOpen: (id: string) => void }): React.JSX.Element {
+  const { t } = useI18n()
+  const [message, setMessage] = useState('')
+  return <article className="space-y-2 rounded border border-edge p-2 text-xs">
+    <div className="flex items-center justify-between"><span>{worker.title} · {worker.status}</span><Button size="xs" variant="ghost" onClick={() => onOpen(worker.workspaceId)}>{t('chat.openWorker')}</Button></div>
+    <p className="break-all text-fgmuted">{worker.branch} · {worker.id.slice(0, 8)}</p>
+    {worker.summary && <details><summary>{t('chat.result')}</summary><pre className="whitespace-pre-wrap break-words">{worker.summary}</pre></details>}
+    <Textarea rows={2} maxLength={10000} value={message} aria-label={t('chat.messageWorker')} onChange={e => setMessage(e.target.value)} />
+    <div className="flex gap-2"><Button size="xs" disabled={busy || !message.trim()} onClick={() => void act({ type: 'message', id: chatId, to: worker.id, text: message }).then(ok => { if (ok) setMessage('') })}>{t('chat.messageWorker')}</Button>
+      {['working', 'waiting'].includes(worker.status) && <Button size="xs" variant="ghost" disabled={busy} onClick={() => void act({ type: 'stop', id: worker.id })}>{t('chat.stop')}</Button>}
+    </div>
+  </article>
 }

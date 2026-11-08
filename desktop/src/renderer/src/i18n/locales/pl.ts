@@ -5,6 +5,12 @@ import { elevationPl } from '../elevation'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  "chat.coordinator": "Koordynator",
+  "chat.workers": "Agenci roboczy",
+  "chat.inbox": "Wiadomości",
+  "chat.openWorker": "Otwórz agenta",
+  "chat.result": "Wynik",
+  "chat.messageWorker": "Wyślij wiadomość",
   "chat.new": "Nowy czat",
   "chat.intro": "Uruchom czat Codex z lokalnym logowaniem CLI. Tutaj pojawią się narzędzia i prośby o zatwierdzenie.",
   "chat.fork": "Rozgałęź tutaj",

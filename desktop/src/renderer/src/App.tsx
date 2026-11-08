@@ -958,7 +958,7 @@ export default function App(): React.JSX.Element {
                   />
                 </div>
                 {workspaceMode === 'chat' && ws.activeWorkspace && <Suspense fallback={<DeferredPanel />}>
-                  <NativeChatWorkspace key={ws.activeWorkspace.id} workspace={ws.activeWorkspace} />
+                  <NativeChatWorkspace key={ws.activeWorkspace.id} workspace={ws.activeWorkspace} onOpenWorker={id => { dispatchCode(id, { type: 'mode', mode: 'chat' }); void ws.selectWorkspace(id) }} />
                 </Suspense>}
                 {browserEnabled && <Suspense fallback={<DeferredPanel />}>
                   <BrowserDeck browserLink={browserLink} workspaces={ws.workspaces} activeWorkspaceId={ws.activeWorkspaceId}

@@ -131,7 +131,8 @@ export interface CreateWorktreeResult {
 export async function createWorktree(
   folderPath: string,
   branch: string,
-  createBranch: boolean
+  createBranch: boolean,
+  baseCommit?: string
 ): Promise<CreateWorktreeResult> {
   if (!(await isGitRepo(folderPath))) throw new Error(WORKTREE_ERROR.NOT_A_REPO)
 
@@ -147,8 +148,9 @@ export async function createWorktree(
   fs.mkdirSync(dir, { recursive: true })
   const wtPath = path.join(dir, `${branchSlug(branch)}-${randomUUID().slice(0, 8)}`)
 
+  if (baseCommit && !/^[0-9a-f]{40,64}$/.test(baseCommit)) throw new Error('Invalid base commit.')
   const args = createBranch
-    ? ['worktree', 'add', '-b', branch, wtPath, 'HEAD']
+    ? ['worktree', 'add', '-b', branch, wtPath, baseCommit ?? 'HEAD']
     : ['worktree', 'add', wtPath, branch]
   // A worktree add checks out the full tree — far beyond runGit's probe timeout.
   await runGitLong(folderPath, args)

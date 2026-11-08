@@ -3,6 +3,12 @@ import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
 import { elevationEn } from '../elevation'
 export const en = {
+  "chat.coordinator": "Coordinator",
+  "chat.workers": "Workers",
+  "chat.inbox": "Inbox",
+  "chat.openWorker": "Open worker",
+  "chat.result": "Result",
+  "chat.messageWorker": "Message worker",
   "chat.new": "New chat",
   "chat.intro": "Start a Codex chat using your local CLI sign-in. Tool requests and approvals appear here.",
   "chat.fork": "Fork from here",

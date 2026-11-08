@@ -631,7 +631,7 @@ export function addWorkspace(folderPath: string, name: string, activate = true):
  * then make it active. Rolls the worktree back if persistence is impossible.
  * @throws a WORKTREE_ERROR code or raw git error (handled by the IPC layer).
  */
-export async function addWorktreeWorkspace(args: WorktreeAddArgs, activate = true): Promise<WorkspaceState> {
+export async function addWorktreeWorkspace(args: WorktreeAddArgs, activate = true, baseCommit?: string): Promise<WorkspaceState> {
   const initial = readState()
   const folder = initial.folders.find((f) => f.path === args.folderPath)
   if (!folder || !isLocalFolder(folder)) {
@@ -641,7 +641,8 @@ export async function addWorktreeWorkspace(args: WorktreeAddArgs, activate = tru
   const { worktreePath, branch } = await createWorktree(
     args.folderPath,
     args.branch.trim(),
-    args.createBranch
+    args.createBranch,
+    baseCommit
   )
 
   try {

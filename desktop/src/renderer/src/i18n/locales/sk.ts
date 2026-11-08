@@ -5,6 +5,12 @@ import { elevationSk } from '../elevation'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  "chat.coordinator": "Koordinátor",
+  "chat.workers": "Workeri",
+  "chat.inbox": "Správy",
+  "chat.openWorker": "Otvoriť workera",
+  "chat.result": "Výsledok",
+  "chat.messageWorker": "Poslať správu workerovi",
   "chat.new": "Nový chat",
   "chat.intro": "Spustite chat Codex cez lokálne prihlásenie CLI. Tu sa zobrazia nástroje a žiadosti o schválenie.",
   "chat.fork": "Rozvetviť odtiaľto",

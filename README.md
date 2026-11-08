@@ -361,3 +361,20 @@ resumed. The native adapter currently supports Codex; Claude and other presets
 continue to use the existing terminal experience. Native chat does not import
 existing terminal conversations. Requires a Codex CLI supporting the app-server
 thread/turn protocol; incompatible versions report their protocol error.
+
+## Coordinator and workers
+
+In Chat, choose **Coordinator** to enable scoped worker tools. The coordinator can
+dispatch up to three concurrent Codex workers, each in a new worktree created from
+the coordinator workspace's committed HEAD. Uncommitted parent changes are not
+copied. Project setup completes before the worker starts. Workers cannot dispatch
+nested workers; Plan mode cannot dispatch workers.
+
+The coordinator can wait for results and exchange durable inbox messages with its
+workers. Worker cards expose status, branch, result, messages and navigation to
+approvals in the worker's own chat. Mail is read through the worker tools; it does
+not interrupt a running prompt. Each dispatch is reserved before checkout
+creation, so a duplicate tool call returns the same worker. Stop on a coordinator
+also stops its workers. Worktrees remain for review, including after failure;
+nothing is automatically merged, pushed or deleted. On restart, interrupted
+workers require an explicit new message to resume.

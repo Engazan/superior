@@ -13,7 +13,22 @@ export interface ChatApproval {
   detail: string
   questions?: { id: string; question: string; secret: boolean; options: string[] }[]
 }
+export interface WorkerSummary {
+  id: string
+  workspaceId: string
+  title: string
+  status: NativeChat['status']
+  branch?: string
+  summary: string
+}
 export interface NativeChat {
+  coordinator?: boolean
+  parentId?: string
+  dispatchCallId?: string
+  stopRequested?: boolean
+  inbox?: { id: string; from: string; text: string; at: number }[]
+  workers?: WorkerSummary[]
+
   id: string
   workspaceId: string
   cwd: string
@@ -29,9 +44,10 @@ export interface NativeChat {
   createdAt: number
 }
 export type ChatAction =
-  | { type: 'create'; workspaceId: string }
+  | { type: 'create'; workspaceId: string; coordinator?: boolean }
   | { type: 'send'; id: string; text: string; plan: boolean }
   | { type: 'stop'; id: string }
+  | { type: 'message'; id: string; to: string; text: string }
   | { type: 'answer'; id: string; requestId: string; decision?: 'accept' | 'decline'; answers?: Record<string, string> }
   | { type: 'fork'; id: string; turnId: string }
   | { type: 'delete'; id: string }
