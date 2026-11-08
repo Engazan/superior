@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a version tag (e.g. v0.1.0) builds the macOS, Windows and Linux apps
-# and publishes them as assets on a GitHub Release for that tag.
+# and publishes them as assets on a GitHub Release for that tag, after all
+# desktop, relay and mobile CI checks pass for the same commit.
 on:
   push:
     tags: ['v*']
@@ -10,7 +11,14 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    name: Release quality gates
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   release:
+    needs: quality
     strategy:
       fail-fast: false
       matrix:

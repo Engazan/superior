@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
+    # Version tags run these same checks through Release's reusable-workflow job.
+    branches: ['**']
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -103,5 +106,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Check Expo dependency compatibility
+        run: npx expo install --check
       - run: npx expo-doctor
-      - run: npx expo export --platform ios --platform android --output-dir build/bundles
+      - name: Export native and web bundles
+        run: npx expo export --platform ios --platform android --platform web --output-dir build/bundles
