@@ -5,6 +5,56 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0] - 2026-11-08
+
+### Added
+
+- **Send context to agents.** Send selected code, Markdown or terminal output to
+  an agent, with source information and an optional instruction.
+- **Native Codex conversations.** Stream assistant responses and tool results,
+  answer approval requests and questions, use Plan mode, stop a turn, and fork
+  from a completed response. Conversations persist across app restarts.
+- **Coordinator and workers.** Dispatch up to three concurrent Codex workers in
+  separate worktrees, exchange messages, inspect results and open worker chats.
+  Worktrees start from committed HEAD and remain available for review; nothing
+  is automatically merged or pushed.
+- **Scheduled Tasks.** Schedule one-time or recurring tasks with optional
+  prechecks and timeouts. Tasks run from the desktop main process while Superior
+  is running, independently of the renderer.
+- **Pull request and CI status.** The Changes panel displays the current GitHub
+  pull request, review decision and checks, warns when local and PR commits differ,
+  and lets you send failed-check context to an agent. Requires an authenticated
+  GitHub CLI.
+- **Mobile native chat.** Open Codex conversations from a workspace, send prompts,
+  use Plan mode, stop or fork turns, answer approval requests and questions, and
+  view worker status. Large approvals require the full desktop view.
+- **Privacy and support pages.** Add pages matching the website design, contact
+  and troubleshooting information, and links from the website footer and mobile
+  settings in all five supported languages.
+
+### Changed
+
+- **Mobile 1.1.0.** Upgrade to Expo SDK 58, React Native 0.88.1 and compatible
+  native packages, with updated test tooling. This upgrade requires a new native
+  binary rather than an OTA update alone.
+- **Release quality gates.** Desktop releases now wait for the full desktop,
+  relay and mobile CI checks. Mobile CI also validates Expo dependency
+  compatibility and exports the web bundle alongside iOS and Android bundles.
+- **Chat delivery and polling.** Mobile chat mutations use durable request IDs
+  and bounded previews; desktop conversation lists load lightweight summaries.
+
+### Fixed
+
+- **Mobile drafts.** Persist drafts separately for each host and session and
+  retain input until delivery is acknowledged. Uncertain terminal input is not
+  automatically replayed.
+- **Chat lifecycle.** Count initializing connections toward the concurrency
+  limit and mark active conversations and preparing workers as interrupted when
+  the desktop exits.
+- **Mobile compatibility and version display.** Update terminal component types
+  for the new React Native and WebView APIs, and show the configured app version
+  in Settings instead of a hardcoded value.
+
 ## [0.37.0] - 2026-11-04
 
 ### Added
