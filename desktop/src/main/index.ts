@@ -1,3 +1,4 @@
+import { startTaskEngine, stopTaskEngine } from './services/task-engine.service'
 import { stopAllSetups } from './services/worktree-setup.service'
 import { browserService, registerBrowserIpc } from './ipc/browser.ipc'
 import { app, BrowserWindow, shell } from 'electron'
@@ -213,6 +214,7 @@ if (gotSingleInstanceLock) app.whenReady().then(async () => {
   // Connect to (or launch) the terminal daemon so surviving sessions can be restored.
   daemonClient.ensure().catch((err) => console.error('[daemon] connect failed:', err))
   mobileRelay.start()
+  void reconciled.then(() => startTaskEngine())
 
   mainWindow = createWindow()
 
@@ -244,6 +246,7 @@ app.on('window-all-closed', () => {
 let setupsStopped = false
 app.on('before-quit', (event) => {
   quitting = true
+  stopTaskEngine()
   if (!setupsStopped) {
     event.preventDefault()
     void stopAllSetups().finally(() => { setupsStopped = true; app.quit() })

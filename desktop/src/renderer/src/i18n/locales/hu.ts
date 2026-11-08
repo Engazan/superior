@@ -5,6 +5,17 @@ import { elevationHu } from '../elevation'
 import type { MessageKey } from './en'
 
 export const hu: Record<MessageKey, string> = {
+  "tasks.schedule": "Ütemezés és feltételek",
+  "tasks.startAt": "Kezdés (helyi idő; üres = most)",
+  "tasks.repeat": "Ismétlés",
+  "tasks.once": "Egyszer",
+  "tasks.hourly": "Óránként",
+  "tasks.daily": "24 óránként",
+  "tasks.weekly": "7 naponta",
+  "tasks.timeout": "Ügynök időkorlátja (perc)",
+  "tasks.precheck": "Ellenőrző parancs (opcionális)",
+  "tasks.scheduleHint": "A 0 kód elindítja az ügynököt; más eredmény kihagyja (60 mp limit). A Superiornak futnia kell. Az ismétlés leállításához törölje a következő feladatot.",
+  "tasks.skippedPrecheck": "Ellenőrzés miatt kihagyva",
   'context.send': 'Küldés az ügynöknek',
   'context.instruction': 'Mit tegyen az ügynök?',
   ...setupHu,

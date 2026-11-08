@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+import { isAgentTask } from '../ipc/validation'
 import type { AgentTask, TasksState } from '@shared/types'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
 
@@ -19,23 +21,7 @@ function read(): TasksState {
   return parsed ?? { tasks: [], paused: false }
 }
 
-const TASK_STATUSES = new Set(['queued', 'running', 'done', 'failed', 'canceled'])
-
-function isTask(value: unknown): value is AgentTask {
-  if (!value || typeof value !== 'object') return false
-  const task = value as Record<string, unknown>
-  return (
-    typeof task.id === 'string' &&
-    typeof task.folderPath === 'string' &&
-    typeof task.prompt === 'string' &&
-    typeof task.presetId === 'string' &&
-    typeof task.useWorktree === 'boolean' &&
-    typeof task.status === 'string' &&
-    TASK_STATUSES.has(task.status) &&
-    typeof task.createdAt === 'number' &&
-    Number.isFinite(task.createdAt)
-  )
-}
+const isTask = isAgentTask
 
 /**
  * Persisted task queue. The queue *engine* (start next, watch exits) lives in
@@ -80,4 +66,22 @@ export function setTasksPaused(paused: boolean): TasksState {
   state.paused = paused
   save(state)
   return state
+}
+
+/** Complete a run and enqueue its successor in one durable write. */
+export function finishTaskRun(id: string, result: Partial<AgentTask>): void {
+  const state = read()
+  const task = state.tasks.find(t => t.id === id)
+  if (!task || task.status !== 'running') return
+  Object.assign(task, result, { finishedAt: Date.now() })
+  if (task.repeatMinutes && result.status !== 'canceled') {
+    const interval = task.repeatMinutes * 60_000
+    const base = task.scheduledAt ?? task.startedAt ?? Date.now()
+    const scheduledAt = base + Math.max(1, Math.floor((Date.now() - base) / interval) + 1) * interval
+    state.tasks.push({ id: randomUUID(), automationId: task.automationId ?? task.id,
+      folderPath: task.folderPath, prompt: task.prompt, presetId: task.presetId, useWorktree: task.useWorktree,
+      repeatMinutes: task.repeatMinutes, precheck: task.precheck, timeoutMinutes: task.timeoutMinutes,
+      scheduledAt, status: 'queued', createdAt: Date.now() })
+  }
+  save(state)
 }

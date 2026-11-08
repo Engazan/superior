@@ -282,6 +282,13 @@ export type AgentTaskStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancel
  * next queued task starts when the previous task's terminal exits.
  */
 export interface AgentTask {
+  scheduledAt?: number
+  repeatMinutes?: number
+  precheck?: string
+  timeoutMinutes?: number
+  outcome?: 'skipped_precheck'
+  automationId?: string
+
   /** crypto.randomUUID() */
   id: string
   /** The project folder the task belongs to (queues are per-folder). */

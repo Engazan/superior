@@ -225,7 +225,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     let revision = 0
     const off = window.api.onWorkspaceStateChanged((state) => {
       const currentRevision = ++revision
-      applyStateRef.current(state, (state as WorkspaceState & { source?: string }).source !== 'mobile')
+      applyStateRef.current(state, !['mobile', 'tasks'].includes((state as WorkspaceState & { source?: string }).source ?? ''))
       void Promise.all([window.api.restoreSessions(), window.api.getTabs()]).then(([next, tabs]) => {
         if (!active || currentRevision !== revision) return
         const validIds = new Set(state.workspaces.map(w => w.id))

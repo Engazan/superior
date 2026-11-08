@@ -2,7 +2,7 @@ import { ipcErrorMessage } from '../ipcError'
 import { useMemo, useState } from 'react'
 import { useI18n, type TFunction } from '../i18n'
 import { PresetIcon } from './PresetIcon'
-import { Button, EmptyState, IconButton, Select, TasksIcon, Textarea } from './ui'
+import { Button, EmptyState, IconButton, Select, TasksIcon, Textarea, useToast } from './ui'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
 import { WORKTREE_ERROR, type AgentTask, type TerminalPreset } from '../types'
 
@@ -127,6 +127,11 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
   const [presetId, setPresetId] = useState('')
   const [useWorktree, setUseWorktree] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [scheduled, setScheduled] = useState('')
+  const [repeatMinutes, setRepeatMinutes] = useState(0)
+  const [precheck, setPrecheck] = useState('')
+  const [timeoutMinutes, setTimeoutMinutes] = useState(60)
+  const toast = useToast()
 
   const folderTasks = useMemo(
     () => queue.tasks.filter((task) => task.folderPath === folderPath),
@@ -149,7 +154,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
   }
 
   const effectivePresetId = presetId || activePresets[0]?.id || ''
-  const canAdd = prompt.trim().length > 0 && !!effectivePresetId && !adding
+  const canAdd = prompt.trim().length > 0 && !!effectivePresetId && !adding && (!scheduled || Number.isFinite(new Date(scheduled).getTime())) && Number.isInteger(timeoutMinutes) && timeoutMinutes >= 1 && timeoutMinutes <= 10080
 
   const doAdd = async (): Promise<void> => {
     if (!canAdd) return
@@ -159,10 +164,14 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
         folderPath,
         prompt,
         presetId: effectivePresetId,
-        useWorktree
+        useWorktree,
+        scheduledAt: scheduled ? new Date(scheduled).getTime() : undefined,
+        repeatMinutes: repeatMinutes || undefined,
+        precheck: precheck.trim() || undefined,
+        timeoutMinutes
       })
       setPrompt('')
-    } finally {
+    } catch (error) { toast.error(ipcErrorMessage(error)) } finally {
       // A rejected add must not leave the button spinning.
       setAdding(false)
     }
@@ -178,7 +187,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
       case 'queued':
         return t('tasks.statusQueued')
       case 'done':
-        return t('tasks.statusDone')
+        return task.outcome === 'skipped_precheck' ? t('tasks.skippedPrecheck') : t('tasks.statusDone')
       case 'canceled':
         return t('tasks.statusCanceled')
       case 'failed':
@@ -212,6 +221,7 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
               {statusLabel(task)}
             </span>
           </div>
+          {task.scheduledAt && <p className="text-[10px] text-fgmuted">{new Date(task.scheduledAt).toLocaleString()}</p>}
           {task.status === 'failed' && task.error && (
             <div className="mt-0.5 wrap-break-word text-[10px] text-danger" title={errorMessage(t, task.error)}>
               {errorMessage(t, task.error)}
@@ -365,6 +375,18 @@ export function TasksView({ folderPath, queue, presets, onJumpTo }: Props): Reac
             {t('tasks.worktree')}
           </label>
         </div>
+        <details className="text-xs text-fgdim">
+          <summary className="cursor-pointer">{t('tasks.schedule')}</summary>
+          <div className="space-y-2 py-2">
+            <label className="block">{t('tasks.startAt')}<input className="block w-full rounded border border-edge bg-panel p-1" type="datetime-local" value={scheduled} onChange={e => setScheduled(e.target.value)} /></label>
+            <label className="block">{t('tasks.repeat')}<Select value={repeatMinutes} onChange={e => setRepeatMinutes(Number(e.target.value))}>
+              <option value={0}>{t('tasks.once')}</option><option value={60}>{t('tasks.hourly')}</option><option value={1440}>{t('tasks.daily')}</option><option value={10080}>{t('tasks.weekly')}</option>
+            </Select></label>
+            <label className="block">{t('tasks.timeout')}<input className="block w-full rounded border border-edge bg-panel p-1" type="number" min={1} max={10080} value={timeoutMinutes} onChange={e => setTimeoutMinutes(Number(e.target.value))} /></label>
+            <label className="block">{t('tasks.precheck')}<Textarea value={precheck} onChange={e => setPrecheck(e.target.value)} rows={2} maxLength={10000} /></label>
+            <p>{t('tasks.scheduleHint')}</p>
+          </div>
+        </details>
         <Button size="sm" className="w-full" disabled={!canAdd} loading={adding} onClick={() => void doAdd()}>
           {t('tasks.add')}
           <kbd className="font-mono text-[10px] font-normal opacity-70">{SUBMIT_HINT}</kbd>

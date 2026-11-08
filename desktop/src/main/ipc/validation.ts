@@ -131,6 +131,10 @@ export function isWorktreeAddArgs(value: unknown): value is WorktreeAddArgs {
 export function isAgentTask(value: unknown): value is AgentTask {
   if (!isRecord(value)) return false
   return (
+    (value.scheduledAt === undefined || (typeof value.scheduledAt === 'number' && Number.isFinite(value.scheduledAt) && value.scheduledAt >= 0)) &&
+    (value.repeatMinutes === undefined || (typeof value.repeatMinutes === 'number' && Number.isInteger(value.repeatMinutes) && value.repeatMinutes >= 1 && value.repeatMinutes <= 525600)) &&
+    (value.timeoutMinutes === undefined || (typeof value.timeoutMinutes === 'number' && Number.isInteger(value.timeoutMinutes) && value.timeoutMinutes >= 1 && value.timeoutMinutes <= 10080)) &&
+    (value.precheck === undefined || (typeof value.precheck === 'string' && value.precheck.length <= 10000 && !value.precheck.includes('\0'))) &&
     validId(value.id) &&
     boundedString(value.folderPath) &&
     boundedString(value.prompt, 1_000_000) &&

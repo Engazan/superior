@@ -5,6 +5,17 @@ import { elevationCs } from '../elevation'
 import type { MessageKey } from './en'
 
 export const cs: Record<MessageKey, string> = {
+  "tasks.schedule": "Plánování a podmínky",
+  "tasks.startAt": "Spustit (místní čas; prázdné = teď)",
+  "tasks.repeat": "Opakování",
+  "tasks.once": "Jednou",
+  "tasks.hourly": "Každou hodinu",
+  "tasks.daily": "Každých 24 hodin",
+  "tasks.weekly": "Každých 7 dní",
+  "tasks.timeout": "Limit agenta (minuty)",
+  "tasks.precheck": "Kontrolní příkaz (volitelný)",
+  "tasks.scheduleHint": "Kontrola: kód 0 spustí agenta; jiný výsledek běh přeskočí (limit 60 s). Superior musí běžet. Smazáním dalšího běhu zastavíte opakování.",
+  "tasks.skippedPrecheck": "Přeskočeno kontrolou",
   'context.send': 'Poslat agentovi',
   'context.instruction': 'Co má agent udělat?',
   ...setupCs,

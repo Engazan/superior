@@ -1,3 +1,4 @@
+import { cancelTaskRun } from '../services/task-engine.service'
 import { IPC, type AgentTask, type TasksState } from '@shared/types'
 import {
   clearFinishedTasks,
@@ -12,12 +13,16 @@ import { boundedString, invalidPayload, isAgentTask, validId } from './validatio
 export function registerTasksIpc(): void {
   handle(IPC.TASKS_LIST, (): TasksState => listTasks())
 
-  handle(IPC.TASKS_SAVE, (task: AgentTask): TasksState =>
-    isAgentTask(task) ? saveTask(task) : invalidPayload()
-  )
+  handle(IPC.TASKS_SAVE, async (task: AgentTask): Promise<TasksState> => {
+    if (!isAgentTask(task)) return invalidPayload()
+    const existing = listTasks().tasks.find(t => t.id === task.id)
+    if (existing && task.status === 'canceled') { await cancelTaskRun(task.id); return listTasks() }
+    if (task.status !== 'queued' || (existing && existing.status !== 'queued')) throw new Error('Task is no longer queued.')
+    return saveTask(task)
+  })
 
   handle(IPC.TASKS_DELETE, (id: string): TasksState =>
-    validId(id) ? deleteTask(id) : invalidPayload()
+    validId(id) && listTasks().tasks.find(t => t.id === id)?.status !== 'running' ? deleteTask(id) : invalidPayload()
   )
 
   handle(IPC.TASKS_CLEAR_FINISHED, (folderPath: string): TasksState =>

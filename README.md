@@ -311,3 +311,23 @@ an instruction. The preview includes the source and editor line range (the visib
 buffer may include unsaved edits). Selections are limited to 100,000 characters.
 When right-click paste is enabled, use the terminal's modified context-menu click.
 A transport error leaves the dialog open; inspect the target before retrying.
+
+## Scheduled Tasks
+
+Tasks now run from the main process, independently of the Tasks panel. Expand
+**Schedule & conditions** to choose a local start time, an hourly/24-hour/7-day
+repeat interval, an agent timeout, and an optional precheck shell command. Exit 0
+from the precheck runs the agent; any other result or a 60-second timeout records
+a skipped run. Use a command that explicitly tests its condition, not merely a
+command that prints an empty list successfully. Prechecks run in the project root.
+
+Every run has its own result and optional worktree. The next recurring run is
+saved atomically with the result; missed intervals are skipped rather than
+replayed in a burst. Delete the next queued run to stop repetition. Retry runs a
+single fresh attempt. Only one task per project runs at a time. Run times are
+fixed elapsed intervals, so a daily repeat can shift local clock time at DST.
+
+Superior must remain running for scheduling and timeouts. Existing PTYs survive
+app shutdown, but no new scheduled jobs start while it is closed. On restart,
+tasks reconcile with the surviving daemon; a missing result is a failure, never
+an assumed success. Agent timeout enforcement resumes when Superior opens.

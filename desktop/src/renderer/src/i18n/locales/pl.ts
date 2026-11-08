@@ -5,6 +5,17 @@ import { elevationPl } from '../elevation'
 import type { MessageKey } from './en'
 
 export const pl: Record<MessageKey, string> = {
+  "tasks.schedule": "Harmonogram i warunki",
+  "tasks.startAt": "Uruchom (czas lokalny; puste = teraz)",
+  "tasks.repeat": "Powtarzanie",
+  "tasks.once": "Raz",
+  "tasks.hourly": "Co godzinę",
+  "tasks.daily": "Co 24 godziny",
+  "tasks.weekly": "Co 7 dni",
+  "tasks.timeout": "Limit agenta (minuty)",
+  "tasks.precheck": "Polecenie kontrolne (opcjonalne)",
+  "tasks.scheduleHint": "Kod 0 uruchamia agenta; inne wyniki pomijają zadanie (limit 60 s). Superior musi działać. Usuń następne zadanie, aby zatrzymać powtarzanie.",
+  "tasks.skippedPrecheck": "Pominięto po kontroli",
   'context.send': 'Wyślij do agenta',
   'context.instruction': 'Co ma zrobić agent?',
   ...setupPl,

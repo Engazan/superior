@@ -3,6 +3,17 @@ import { terminalSettingsEn } from '../terminalSettings'
 import { onboardingEn } from '../onboarding'
 import { elevationEn } from '../elevation'
 export const en = {
+  "tasks.schedule": "Schedule & conditions",
+  "tasks.startAt": "Start at (local time; empty = now)",
+  "tasks.repeat": "Repeat",
+  "tasks.once": "Once",
+  "tasks.hourly": "Hourly",
+  "tasks.daily": "Every 24 hours",
+  "tasks.weekly": "Every 7 days",
+  "tasks.timeout": "Agent timeout (minutes)",
+  "tasks.precheck": "Precheck command (optional)",
+  "tasks.scheduleHint": "Precheck: exit 0 runs the agent; other results skip it (60s limit). Superior must be running. Delete the next queued run to stop repetition.",
+  "tasks.skippedPrecheck": "Skipped by precheck",
   'context.send': 'Send to agent',
   'context.instruction': 'What should the agent do?',
   ...setupEn,

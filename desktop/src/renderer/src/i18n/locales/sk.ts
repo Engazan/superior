@@ -5,6 +5,17 @@ import { elevationSk } from '../elevation'
 import type { MessageKey } from './en'
 
 export const sk: Record<MessageKey, string> = {
+  "tasks.schedule": "Plánovanie a podmienky",
+  "tasks.startAt": "Spustiť (miestny čas; prázdne = teraz)",
+  "tasks.repeat": "Opakovanie",
+  "tasks.once": "Raz",
+  "tasks.hourly": "Každú hodinu",
+  "tasks.daily": "Každých 24 hodín",
+  "tasks.weekly": "Každých 7 dní",
+  "tasks.timeout": "Limit agenta (minúty)",
+  "tasks.precheck": "Kontrolný príkaz (voliteľný)",
+  "tasks.scheduleHint": "Kontrola: kód 0 spustí agenta; iný výsledok beh preskočí (limit 60 s). Superior musí bežať. Vymazaním ďalšieho behu zastavíte opakovanie.",
+  "tasks.skippedPrecheck": "Preskočené kontrolou",
   'context.send': 'Poslať agentovi',
   'context.instruction': 'Čo má agent urobiť?',
   ...setupSk,
