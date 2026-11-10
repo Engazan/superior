@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.1] - 2026-11-10
+
+### Changed
+
+- **Lower sidebar memory usage.** Release the file tree, commit history and full
+  diff data when the right panel is closed or Settings is open. Restore expanded
+  directories when reopening the file tree and preserve commit and task drafts.
+- **Less background Git work.** Load and poll full diffs only while the Changes
+  tab is visible. Other tabs reuse the working-tree summary from the title bar.
+
+### Fixed
+
+- **Code disabled in Settings.** Turning off Code now also unmounts the file
+  browser and releases its loaded data. The Files tab shows an Enable in Settings
+  action instead of loading the project tree, in all five supported languages.
+
 ## [0.38.0] - 2026-11-08
 
 ### Added
