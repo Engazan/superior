@@ -82,6 +82,8 @@ export const cs: Record<MessageKey, string> = {
   'code.merge': 'Sloučit skupiny editoru',
   'code.resize': 'Změnit šířku skupin editoru',
   'code.empty': 'Otevři soubor ze stromu projektu nebo ho vyhledej dvojitým Shiftem.',
+  'files.codeDisabled': 'Prohlížeč souborů je vypnutý spolu s Code.',
+  'files.enableInSettings': 'Zapnout v nastavení',
   'code.openFiles': 'Otevřít soubor…',
   ...onboardingCs,
   'footer.resetNotice': 'Usage limity se obnovily',

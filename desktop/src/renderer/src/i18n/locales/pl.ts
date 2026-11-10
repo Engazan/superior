@@ -82,6 +82,8 @@ export const pl: Record<MessageKey, string> = {
   'code.merge': 'Połącz grupy edytora',
   'code.resize': 'Zmień szerokość grup edytora',
   'code.empty': 'Otwórz plik z drzewa projektu lub wyszukaj go, naciskając Shift dwukrotnie.',
+  'files.codeDisabled': 'Przeglądarka plików jest wyłączona razem z Code.',
+  'files.enableInSettings': 'Włącz w ustawieniach',
   'code.openFiles': 'Otwórz plik…',
   ...onboardingPl,
   'footer.resetNotice': 'Limity użycia zostały odnowione',

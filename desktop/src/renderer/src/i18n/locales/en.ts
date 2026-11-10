@@ -80,6 +80,8 @@ export const en = {
   'code.merge': 'Merge editor groups',
   'code.resize': 'Resize editor groups',
   'code.empty': 'Open a file from the project tree or use double Shift to search.',
+  'files.codeDisabled': 'The file browser is disabled with Code.',
+  'files.enableInSettings': 'Enable in Settings',
   'code.openFiles': 'Open file…',
   ...onboardingEn,
   'footer.resetNotice': 'Usage limits reset',

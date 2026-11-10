@@ -82,6 +82,8 @@ export const hu: Record<MessageKey, string> = {
   'code.merge': 'Szerkesztőcsoportok egyesítése',
   'code.resize': 'Szerkesztőcsoportok átméretezése',
   'code.empty': 'Nyiss meg egy fájlt a projektfából, vagy keress a Shift kétszeri megnyomásával.',
+  'files.codeDisabled': 'A fájlböngésző a Code funkcióval együtt ki van kapcsolva.',
+  'files.enableInSettings': 'Engedélyezés a beállításokban',
   'code.openFiles': 'Fájl megnyitása…',
   ...onboardingHu,
   'footer.resetNotice': 'A használati korlátok visszaálltak',

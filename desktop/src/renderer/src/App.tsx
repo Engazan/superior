@@ -1017,6 +1017,8 @@ export default function App(): React.JSX.Element {
                     }}
                     width={rightPanelWidth}
                     active={rightSidebarOpen}
+                    codeEnabled={codeEnabled}
+                    onOpenSettings={() => setView('settings')}
                     folderPath={ws.effectiveDir}
                     isRemoteWorkspace={ws.activeFolder?.kind === 'remote'}
                     tasksFolder={ws.effectiveDir ? (ws.activeFolder?.path ?? null) : null}

@@ -6,7 +6,7 @@ import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { HistoryView } from './HistoryView'
 import { TasksView } from './TasksView'
-import { BranchIcon, FolderIcon, HistoryIcon, Notice, TasksIcon } from './ui'
+import { BranchIcon, Button, FolderIcon, HistoryIcon, Notice, TasksIcon } from './ui'
 import { useI18n } from '../i18n'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
 import type { AgentSession, AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
@@ -19,6 +19,8 @@ interface Props {
   /** Whether the panel is open. Kept mounted while closed (for the slide
       animation), so polling is gated on this to stay idle when hidden. */
   active: boolean
+  codeEnabled: boolean
+  onOpenSettings: () => void
   workspaceId: string | null
   sessions: AgentSession[]
   onReviewSent: (session: AgentSession) => void
@@ -49,6 +51,8 @@ interface Props {
 export function RightPanel({
   filesRevealRequest,
   active,
+  codeEnabled,
+  onOpenSettings,
   workspaceId,
   sessions,
   onReviewSent,
@@ -226,7 +230,13 @@ export function RightPanel({
         aria-labelledby={`right-panel-tab-${tab}`}
         className="flex min-h-0 flex-1 flex-col"
       >
-      {isRemoteWorkspace ? (
+      {tab === 'files' && !codeEnabled ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-center text-sm text-fgmuted">
+          <FolderIcon size={24} />
+          <p>{t('files.codeDisabled')}</p>
+          <Button variant="secondary" size="sm" onClick={onOpenSettings}>{t('files.enableInSettings')}</Button>
+        </div>
+      ) : isRemoteWorkspace ? (
         <div className="p-3">
           <Notice tone="info">{t('remote.localOnlyPanel')}</Notice>
         </div>

@@ -82,6 +82,8 @@ export const sk: Record<MessageKey, string> = {
   'code.merge': 'Zlúčiť skupiny editora',
   'code.resize': 'Zmeniť šírku skupín editora',
   'code.empty': 'Otvor súbor zo stromu projektu alebo ho vyhľadaj dvojitým Shiftom.',
+  'files.codeDisabled': 'Prehliadač súborov je vypnutý spolu s Code.',
+  'files.enableInSettings': 'Zapnúť v nastaveniach',
   'code.openFiles': 'Otvoriť súbor…',
   ...onboardingSk,
   'footer.resetNotice': 'Usage limity sa obnovili',
