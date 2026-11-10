@@ -995,8 +995,8 @@ export default function App(): React.JSX.Element {
               </div>
             )}
             {/* The width wrapper stays mounted for the close animation. The panel
-                itself is loaded only on first use, then remains mounted so its
-                UI state survives close/reopen cycles. */}
+                shell stays mounted to preserve drafts and expansion paths;
+                hidden file/history views and full diff data are released. */}
             <div
               style={{ width: rightSidebarOpen ? rightPanelWidth : 0 }}
               className={`flex shrink-0 overflow-hidden ${
@@ -1016,7 +1016,8 @@ export default function App(): React.JSX.Element {
                       ws.setActiveSessionId(session.id)
                     }}
                     width={rightPanelWidth}
-                    active={rightSidebarOpen}
+                    active={rightSidebarOpen && view === 'main'}
+                    gitStatus={gitStatus}
                     codeEnabled={codeEnabled}
                     onOpenSettings={() => setView('settings')}
                     folderPath={ws.effectiveDir}

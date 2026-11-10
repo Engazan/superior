@@ -9,7 +9,7 @@ import { TasksView } from './TasksView'
 import { BranchIcon, Button, FolderIcon, HistoryIcon, Notice, TasksIcon } from './ui'
 import { useI18n } from '../i18n'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
-import type { AgentSession, AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
+import type { AgentSession, AgentTask, FsEntry, GitDiff, GitStatus, TerminalPreset } from '../types'
 
 type Tab = 'files' | 'changes' | 'history' | 'tasks'
 
@@ -19,6 +19,7 @@ interface Props {
   /** Whether the panel is open. Kept mounted while closed (for the slide
       animation), so polling is gated on this to stay idle when hidden. */
   active: boolean
+  gitStatus: GitStatus | null
   codeEnabled: boolean
   onOpenSettings: () => void
   workspaceId: string | null
@@ -51,6 +52,7 @@ interface Props {
 export function RightPanel({
   filesRevealRequest,
   active,
+  gitStatus,
   codeEnabled,
   onOpenSettings,
   workspaceId,
@@ -72,6 +74,18 @@ export function RightPanel({
   const [editor, setEditor] = useState<{ scope: string; anchor: ReviewAnchor; note?: ReviewNote } | null>(null)
   const openComment = (anchor: ReviewAnchor): void => setEditor({ scope, anchor, note: review.notes.find((note) => sameReviewAnchor(note, anchor)) })
   const [tab, setTab] = useState<Tab>('files')
+  // Keep only expansion paths while the heavy file tree is unmounted.
+  const [treeState, setTreeState] = useState<{ folder: string | null; paths: ReadonlySet<string> }>({ folder: folderPath, paths: new Set() })
+  const expandedPaths = treeState.folder === folderPath ? treeState.paths : new Set<string>()
+  const onToggleDirectory = (path: string): void => {
+    setTreeState((previous) => {
+      const paths = new Set(previous.folder === folderPath ? previous.paths : [])
+      if (paths.has(path)) paths.delete(path)
+      else paths.add(path)
+      return { folder: folderPath, paths }
+    })
+  }
+  const diffActive = active && !isRemoteWorkspace && tab === 'changes'
 
   // Restore the last-open tab once; after that every switch persists, so users
   // who live in Tasks aren't dropped back on Changes each app run.
@@ -99,7 +113,7 @@ export function RightPanel({
 
   const fetchDiff = useCallback(
     async (show: boolean): Promise<void> => {
-      if (!folderPath) return
+      if (!folderPath || !diffActive) return
       const token = ++reqRef.current
       if (show) setLoading(true)
       // A rejected IPC must clear the spinner instead of sticking on "Loading…".
@@ -116,14 +130,14 @@ export function RightPanel({
       setDiff((prev) => (prev && JSON.stringify(prev) === JSON.stringify(result) ? prev : result))
       setLoading(false)
     },
-    [folderPath]
+    [folderPath, diffActive]
   )
 
-  // Refetch on folder change and poll so the view tracks working-tree edits.
-  // Skipped while collapsed — the panel stays mounted only for its animation.
+  // Full hunks exist only while Changes is visible. Other tabs reuse the title-bar summary.
   useEffect(() => {
     setDiff(null)
-    if (!folderPath || !active) return
+    setLoading(false)
+    if (!folderPath || !diffActive) return
     void fetchDiff(true)
     const id = window.setInterval(() => {
       if (!document.hidden) void fetchDiff(false)
@@ -134,7 +148,7 @@ export function RightPanel({
       // eslint-disable-next-line react-hooks/exhaustive-deps
       ++reqRef.current
     }
-  }, [folderPath, fetchDiff, active])
+  }, [folderPath, fetchDiff, diffActive])
 
   // Bumped on every explicit refresh (incl. after commit/pull) so the history
   // tab refetches its log without its own poller.
@@ -144,7 +158,11 @@ export function RightPanel({
     void fetchDiff(true)
   }, [fetchDiff])
 
-  const totals = diff?.isRepository && !diff.error ? diff.totals : null
+  const totals = diffActive && diffFolder === folderPath && diff?.isRepository && !diff.error
+    ? diff.totals
+    : gitStatus?.isRepository && !gitStatus.error
+      ? { additions: gitStatus.additions ?? 0, deletions: gitStatus.deletions ?? 0 }
+      : null
 
   // Queued + running task count for this folder, badged on the Tasks tab.
   const pendingTasks = useMemo(
@@ -254,7 +272,7 @@ export function RightPanel({
             onSave={(note) => review.update([...review.notes.filter((item) => item.id !== note.id), note])} />}
         </>
       ) : tab === 'history' ? (
-        <HistoryView folderPath={folderPath} refreshToken={refreshToken} />
+        active && <HistoryView folderPath={folderPath} refreshToken={refreshToken} />
       ) : tab === 'tasks' ? (
         <TasksView
           folderPath={tasksFolder}
@@ -263,7 +281,7 @@ export function RightPanel({
           onJumpTo={onJumpToTask}
         />
       ) : (
-        <FilesView folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
+        active && <FilesView key={folderPath} expandedPaths={expandedPaths} onToggleDirectory={onToggleDirectory} folderPath={folderPath} onOpenFile={onOpenFile} selectedPath={selectedPath} />
       )}
       </div>
     </aside>

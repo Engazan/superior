@@ -11,6 +11,8 @@ interface Props {
   onOpenFile: (file: FsEntry) => void
   /** Path of the file currently shown in the preview, for highlighting. */
   selectedPath: string | null
+  expandedPaths: ReadonlySet<string>
+  onToggleDirectory: (path: string) => void
 }
 
 function Chevron({ open }: { open: boolean }): React.JSX.Element {
@@ -35,35 +37,37 @@ interface NodeProps {
   depth: number
   onOpenFile: (file: FsEntry) => void
   selectedPath: string | null
+  expandedPaths: ReadonlySet<string>
+  onToggleDirectory: (path: string) => void
 }
 
-/** A single tree row; directories fetch their children lazily on first expand. */
-function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): React.JSX.Element {
+/** A single tree row; expanded directories reload after the tree is remounted. */
+function TreeNode({ entry, depth, onOpenFile, selectedPath, expandedPaths, onToggleDirectory }: NodeProps): React.JSX.Element {
   const { t } = useI18n()
-  const [open, setOpen] = useState(false)
+  const open = expandedPaths.has(entry.path)
   const [children, setChildren] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
 
   const [error, setError] = useState(false)
 
-  const activate = async (): Promise<void> => {
-    if (!entry.isDirectory) {
-      onOpenFile(entry)
-      return
-    }
-    const next = !open
-    setOpen(next)
-    if (next && (children === null || error)) {
-      setLoading(true)
-      setError(false)
-      try {
-        const res = await window.api.listDir(entry.path)
-        setChildren(res.entries)
-      } catch {
-        setError(true)
-      }
-      setLoading(false)
-    }
+  useEffect(() => {
+    if (!open || !entry.isDirectory) return
+    let live = true
+    setLoading(true)
+    setError(false)
+    void window.api.listDir(entry.path).then((res) => {
+      if (live) setChildren(res.entries)
+    }).catch(() => {
+      if (live) setError(true)
+    }).finally(() => {
+      if (live) setLoading(false)
+    })
+    return () => { live = false }
+  }, [open, entry.path, entry.isDirectory])
+
+  const activate = (): void => {
+    if (!entry.isDirectory) onOpenFile(entry)
+    else onToggleDirectory(entry.path)
   }
 
   const selected = !entry.isDirectory && entry.path === selectedPath
@@ -111,6 +115,8 @@ function TreeNode({ entry, depth, onOpenFile, selectedPath }: NodeProps): React.
               depth={depth + 1}
               onOpenFile={onOpenFile}
               selectedPath={selectedPath}
+              expandedPaths={expandedPaths}
+              onToggleDirectory={onToggleDirectory}
             />
           ))
         ))}
@@ -151,7 +157,7 @@ function SearchRow({
   )
 }
 
-export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): React.JSX.Element {
+export function FilesView({ folderPath, onOpenFile, selectedPath, expandedPaths, onToggleDirectory }: Props): React.JSX.Element {
   const { t } = useI18n()
   const [entries, setEntries] = useState<FsEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -326,6 +332,8 @@ export function FilesView({ folderPath, onOpenFile, selectedPath }: Props): Reac
               depth={0}
               onOpenFile={onOpenFile}
               selectedPath={selectedPath}
+              expandedPaths={expandedPaths}
+              onToggleDirectory={onToggleDirectory}
             />
           ))}
         </div>
