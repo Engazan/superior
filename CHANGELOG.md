@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0] - 2026-11-21
+
+### Added
+
+- **Desktop Git dashboard.** Browse GitHub and GitLab issues, pull requests and
+  merge requests from a linked project. See reviews waiting for you, assigned
+  issues and blocked changes. Search and filter the lists, inspect merge
+  readiness and approvals, and resume your dashboard view per project.
+
+### Changed
+
+- **Desktop workspace layout.** Redesign the title bar, sidebar, terminal tabs
+  and Changes panel. Update the command palette, session status indicators and
+  typography with bundled Inter and JetBrains Mono fonts.
+- **Desktop build tooling.** Upgrade Electron to 45, Vite to 8 and the desktop
+  build and test tools. Use Node.js 22.13.0 as the minimum Node 22 version in CI.
+
+### Fixed
+
+- **Quit on macOS.** A single `⌘Q` now quits Superior after worktree setup
+  cleanup.
+
 ## [0.38.1] - 2026-11-10
 
 ### Changed
