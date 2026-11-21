@@ -904,6 +904,8 @@ export interface Integration {
    * For github.com it may be left blank (api.github.com is assumed).
    */
   baseUrl: string
+  /** Optional host alias used by SSH remotes for this instance. */
+  sshHost?: string
   /** Personal access token used for API calls and authenticated clones. */
   token: string
   /** Renderer projection: true when main has a saved token; the token itself remains redacted. */

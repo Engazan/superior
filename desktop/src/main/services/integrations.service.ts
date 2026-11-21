@@ -88,6 +88,7 @@ function read(): IntegrationsState {
       provider: r.provider,
       name: r.name,
       baseUrl: r.baseUrl,
+      sshHost: typeof r.sshHost === 'string' ? r.sshHost : undefined,
       token: decryptToken(r)
     }))
   }
@@ -132,6 +133,7 @@ export function saveIntegration(integration: Integration): IntegrationsState {
     provider: PROVIDERS.includes(integration.provider) ? integration.provider : 'gitea',
     name: integration.name.trim(),
     baseUrl: integration.baseUrl.trim().replace(/\/+$/, ''),
+    sshHost: integration.sshHost?.trim().toLowerCase() || undefined,
     token
   }
   const idx = state.integrations.findIndex((i) => i.id === clean.id)

@@ -44,7 +44,8 @@ export function repositoryFromOrigin(origin: string, integration: Integration): 
   const matchingHost = publicGithub
     ? ['github.com', 'www.github.com'].includes(remote.host)
     : remote.host === (remote.ssh ? base.hostname : base.host)
-  if (!matchingHost) return null
+  const matchingSshAlias = remote.ssh && remote.host === integration.sshHost
+  if (!matchingHost && !matchingSshAlias) return null
 
   const path = remote.path.replace(/^\/+|\/+$/g, '').replace(/\.git$/i, '')
   const prefix = publicGithub ? '' : base.pathname.replace(/^\/+|\/+$/g, '')

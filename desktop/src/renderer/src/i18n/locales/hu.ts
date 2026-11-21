@@ -607,6 +607,8 @@ export const hu: Record<MessageKey, string> = {
   'integrations.name': 'Név',
   'integrations.namePlaceholder': 'pl. Munka Gitea',
   'integrations.url': 'Szerver URL',
+  'integrations.sshHost': 'SSH-gépnév aliasa',
+  'integrations.sshHostHint': 'A Git-tárolók SSH-címeiben szereplő alias összekapcsolja a projekteket ezzel az irányítópulttal.',
   'integrations.optional': 'opcionális',
   'integrations.token': 'Hozzáférési token',
   'integrations.tokenPlaceholder': 'Személyes hozzáférési token',

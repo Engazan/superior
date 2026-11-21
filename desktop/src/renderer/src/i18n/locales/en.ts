@@ -604,6 +604,8 @@ export const en = {
   'integrations.name': 'Name',
   'integrations.namePlaceholder': 'e.g. Work Gitea',
   'integrations.url': 'Server URL',
+  'integrations.sshHost': 'SSH host alias',
+  'integrations.sshHostHint': 'Use the host alias from your SSH Git remotes to link projects to this dashboard.',
   'integrations.optional': 'optional',
   'integrations.token': 'Access token',
   'integrations.tokenPlaceholder': 'Personal access token',

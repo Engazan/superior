@@ -81,6 +81,7 @@ export function isIntegration(value: unknown): value is Integration {
     typeof item.provider === 'string' && PROVIDERS.has(item.provider) &&
     boundedString(item.name) &&
     boundedString(item.baseUrl) &&
+    (item.sshHost === undefined || (typeof item.sshHost === 'string' && /^[\w.-]{0,253}$/.test(item.sshHost.trim()))) &&
     boundedString(item.token, 100_000)
   )
 }

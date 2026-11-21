@@ -171,6 +171,23 @@ function IntegrationForm({
           />
         </Field>
 
+        <Field
+          label={t('integrations.sshHost')}
+          htmlFor="integration-ssh-host"
+          aside={<FieldTag>{t('integrations.optional')}</FieldTag>}
+          hint={t('integrations.sshHostHint')}
+        >
+          <Input
+            id="integration-ssh-host"
+            value={draft.sshHost ?? ''}
+            onChange={(e) => patch({ sshHost: e.target.value })}
+            placeholder="work-gitlab"
+            maxLength={253}
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </Field>
+
         <Field label={t('integrations.token')} htmlFor="integration-token">
           <Input
             id="integration-token"

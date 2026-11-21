@@ -607,6 +607,8 @@ export const pl: Record<MessageKey, string> = {
   'integrations.name': 'Nazwa',
   'integrations.namePlaceholder': 'np. Firmowa Gitea',
   'integrations.url': 'Adres URL serwera',
+  'integrations.sshHost': 'Alias hosta SSH',
+  'integrations.sshHostHint': 'Alias z adresów SSH repozytoriów Git połączy projekty z tym panelem.',
   'integrations.optional': 'opcjonalne',
   'integrations.token': 'Token dostępu',
   'integrations.tokenPlaceholder': 'Osobisty token dostępu',

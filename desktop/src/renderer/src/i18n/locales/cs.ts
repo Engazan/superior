@@ -607,6 +607,8 @@ export const cs: Record<MessageKey, string> = {
   'integrations.name': 'Název',
   'integrations.namePlaceholder': 'např. Pracovní Gitea',
   'integrations.url': 'URL serveru',
+  'integrations.sshHost': 'Alias hostitele SSH',
+  'integrations.sshHostHint': 'Alias z Git adres SSH propojí projekty s tímto dashboardem.',
   'integrations.optional': 'volitelné',
   'integrations.token': 'Přístupový token',
   'integrations.tokenPlaceholder': 'Osobní přístupový token',

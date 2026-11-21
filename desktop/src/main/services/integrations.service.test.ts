@@ -47,8 +47,9 @@ describe('integration secret projection', () => {
     expect(created).toMatchObject({ token: '', hasToken: true })
     expect(listIntegrations().integrations[0]).toMatchObject({ token: '', hasToken: true })
 
-    const updated = saveIntegration({ ...created, name: 'Renamed', token: '' }).integrations[0]
-    expect(updated).toMatchObject({ name: 'Renamed', token: '', hasToken: true })
+    const updated = saveIntegration({ ...created, name: 'Renamed', sshHost: ' Work-Forge ', token: '' }).integrations[0]
+    expect(updated).toMatchObject({ name: 'Renamed', sshHost: 'work-forge', token: '', hasToken: true })
+    expect(listIntegrations().integrations[0].sshHost).toBe('work-forge')
 
     const disk = JSON.parse(fs.readFileSync(path.join(userData, 'integrations.json'), 'utf8'))
     expect(disk.integrations[0].token).toBe('secret-token')

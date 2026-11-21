@@ -72,6 +72,24 @@ describe('dashboard project resolution', () => {
     expect(mock.fetch).not.toHaveBeenCalled()
   })
 
+  it('links existing projects through a configured SSH alias and uses the server URL for API requests', async () => {
+    const integration = { ...gitlab, baseUrl: 'https://git.test', sshHost: 'work-gitlab' }
+    mock.integrations.mockReturnValue([integration])
+    mock.git.mockResolvedValue('git@work-gitlab:team/subgroup/app.git')
+    mock.fetch.mockResolvedValue(json([]))
+
+    expect(await dashboardProject(folder)).toMatchObject(binding)
+    await expect(dashboardList(folder, binding, { kind: 'issue', assignee: 'any', state: 'open' }))
+      .resolves.toEqual({ data: { items: [], truncated: false } })
+    expect(mock.fetch).toHaveBeenCalledTimes(1)
+    const url = pathOf(mock.fetch.mock.calls[0][0])
+    expect(url.origin).toBe('https://git.test')
+    expect(url.pathname).toBe('/api/v4/projects/team%2Fsubgroup%2Fapp/issues')
+    expect(matchForgeProject('ssh://git@work-gitlab:2222/team/another.git', [integration]))
+      .toMatchObject({ fullName: 'team/another' })
+    expect(matchForgeProject('https://work-gitlab/team/another.git', [integration])).toBeNull()
+  })
+
   it('leaves ambiguous and unrelated origins unlinked', () => {
     expect(matchForgeProject('https://git.test/forge/team/subgroup/app', [gitlab, { ...gitlab, id: 'alt' }])).toBeNull()
     expect(matchForgeProject('https://other.test/forge/team/subgroup/app', [gitlab])).toBeNull()
