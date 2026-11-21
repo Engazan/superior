@@ -188,12 +188,12 @@ export function TitleBar({
       </div>
 
       {showToggle && (
-        <div className="superior-command-strip app-no-drag flex min-w-0 flex-1 items-center gap-1 rounded-xl border border-edge bg-bar p-[3px]">
+        <div className="superior-command-strip app-no-drag flex min-w-0 flex-initial items-center gap-1 rounded-xl border border-edge bg-bar p-[3px]">
           <button
             type="button"
             onClick={onOpenPalette}
             title={shortcutTitle(t('titlebar.search'), 'openPalette')}
-            className="superior-command-search flex h-[30px] min-w-0 flex-1 items-center gap-2.5 rounded-[9px] bg-panel px-2.5 text-left text-fgdim transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+            className="superior-command-search flex h-[30px] w-80 min-w-0 items-center gap-2.5 rounded-[9px] bg-panel px-2.5 text-left text-fgdim transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <SearchIcon size={15} className="shrink-0" />
             <span className="min-w-0 flex-1 truncate">{t('titlebar.search')}</span>
@@ -225,7 +225,7 @@ export function TitleBar({
         </div>
       )}
 
-      <div className="superior-titlebar-end ml-auto flex shrink-0 items-center justify-end gap-2" onDoubleClick={onMaximize}>
+      <div className={`superior-titlebar-end flex shrink-0 items-center justify-end gap-2 ${showToggle ? '' : 'ml-auto'}`} onDoubleClick={onMaximize}>
         {showToggle && (
           <>
             <button

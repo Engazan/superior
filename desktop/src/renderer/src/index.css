@@ -317,7 +317,6 @@ body {
 }
 
 .superior-command-strip {
-  max-width: 728px;
   margin-inline: auto;
 }
 
@@ -517,6 +516,7 @@ body {
   }
 
   .superior-command-search {
+    width: 36px;
     justify-content: center;
   }
 
