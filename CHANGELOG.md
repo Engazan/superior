@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.2] - 2026-11-21
+
+### Fixed
+
+- **Git dashboard for SSH clones.** Set an SSH host alias once in the Git
+  integration to link existing projects that use it in their `origin` URLs.
+
+### Changed
+
+- **Desktop title bar.** Keep the search field and workspace mode switcher
+  compact. On narrow windows, search collapses to an icon button.
+
 ## [0.39.1] - 2026-11-21
 
 ### Fixed
