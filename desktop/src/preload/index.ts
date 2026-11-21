@@ -1,3 +1,4 @@
+import type { DashboardFilter, DashboardKind, GitProjectBinding } from '@shared/git-dashboard'
 import type { ChatAction } from '@shared/native-chat'
 import type { WorktreeSetupConfig } from '@shared/worktree-setup'
 import type { AgentStateEvent } from '@shared/agent-state'
@@ -449,6 +450,17 @@ const api = {
     const listener = (_e: unknown, payload: UpdateProgress): void => cb(payload)
     ipcRenderer.on(IPC.UPDATE_STATUS, listener)
     return () => ipcRenderer.removeListener(IPC.UPDATE_STATUS, listener)
+  },
+
+  dashboardProject(folder: string) { return ipcRenderer.invoke(IPC.DASHBOARD_PROJECT, folder) },
+  dashboardList(folder: string, project: GitProjectBinding, filter: DashboardFilter) {
+    return ipcRenderer.invoke(IPC.DASHBOARD_LIST, folder, project, filter)
+  },
+  dashboardReviews(folder: string, project: GitProjectBinding) {
+    return ipcRenderer.invoke(IPC.DASHBOARD_REVIEWS, folder, project)
+  },
+  dashboardDetail(folder: string, project: GitProjectBinding, kind: DashboardKind, id: number) {
+    return ipcRenderer.invoke(IPC.DASHBOARD_DETAIL, folder, project, kind, id)
   },
 
   /** Saved git-forge integrations (GitHub / GitLab / Gitea connections). */

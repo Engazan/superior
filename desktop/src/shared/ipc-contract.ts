@@ -1,3 +1,4 @@
+import type { DashboardDetail, DashboardFilter, DashboardKind, DashboardList, DashboardProject, DashboardResult, DashboardReviews, GitProjectBinding } from './git-dashboard'
 import type { ChatAction, NativeChat, NativeChatSummary } from './native-chat'
 import type { PullRequestState } from './pull-request'
 import type { WorktreeSetupConfig, WorktreeSetupSnapshot } from './worktree-setup'
@@ -201,6 +202,10 @@ export interface IpcInvokeMap {
   [IPC.INTEGRATIONS_TEST]: Invocation<[draft: IntegrationDraft], IntegrationTestResult>
   [IPC.INTEGRATIONS_LIST_REPOS]: Invocation<[integrationId: string], RepoListResult>
   [IPC.INTEGRATIONS_CLONE]: Invocation<[args: CloneArgs], CloneResult>
+  [IPC.DASHBOARD_PROJECT]: Invocation<[folder: string], DashboardProject | null>
+  [IPC.DASHBOARD_LIST]: Invocation<[folder: string, project: GitProjectBinding, filter: DashboardFilter], DashboardResult<DashboardList>>
+  [IPC.DASHBOARD_REVIEWS]: Invocation<[folder: string, project: GitProjectBinding], DashboardResult<DashboardReviews>>
+  [IPC.DASHBOARD_DETAIL]: Invocation<[folder: string, project: GitProjectBinding, kind: DashboardKind, id: number], DashboardResult<DashboardDetail>>
 
   [IPC.PRESETS_LIST]: Invocation<[], PresetsState>
   [IPC.PRESETS_SAVE]: Invocation<[preset: TerminalPreset], PresetsState>

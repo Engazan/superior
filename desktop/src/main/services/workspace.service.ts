@@ -1,3 +1,4 @@
+import type { GitProjectBinding } from '@shared/git-dashboard'
 import { initializeSetup, runSetup, cancelSetup } from './worktree-setup.service'
 import { dialog } from 'electron'
 import { execFile } from 'child_process'
@@ -355,18 +356,19 @@ export async function addFolder(): Promise<WorkspaceState | null> {
  * folder picker ({@link addFolder}) and the integration clone flow. Assumes
  * `dir` is an existing directory. Returns the updated, persisted state.
  */
-export function addFolderByPath(dir: string, options?: { profileId: string; activate: boolean }): WorkspaceState {
+export function addFolderByPath(dir: string, options?: { profileId?: string; activate?: boolean; gitIntegration?: GitProjectBinding }): WorkspaceState {
   const state = readState()
   const existing = state.folders.find((f) => f.path === dir)
   if (!existing) {
     // New folders join the active profile; existing ones keep their profile but
     // switch the active profile to the one that owns them so they're visible.
-    state.folders.push(makeFolder(dir, options?.profileId ?? state.activeProfileId as string))
+    state.folders.push({ ...makeFolder(dir, options?.profileId ?? state.activeProfileId as string), gitIntegration: options?.gitIntegration })
     const ws = makeWorkspace(dir, 'Main')
     state.workspaces.push(ws)
     if (options?.activate !== false) state.activeWorkspaceId = ws.id
   } else {
     existing.lastOpenedAt = Date.now()
+    if (options?.gitIntegration) existing.gitIntegration = options.gitIntegration
     // Re-opening a folder filed under another profile activates that profile so
     // the folder (and its newly-active workspace) is actually shown.
     if (existing.profileId && options?.activate !== false) state.activeProfileId = existing.profileId

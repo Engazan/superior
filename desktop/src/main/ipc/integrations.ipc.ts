@@ -1,3 +1,5 @@
+import type { DashboardFilter, DashboardKind, GitProjectBinding } from '@shared/git-dashboard'
+import { dashboardDetail, dashboardList, dashboardProject, dashboardReviews } from '../services/git-dashboard.service'
 import {
   IPC,
   type CloneArgs,
@@ -17,9 +19,36 @@ import {
   testConnection
 } from '../services/integrations.service'
 import { handle } from './handle'
-import { isCloneArgs, isIntegration, isIntegrationDraft, validId } from './validation'
+import { isCloneArgs, isIntegration, isIntegrationDraft, boundedString, validId } from './validation'
+
+function projectBinding(value: unknown): value is GitProjectBinding {
+  if (!value || typeof value !== 'object') return false
+  const project = value as Partial<GitProjectBinding>
+  return validId(project.integrationId) && boundedString(project.fullName)
+}
+
+function dashboardKind(value: unknown): value is DashboardKind {
+  return value === 'issue' || value === 'merge-request'
+}
+
+function dashboardFilter(value: unknown): value is DashboardFilter {
+  if (!value || typeof value !== 'object') return false
+  const filter = value as Partial<DashboardFilter>
+  return dashboardKind(filter.kind) &&
+    (filter.assignee === 'me' || filter.assignee === 'any') &&
+    (filter.state === 'open' || filter.state === 'all')
+}
 
 export function registerIntegrationsIpc(): void {
+  handle(IPC.DASHBOARD_PROJECT, (folder) => boundedString(folder) ? dashboardProject(folder) : null)
+  handle(IPC.DASHBOARD_REVIEWS, (folder, project) =>
+    boundedString(folder) && projectBinding(project) ? dashboardReviews(folder, project) : { error: 'unlinked' })
+  handle(IPC.DASHBOARD_LIST, (folder, project, filter) =>
+    boundedString(folder) && projectBinding(project) && dashboardFilter(filter) ? dashboardList(folder, project, filter) : { error: 'unavailable' })
+  handle(IPC.DASHBOARD_DETAIL, (folder, project, kind, id) =>
+    boundedString(folder) && projectBinding(project) && dashboardKind(kind) && Number.isSafeInteger(id) && id > 0
+      ? dashboardDetail(folder, project, kind, id) : { error: 'not-found' })
+
   handle(IPC.INTEGRATIONS_LIST, (): IntegrationsState => listIntegrations())
 
   handle(IPC.INTEGRATIONS_SAVE, (integration: Integration): IntegrationsState => {

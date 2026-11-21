@@ -1,3 +1,4 @@
+import type { GitProjectBinding } from './git-dashboard'
 import type { TerminalSettings } from "./terminalSettings"
 export type { TerminalSettings } from "./terminalSettings"
 /**
@@ -421,6 +422,7 @@ export interface Folder {
   path: string
   /** Absent is treated as 'local' for legacy state. */
   kind?: WorkspaceFolderKind
+  gitIntegration?: GitProjectBinding
   /** Present when kind === 'remote'. Uses the user's existing SSH config/agent. */
   remote?: RemoteWorkspaceTarget
   /** basename of path */
@@ -1076,6 +1078,10 @@ export const IPC = {
   INTEGRATIONS_TEST: 'integrations:test',
   INTEGRATIONS_LIST_REPOS: 'integrations:list-repos',
   INTEGRATIONS_CLONE: 'integrations:clone',
+  DASHBOARD_PROJECT: 'dashboard:project',
+  DASHBOARD_LIST: 'dashboard:list',
+  DASHBOARD_REVIEWS: 'dashboard:reviews',
+  DASHBOARD_DETAIL: 'dashboard:detail',
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',

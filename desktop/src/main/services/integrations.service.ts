@@ -16,6 +16,7 @@ import type {
   RepoListResult
 } from '@shared/types'
 import { readJsonFile, userDataFile, writeJsonFile } from '../lib/jsonStore'
+import { repositoryFromOrigin } from './forge-project'
 import { addFolderByPath } from './workspace.service'
 
 const execFileAsync = promisify(execFile)
@@ -109,6 +110,11 @@ function rendererState(state: IntegrationsState): IntegrationsState {
   }
 }
 
+/** Credentials are consumed only by main-process integration services. */
+export function integrationCredentials(): Integration[] {
+  return read().integrations
+}
+
 export function listIntegrations(): IntegrationsState {
   return rendererState(read())
 }
@@ -147,11 +153,11 @@ export function deleteIntegration(id: string): IntegrationsState {
  * public API host; a self-hosted GitHub uses /api/v3, GitLab /api/v4, Gitea
  * /api/v1.
  */
-function apiBase(provider: IntegrationProvider, baseUrl: string): string {
+export function apiBase(provider: IntegrationProvider, baseUrl: string): string {
   const url = baseUrl.trim().replace(/\/+$/, '')
   switch (provider) {
     case 'github':
-      if (!url || /^https?:\/\/(www\.)?github\.com$/i.test(url)) return 'https://api.github.com'
+      if (!url || /^https?:\/\/(www\.|api\.)?github\.com$/i.test(url)) return 'https://api.github.com'
       return `${url}/api/v3`
     case 'gitlab':
       return `${url || 'https://gitlab.com'}/api/v4`
@@ -161,7 +167,7 @@ function apiBase(provider: IntegrationProvider, baseUrl: string): string {
 }
 
 /** Auth + accept headers for a provider's API. */
-function authHeaders(provider: IntegrationProvider, token: string): Record<string, string> {
+export function authHeaders(provider: IntegrationProvider, token: string): Record<string, string> {
   switch (provider) {
     case 'github':
       return {
@@ -323,6 +329,13 @@ export async function cloneRepository(args: CloneArgs): Promise<CloneResult> {
   // http(s) only: a crafted value like `--upload-pack=<cmd>` or an exotic
   // scheme must never reach git as anything but a URL (see also `--` below).
   if (!args.cloneUrl || !/^https?:\/\//i.test(args.cloneUrl)) return { error: 'invalid-repo' }
+  const fullName = repositoryFromOrigin(args.cloneUrl, integration)
+  if (!fullName) return { error: 'invalid-repo' }
+  const cloneUrl = new URL(args.cloneUrl)
+  if (cloneUrl.username || cloneUrl.password ||
+      (cloneUrl.protocol === 'http:' && apiBase(integration.provider, integration.baseUrl).startsWith('https:'))) {
+    return { error: 'invalid-repo' }
+  }
 
   const picked = await dialog.showOpenDialog({
     title: 'Choose where to clone',
@@ -349,9 +362,11 @@ export async function cloneRepository(args: CloneArgs): Promise<CloneResult> {
       env: {
         ...process.env,
         GIT_TERMINAL_PROMPT: '0', // fail fast on bad auth, never prompt
-        GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: 'http.extraHeader',
-        GIT_CONFIG_VALUE_0: cloneAuthHeader(integration)
+        GIT_CONFIG_COUNT: '2',
+        GIT_CONFIG_KEY_0: `http.${cloneUrl.origin}/.extraHeader`,
+        GIT_CONFIG_VALUE_0: cloneAuthHeader(integration),
+        GIT_CONFIG_KEY_1: 'http.followRedirects',
+        GIT_CONFIG_VALUE_1: 'false'
       }
     })
   } catch (err) {
@@ -364,5 +379,5 @@ export async function cloneRepository(args: CloneArgs): Promise<CloneResult> {
     return { error: cloneErrorMessage(err) }
   }
 
-  return { state: addFolderByPath(dest) }
+  return { state: addFolderByPath(dest, { gitIntegration: { integrationId: integration.id, fullName } }) }
 }

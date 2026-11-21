@@ -3,7 +3,7 @@ import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { BranchSwitcher } from './BranchSwitcher'
-import { AgentIcon, BranchIcon, BroadcastIcon, ChatIcon, CodeIcon, GlobeIcon, PlusIcon, PromptIcon, SearchIcon } from './ui'
+import { AgentIcon, BranchIcon, BroadcastIcon, ChatIcon, CodeIcon, DashboardIcon, GlobeIcon, PlusIcon, PromptIcon, SearchIcon } from './ui'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import { barTint } from '../tint'
@@ -15,7 +15,8 @@ const MODE_ICONS = {
   terminals: AgentIcon,
   code: CodeIcon,
   browser: GlobeIcon,
-  chat: ChatIcon
+  chat: ChatIcon,
+  dashboard: DashboardIcon
 } satisfies Record<WorkspaceMode, typeof AgentIcon>
 
 /** Every titlebar icon button shares one 32px height, width, radius and focus ring. */
@@ -28,6 +29,7 @@ interface Props {
   workspaceModes?: readonly WorkspaceMode[]
   onWorkspaceModeChange: (mode: WorkspaceMode) => void
   workspaceModeEnabled: boolean
+  dashboardPendingCount: number | null
   /** Show the sidebar toggle (hidden in settings, where there is no sidebar). */
   showToggle: boolean
   projectName?: string
@@ -82,6 +84,7 @@ export function TitleBar({
   workspaceModes = WORKSPACE_MODES,
   onWorkspaceModeChange,
   workspaceModeEnabled,
+  dashboardPendingCount,
   showToggle,
   projectName,
   onOpenPalette,
@@ -203,13 +206,16 @@ export function TitleBar({
                 className="superior-mode-switch flex shrink-0 gap-0.5">
                 {workspaceModes.map((mode) => {
                   const Icon = MODE_ICONS[mode]
-                  const label = t(`titlebar.mode.${mode}`)
+                  const count = mode === 'dashboard' ? dashboardPendingCount : null
+                  const label = count ? `${t(`titlebar.mode.${mode}`)} · ${t('dashboard.pendingCount', { count })}`
+                    : t(`titlebar.mode.${mode}`)
                   return (
                     <button key={mode} type="button" aria-label={label} title={label}
                       aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
                       onClick={() => onWorkspaceModeChange(mode)}
-                      className="grid h-7 w-9 place-items-center rounded-[7px] text-fgmuted transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40">
+                      className="relative grid h-7 w-9 place-items-center rounded-[7px] text-fgmuted transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40">
                       <Icon size={16} />
+                      {!!count && <span aria-hidden className="absolute -right-0.5 -top-1 grid min-w-4 place-items-center rounded-full border border-panel bg-warnBg px-0.5 text-[10px] font-bold leading-[14px] text-warn">{count}</span>}
                     </button>
                   )
                 })}

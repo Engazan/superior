@@ -310,6 +310,17 @@ export function ChatIcon(props: IconProps): React.JSX.Element {
   )
 }
 
+export function DashboardIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  )
+}
+
 export function KeyboardIcon(props: IconProps): React.JSX.Element {
   return <svg {...base(props)}><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10" /></svg>
 }

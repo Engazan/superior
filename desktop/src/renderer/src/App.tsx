@@ -31,6 +31,7 @@ import { useWorkspaceSessions } from './hooks/useWorkspaceSessions'
 import { useTaskQueue } from './hooks/useTaskQueue'
 import { useUpdateCheck } from './hooks/useUpdateCheck'
 import { useAppUiState } from './hooks/useAppUiState'
+import { useGitDashboard } from './hooks/useGitDashboard'
 import { useIntegrations } from './hooks/useIntegrations'
 import {
   setActivitySessions,
@@ -55,6 +56,9 @@ const RightPanel = lazy(() =>
 )
 const CodeWorkspace = lazy(() =>
   import('./components/CodeWorkspace').then(({ CodeWorkspace }) => ({ default: CodeWorkspace }))
+)
+const GitDashboard = lazy(() =>
+  import('./components/GitDashboard').then(({ GitDashboard }) => ({ default: GitDashboard }))
 )
 const CommandPalette = lazy(() =>
   import('./components/CommandPalette').then(({ CommandPalette }) => ({ default: CommandPalette }))
@@ -150,13 +154,15 @@ export default function App(): React.JSX.Element {
   const { presets } = presetsApi
   const layoutPresets = useLayoutPresets()
   const ws = useWorkspaceSessions({ setError, t, presets })
+  const dashboardFolder = ws.activeFolder?.kind === 'remote' ? null : ws.activeFolder?.path ?? null
+  const dashboard = useGitDashboard(dashboardFolder, integrations)
   const code = useCodeWorkspaces(ws.activeWorkspaceId)
   const { dispatch: dispatchCode, act: actCode } = code
   const [browserLink, setBrowserLink] = useState<{ workspaceId: string; url: string } | null>(null)
   const selectBrowserWorkspace = ws.selectWorkspace
   // Code and Browser can be turned off in settings to save memory (notably on
   // Windows); a turned-off mode is never mounted and falls back to the CLI.
-  const [disabledModes, setDisabledModes] = useState<WorkspaceMode[]>([])
+  const [settingsDisabledModes, setDisabledModes] = useState<WorkspaceMode[]>([])
   useEffect(() => {
     if (view !== 'main') return
     let live = true
@@ -170,6 +176,9 @@ export default function App(): React.JSX.Element {
     }).catch(() => {})
     return () => { live = false }
   }, [view])
+  const dashboardAvailable = !!dashboard.project
+  const disabledModes = useMemo<WorkspaceMode[]>(() => dashboardAvailable
+    ? settingsDisabledModes : [...settingsDisabledModes, 'dashboard'], [settingsDisabledModes, dashboardAvailable])
   const codeEnabled = !disabledModes.includes('code')
   const browserEnabled = !disabledModes.includes('browser')
   const workspaceMode: WorkspaceMode = disabledModes.includes(code.current.mode) ? 'terminals' : code.current.mode
@@ -856,6 +865,7 @@ export default function App(): React.JSX.Element {
         workspaceModes={WORKSPACE_MODES.filter((mode) => !disabledModes.includes(mode))}
         onWorkspaceModeChange={(mode) => actCode({ type: 'mode', mode })}
         workspaceModeEnabled={!!ws.activeWorkspaceId}
+        dashboardPendingCount={dashboard.reviews.data?.pendingCount ?? null}
         projectName={ws.activeFolder?.displayName?.trim() || ws.activeFolder?.name}
         onOpenPalette={() => setPaletteOpen(true)}
         gitStatus={view === 'main' ? gitStatus : null}
@@ -980,6 +990,12 @@ export default function App(): React.JSX.Element {
                     onBroadcastModeChange={setBroadcastMode}
                   />
                 </div>
+                {workspaceMode === 'dashboard' && view === 'main' && dashboardFolder && dashboard.project && dashboard.projectKey && (
+                  <Suspense fallback={<DeferredPanel />}>
+                    <GitDashboard key={dashboard.projectKey} folder={dashboardFolder} project={dashboard.project}
+                      projectKey={dashboard.projectKey} reviews={dashboard.reviews} />
+                  </Suspense>
+                )}
                 {workspaceMode === 'chat' && ws.activeWorkspace && <Suspense fallback={<DeferredPanel />}>
                   <NativeChatWorkspace key={ws.activeWorkspace.id} workspace={ws.activeWorkspace} onOpenWorker={id => { dispatchCode(id, { type: 'mode', mode: 'chat' }); void ws.selectWorkspace(id) }} />
                 </Suspense>}
