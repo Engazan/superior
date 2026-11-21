@@ -744,7 +744,6 @@ export const hu: Record<MessageKey, string> = {
   'terminal.activityWaiting': 'Jóváhagyásra vár',
   'terminal.activityReady': 'Készen áll',
   'terminal.activityExited': 'Befejezve',
-  'terminal.composer': 'Írj az ügynöknek…',
   'changes.openCommit': 'Változtatások véglegesítése…',
   'changes.fileCount': 'Módosított fájlok: {count}',
   'titlebar.gitLoading': 'Git…',

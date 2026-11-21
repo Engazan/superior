@@ -151,7 +151,6 @@ export const TerminalView = memo(function TerminalView({
   const contextPercent = usage && usage.contextLimit > 0
     ? Math.max(0, Math.min(100, Math.round(usage.contextTokens / usage.contextLimit * 100)))
     : null
-  const [prompt, setPrompt] = useState('')
   const hostRef = useRef<HTMLDivElement>(null)
   const [copyMenu, setCopyMenu] = useState<{
     x: number
@@ -735,28 +734,6 @@ export const TerminalView = memo(function TerminalView({
               {t('terminal.replyInTerminal')}
             </button>
           </div>
-        )}
-        {visible && showBar && agentState === 'idle' && session.status === 'running' && (
-          <form className="superior-terminal-composer mx-3 mb-3 flex shrink-0 items-center gap-2 rounded-[10px] border border-edge bg-bar p-1.5 pl-3"
-            onSubmit={(event) => {
-              event.preventDefault()
-              const term = termRef.current
-              if (!prompt.trim() || !term || exitedRef.current || replayWritesRef.current > 0) return
-              onSelect(session.id)
-              noteActivityInput(session.id)
-              term.paste(prompt)
-              window.api.sendInput(session.id, '\r')
-              setPrompt('')
-              term.focus()
-            }}>
-            <input value={prompt} onChange={(event) => setPrompt(event.target.value)}
-              aria-label={t('terminal.composer')} placeholder={t('terminal.composer')}
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-fg placeholder:text-fgmuted focus-visible:outline-hidden" />
-            <button type="submit" disabled={!prompt.trim()} aria-label={t('context.send')}
-              className="grid size-7 shrink-0 place-items-center rounded-lg bg-accentBg text-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60">
-              <span aria-hidden>→</span>
-            </button>
-          </form>
         )}
         {visible && showBar && usage && (
           <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-t border-edge bg-panel px-3 py-1.5 text-[11px] text-fgmuted">

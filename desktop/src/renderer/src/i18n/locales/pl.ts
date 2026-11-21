@@ -744,7 +744,6 @@ export const pl: Record<MessageKey, string> = {
   'terminal.activityWaiting': 'Czeka na zatwierdzenie',
   'terminal.activityReady': 'Gotowy',
   'terminal.activityExited': 'Zakończono',
-  'terminal.composer': 'Napisz do agenta…',
   'changes.openCommit': 'Zatwierdź zmiany…',
   'changes.fileCount': 'Zmienione pliki: {count}',
   'titlebar.gitLoading': 'Git…',

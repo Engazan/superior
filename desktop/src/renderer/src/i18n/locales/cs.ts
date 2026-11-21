@@ -744,7 +744,6 @@ export const cs: Record<MessageKey, string> = {
   'terminal.activityWaiting': 'Čeká na schválení',
   'terminal.activityReady': 'Připraven',
   'terminal.activityExited': 'Hotovo',
-  'terminal.composer': 'Napiš agentovi…',
   'changes.openCommit': 'Commitnout změny…',
   'changes.fileCount': 'Změněné soubory: {count}',
   'titlebar.gitLoading': 'Git…',

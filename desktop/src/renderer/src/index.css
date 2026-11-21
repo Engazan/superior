@@ -462,10 +462,6 @@ body {
   margin: 10px 12px 0 14px;
 }
 
-.superior-terminal-composer:focus-within {
-  border-color: var(--c-accent-border);
-}
-
 .superior-context-fill {
   background: var(--c-brand-fill);
 }

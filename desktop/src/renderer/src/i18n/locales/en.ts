@@ -741,7 +741,6 @@ export const en = {
   'terminal.activityWaiting': 'Waiting for approval',
   'terminal.activityReady': 'Ready',
   'terminal.activityExited': 'Finished',
-  'terminal.composer': 'Message the agent…',
   'changes.openCommit': 'Commit changes…',
   'changes.fileCount': '{count} changed files',
   'titlebar.gitLoading': 'Git…',
