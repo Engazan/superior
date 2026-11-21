@@ -3,6 +3,7 @@ import type {
   DashboardFilter, DashboardItem, DashboardKind, DashboardProject, DashboardReviewState
 } from '@shared/git-dashboard'
 import { DASHBOARD_REFRESH_MS, useDashboardData } from '../hooks/useDashboardData'
+import { useDashboardView, type DashboardView } from '../hooks/useDashboardView'
 import type { useGitDashboard } from '../hooks/useGitDashboard'
 import { useI18n } from '../i18n'
 import { RefreshIcon, SearchIcon } from './ui'
@@ -18,7 +19,6 @@ interface Props {
   reviews: ReturnType<typeof useGitDashboard>['reviews']
 }
 
-type View = 'items' | 'reviews' | 'blocked'
 const TABS: DashboardKind[] = ['issue', 'merge-request']
 const PROVIDERS = { github: 'GitHub', gitlab: 'GitLab', gitea: 'Gitea' }
 const blocked = (item: DashboardItem): boolean => item.conflicts === true || item.pipeline === 'failed'
@@ -89,13 +89,7 @@ export function GitDashboard(props: Props) {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(timer)
   }, [])
-  const [tab, setTab] = useState<DashboardKind>('merge-request')
-  const [selected, setSelected] = useState<number | null>()
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [assignee, setAssignee] = useState<DashboardFilter['assignee']>('me')
-  const [state, setState] = useState<DashboardFilter['state']>('open')
-  const [query, setQuery] = useState('')
-  const [view, setView] = useState<View>('items')
+  const [{ tab, selected, sheetOpen, assignee, state, query, view }, updateView] = useDashboardView(props.projectKey)
   const search = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const dashboardRef = useRef<HTMLElement>(null)
@@ -147,11 +141,8 @@ export function GitDashboard(props: Props) {
   const updatedAt = relevant.updatedAt
 
   function changeTab(kind: DashboardKind) {
-    setTab(kind)
-    setView('items')
     if (kind !== tab || view !== 'items') {
-      setSelected(undefined)
-      setSheetOpen(false)
+      updateView({ tab: kind, view: 'items', selected: undefined, sheetOpen: false })
     }
   }
 
@@ -160,14 +151,11 @@ export function GitDashboard(props: Props) {
     document.getElementById(`dashboard-tab-${kind}`)?.focus()
   }
 
-  function showTile(next: View) {
-    changeTab(next === 'items' ? 'issue' : 'merge-request')
-    setView(next)
-    setQuery('')
-    setAssignee('me')
-    setState('open')
-    setSelected(undefined)
-    setSheetOpen(false)
+  function showTile(next: DashboardView) {
+    updateView({
+      tab: next === 'items' ? 'issue' : 'merge-request',
+      view: next, query: '', assignee: 'me', state: 'open', selected: undefined, sheetOpen: false
+    })
   }
 
   function refresh() {
@@ -179,8 +167,7 @@ export function GitDashboard(props: Props) {
 
   function closeDetail() {
     const target = listRef.current?.querySelector<HTMLButtonElement>(`[data-item="${selection?.id}"]`)
-    setSelected(null)
-    setSheetOpen(false)
+    updateView({ selected: null, sheetOpen: false })
     requestAnimationFrame(() => target?.focus())
   }
 
@@ -188,7 +175,7 @@ export function GitDashboard(props: Props) {
     if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
     const key = event.key.toLowerCase()
     if (event.target === search.current && key === 'escape') {
-      setQuery('')
+      updateView({ query: '' })
       dashboardRef.current?.focus()
       event.preventDefault()
       return
@@ -209,7 +196,7 @@ export function GitDashboard(props: Props) {
         break
       case 'enter':
         if (!selection || event.target !== dashboardRef.current) return
-        setSheetOpen(true)
+        updateView({ selected: selection.id, sheetOpen: true })
         break
       case 'j':
       case 'arrowdown':
@@ -221,7 +208,7 @@ export function GitDashboard(props: Props) {
         const direction = key === 'j' || key === 'arrowdown' ? 1 : -1
         const next = ordered[Math.max(0, Math.min(ordered.length - 1, index + direction))]
         if (!next) return
-        setSelected(next.id)
+        updateView({ selected: next.id })
         const row = listRef.current?.querySelector<HTMLButtonElement>(`[data-item="${next.id}"]`)
         row?.focus({ preventScroll: true })
         row?.scrollIntoView({ block: 'nearest' })
@@ -294,17 +281,17 @@ export function GitDashboard(props: Props) {
             <SearchIcon size={15} />
             <input type="search" ref={search} autoComplete="off" value={query}
               aria-label={t('dashboard.keys.search')} placeholder={t('dashboard.search')}
-              onChange={(event) => setQuery(event.target.value)} />
+              onChange={(event) => updateView({ query: event.target.value })} />
             <kbd>/</kbd>
           </label>
           <div className="seg" role="group" aria-label={t('dashboard.assignees')}>
             <button type="button" title={t('dashboard.mine')} aria-pressed={view === 'items' && assignee === 'me'}
-              onClick={() => { setView('items'); setAssignee('me') }}>{t('dashboard.filter.mine')}</button>
+              onClick={() => updateView({ view: 'items', assignee: 'me' })}>{t('dashboard.filter.mine')}</button>
             <button type="button" title={t('dashboard.everyone')} aria-pressed={view === 'items' && assignee === 'any'}
-              onClick={() => { setView('items'); setAssignee('any') }}>{t('dashboard.filter.any')}</button>
+              onClick={() => updateView({ view: 'items', assignee: 'any' })}>{t('dashboard.filter.any')}</button>
           </div>
           <select className="select" aria-label={t('dashboard.state')} value={state}
-            onChange={(event) => { setView('items'); setState(event.target.value === 'all' ? 'all' : 'open') }}>
+            onChange={(event) => updateView({ view: 'items', state: event.target.value === 'all' ? 'all' : 'open' })}>
             <option value="open">{t('dashboard.state.open')}</option>
             <option value="all">{t('dashboard.allStates')}</option>
           </select>
@@ -324,15 +311,15 @@ export function GitDashboard(props: Props) {
           {!relevant.loading && !relevant.error && !visible.length && <div className="empty">
             <ItemIcon kind={tab} status="merged" size={24} />
             <h3>{t(view === 'reviews' && !q && reviewCount !== null ? 'dashboard.noReviews' : 'dashboard.noItems')}</h3>
-            {canReset && <button type="button" className="btn" onClick={() => {
-              setQuery(''); setView('items'); setAssignee('any'); setState('all')
-            }}>{t('dashboard.showAll')}</button>}
+            {canReset && <button type="button" className="btn" onClick={() =>
+              updateView({ query: '', view: 'items', assignee: 'any', state: 'all' })
+            }>{t('dashboard.showAll')}</button>}
           </div>}
           {groups.filter((group) => group.items.length > 0).map((group) => <section key={group.label}>
             <h2 className={`group ${group.priority ? 'attn-g' : ''}`}>{group.label}<span className="count">{group.items.length}</span></h2>
             <ul className="rows" aria-label={group.label}>{group.items.map((item) => <ItemRow key={item.id}
               item={item} now={now} selected={item.id === selection?.id} review={reviewStates.get(item.id)}
-              onSelect={() => { setSelected(item.id); setSheetOpen(true) }} />)}</ul>
+              onSelect={() => updateView({ selected: item.id, sheetOpen: true })} />)}</ul>
           </section>)}
         </div>
         <div className="hints" aria-hidden="true">{shortcuts.map(([keys, label]) => (
