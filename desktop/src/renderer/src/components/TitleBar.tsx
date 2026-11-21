@@ -192,12 +192,12 @@ export function TitleBar({
           <button
             type="button"
             onClick={onOpenPalette}
+            aria-label={t('titlebar.search')}
             title={shortcutTitle(t('titlebar.search'), 'openPalette')}
-            className="superior-command-search flex h-[30px] w-80 min-w-0 items-center gap-2.5 rounded-[9px] bg-panel px-2.5 text-left text-fgdim transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] bg-panel px-2 text-fgdim transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
           >
             <SearchIcon size={15} className="shrink-0" />
-            <span className="min-w-0 flex-1 truncate">{t('titlebar.search')}</span>
-            <kbd className="superior-command-key shrink-0 rounded-md border border-edge px-1.5 py-0.5 font-mono text-[10px] leading-none">{paletteShortcut}</kbd>
+            <kbd className="rounded-md border border-edge px-1.5 py-0.5 font-mono text-[10px] leading-none">{paletteShortcut}</kbd>
           </button>
           {workspaceModes.length > 1 && (
             <>

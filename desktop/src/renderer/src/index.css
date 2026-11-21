@@ -493,8 +493,7 @@ body {
 }
 
 @media (max-width: 1120px) {
-  .superior-project-crumb,
-  .superior-command-key {
+  .superior-project-crumb {
     display: none;
   }
 }
@@ -508,19 +507,6 @@ body {
   .superior-titlebar-start > div,
   .superior-titlebar-end {
     gap: 4px;
-  }
-
-  .superior-command-search > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  .superior-command-search {
-    width: 36px;
-    justify-content: center;
   }
 
   .superior-branch-chip {
