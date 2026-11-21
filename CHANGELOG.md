@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.3] - 2026-11-21
+
+### Changed
+
+- **Usage footer.** Restore the compact layout, provider icons, separators, and
+  percentage badges on a neutral background.
+- **Title bar search.** Show a compact search button with a magnifying glass and
+  the current keyboard shortcut. The button opens the command palette.
+
+### Removed
+
+- **Extra terminal prompt field.** Enter prompts directly in the Claude Code
+  or Codex interface inside the terminal.
+
 ## [0.39.2] - 2026-11-21
 
 ### Fixed
