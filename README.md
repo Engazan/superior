@@ -59,7 +59,7 @@ Run the desktop commands from `desktop/`:
 
 ```bash
 cd desktop
-npm install      # installs dependencies (Node 22.12+)
+npm install      # installs dependencies (Node 22.13+)
 npm run dev      # launch the app in development (HMR)
 npm run build    # type-check + build main/preload/renderer into out/
 npm start        # preview the production build

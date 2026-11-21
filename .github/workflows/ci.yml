@@ -27,8 +27,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # Electron 43 and the Vite 7 toolchain require Node 22.12 or newer.
-          node-version: 22.12.0
+          # Use the minimum Node 22 release supported by the desktop tooling.
+          node-version: 22.13.0
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
@@ -74,7 +74,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.12.0
+          node-version: 22.13.0
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 

@@ -10,9 +10,8 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node", "electron-vite/node"],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": [
@@ -20,6 +19,6 @@
     "src/preload/**/*",
     "src/daemon/**/*",
     "src/shared/**/*",
-    "electron.vite.config.ts"
+    "electron.vite.config.mts"
   ]
 }
