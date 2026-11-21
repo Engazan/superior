@@ -1,5 +1,5 @@
 import type {
-  DashboardDetail, DashboardError, DashboardFilter, DashboardKind, DashboardList,
+  DashboardDetail, DashboardError, DashboardFilter, DashboardKind, DashboardList, DashboardPipeline,
   DashboardProject, DashboardResult, DashboardReviews, DashboardReviewState, GitProjectBinding
 } from '@shared/git-dashboard'
 import type { Integration } from '@shared/types'
@@ -25,6 +25,31 @@ const object = (value: unknown): RecordValue =>
   value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {}
 const string = (value: unknown): string => typeof value === 'string' ? value : ''
 const rows = (value: unknown): RecordValue[] => Array.isArray(value) ? value.map(object) : []
+const count = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined
+
+function pipeline(status: unknown): DashboardPipeline | undefined {
+  switch (status) {
+    case 'success': return 'passed'
+    case 'failed':
+    case 'failure': return 'failed'
+    case 'created':
+    case 'pending':
+    case 'preparing':
+    case 'running':
+    case 'waiting_for_resource': return 'running'
+  }
+}
+
+function labels(value: unknown): DashboardDetail['labels'] {
+  if (!Array.isArray(value)) return undefined
+  return value.flatMap((entry) => {
+    const label = object(entry)
+    const name = string(entry) || string(label.name)
+    const color = string(label.color).replace(/^#/, '')
+    return name ? [{ name, color: /^[a-f0-9]{6}$/i.test(color) ? `#${color}` : undefined }] : []
+  })
+}
 const account = (row: RecordValue): Account => ({
   id: typeof row.id === 'number' || typeof row.id === 'string' ? String(row.id) : '',
   name: string(row.login) || string(row.username)
@@ -68,6 +93,9 @@ function normalize(row: RecordValue, kind: DashboardKind): DashboardDetail | nul
   if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0 || !url || !title) return null
   const state = string(row.state)
   const assignees = Array.isArray(row.assignees) ? rows(row.assignees) : [object(row.assignee)]
+  const reviewerData = row.reviewers ?? row.requested_reviewers
+  const draft = row.draft ?? row.work_in_progress
+  const mergeStatus = row.detailed_merge_status
   return {
     id, kind, title, url,
     state: state === 'merged' || row.merged === true || !!row.merged_at ? 'merged'
@@ -75,14 +103,28 @@ function normalize(row: RecordValue, kind: DashboardKind): DashboardDetail | nul
     updatedAt: string(row.updated_at),
     assignees: assignees.map((user) => account(user).name).filter(Boolean),
     author: account(object(row.author ?? row.user)).name,
+    labels: labels(row.labels),
+    comments: count(row.user_notes_count ?? row.comments),
+    draft: kind === 'merge-request' && typeof draft === 'boolean' ? draft : undefined,
+    pipeline: pipeline(object(row.head_pipeline ?? row.pipeline).status),
+    conflicts: mergeStatus === 'conflict' ? true
+      : typeof row.has_conflicts === 'boolean' ? row.has_conflicts
+      : row.mergeable_state === 'dirty' ? true
+        : row.mergeable === true ? false : undefined,
+    mergeReady: mergeStatus === 'mergeable' || row.mergeable_state === 'clean' ? true : undefined,
     body: string(row.description ?? row.body),
     sourceBranch: string(row.source_branch ?? object(row.head).ref) || undefined,
-    targetBranch: string(row.target_branch ?? object(row.base).ref) || undefined
+    targetBranch: string(row.target_branch ?? object(row.base).ref) || undefined,
+    reviewers: Array.isArray(reviewerData) ? rows(reviewerData).map((user) => account(user).name).filter(Boolean) : undefined,
+    createdAt: string(row.created_at) || undefined,
+    additions: count(row.additions),
+    deletions: count(row.deletions)
   }
 }
 
 function summary(item: DashboardDetail) {
-  const { body: _body, sourceBranch: _source, targetBranch: _target, ...rest } = item
+  const { body: _body, targetBranch: _target, reviewers: _reviewers, createdAt: _createdAt,
+    additions: _additions, deletions: _deletions, approvals: _approvals, ...rest } = item
   return rest
 }
 
@@ -109,7 +151,7 @@ class ForgeDashboard {
     return `${this.repo}/${kind === 'issue' ? 'issues' : this.gitlab ? 'merge_requests' : 'pulls'}`
   }
 
-  private async get(path: string, params: Record<string, string> = {}) {
+  private async get(path: string, params: Record<string, string> = {}, timeoutMs = 10_000) {
     const { provider, token } = this.project.integration
     if (!token) throw new DashboardFailure('unauthorized')
     const url = new URL(this.base + path)
@@ -119,7 +161,7 @@ class ForgeDashboard {
     if (remaining <= 0) throw new DashboardFailure('unavailable')
     const response = await fetch(url, {
       headers: authHeaders(provider, token), redirect: 'error',
-      signal: AbortSignal.timeout(Math.min(10_000, remaining))
+      signal: AbortSignal.timeout(Math.min(timeoutMs, remaining))
     })
     if (response.status === 429 || (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0')) {
       throw new DashboardFailure('rate-limited')
@@ -178,10 +220,21 @@ class ForgeDashboard {
   }
 
   async detail(kind: DashboardKind, id: number): Promise<DashboardDetail> {
-    const { data } = await this.get(`${this.path(kind)}/${id}`)
+    const path = `${this.path(kind)}/${id}`
+    const { data } = await this.get(path)
     const row = object(data)
     const detail = normalize(row, kind)
     if (!detail || (kind === 'issue' && (row.pull_request || row.pull_request_meta))) throw new DashboardFailure('not-found')
+    if (this.gitlab && kind === 'merge-request' && detail.state === 'open') {
+      // Approval rules are optional across GitLab editions and permissions.
+      const result = await this.get(`${path}/approvals`, {}, 2500).catch(() => undefined)
+      const approvalData = object(result?.data)
+      const required = count(approvalData.approvals_required)
+      const remaining = count(approvalData.approvals_left)
+      if (required !== undefined && remaining !== undefined && remaining <= required) {
+        detail.approvals = { required, remaining }
+      }
+    }
     return detail
   }
 

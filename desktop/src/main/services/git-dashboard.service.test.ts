@@ -143,6 +143,27 @@ describe('dashboard forge data', () => {
     expect(await dashboardReviews(folder, binding)).toEqual({ error: 'rate-limited' })
   })
 
+  it('uses qualifying GitLab approvals and keeps the merge request when approval rules are unavailable', async () => {
+    const row = { ...mr(4), labels: ['feature', { name: 'release', color: 'abc123' }],
+      detailed_merge_status: 'conflict', head_pipeline: { status: 'failed' }, has_conflicts: false,
+      user_notes_count: 3, source_branch: 'feature', target_branch: 'main' }
+    mock.fetch.mockResolvedValueOnce(json(row))
+      .mockResolvedValueOnce(json({ approvals_required: 2, approvals_left: 1, approved_by: [mine, other] }))
+    expect(await dashboardDetail(folder, binding, 'merge-request', 4)).toMatchObject({
+      data: {
+        approvals: { required: 2, remaining: 1 }, comments: 3, conflicts: true, pipeline: 'failed',
+        labels: [{ name: 'feature' }, { name: 'release', color: '#abc123' }],
+        sourceBranch: 'feature', targetBranch: 'main', reviewers: ['dev']
+      }
+    })
+    expect(pathOf(mock.fetch.mock.calls[1][0]).pathname).toContain('/merge_requests/4/approvals')
+
+    mock.fetch.mockResolvedValueOnce(json(row)).mockResolvedValueOnce(new Response(null, { status: 404 }))
+    const result = await dashboardDetail(folder, binding, 'merge-request', 4)
+    expect(result).toMatchObject({ data: { id: 4 } })
+    if ('data' in result) expect(result.data.approvals).toBeUndefined()
+  })
+
   it.each(['github', 'gitea'] as const)('uses direct reviewer requests and excludes PR rows from %s issues', async (provider) => {
     const integration = { ...gitlab, provider, baseUrl: provider === 'github' ? 'https://api.github.com' : 'https://git.test' }
     const project = { integrationId: integration.id, fullName: 'team/app' }

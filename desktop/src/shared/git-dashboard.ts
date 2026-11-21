@@ -13,6 +13,7 @@ export interface DashboardProject extends GitProjectBinding {
 export type DashboardKind = 'issue' | 'merge-request'
 export type DashboardItemState = 'open' | 'closed' | 'merged'
 export type DashboardReviewState = 'pending' | 'completed' | 'unknown'
+export type DashboardPipeline = 'passed' | 'failed' | 'running'
 
 export interface DashboardItem {
   id: number
@@ -23,12 +24,23 @@ export interface DashboardItem {
   updatedAt: string
   assignees: string[]
   author: string
+  labels?: { name: string; color?: string }[]
+  comments?: number
+  draft?: boolean
+  pipeline?: DashboardPipeline
+  conflicts?: boolean
+  mergeReady?: boolean
+  sourceBranch?: string
 }
 
 export interface DashboardDetail extends DashboardItem {
   body: string
-  sourceBranch?: string
   targetBranch?: string
+  reviewers?: string[]
+  createdAt?: string
+  additions?: number
+  deletions?: number
+  approvals?: { required: number; remaining: number }
 }
 
 export interface DashboardReview {

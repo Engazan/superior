@@ -1,11 +1,15 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type {
-  DashboardError, DashboardFilter, DashboardItem, DashboardKind, DashboardProject
+  DashboardFilter, DashboardItem, DashboardKind, DashboardProject, DashboardReviewState
 } from '@shared/git-dashboard'
 import { DASHBOARD_REFRESH_MS, useDashboardData } from '../hooks/useDashboardData'
 import type { useGitDashboard } from '../hooks/useGitDashboard'
 import { useI18n } from '../i18n'
-import { Button, IconButton, Modal, Notice, RefreshIcon, Select, useToast } from './ui'
+import { RefreshIcon, SearchIcon } from './ui'
+import {
+  Avatar, CheckStatusIcon, DashboardNotice, ItemDetail, ItemIcon, Labels, RelativeTime, itemRef, statusClass
+} from './GitDashboardDetail'
+import './GitDashboard.css'
 
 interface Props {
   folder: string
@@ -14,176 +18,334 @@ interface Props {
   reviews: ReturnType<typeof useGitDashboard>['reviews']
 }
 
+type View = 'items' | 'reviews' | 'blocked'
 const TABS: DashboardKind[] = ['issue', 'merge-request']
+const PROVIDERS = { github: 'GitHub', gitlab: 'GitLab', gitea: 'Gitea' }
+const blocked = (item: DashboardItem): boolean => item.conflicts === true || item.pipeline === 'failed'
+const searchable = (text: string): string => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
-function DashboardNotice({ error, stale }: { error: DashboardError; stale: boolean }) {
-  const { t } = useI18n()
-  return <Notice tone={stale ? 'warn' : 'danger'}>
-    {t(`dashboard.error.${error}`)} {stale && t('dashboard.stale')}
-  </Notice>
+function useList({ folder, project, projectKey }: Props, filter: DashboardFilter, enabled = true) {
+  const { integrationId, fullName } = project
+  const { kind, assignee, state } = filter
+  const request = useCallback(() => window.api.dashboardList(folder, { integrationId, fullName }, { kind, assignee, state }),
+    [folder, integrationId, fullName, kind, assignee, state])
+  return useDashboardData(enabled ? JSON.stringify([projectKey, kind, assignee, state]) : null, request, DASHBOARD_REFRESH_MS)
 }
 
-function ItemRow({ item, onSelect, priority }: {
+function ItemRow({ item, selected, review, onSelect, now }: {
   item: DashboardItem
+  selected: boolean
+  now: number
+  review?: DashboardReviewState
   onSelect: () => void
-  priority?: boolean
 }) {
   const { t } = useI18n()
+  const people = item.kind === 'issue' ? item.assignees : item.author ? [item.author] : []
   return <li>
-    <button type="button" onClick={onSelect}
-      className={`flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-2 text-left transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${priority ? 'border-warnBorder bg-warnBg/50' : 'border-transparent'}`}>
-      <span className="shrink-0 font-mono text-[11px] text-fgmuted">{item.kind === 'issue' ? '#' : '!'}{item.id}</span>
-      <span className="min-w-20 flex-1 break-words font-medium text-fg">{item.title}</span>
-      {priority && <span className="rounded-md bg-warnBg px-2 py-0.5 text-xs font-semibold text-warn">{t('dashboard.waiting')}</span>}
-      {item.state !== 'open' && <span className="text-xs text-fgmuted">{t(`dashboard.state.${item.state}`)}</span>}
+    <button type="button" className={`row ${item.state === 'open' ? '' : 'done'}`}
+      aria-current={selected ? 'true' : undefined} onClick={onSelect} data-item={item.id}>
+      <ItemIcon kind={item.kind} status={statusClass(item)} />
+      <span>
+        <span className="row-title">{item.title}</span>
+        <span className="row-meta">
+          {review === 'pending' && <span className="flag warn">{t('dashboard.waiting')}</span>}
+          {item.state === 'open' && item.draft && <span className="flag muted">{t('dashboard.draft')}</span>}
+          {item.state === 'open' && item.pipeline === 'failed' && <span className="flag danger">{t('dashboard.pipeline.failed')}</span>}
+          {item.state === 'open' && item.conflicts && <span className="flag danger">{t('dashboard.conflicts')}</span>}
+          {item.state === 'open' && item.mergeReady && !blocked(item) && !item.draft && review !== 'pending' &&
+            <span className="flag ok">{t('dashboard.mergeReady')}</span>}
+          <span className="mono">{itemRef(item)}</span>
+          <RelativeTime value={item.updatedAt} now={now} />
+          {item.author && <span>{item.author}</span>}
+          <Labels labels={item.labels} />
+        </span>
+      </span>
+      <span className="row-side">
+        {item.state === 'open' && item.pipeline && (
+          <span className="stat" title={t(`dashboard.pipeline.${item.pipeline}`)}>
+            <CheckStatusIcon status={item.pipeline} />
+          </span>
+        )}
+        {!!item.comments && <span className="stat" title={t('dashboard.comments')}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+            <path d="M21 11.5a8 8 0 0 1-8 8H4l2.5-3A8 8 0 1 1 21 11.5Z" />
+          </svg>{item.comments}
+        </span>}
+        <span className="avs">{people.length ? people.map((person) => <Avatar key={person} person={person} />) : '—'}</span>
+      </span>
     </button>
   </li>
 }
 
-function ItemDetail({ folder, project, item, onClose }: {
-  folder: string
-  project: DashboardProject
-  item: DashboardItem
-  onClose: () => void
-}) {
-  const { t } = useI18n()
-  const toast = useToast()
-  const { id, kind } = item
-  const { integrationId, fullName } = project
-  const request = useCallback(() => window.api.dashboardDetail(folder, { integrationId, fullName }, kind, id),
-    [folder, integrationId, fullName, kind, id])
-  const detail = useDashboardData(`${kind}:${id}`, request, DASHBOARD_REFRESH_MS)
-  const url = detail.data?.url ?? item.url
-  const copyUrl = async (): Promise<void> => {
-    try {
-      await navigator.clipboard.writeText(url)
-      toast.success(t('dashboard.copied'))
-    } catch {
-      toast.error(t('dashboard.copyFailed'))
-    }
-  }
-  const current = detail.data ?? item
-
-  return <Modal title={current.title} size="lg" onClose={onClose}
-    description={`${kind === 'issue' ? '#' : '!'}${id} · ${t(`dashboard.state.${current.state}`)}`}>
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <a href={url} target="_blank" rel="noreferrer"
-          className="min-w-0 flex-1 break-all rounded-sm text-sm text-accent underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent">{url}</a>
-        <Button type="button" variant="secondary" size="sm" onClick={() => void copyUrl()}>
-          {t('dashboard.copyUrl')}
-        </Button>
-      </div>
-      {current.author && <p className="text-xs text-fgmuted">{t('dashboard.author')} {current.author}</p>}
-      <p className="text-xs text-fgmuted">{t('dashboard.assignees')} {current.assignees.join(', ') || '—'}</p>
-      {detail.loading && <p role="status" className="text-xs text-fgmuted">{t('common.loading')}</p>}
-      {detail.error && <DashboardNotice error={detail.error} stale={!!detail.data} />}
-      {detail.data && <>
-        {detail.data.sourceBranch && detail.data.targetBranch && (
-          <p className="break-all font-mono text-xs text-fgdim">{detail.data.sourceBranch} → {detail.data.targetBranch}</p>
-        )}
-        <p className="max-h-[38vh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-edge bg-bar p-3 text-sm">
-          {detail.data.body || t('dashboard.noDescription')}
-        </p>
-      </>}
-    </div>
-  </Modal>
-}
-
-function DashboardItems({ folder, project, projectKey, reviews, kind, onSelect }: Props & {
-  kind: DashboardKind
-  onSelect: (item: DashboardItem) => void
-}) {
-  const { t } = useI18n()
-  const [assignee, setAssignee] = useState<DashboardFilter['assignee']>('me')
-  const [state, setState] = useState<DashboardFilter['state']>('open')
-  const { integrationId, fullName } = project
-  const request = useCallback(() => window.api.dashboardList(folder, { integrationId, fullName }, { kind, assignee, state }),
-    [folder, integrationId, fullName, kind, assignee, state])
-  const list = useDashboardData(JSON.stringify([projectKey, kind, assignee, state]), request, DASHBOARD_REFRESH_MS)
-  const showReviews = kind === 'merge-request'
-  const pendingIds = new Set(reviews.data?.items.filter((entry) => entry.state === 'pending').map((entry) => entry.item.id))
-
-  return <div role="tabpanel" id={`dashboard-panel-${kind}`} aria-labelledby={`dashboard-tab-${kind}`}
-    className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-    {showReviews && (
-      <section aria-label={t('dashboard.reviews')} className="space-y-2 rounded-xl border border-edge bg-panel p-3">
-        <h2 className="px-1 text-sm font-semibold">{t('dashboard.reviews')}</h2>
-        {reviews.loading && <p role="status" className="px-1 text-xs text-fgmuted">{t('common.loading')}</p>}
-        {reviews.error && <DashboardNotice error={reviews.error} stale={!!reviews.data} />}
-        {reviews.data?.pendingCount === null && <Notice tone="info">{t('dashboard.unknownReviews')}</Notice>}
-        {reviews.data?.items.length === 0 && reviews.data.pendingCount !== null && (
-          <p className="px-1 text-xs text-fgmuted">{t('dashboard.noReviews')}</p>
-        )}
-        {!!reviews.data?.items.length && <ul className="space-y-1">
-          {reviews.data.items.map((entry) => (
-            <ItemRow key={entry.item.id} item={entry.item} priority={entry.state === 'pending'} onSelect={() => onSelect(entry.item)} />
-          ))}
-        </ul>}
-      </section>
-    )}
-    <section aria-label={t(`dashboard.tab.${kind}`)} className="space-y-2 rounded-xl border border-edge bg-panel p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Select className="w-auto!" aria-label={t('dashboard.assignees')} value={assignee}
-          onChange={(e) => setAssignee(e.target.value === 'any' ? 'any' : 'me')}>
-          <option value="me">{t('dashboard.mine')}</option>
-          <option value="any">{t('dashboard.everyone')}</option>
-        </Select>
-        <Select className="w-auto!" aria-label={t('dashboard.state')} value={state}
-          onChange={(e) => setState(e.target.value === 'all' ? 'all' : 'open')}>
-          <option value="open">{t('dashboard.state.open')}</option>
-          <option value="all">{t('dashboard.allStates')}</option>
-        </Select>
-        <IconButton className="ml-auto" label={t('changes.refresh')}
-          onClick={() => { list.refresh(); reviews.refresh() }}>
-          <RefreshIcon size={15} />
-        </IconButton>
-      </div>
-      {list.loading && <p role="status" className="px-1 text-xs text-fgmuted">{t('common.loading')}</p>}
-      {list.error && <DashboardNotice error={list.error} stale={!!list.data} />}
-      {list.data?.truncated && <Notice tone="info">{t('dashboard.partialList')}</Notice>}
-      {list.data?.items.length === 0 && <p className="px-1 text-xs text-fgmuted">{t('dashboard.noItems')}</p>}
-      {!!list.data?.items.length && <ul className="space-y-1">
-        {list.data.items.map((item) => (
-          <ItemRow key={item.id} item={item} priority={showReviews && pendingIds.has(item.id)} onSelect={() => onSelect(item)} />
-        ))}
-      </ul>}
-    </section>
-  </div>
-}
-
 export function GitDashboard(props: Props) {
   const { t } = useI18n()
-  const [tab, setTab] = useState<DashboardKind>('issue')
-  const [selected, setSelected] = useState<DashboardItem | null>(null)
-  return (
-    <section aria-label={t('titlebar.mode.dashboard')} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-edge bg-bar">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-edge bg-panel px-4 py-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-sm font-semibold">{props.project.fullName}</h1>
-          <p className="truncate text-xs text-fgmuted">{props.project.integrationName}</p>
-        </div>
-        <div role="tablist" aria-label={t('titlebar.mode.dashboard')} className="flex rounded-lg border border-edge bg-bar p-0.5">
-          {TABS.map((kind) => (
-            <button key={kind} id={`dashboard-tab-${kind}`} type="button" role="tab"
-              aria-controls={`dashboard-panel-${kind}`} aria-selected={kind === tab} tabIndex={kind === tab ? 0 : -1}
-              onClick={() => setTab(kind)}
-              onKeyDown={(event) => {
+  const { folder, project, reviews } = props
+  const provider = PROVIDERS[project.provider]
+  const segments = project.fullName.split('/')
+  const name = segments.pop()
+  const namespace = segments.join('/')
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const [tab, setTab] = useState<DashboardKind>('merge-request')
+  const [selected, setSelected] = useState<number | null>()
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [assignee, setAssignee] = useState<DashboardFilter['assignee']>('me')
+  const [state, setState] = useState<DashboardFilter['state']>('open')
+  const [query, setQuery] = useState('')
+  const [view, setView] = useState<View>('items')
+  const search = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const dashboardRef = useRef<HTMLElement>(null)
+  const copy = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (document.activeElement === document.body ||
+        document.activeElement?.closest('button[aria-pressed="true"]')?.closest('.superior-command-strip')) {
+      dashboardRef.current?.focus({ preventScroll: true })
+    }
+  }, [])
+
+  const mine = assignee === 'me' && state === 'open'
+  const issues = useList(props, { kind: 'issue', assignee: 'me', state: 'open' })
+  const merges = useList(props, { kind: 'merge-request', assignee: 'me', state: 'open' })
+  const filtered = useList(props, { kind: tab, assignee, state }, !mine && view === 'items')
+  const list = view === 'blocked' ? merges : mine ? tab === 'issue' ? issues : merges : filtered
+  const relevant = view === 'reviews' ? reviews : list
+  const reviewEntries = tab === 'merge-request' ? reviews.data?.items ?? [] : []
+  const reviewStates = new Map(reviewEntries.map(({ item, state }) => [item.id, state]))
+  const primaryItems = view === 'reviews' ? [] : (list.data?.items ?? []).filter((item) => view !== 'blocked' || blocked(item))
+  const items = new Map(primaryItems.map((item) => [item.id, item]))
+  if (view !== 'blocked') {
+    for (const { item } of reviewEntries) if (!items.has(item.id)) items.set(item.id, item)
+  }
+  const q = searchable(query.trim())
+  const visible = [...items.values()].filter((item) => !q || searchable(
+    [item.title, itemRef(item), item.author, item.sourceBranch, ...item.assignees, ...(item.labels?.map(({ name }) => name) ?? [])].join(' ')
+  ).includes(q)).sort((a, b) => Number(b.state === 'open') - Number(a.state === 'open') || b.updatedAt.localeCompare(a.updatedAt))
+  const pending = visible.filter((item) => reviewStates.get(item.id) === 'pending' && view !== 'blocked')
+  const pendingIds = new Set(pending.map(({ id }) => id))
+  const groups = [
+    { label: t('dashboard.waiting'), items: pending, priority: true },
+    { label: t(tab === 'issue' ? 'dashboard.state.open' : 'dashboard.other'), items: visible.filter((item) => item.state === 'open' && !pendingIds.has(item.id)) },
+    { label: t('dashboard.state.closed'), items: visible.filter((item) => item.state !== 'open') }
+  ]
+  const ordered = groups.flatMap((group) => group.items)
+  const selection = selected === undefined ? ordered[0] : ordered.find(({ id }) => id === selected)
+  const reviewCount = reviews.data?.pendingCount
+  const blockedItems = merges.data?.items.filter(blocked)
+  const hasUnknownBlockers = merges.data?.truncated || merges.data?.items.some((item) =>
+    !blocked(item) && (item.conflicts === undefined || item.pipeline !== 'passed'))
+  const blockedCount = blockedItems && (hasUnknownBlockers
+    ? blockedItems.length ? `${blockedItems.length}+` : undefined
+    : blockedItems.length)
+  const issueCount = issues.data && `${issues.data.items.length}${issues.data.truncated ? '+' : ''}`
+  const busy = relevant.refreshing || (tab === 'merge-request' && reviews.refreshing)
+  const outdated = !!(relevant.error || (tab === 'merge-request' && reviews.error))
+  const showReviewNotice = tab === 'merge-request' && view !== 'blocked'
+  const updatedAt = relevant.updatedAt
+
+  function changeTab(kind: DashboardKind) {
+    setTab(kind)
+    setView('items')
+    if (kind !== tab || view !== 'items') {
+      setSelected(undefined)
+      setSheetOpen(false)
+    }
+  }
+
+  function focusTab(kind: DashboardKind) {
+    changeTab(kind)
+    document.getElementById(`dashboard-tab-${kind}`)?.focus()
+  }
+
+  function showTile(next: View) {
+    changeTab(next === 'items' ? 'issue' : 'merge-request')
+    setView(next)
+    setQuery('')
+    setAssignee('me')
+    setState('open')
+    setSelected(undefined)
+    setSheetOpen(false)
+  }
+
+  function refresh() {
+    issues.refresh()
+    merges.refresh()
+    if (!mine && view === 'items') filtered.refresh()
+    reviews.refresh()
+  }
+
+  function closeDetail() {
+    const target = listRef.current?.querySelector<HTMLButtonElement>(`[data-item="${selection?.id}"]`)
+    setSelected(null)
+    setSheetOpen(false)
+    requestAnimationFrame(() => target?.focus())
+  }
+
+  function handleKeys(event: KeyboardEvent<HTMLElement>) {
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
+    const key = event.key.toLowerCase()
+    if (event.target === search.current && key === 'escape') {
+      setQuery('')
+      dashboardRef.current?.focus()
+      event.preventDefault()
+      return
+    }
+    if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return
+    switch (key) {
+      case '/': search.current?.focus(); break
+      case '1': focusTab('issue'); break
+      case '2': focusTab('merge-request'); break
+      case 'r': refresh(); break
+      case 'c':
+        if (!selection) return
+        copy.current?.click()
+        break
+      case 'escape':
+        if (!selection) return
+        closeDetail()
+        break
+      case 'enter':
+        if (!selection || event.target !== dashboardRef.current) return
+        setSheetOpen(true)
+        break
+      case 'j':
+      case 'arrowdown':
+      case 'arrowup':
+      case 'k': {
+        if (key.startsWith('arrow') && event.target instanceof HTMLElement &&
+            !event.target.closest('.scroller, .git-dashboard:focus')) return
+        const index = ordered.findIndex(({ id }) => id === selection?.id)
+        const direction = key === 'j' || key === 'arrowdown' ? 1 : -1
+        const next = ordered[Math.max(0, Math.min(ordered.length - 1, index + direction))]
+        if (!next) return
+        setSelected(next.id)
+        const row = listRef.current?.querySelector<HTMLButtonElement>(`[data-item="${next.id}"]`)
+        row?.focus({ preventScroll: true })
+        row?.scrollIntoView({ block: 'nearest' })
+        break
+      }
+      default: return
+    }
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  const canReset = !!q || assignee !== 'any' || state !== 'all' || view !== 'items'
+  const tiles = [
+    { view: 'reviews', label: t('dashboard.attention.reviews'), count: reviewCount, tone: reviewCount ? 'warn' : '' },
+    { view: 'blocked', label: t('dashboard.attention.blocked'), count: blockedCount, tone: blockedCount ? 'danger' : '' },
+    { view: 'items', label: t('dashboard.attention.issues'), count: issueCount, tone: '' }
+  ] as const
+  const shortcuts = [
+    [['J', 'K'], t('dashboard.keys.move')], [['1', '2'], t('dashboard.keys.tabs')],
+    [['/'], t('dashboard.keys.search')], [['R'], t('changes.refresh')], [['C'], t('dashboard.copyUrl')]
+  ] as const
+
+  return <section ref={dashboardRef} tabIndex={-1} className="git-dashboard" aria-label={t('titlebar.mode.dashboard')} onKeyDown={handleKeys}>
+    <div className={`workspace ${selection && sheetOpen ? 'has-detail' : ''}`}>
+      <div className="main">
+        <header className="phead">
+          <span className="provider" title={project.integrationName}>{project.provider === 'gitlab' ? (
+            <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+              <path fill="currentColor" d="M8 14.6 10.6 6.6H5.4ZM8 14.6 5.4 6.6H1.8ZM1.8 6.6 1 9.1c-.1.2 0 .5.2.6L8 14.6ZM1.8 6.6h3.6L3.9 1.9c-.1-.2-.4-.2-.5 0ZM8 14.6l2.6-8h3.6ZM14.2 6.6l.8 2.5c.1.2 0 .5-.2.6L8 14.6ZM14.2 6.6h-3.6l1.5-4.7c.1-.2.4-.2.5 0Z" />
+            </svg>
+          ) : <ItemIcon kind="merge-request" />}{provider}</span>
+          <h1>{namespace && <span>{namespace} / </span>}{name}</h1>
+          <div className={`sync ${outdated ? 'stale' : ''}`}>
+            <span className="dot" aria-hidden="true" />
+            <span role="status">{busy ? t('common.loading') : updatedAt
+              ? <>{t(outdated ? 'dashboard.lastSync' : 'dashboard.synced')} <RelativeTime value={updatedAt} now={now} /></>
+              : t('dashboard.syncUnavailable')}</span>
+            <button type="button" className={`icon-btn ${busy ? 'spin' : ''}`} onClick={refresh}
+              aria-label={t('changes.refresh')} title={`${t('changes.refresh')} (R)`}><RefreshIcon size={15} /></button>
+          </div>
+        </header>
+        <section className="attn" aria-label={t('dashboard.attention')}>
+          {tiles.map((tile) => <button type="button" key={tile.view}
+            className={`tile ${tile.tone} ${tile.count == null || tile.count === 0 ? 'zero' : ''}`}
+            aria-pressed={tile.view !== 'items' ? view === tile.view : undefined}
+            onClick={() => showTile(tile.view)}>
+            <span className="n">{tile.count ?? '–'}</span><span className="k">{tile.label}</span>
+          </button>)}
+        </section>
+        <div className="tabs" role="tablist" aria-label={t('titlebar.mode.dashboard')}>
+          {TABS.map((kind) => {
+            const snapshot = kind === tab && view === 'items' ? list.data : (kind === 'issue' ? issues : merges).data
+            const count = kind === tab ? visible.filter((item) => item.state === 'open').length : snapshot?.items.length
+            const hasData = kind === tab ? !!relevant.data || !!visible.length : !!snapshot
+            return <button type="button" className="tab" key={kind} role="tab" id={`dashboard-tab-${kind}`}
+              aria-selected={kind === tab} aria-controls="dashboard-list" tabIndex={kind === tab ? 0 : -1}
+              onClick={() => changeTab(kind)} onKeyDown={(event) => {
                 if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
                 event.preventDefault()
                 const next = event.key === 'Home' ? 'issue' : event.key === 'End' ? 'merge-request' : kind === 'issue' ? 'merge-request' : 'issue'
-                setTab(next)
-                document.getElementById(`dashboard-tab-${next}`)?.focus()
-              }}
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-fgmuted hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent aria-selected:bg-panel aria-selected:text-fg aria-selected:shadow-sm">
-              {t(`dashboard.tab.${kind}`)}
+                focusTab(next)
+              }}>
+              <ItemIcon kind={kind} />{kind === 'merge-request' && project.provider !== 'gitlab' ? t('dashboard.pullRequests') : t(`dashboard.tab.${kind}`)}
+              <span className={`count ${kind === 'merge-request' && reviewCount ? 'alert' : ''}`}>{hasData ? `${count ?? 0}${snapshot?.truncated && !q ? '+' : ''}` : '·'}</span>
             </button>
-          ))}
+          })}
         </div>
-      </header>
-      <DashboardItems key={tab} {...props} kind={tab} onSelect={setSelected} />
-      {selected && <ItemDetail key={`${selected.kind}:${selected.id}`} folder={props.folder} project={props.project}
-        item={selected} onClose={() => setSelected(null)} />}
-    </section>
-  )
+        <div className="toolbar">
+          <label className="search">
+            <SearchIcon size={15} />
+            <input type="search" ref={search} autoComplete="off" value={query}
+              aria-label={t('dashboard.keys.search')} placeholder={t('dashboard.search')}
+              onChange={(event) => setQuery(event.target.value)} />
+            <kbd>/</kbd>
+          </label>
+          <div className="seg" role="group" aria-label={t('dashboard.assignees')}>
+            <button type="button" title={t('dashboard.mine')} aria-pressed={view === 'items' && assignee === 'me'}
+              onClick={() => { setView('items'); setAssignee('me') }}>{t('dashboard.filter.mine')}</button>
+            <button type="button" title={t('dashboard.everyone')} aria-pressed={view === 'items' && assignee === 'any'}
+              onClick={() => { setView('items'); setAssignee('any') }}>{t('dashboard.filter.any')}</button>
+          </div>
+          <select className="select" aria-label={t('dashboard.state')} value={state}
+            onChange={(event) => { setView('items'); setState(event.target.value === 'all' ? 'all' : 'open') }}>
+            <option value="open">{t('dashboard.state.open')}</option>
+            <option value="all">{t('dashboard.allStates')}</option>
+          </select>
+        </div>
+        <div className="scroller" role="tabpanel" id="dashboard-list" aria-labelledby={`dashboard-tab-${tab}`} ref={listRef}>
+          {relevant.error && <DashboardNotice error={relevant.error} stale={!!relevant.data} onRetry={refresh} />}
+          {showReviewNotice && view !== 'reviews' && reviews.error &&
+            <DashboardNotice error={reviews.error} stale={!!reviews.data} onRetry={reviews.refresh} />}
+          {showReviewNotice && reviewCount === null && <div className="notice info">{t('dashboard.unknownReviews')}</div>}
+          {view !== 'reviews' && list.data?.truncated && <div className="notice info">{t('dashboard.partialList')}</div>}
+          {view === 'blocked' && hasUnknownBlockers && <div className="notice info">{t('dashboard.unknownBlockers')}</div>}
+          {relevant.loading && !visible.length && <div role="status" aria-label={t('common.loading')}>
+            {Array.from({ length: 6 }, (_, i) => <div className="sk-row" key={i}>
+              <span className="sk" /><div><span className="sk" style={{ width: `${70 - i * 6}%` }} /><span className="sk" style={{ width: `${40 + (i % 3) * 8}%` }} /></div><span className="sk" />
+            </div>)}
+          </div>}
+          {!relevant.loading && !relevant.error && !visible.length && <div className="empty">
+            <ItemIcon kind={tab} status="merged" size={24} />
+            <h3>{t(view === 'reviews' && !q && reviewCount !== null ? 'dashboard.noReviews' : 'dashboard.noItems')}</h3>
+            {canReset && <button type="button" className="btn" onClick={() => {
+              setQuery(''); setView('items'); setAssignee('any'); setState('all')
+            }}>{t('dashboard.showAll')}</button>}
+          </div>}
+          {groups.filter((group) => group.items.length > 0).map((group) => <section key={group.label}>
+            <h2 className={`group ${group.priority ? 'attn-g' : ''}`}>{group.label}<span className="count">{group.items.length}</span></h2>
+            <ul className="rows" aria-label={group.label}>{group.items.map((item) => <ItemRow key={item.id}
+              item={item} now={now} selected={item.id === selection?.id} review={reviewStates.get(item.id)}
+              onSelect={() => { setSelected(item.id); setSheetOpen(true) }} />)}</ul>
+          </section>)}
+        </div>
+        <div className="hints" aria-hidden="true">{shortcuts.map(([keys, label]) => (
+          <span key={label}>{keys.map((key) => <kbd key={key}>{key}</kbd>)} {label}</span>
+        ))}</div>
+      </div>
+      <aside className="detail" aria-label={t('dashboard.detail')}>
+        {selection
+          ? <ItemDetail key={`${tab}:${selection.id}`} folder={folder} project={project} provider={provider}
+              item={selection} now={now} review={reviewStates.get(selection.id)} onClose={closeDetail} copyRef={copy}
+              sheetOpen={sheetOpen} />
+          : <div className="d-empty"><ItemIcon kind={tab} size={24} /><strong>{t('dashboard.selectItem')}</strong></div>}
+      </aside>
+    </div>
+  </section>
 }

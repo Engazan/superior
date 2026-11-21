@@ -3,7 +3,7 @@ import type { DashboardError, DashboardResult } from '@shared/git-dashboard'
 
 export const DASHBOARD_REFRESH_MS = 5 * 60_000
 
-type Snapshot<T> = { scope: string; data?: T; error?: DashboardError }
+type Snapshot<T> = { scope: string; revision: number; data?: T; error?: DashboardError; updatedAt?: number }
 
 export function useDashboardData<T>(
   scope: string | null,
@@ -23,8 +23,12 @@ export function useDashboardData<T>(
       const result = await request().catch((): DashboardResult<T> => ({ error: 'unavailable' }))
       if (!active || !scope) return
       setSnapshot((prev) => 'data' in result
-        ? { scope, data: result.data }
-        : { scope, data: prev?.scope === scope && result.error !== 'unlinked' ? prev.data : undefined, error: result.error })
+        ? { scope, revision, data: result.data, updatedAt: startedAt }
+        : {
+          scope, revision, error: result.error,
+          data: prev?.scope === scope && result.error !== 'unlinked' ? prev.data : undefined,
+          updatedAt: prev?.scope === scope && result.error !== 'unlinked' ? prev.updatedAt : undefined
+        })
       if (refreshMs) timer = window.setTimeout(() => void load(), Math.max(0, refreshMs - (Date.now() - startedAt)))
     }
     void load()
@@ -35,5 +39,8 @@ export function useDashboardData<T>(
   }, [scope, request, refreshMs, revision])
 
   const current = snapshot?.scope === scope ? snapshot : undefined
-  return { data: current?.data, error: current?.error, loading: !!scope && !current, refresh }
+  return {
+    data: current?.data, error: current?.error, updatedAt: current?.updatedAt,
+    loading: !!scope && !current, refreshing: !!scope && current?.revision !== revision, refresh
+  }
 }

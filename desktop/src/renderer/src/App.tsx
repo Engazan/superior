@@ -182,6 +182,13 @@ export default function App(): React.JSX.Element {
   const codeEnabled = !disabledModes.includes('code')
   const browserEnabled = !disabledModes.includes('browser')
   const workspaceMode: WorkspaceMode = disabledModes.includes(code.current.mode) ? 'terminals' : code.current.mode
+  const [dashboardInspectorOpen, setDashboardInspectorOpen] = useState(false)
+  const dashboardActive = workspaceMode === 'dashboard'
+  const inspectorOpen = dashboardActive ? dashboardInspectorOpen : rightSidebarOpen
+  const toggleInspector = useCallback(() => {
+    if (dashboardActive) setDashboardInspectorOpen((open) => !open)
+    else setRightSidebarOpen((open) => !open)
+  }, [dashboardActive, setRightSidebarOpen])
   const openTerminalUrl = useCallback((workspaceId: string, url: string) => {
     const safeUrl = browserUrl(url)
     // The main window's open handler hands http(s) links to the system browser.
@@ -543,7 +550,7 @@ export default function App(): React.JSX.Element {
         title: t('keyboard.toggleRightPanel'),
         section: t('palette.sectionView'),
         hint: formatChord(shortcuts.toggleRightPanel),
-        run: () => setRightSidebarOpen((o) => !o)
+        run: toggleInspector
       },
       // Open project is always available — it's the only recovery action when
       // nothing is open yet; Manage profiles likewise had no palette entry.
@@ -627,6 +634,7 @@ export default function App(): React.JSX.Element {
     openAgentSession,
     update.info,
     update.progress.phase,
+    toggleInspector,
     t
   ])
 
@@ -753,7 +761,7 @@ export default function App(): React.JSX.Element {
         if (view !== 'main') return
         e.preventDefault()
         e.stopPropagation()
-        setRightSidebarOpen((o) => !o)
+        toggleInspector()
       } else if (chord === shortcuts.closeFocusedCell) {
         if (view !== 'main') return
         e.preventDefault()
@@ -851,6 +859,7 @@ export default function App(): React.JSX.Element {
     codeActive,
     terminalActive,
     workspaceMode,
+    toggleInspector,
     disabledModes,
     currentCodePath,
     actCode,
@@ -890,8 +899,8 @@ export default function App(): React.JSX.Element {
           view === 'main' && terminalActive && activeTabSessionCount > 0
         }
         broadcastActive={broadcastMode}
-        onToggleRight={() => setRightSidebarOpen((o) => !o)}
-        rightOpen={rightSidebarOpen}
+        onToggleRight={toggleInspector}
+        rightOpen={inspectorOpen}
         sidebarCollapsed={sidebarCollapsed}
         profiles={ws.profiles}
         activeProfileId={ws.activeProfileId}
@@ -1025,7 +1034,7 @@ export default function App(): React.JSX.Element {
             </main>
 
             {/* Drag handle for resizing the right panel. */}
-            {rightSidebarOpen && (
+            {inspectorOpen && (
               <div
                 onPointerDown={startRightResize}
                 className="superior-inspector-resize group relative z-10 -mr-1.5 flex w-1.5 shrink-0 cursor-col-resize items-stretch"
@@ -1037,13 +1046,13 @@ export default function App(): React.JSX.Element {
                 shell stays mounted to preserve drafts and expansion paths;
                 hidden file/history views and full diff data are released. */}
             <div
-              style={{ width: rightSidebarOpen ? `min(${rightPanelWidth}px, var(--inspector-max))` : 0 }}
-              inert={!rightSidebarOpen}
+              style={{ width: inspectorOpen ? `min(${rightPanelWidth}px, var(--inspector-max))` : 0 }}
+              inert={!inspectorOpen}
               className={`flex shrink-0 overflow-hidden ${
                 rightResizing ? '' : 'transition-[width] duration-200 ease-out'
               }`}
             >
-              {rightPanelLoaded && (
+              {(rightPanelLoaded || dashboardInspectorOpen) && (
                 <Suspense fallback={<DeferredPanel />}>
                   <RightPanel
                     filesRevealRequest={filesRevealRequest}
@@ -1056,7 +1065,7 @@ export default function App(): React.JSX.Element {
                       ws.setActiveSessionId(session.id)
                     }}
                     width={rightPanelWidth}
-                    active={rightSidebarOpen && view === 'main'}
+                    active={inspectorOpen && view === 'main'}
                     codeEnabled={codeEnabled}
                     onOpenSettings={() => setView('settings')}
                     folderPath={ws.effectiveDir}
