@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { useOverlayLayer } from '../overlayStack'
 import type { AccountUsage, UiState, UsageProfile, UsageWindow } from '../types'
-import { Button, CloseIcon, IconButton, Notice, RefreshIcon, useConfirm, useToast } from './ui'
+import { builtinIcon } from '@shared/icons'
+import { Button, ChevronIcon, CloseIcon, IconButton, Notice, RefreshIcon, useConfirm, useToast } from './ui'
 import { resetWindows } from '../usageReset'
 import { UsageResetNotice } from './UsageResetNotice'
 
@@ -223,7 +224,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
   const hoveredProfile = visible.find((profile) => profile.id === hover?.id)
   const hoveredReading = hoveredProfile ? readings[hoveredProfile.id] : undefined
   return (
-    <footer className="relative z-40 flex h-[41px] shrink-0 items-center gap-3 border-t border-edge bg-panel px-4 text-xs text-fgmuted">
+    <footer className="relative z-40 flex h-8 shrink-0 items-center gap-2 border-t border-edge bg-panel px-3 text-[11px] text-fgmuted">
       {notice && <UsageResetNotice key={notice.id} message={notice.message} onClose={dismissNotice.current} />}
       <IconButton
         type="button"
@@ -234,7 +235,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
       >
         <RefreshIcon className={loading ? 'animate-spin' : undefined} />
       </IconButton>
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+      <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto">
         {visible.map((profile) => {
           const reading = readings[profile.id]
           const windows = reading?.windows ?? []
@@ -242,7 +243,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
             ? [windows.find((limit) => limit.id === 'five_hour'), tightestWindow(windows.filter((limit) => limit.id !== 'five_hour'))]
             : [tightestWindow(windows)]).filter((limit): limit is UsageWindow => !!limit)
           return (
-            <div key={profile.id} className="flex shrink-0 items-center">
+            <div key={profile.id} className="flex shrink-0 items-center gap-3 before:h-4 before:w-px before:bg-edge first:before:hidden">
             <button type="button" aria-haspopup="dialog" aria-expanded={open}
               draggable={visible.length > 1}
               title={t('footer.reorder')}
@@ -285,16 +286,13 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
               onFocus={(event) => showHover(profile.id, event.currentTarget)} onBlur={hideHover}
               aria-describedby={!open && hover?.id === profile.id ? 'usage-profile-tooltip' : undefined}
               className="flex shrink-0 cursor-grab select-none items-center gap-1.5 rounded px-1 py-0.5 active:cursor-grabbing hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
-              <span aria-hidden data-provider={profile.provider}
-                className="superior-usage-icon grid size-[18px] shrink-0 place-items-center rounded-[5px] text-[10px] font-bold">
-                {profile.provider === 'codex' ? 'X' : 'C'}
-              </span>
+              <img draggable={false} src={builtinIcon(profile.provider)?.dataUrl} alt="" className={`h-3.5 w-3.5 object-contain ${profile.provider === 'codex' ? 'superior-usage-codex-icon' : ''}`} />
               <span className="font-medium text-fg">{profile.name}</span>
               {limits.length > 0 && reading?.status === 'ready' ? limits.map((limit) => (
                 <span key={limit.id} className="ml-1 flex items-center gap-1.5">
                   <span className="text-fgmuted">{limit.label}</span>
-                  <span className="min-w-10 rounded-[5px] px-1.5 text-center font-mono text-[11px] font-semibold tabular-nums"
-                    style={{ color: color(limit.usedPercent), backgroundColor: `color-mix(in srgb, ${color(limit.usedPercent)} 13%, var(--c-panel))` }}>{percent(limit)}</span>
+                  <span className="min-w-[3rem] rounded bg-hover px-1.5 py-0.5 text-center font-semibold tabular-nums"
+                    style={{ color: color(limit.usedPercent) }}>{percent(limit)}</span>
                 </span>
               )) : <span className="text-fgdim">{status(reading)}</span>}
             </button>
@@ -305,6 +303,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
       <button type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}
         className="flex h-6 shrink-0 items-center gap-1 rounded-full px-2 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50">
         {t('footer.options')}
+        <ChevronIcon size={11} direction="up" />
       </button>
       {!open && hover && hoveredProfile && <div id="usage-profile-tooltip" role="tooltip"
         onMouseEnter={clearHoverTimer} onMouseLeave={hideHover}
@@ -316,7 +315,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
         <p className="mt-1 break-all text-[10px] text-fgdim">{hoveredProfile.directoryPath}</p>
         {hoveredReading?.status === 'ready' ? hoveredReading.windows.map((limit) => <div key={limit.id} className="mt-3">
           <div className="flex justify-between gap-2"><span>{limit.label}</span>
-            <span style={{ color: color(limit.usedPercent), backgroundColor: `color-mix(in srgb, ${color(limit.usedPercent)} 13%, var(--c-panel))` }}>{percent(limit)} {t(remaining ? 'usage.remaining' : 'usage.used')}</span>
+            <span style={{ color: color(limit.usedPercent) }}>{percent(limit)} {t(remaining ? 'usage.remaining' : 'usage.used')}</span>
           </div>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-hover"><div className="h-full rounded-full"
             style={{ width: `${remaining ? 100 - limit.usedPercent : limit.usedPercent}%`, backgroundColor: color(limit.usedPercent) }} /></div>
@@ -382,7 +381,7 @@ export function UsageFooter({ onManage }: { onManage: () => void }): React.JSX.E
                   <div key={limit.id} className="mt-2">
                     <div className="mb-1 flex justify-between gap-2">
                       <span>{limit.label}</span>
-                      <span style={{ color: color(limit.usedPercent), backgroundColor: `color-mix(in srgb, ${color(limit.usedPercent)} 13%, var(--c-panel))` }}>{percent(limit)} {t(remaining ? 'usage.remaining' : 'usage.used')}</span>
+                      <span style={{ color: color(limit.usedPercent) }}>{percent(limit)} {t(remaining ? 'usage.remaining' : 'usage.used')}</span>
                     </div>
                     <div role="progressbar" aria-label={`${profile.name} ${limit.label} ${t(remaining ? 'usage.remaining' : 'usage.used')}`}
                       aria-valuenow={remaining ? 100 - limit.usedPercent : limit.usedPercent} aria-valuemin={0} aria-valuemax={100} className="h-1.5 overflow-hidden rounded-full bg-hover">

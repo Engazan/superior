@@ -1,6 +1,11 @@
 @import '@xterm/xterm/css/xterm.css' layer(base);
 
 @import 'tailwindcss';
+
+.dark .superior-usage-codex-icon {
+  filter: invert(1);
+}
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -394,13 +399,11 @@ body {
   color: var(--c-fgdim);
 }
 
-.superior-terminal-icon,
-.superior-usage-icon {
+.superior-terminal-icon {
   background: var(--c-hover);
   color: var(--c-fg2);
 }
 
-.superior-usage-icon[data-provider='claude'],
 .superior-terminal-icon[data-provider='claude'] {
   background: var(--c-agent-claude-bg);
   color: var(--c-agent-claude-fg);
