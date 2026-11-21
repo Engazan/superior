@@ -253,7 +253,13 @@ app.on('before-quit', (event) => {
   stopNativeChats()
   if (!setupsStopped) {
     event.preventDefault()
-    void stopAllSetups().finally(() => { setupsStopped = true; app.quit() })
+    void stopAllSetups().finally(() => {
+      // Let Electron finish cancelling the native quit request before retrying.
+      setImmediate(() => {
+        setupsStopped = true
+        app.quit()
+      })
+    })
     return
   }
   // A staged update installs on quit; on Windows a daemon running from the
