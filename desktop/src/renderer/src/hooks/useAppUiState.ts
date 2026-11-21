@@ -15,7 +15,7 @@ export function useAppUiState() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   const [rightPanelLoaded, setRightPanelLoaded] = useState(false)
-  const [rightPanelWidth, setRightPanelWidth] = useState(384)
+  const [rightPanelWidth, setRightPanelWidth] = useState(312)
   const [rightResizing, setRightResizing] = useState(false)
   const [launcherOpen, setLauncherOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)

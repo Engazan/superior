@@ -5,6 +5,8 @@ export interface AgentStateEvent {
   id: string
   /** null: the agent ended; fall back to output-based activity. */
   state: AgentState | null
+  /** Command text supplied by a shell-tool permission hook, if available. */
+  pendingCommand?: string
 }
 
 const HOOK_STATES: Record<string, AgentState | null> = {
@@ -22,4 +24,13 @@ export function agentStateFromHook(payload: unknown): AgentState | null | undefi
   if (!payload || typeof payload !== 'object') return undefined
   const name = (payload as { hook_event_name?: unknown }).hook_event_name
   return typeof name === 'string' && Object.hasOwn(HOOK_STATES, name) ? HOOK_STATES[name] : undefined
+}
+
+/** Only show the command the CLI supplied for a pending shell permission. */
+export function pendingCommandFromHook(payload: unknown): string | undefined {
+  if (agentStateFromHook(payload) !== 'waiting') return undefined
+  const { tool_name, tool_input } = payload as { tool_name?: unknown; tool_input?: unknown }
+  if (tool_name !== 'Bash' || !tool_input || typeof tool_input !== 'object') return undefined
+  const { command } = tool_input as { command?: unknown }
+  return typeof command === 'string' ? command.trim().slice(0, 2000) || undefined : undefined
 }

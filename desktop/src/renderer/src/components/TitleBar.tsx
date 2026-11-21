@@ -3,17 +3,24 @@ import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { BranchSwitcher } from './BranchSwitcher'
-import { BranchIcon, BroadcastIcon, PromptIcon } from './ui'
+import { AgentIcon, BranchIcon, BroadcastIcon, ChatIcon, CodeIcon, GlobeIcon, PlusIcon, PromptIcon, SearchIcon } from './ui'
 import { useI18n } from '../i18n'
-import { useShortcutTitle } from '../shortcuts'
+import { formatChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import { barTint } from '../tint'
 import type { GitStatus, Profile } from '../types'
 
 const isMac = window.api.platform === 'darwin'
 
+const MODE_ICONS = {
+  terminals: AgentIcon,
+  code: CodeIcon,
+  browser: GlobeIcon,
+  chat: ChatIcon
+} satisfies Record<WorkspaceMode, typeof AgentIcon>
+
 /** Every titlebar icon button shares one 32px height, width, radius and focus ring. */
 const TB_BTN =
-  'app-no-drag grid h-8 w-9 shrink-0 place-items-center rounded-full p-0 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent'
+  'app-no-drag grid h-8 w-8 shrink-0 place-items-center rounded-lg p-0 transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent'
 
 interface Props {
   workspaceMode: WorkspaceMode
@@ -23,6 +30,8 @@ interface Props {
   workspaceModeEnabled: boolean
   /** Show the sidebar toggle (hidden in settings, where there is no sidebar). */
   showToggle: boolean
+  projectName?: string
+  onOpenPalette: () => void
   gitStatus: GitStatus | null
   gitLoading: boolean
   onToggle: () => void
@@ -74,6 +83,8 @@ export function TitleBar({
   onWorkspaceModeChange,
   workspaceModeEnabled,
   showToggle,
+  projectName,
+  onOpenPalette,
   gitStatus,
   gitLoading,
   onToggle,
@@ -99,6 +110,8 @@ export function TitleBar({
 }: Props): React.JSX.Element {
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
+  const { shortcuts } = useShortcuts()
+  const paletteShortcut = formatChord(shortcuts.openPalette)
   const showGit = showToggle && (gitLoading || gitStatus !== null)
   // Tint only on the main view; settings has no active profile chrome.
   const profileTint = showToggle ? barTint(tintColor) : undefined
@@ -109,26 +122,27 @@ export function TitleBar({
   const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header
-      className="superior-titlebar app-drag relative z-40 flex h-11 shrink-0 items-center bg-panel/80 transition-colors duration-200"
+      className="superior-titlebar app-drag relative z-40 flex min-h-[59px] shrink-0 items-center bg-panel transition-colors duration-200"
       style={tint}
     >
       {/* LEFT — sidebar toggle + git status. */}
       <div
-        className={`flex h-full min-w-0 flex-1 items-center ${isMac ? 'pl-[84px]' : 'pl-1'}`}
+        className={`superior-titlebar-start flex min-w-0 items-center ${isMac ? 'pl-20' : 'pl-4'}`}
         onDoubleClick={onMaximize}
       >
         {showToggle && (
-          <div className="app-no-drag flex h-full min-w-0 items-center pr-1">
+          <div className="app-no-drag flex min-w-0 items-center gap-3">
             <SidebarToggle onClick={onToggle} expanded={!sidebarCollapsed} />
+            {projectName && <span className="superior-project-crumb max-w-28 truncate font-semibold text-fgdim" title={projectName}>{projectName}</span>}
             {showGit && (
               <>
-                <span className="mx-2 h-4 w-px shrink-0 bg-edge" aria-hidden />
+                {projectName && <span className="superior-project-crumb text-fgmuted" aria-hidden>/</span>}
                 {gitLoading && !gitStatus ? (
                   <span role="status" className="flex h-full items-center px-1 text-xs text-fgmuted">
                     {t('titlebar.gitLoading')}
                   </span>
                 ) : gitStatus?.isRepository ? (
-                  <div className="flex h-full min-w-0 max-w-72 items-center gap-1.5 text-xs font-medium text-fgdim">
+                  <div className="superior-branch-chip flex h-7 min-w-0 max-w-48 items-center gap-1.5 rounded-lg border border-edge bg-bar px-2 font-mono text-xs text-fg">
                     {branchSwitchable && gitDir ? (
                       <BranchSwitcher
                         gitDir={gitDir}
@@ -136,7 +150,7 @@ export function TitleBar({
                         onSwitched={onBranchSwitched}
                       />
                     ) : (
-                      <span className="flex h-8 min-w-0 items-center gap-1.5 px-2">
+                      <span className="flex min-w-0 items-center gap-1.5">
                         <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
                         <span className="truncate" title={gitStatus.branch ?? 'HEAD'}>
                           {gitStatus.branch ?? 'HEAD'}
@@ -170,28 +184,42 @@ export function TitleBar({
         )}
       </div>
 
-      {/* CENTER — pin the workspace mode switcher to the title bar's actual midpoint,
-          independently of the widths of the controls on either side. */}
-      <div
-        className="absolute left-1/2 top-0 flex h-full -translate-x-1/2 items-center justify-center max-[1100px]:static max-[1100px]:max-w-64 max-[1100px]:translate-x-0"
-        onDoubleClick={onMaximize}
-      >
-        {showToggle && workspaceModes.length > 1 && (
-          <div role="group" aria-label={t('code.switchMode')} title={shortcutTitle(t('code.switchMode'), 'toggleWorkspaceMode')}
-            className="superior-mode-switch app-no-drag mx-2 flex shrink-0 rounded-lg border border-edge bg-bar p-0.5">
-            {workspaceModes.map((mode) => (
-              <button key={mode} type="button" aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
-                onClick={() => onWorkspaceModeChange(mode)}
-                className={`h-[26px] rounded-md px-3 text-xs font-medium transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 ${workspaceMode === mode ? 'bg-hover text-fg shadow-sm' : 'text-fgmuted hover:text-fg'}`}>
-                {mode === 'terminals' ? 'CLI' : mode === 'code' ? 'Code' : mode === 'chat' ? 'Chat' : 'Browser'}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {showToggle && (
+        <div className="superior-command-strip app-no-drag flex min-w-0 flex-1 items-center gap-1 rounded-xl border border-edge bg-bar p-[3px]">
+          <button
+            type="button"
+            onClick={onOpenPalette}
+            title={shortcutTitle(t('titlebar.search'), 'openPalette')}
+            className="superior-command-search flex h-[30px] min-w-0 flex-1 items-center gap-2.5 rounded-[9px] bg-panel px-2.5 text-left text-fgdim transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <SearchIcon size={15} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{t('titlebar.search')}</span>
+            <kbd className="superior-command-key shrink-0 rounded-md border border-edge px-1.5 py-0.5 font-mono text-[10px] leading-none">{paletteShortcut}</kbd>
+          </button>
+          {workspaceModes.length > 1 && (
+            <>
+              <span className="mx-1 h-5 w-px shrink-0 bg-edge" aria-hidden />
+              <div role="group" aria-label={t('code.switchMode')} title={shortcutTitle(t('code.switchMode'), 'toggleWorkspaceMode')}
+                className="superior-mode-switch flex shrink-0 gap-0.5">
+                {workspaceModes.map((mode) => {
+                  const Icon = MODE_ICONS[mode]
+                  const label = t(`titlebar.mode.${mode}`)
+                  return (
+                    <button key={mode} type="button" aria-label={label} title={label}
+                      aria-pressed={workspaceMode === mode} disabled={!workspaceModeEnabled}
+                      onClick={() => onWorkspaceModeChange(mode)}
+                      className="grid h-7 w-9 place-items-center rounded-[7px] text-fgmuted transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40">
+                      <Icon size={16} />
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
-      {/* RIGHT — terminal tools + quick-launch + profile switcher + right-panel toggle + window controls. */}
-      <div className="flex h-full shrink-0 items-center justify-end" onDoubleClick={onMaximize}>
+      <div className="superior-titlebar-end ml-auto flex shrink-0 items-center justify-end gap-2" onDoubleClick={onMaximize}>
         {showToggle && (
           <>
             <button
@@ -200,7 +228,7 @@ export function TitleBar({
               disabled={!promptPickerEnabled}
               title={t('prompts.insert')}
               aria-label={t('prompts.insert')}
-              className={`${TB_BTN} text-fgdim`}
+              className={`${TB_BTN} superior-prompt-action text-fgdim`}
             >
               <PromptIcon size={15} />
             </button>
@@ -233,26 +261,14 @@ export function TitleBar({
                 : t('terminal.noWorkspace')
             }
             aria-label={t('terminal.addTerminal')}
-            className={`${TB_BTN} text-fgdim`}
+            className={`${TB_BTN} superior-launch-button`}
           >
-            <svg
-              className="block h-[16px] w-[16px]"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="m7 9 3 3-3 3M12 15h5" />
-            </svg>
+            <PlusIcon size={16} />
           </button>
         )}
 
         {showToggle && (
-          <div className="app-no-drag mx-2 min-w-0 max-[1100px]:max-w-64">
+          <div className="app-no-drag min-w-0">
             <ProfileSwitcher
               profiles={profiles}
               activeProfileId={activeProfileId}
@@ -269,7 +285,7 @@ export function TitleBar({
             aria-expanded={rightOpen}
             title={shortcutTitle(t('common.toggleRightSidebar'), 'toggleRightPanel')}
             aria-label={t('common.toggleRightSidebar')}
-            className={`group ${TB_BTN} text-fgdim`}
+            className={`group ${TB_BTN} superior-panel-toggle text-fgdim`}
           >
             <svg
               className="block h-[15px] w-[15px] transition-transform duration-150 group-active:scale-90"

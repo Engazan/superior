@@ -69,13 +69,12 @@ export function ProfileSwitcher({ profiles, activeProfileId, onSelect, onManage 
         aria-label={active ? `${t('profile.switch')}: ${active.name}` : t('profile.switch')}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="superior-profile-switch flex h-8 max-w-full items-center gap-2 rounded-lg border border-edge bg-bar px-2.5 text-fgdim transition hover:bg-hover hover:text-fg aria-expanded:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+        className="superior-profile-switch flex h-8 max-w-full items-center gap-2 rounded-full border border-edge bg-bar py-[3px] pl-[3px] pr-2.5 text-fgdim transition hover:bg-hover hover:text-fg aria-expanded:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <span
-          className="h-2 w-2 shrink-0 rounded-full bg-fgmuted"
-          style={active?.color ? { backgroundColor: active.color } : undefined}
-          aria-hidden
-        />
+        <span aria-hidden className="superior-profile-initial grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold"
+          style={active?.color ? { backgroundColor: active.color } : undefined}>
+          {active?.name.trim().charAt(0).toUpperCase() || '–'}
+        </span>
         <span className="truncate text-xs font-medium text-fg">{active?.name ?? '—'}</span>
         <ChevronIcon size={12} className="shrink-0 text-fgmuted" />
       </button>

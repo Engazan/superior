@@ -3,7 +3,8 @@ import { useI18n } from '../../i18n'
 import { KebabIcon, StarIcon } from '../ui'
 import { DiffStat, RemoteBadge, RunningBadge, WorkingSpinner, folderTitle } from './parts'
 import type { WorkspaceGitStat } from '../../hooks/useWorkspaceGitStats'
-import type { Folder, Workspace } from '../../types'
+import { SessionList } from './SessionList'
+import type { AgentSession, Folder, Workspace } from '../../types'
 
 type MenuAnchor = HTMLElement | { x: number; y: number }
 
@@ -11,6 +12,9 @@ interface Props {
   ws: Workspace
   folder: Folder
   active: boolean
+  sessions: AgentSession[]
+  activeSessionId: string | null
+  onSelectSession: (session: AgentSession) => void
   /** this row is the one being dragged */
   dragging: boolean
   attention: boolean
@@ -46,6 +50,9 @@ export function WorkspaceRow({
   ws,
   folder,
   active,
+  sessions,
+  activeSessionId,
+  onSelectSession,
   dragging,
   attention,
   busy,
@@ -98,7 +105,7 @@ export function WorkspaceRow({
         style={attention ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
         className={`group relative flex min-h-7 cursor-pointer items-center gap-2 rounded-md py-1 pl-4 pr-1 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
           dragging ? 'opacity-60 ring-1 ring-accentBorder ' : ''
-        }${active ? 'bg-accentBg text-fg' : 'text-fg2 hover:bg-hover/70'}`}
+        }${active ? 'bg-hover text-fg' : 'text-fg2 hover:bg-hover/70'}`}
       >
         <span className={`flex h-4 w-3.5 shrink-0 items-center justify-center ${twoLines ? 'self-start' : ''}`}>
           {attention ? (
@@ -203,6 +210,7 @@ export function WorkspaceRow({
           </span>
         )}
       </div>
+      <SessionList sessions={sessions} activeSessionId={activeSessionId} onSelect={onSelectSession} className="mt-1 pl-2.5" />
     </li>
   )
 }

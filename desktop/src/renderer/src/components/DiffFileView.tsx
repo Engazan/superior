@@ -49,19 +49,19 @@ export function DiffFileView({
   const dir = file.path.slice(0, file.path.length - name.length)
 
   return (
-    <div className="border-b border-edge">
+    <div className="superior-diff-row border-b border-edge">
       <div className="group flex w-full items-center">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="flex h-7 min-w-0 flex-1 items-center gap-2 px-2 text-left text-xs transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+          className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 text-left text-[13px] transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
           title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
         >
-          <span className={`shrink-0 font-mono font-semibold ${meta.className}`}>{meta.letter}</span>
+          <span className={`w-3.5 shrink-0 font-mono text-[11px] font-semibold ${meta.className}`}>{meta.letter}</span>
           <span className="min-w-0 flex-1 truncate">
             <span className="text-fg">{name}</span>
-            {dir && <span className="text-fgmuted"> {dir.replace(/\/$/, '')}</span>}
+            {dir && <span className="text-[11px] text-fgmuted"> {dir.replace(/\/$/, '')}</span>}
           </span>
           <span className="shrink-0 font-mono text-[11px] tabular-nums">
             {file.additions > 0 && <span className="text-status">+{file.additions}</span>}

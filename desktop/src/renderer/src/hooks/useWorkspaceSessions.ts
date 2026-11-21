@@ -729,6 +729,18 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     [sessions]
   )
 
+  // Select a session from outside its grid, including another tab.
+  const selectSession = useCallback((session: AgentSession): void => {
+    selectTab(session.workspaceId, session.tabId)
+    setMaximizedByTab((current) => {
+      const maximized = current[session.tabId]
+      return maximized && maximized !== session.id
+        ? { ...current, [session.tabId]: session.id }
+        : current
+    })
+    setActiveSessionId(session.id)
+  }, [selectTab])
+
   // Maximize/restore the focused grid cell (keyboard shortcut) within the active tab.
   const toggleMaximizeFocused = useCallback(() => {
     if (!activeWorkspaceId) return
@@ -862,6 +874,7 @@ export function useWorkspaceSessions({ setError, t, presets }: Deps) {
     closeTab,
     toggleMaximize,
     toggleMaximizeFocused,
+    selectSession,
     focusGridCell,
     cycleSession,
     cycleWorkspace,

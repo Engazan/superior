@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TerminalView } from './TerminalView'
-import { PresetMenu } from './PresetMenu'
 import { AgentLauncher, type LaunchConfig } from './AgentLauncher'
 import { insertIntoTerminal } from '../terminalInput'
 import {
@@ -35,6 +34,7 @@ interface Props {
   activeWorkspaceId: string | null
   /** the active workspace's working directory (worktree or folder path), shown in the launcher */
   workingDir: string | null
+  branch?: string | null
   /** saved launch layouts shown in the launcher's Preset tab */
   layoutPresets: LayoutPreset[]
   /** the active workspace's auto-launch layout, if any */
@@ -91,6 +91,7 @@ export function TerminalPanel({
   sessions,
   activeWorkspaceId,
   workingDir,
+  branch,
   layoutPresets,
   startupLayoutId,
   onSetStartupLayout,
@@ -121,6 +122,17 @@ export function TerminalPanel({
   const { t } = useI18n()
   const shortcutTitle = useShortcutTitle()
   const containerRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const [stacked, setStacked] = useState(false)
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setStacked(entry.contentRect.width < 640)
+    })
+    observer.observe(viewport)
+    return () => observer.disconnect()
+  }, [])
   const [resizing, setResizing] = useState<null | 'v' | 'h'>(null)
   // Live layout while a divider drag is in flight. Only the release commits it
   // upstream (state + IPC write) — per-move commits would persist the tab
@@ -131,7 +143,7 @@ export function TerminalPanel({
   const [launching, setLaunching] = useState(false)
   const launchLock = useRef(false)
   const cancelDrag = useRef<(() => void) | null>(null)
-  useEffect(() => () => { cancelDrag.current?.() }, [activeWorkspaceId, activeTabId, surfaceActive, sessions, maximizedId])
+  useEffect(() => () => { cancelDrag.current?.() }, [activeWorkspaceId, activeTabId, surfaceActive, sessions, maximizedId, stacked])
   // Stable identity so memoized TerminalViews don't re-render on every panel render.
   // 130 (SIGINT) and 143 (SIGTERM) are ordinary interactive quits — a red
   // "error" dot for Ctrl+C would cry wolf and erode the real-crash signal.
@@ -178,13 +190,21 @@ export function TerminalPanel({
       onGridLayoutChange({ rows: [], cols: [], tree })
     }
   }, [tree, dragTree, gridLayout, onGridLayoutChange])
-  const geometry = paneGeometry(tree)
-  const rects = gridCells.map((s) => geometry.rects.get(s.id)!)
-  const dividers = geometry.dividers
-  const gridIndex = new Map(gridCells.map((s, i) => [s.id, i] as const))
-
-  // Only honor a maximized id while that cell still exists in the current grid.
+  // A narrow viewport stacks panes without overwriting the saved split tree.
   const maxId = gridCells.some((s) => s.id === maximizedId) ? maximizedId : null
+  const stackPanes = stacked && !maxId && gridCells.length > 1
+  useEffect(() => {
+    if (!stackPanes || !surfaceActive || !activeSessionId) return
+    containerRef.current?.querySelector(`[data-terminal-session="${CSS.escape(activeSessionId)}"]`)
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [activeSessionId, stackPanes, surfaceActive])
+  const geometry = paneGeometry(tree)
+  const stackedHeight = stackPanes ? 100 / gridCells.length : 0
+  const rects = gridCells.map((session, index) => stackPanes
+    ? { top: index * stackedHeight, left: 0, width: 100, height: stackedHeight }
+    : geometry.rects.get(session.id)!)
+  const dividers = stackPanes ? [] : geometry.dividers
+  const gridIndex = new Map(gridCells.map((s, i) => [s.id, i] as const))
 
   const layoutFor = (s: AgentSession): Layout => {
     if (!surfaceActive) return { visible: false, focused: false }
@@ -256,7 +276,7 @@ export function TerminalPanel({
   }
 
   const startPaneDrag = (id: string, event: React.PointerEvent): void => {
-    if (event.button !== 0 || event.ctrlKey || !tree || gridCells.length < 2 || maxId || launching) return
+    if (event.button !== 0 || event.ctrlKey || !tree || gridCells.length < 2 || maxId || stackPanes || launching) return
     event.preventDefault()
     onSelect(id)
     cancelDrag.current?.()
@@ -383,12 +403,13 @@ export function TerminalPanel({
         </div>
       )}
 
-      <div className="relative min-h-0 flex-1">
+      <div ref={viewportRef} className={`relative min-h-0 flex-1 ${stackPanes ? 'overflow-y-auto' : ''}`}>
         {/* Terminal stack — every session stays mounted; rect + visibility drive the layout. */}
         <div
           ref={containerRef}
           aria-hidden={!surfaceActive}
-          className={`absolute inset-0 py-1 pl-1 ${
+          style={stackPanes ? { minHeight: gridCells.length * 280 } : undefined}
+          className={`absolute inset-0 ${
             !surfaceActive ? 'invisible pointer-events-none' : ''
           }`}
         >
@@ -447,6 +468,7 @@ export function TerminalPanel({
               onPaneDrag={startPaneDrag}
               session={s}
               workingDir={workingDir}
+              branch={s.workspaceId === activeWorkspaceId ? branch : null}
               rect={l.rect}
               visible={l.visible}
               focused={l.focused}
@@ -539,7 +561,7 @@ export function TerminalPanel({
                 <span
                   className={`transition ${
                     vertical ? 'h-full w-px group-hover:w-0.5' : 'h-px w-full group-hover:h-0.5'
-                  } ${hot ? `bg-accent ${vertical ? 'w-0.5' : 'h-0.5'}` : 'bg-edge group-hover:bg-accent'}`}
+                  } ${hot ? `bg-accent ${vertical ? 'w-0.5' : 'h-0.5'}` : 'bg-transparent group-hover:bg-accent'}`}
                 />
               </div>
             )
@@ -568,17 +590,6 @@ export function TerminalPanel({
           </div>
         )}
 
-        {activeWorkspaceId && tabSessions.length > 0 && (
-          <div className="solid-surface absolute bottom-3 right-3 z-50 rounded-md border border-edge bg-bar shadow-lg">
-            <PresetMenu
-              presets={presets}
-              disabled={launching || gridCells.length >= MAX_GRID}
-              dropUp
-              onSelect={(preset) => { void launch(preset) }}
-              onManage={onManagePresets}
-            />
-          </div>
-        )}
         </div>
       </div>
     </div>

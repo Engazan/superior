@@ -9,6 +9,7 @@ export function resolvePaneTree(ids: string[], layout?: GridLayout): PaneNode | 
   if (!tree) {
     const dist = distribute(ids.length)
     const grid = matchesDist(layout, dist) ? layout! : uniformLayout(dist)
+    const rowWeights = grid === layout || ids.length !== 3 ? grid.rows : [0.58, 0.42]
     let offset = 0
     const group = (nodes: PaneNode[], weights: number[], axis: 'v' | 'h'): PaneNode => nodes.length === 1 ? nodes[0] : ({
       kind: 'split', axis, ratio: weights[0] / weights.reduce((a, b) => a + b, 0), first: nodes[0],
@@ -19,7 +20,7 @@ export function resolvePaneTree(ids: string[], layout?: GridLayout): PaneNode | 
       offset += count
       return group(leaves, grid.cols[i], 'v')
     })
-    return group(rows, grid.rows, 'h')
+    return group(rows, rowWeights, 'h')
   }
   const existing = new Set(paneIds(tree))
   for (const id of ids) if (!existing.has(id)) tree = insertPane(tree, paneIds(tree).at(-1)!, id, 'right')

@@ -15,7 +15,7 @@ export function SidebarToggle({ onClick, expanded }: Props): React.JSX.Element {
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className="group app-no-drag grid h-8 w-9 shrink-0 place-items-center rounded-full p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+      className="superior-panel-toggle group app-no-drag grid h-8 w-8 shrink-0 place-items-center rounded-lg p-0 text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       aria-label={t('common.toggleSidebar')}
       title={shortcutTitle(t('common.toggleSidebar'), 'toggleSidebar')}
     >

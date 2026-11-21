@@ -4,6 +4,7 @@ import { useAttentionColor } from '../attentionColor'
 import {
   onWorkspaceActivity,
   primeWorkspaceActivity,
+  useAgentSessionStates,
   useAgentWorkspaceStates,
   useAttentionWorkspaces,
   useBusyWorkspaces,
@@ -33,6 +34,7 @@ import {
 import { useShortcutTitle } from '../shortcuts'
 import { FolderHeader } from './sidebar/FolderHeader'
 import { SidebarRail } from './sidebar/SidebarRail'
+import { SessionList } from './sidebar/SessionList'
 import { SidebarUpdate } from './sidebar/SidebarUpdate'
 import { WorkspaceRow } from './sidebar/WorkspaceRow'
 import { WorktreeSetup } from './WorktreeSetup'
@@ -40,12 +42,15 @@ import { WorkspaceCreateModal } from './sidebar/WorkspaceCreateModal'
 import { FolderEditModal } from './sidebar/FolderEditModal'
 import type { UpdateController } from '../hooks/useUpdateCheck'
 import type { WorkspaceGitStat } from '../hooks/useWorkspaceGitStats'
-import type { Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
+import type { AgentSession, Folder, FolderUpdate, Workspace, WorktreeAddArgs } from '../types'
 
 interface Props {
   folders: Folder[]
   workspaces: Workspace[]
   activeWorkspaceId: string | null
+  sessions: AgentSession[]
+  activeSessionId: string | null
+  onSelectSession: (session: AgentSession) => void
   /** running-terminal count per workspace id */
   counts: Record<string, number>
   /** git +/- line totals per workspace id, for the diff badge next to each name */
@@ -76,10 +81,19 @@ interface Props {
 /** Anchor for a shared kebab/context menu: an element (kebab) or a point (right-click). */
 type MenuAnchor = HTMLElement | { x: number; y: number }
 
+/** The project's automatic workspace is implied by the project row. */
+function defaultWorkspace(workspaces: Workspace[]): Workspace | undefined {
+  const workspace = workspaces.length === 1 ? workspaces[0] : undefined
+  return workspace?.name === 'Main' && !workspace.worktreePath ? workspace : undefined
+}
+
 export const Sidebar = memo(function Sidebar({
   folders,
   workspaces,
   activeWorkspaceId,
+  sessions,
+  activeSessionId,
+  onSelectSession,
   counts,
   gitStats,
   update,
@@ -125,6 +139,16 @@ export const Sidebar = memo(function Sidebar({
   const [manualOrder, setManualOrder] = useState<string[]>([])
   const workspaceActivity = useWorkspaceActivity()
   const agentWorkspaceStates = useAgentWorkspaceStates()
+  const sessionStates = useAgentSessionStates()
+  const sessionsByWorkspace = useMemo(() => {
+    const groups = new Map<string, AgentSession[]>()
+    for (const session of sessions) {
+      const group = groups.get(session.workspaceId)
+      if (group) group.push(session)
+      else groups.set(session.workspaceId, [session])
+    }
+    return groups
+  }, [sessions])
   // Re-rank once a minute so a new workspace's grace period can expire.
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -361,6 +385,8 @@ export const Sidebar = memo(function Sidebar({
 
   const startRename = (ws: Workspace): void => {
     setAddingFor(null)
+    const folder = folders.find((item) => item.path === ws.folderPath)
+    if (folder?.collapsed) toggleFolder(folder)
     setEditingId(ws.id)
     setDraft(ws.name)
   }
@@ -389,7 +415,7 @@ export const Sidebar = memo(function Sidebar({
     },
     'separator',
     {
-      id: 'remove',
+      id: 'remove-folder',
       label: t('sidebar.removeFolder'),
       icon: <TrashIcon size={13} />,
       tone: 'danger',
@@ -403,15 +429,24 @@ export const Sidebar = memo(function Sidebar({
     name: t('sidebar.sortName'),
     manual: t('sidebar.sortManual')
   }
-  const sortMenuItems: MenuItem[] = WORKSPACE_SORTS.map((mode) => ({
-    id: mode,
-    label: sortLabels[mode],
-    icon: mode === sortMode ? <CheckIcon size={13} /> : <span className="inline-block w-[13px]" />,
-    onSelect: () => {
-      setSortMode(mode)
-      void window.api.setUiState({ workspaceSort: mode })
+  const sortMenuItems: MenuItem[] = [
+    ...WORKSPACE_SORTS.map((mode) => ({
+      id: mode,
+      label: sortLabels[mode],
+      icon: mode === sortMode ? <CheckIcon size={13} /> : <span className="inline-block w-[13px]" />,
+      onSelect: () => {
+        setSortMode(mode)
+        void window.api.setUiState({ workspaceSort: mode })
+      }
+    })),
+    'separator',
+    {
+      id: 'mobile-access',
+      label: t('sidebar.mobileAccess'),
+      icon: <PhoneIcon size={13} />,
+      onSelect: onOpenMobileAccess
     }
-  }))
+  ]
 
   /** The workspace actions offered by both the kebab and the right-click menu. */
   const wsMenuItems = (ws: Workspace): MenuItem[] => [
@@ -450,6 +485,17 @@ export const Sidebar = memo(function Sidebar({
   // Menus + dialogs shared between the collapsed rail and the expanded sidebar.
   const menuFolder = folderMenu ? folders.find((f) => f.path === folderMenu.path) ?? null : null
   const menuWs = wsMenu ? workspaces.find((w) => w.id === wsMenu.id) ?? null : null
+  const menuFolderWorkspace = menuFolder ? defaultWorkspace(projectWorkspaces(menuFolder.path)) : undefined
+  const inlineWorkspaceActions = menuFolderWorkspace ? wsMenuItems(menuFolderWorkspace) : []
+  if (menuFolderWorkspace && workspaceToolsVisible) {
+    const favorite = favoriteWorkspaceIds.has(menuFolderWorkspace.id)
+    inlineWorkspaceActions.unshift({
+      id: 'favorite',
+      label: t(favorite ? 'sidebar.unfavorite' : 'sidebar.favorite'),
+      icon: <StarIcon size={13} />,
+      onSelect: () => toggleFavorite(menuFolderWorkspace.id)
+    })
+  }
   const addingFolder = addingFor ? folders.find((f) => f.path === addingFor) ?? null : null
   const setupWorkspace = workspaces.find(w => w.id === setupWorkspaceId && folders.find(f => f.path === w.folderPath)?.kind !== 'remote')
   const overlays = (
@@ -457,7 +503,10 @@ export const Sidebar = memo(function Sidebar({
       {setupWorkspace && <WorktreeSetup key={setupWorkspace.id} workspace={setupWorkspace} onClose={() => setSetupWorkspaceId(null)} />}
       {folderMenu && menuFolder && (
         <Menu
-          items={folderMenuItems(menuFolder)}
+          items={[
+            ...folderMenuItems(menuFolder),
+            ...(inlineWorkspaceActions.length > 0 ? ['separator' as const, ...inlineWorkspaceActions] : [])
+          ]}
           anchor={folderMenu.anchor}
           onClose={() => setFolderMenu(null)}
         />
@@ -519,22 +568,13 @@ export const Sidebar = memo(function Sidebar({
 
   return (
     <aside
-      className="superior-sidebar flex w-64 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
+      className="superior-sidebar superior-sidebar--expanded flex w-60 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
     >
       {overlays}
-      <div className="px-3 pb-1 pt-2.5">
-        <button
-          type="button"
-          onClick={onOpenMobileAccess}
-          className="mb-2 flex w-full items-center gap-2.5 rounded-md px-2 py-2.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          <span className="shrink-0 text-fgmuted"><PhoneIcon size={18} /></span>
-          <span className="min-w-0 truncate">{t('sidebar.mobileAccess')}</span>
-          <span className="ml-auto shrink-0 rounded-full bg-accentSolid px-2 py-0.5 text-[11px] font-semibold leading-4 text-white">{t('sidebar.newBadge')}</span>
-        </button>
-        <div className="flex h-7 items-center gap-0.5 pl-2">
-          <span className="flex-1 text-xs font-semibold text-fgmuted">
-            {t('palette.sectionWorkspaces')}
+      <div className="px-3 pt-4">
+        <div className="group/heading flex h-7 items-center gap-1 px-1.5">
+          <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fgmuted">
+            {t('sidebar.workspaces')}
           </span>
           <IconButton
             type="button"
@@ -542,12 +582,13 @@ export const Sidebar = memo(function Sidebar({
             onClick={(e) => setSortMenu(e.currentTarget)}
             label={t('sidebar.sortBy')}
             title={`${t('sidebar.sortBy')}: ${sortLabels[sortMode]}`}
+            className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover/heading:opacity-100 aria-expanded:opacity-100"
             aria-haspopup="menu"
             aria-expanded={sortMenu !== null}
           >
             <SlidersIcon size={14} />
           </IconButton>
-          <IconButton type="button" size="sm" onClick={onOpenProject} label={t('sidebar.openProject')}>
+          <IconButton type="button" size="md" onClick={onOpenProject} label={t('sidebar.openProject')}>
             <PlusIcon size={15} />
           </IconButton>
         </div>
@@ -606,7 +647,7 @@ export const Sidebar = memo(function Sidebar({
         )}
       </div>
 
-      <nav ref={navRef} aria-label={t('palette.sectionWorkspaces')} className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
+      <nav ref={navRef} aria-label={t('sidebar.workspaces')} className="min-h-0 flex-1 overflow-y-auto px-3 pb-2 pt-[18px]">
         {folders.length === 0 ? (
           <div className="px-2 pt-2">
             <EmptyState
@@ -621,7 +662,7 @@ export const Sidebar = memo(function Sidebar({
             />
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="flex flex-col gap-1">
             {workspaceToolsVisible && !filterActive && recentWorkspaces.length > 0 && (
               <div className="border-b border-edge pb-2">
                 <div className="flex h-7 items-center px-2 text-xs font-semibold text-fgmuted">
@@ -660,12 +701,29 @@ export const Sidebar = memo(function Sidebar({
               </div>
             ) : (
             displayFolders.map((folder) => {
-              const folderWorkspaces = projectWorkspaces(folder.path, (w) => filteredWorkspaceIds.has(w.id))
-              const open = !folder.collapsed
-              const folderRunning = folderWorkspaces.reduce((a, w) => a + (counts[w.id] ?? 0), 0)
-              const folderActive = folderWorkspaces.some((w) => w.id === activeWorkspaceId)
-              const beingDragged = folderDrag?.path === folder.path
+              const allWorkspaces = projectWorkspaces(folder.path)
+              const folderWorkspaces = allWorkspaces.filter((workspace) => filteredWorkspaceIds.has(workspace.id))
               if (folderWorkspaces.length === 0 && filterActive) return null
+
+              const mainWorkspace = defaultWorkspace(allWorkspaces)
+              const directWorkspace = mainWorkspace?.id !== editingId ? mainWorkspace : undefined
+              const folderActive = allWorkspaces.some((w) => w.id === activeWorkspaceId)
+              const directSessions = directWorkspace && folderActive ? sessionsByWorkspace.get(directWorkspace.id) ?? [] : []
+              const expandable = !directWorkspace || directSessions.length > 0
+              const open = expandable && !folder.collapsed
+              const folderRunning = allWorkspaces.some((w) => (counts[w.id] ?? 0) > 0)
+              const waitingCount = allWorkspaces.reduce((total, w) =>
+                total + (sessionsByWorkspace.get(w.id) ?? []).filter((session) => sessionStates.get(session.id) === 'waiting').length,
+              0)
+              const beingDragged = folderDrag?.path === folder.path
+              const activate = (): void => {
+                if (directWorkspace && !folderActive) {
+                  selectWorkspace(directWorkspace.id)
+                  if (folder.collapsed) toggleFolder(folder)
+                } else if (expandable) {
+                  toggleFolder(folder)
+                }
+              }
               return (
                 <div
                   key={folder.path}
@@ -677,58 +735,69 @@ export const Sidebar = memo(function Sidebar({
                     open={open}
                     active={folderActive}
                     dragging={beingDragged}
-                    workspaceCount={folderWorkspaces.length}
-                    runningCount={folderRunning}
+                    expandable={expandable}
+                    waitingCount={waitingCount}
+                    running={folderRunning}
+                    onActivate={activate}
                     onToggle={() => toggleFolder(folder)}
                     onMenu={(anchor) => setFolderMenu({ path: folder.path, anchor })}
                     onAddWorkspace={() => startAdd(folder.path)}
                     onGripPointerDown={beginFolderDrag(folder.path)}
                   />
 
-                  {/* Workspaces — compact, indented rows under their project. */}
                   {open && (
-                    <ul className="mt-0.5 space-y-px">
-                      {folderWorkspaces.map((ws) => (
-                        <WorkspaceRow
-                          key={ws.id}
-                          ws={ws}
-                          folder={folder}
-                          active={ws.id === activeWorkspaceId}
-                          dragging={workspaceDrag?.id === ws.id}
-                          attention={attentionWorkspaceIds.has(ws.id)}
-                          busy={busyWorkspaceIds.has(ws.id)}
-                          attentionColor={attentionColor}
-                          runningCount={counts[ws.id] ?? 0}
-                          stat={gitStats[ws.id]}
-                          editing={editingId === ws.id}
-                          draft={draft}
-                          onDraftChange={setDraft}
-                          onCommitRename={commitRename}
-                          onCancelRename={() => setEditingId(null)}
-                          favorite={workspaceToolsVisible ? favoriteWorkspaceIds.has(ws.id) : null}
-                          onToggleFavorite={() => toggleFavorite(ws.id)}
-                          onPointerDown={beginWorkspaceDrag(folder.path, ws.id, folderWorkspaces.map((w) => w.id))}
-                          onSelect={() => selectWorkspace(ws.id)}
-                          onStartRename={() => startRename(ws)}
-                          onMenu={(anchor) => setWsMenu({ id: ws.id, anchor })}
-                        />
-                      ))}
-                      {/* An emptied project keeps a direct way to add a workspace back. */}
-                      {folderWorkspaces.length === 0 && (
-                        <li>
-                          <button
-                            type="button"
-                            onClick={() => startAdd(folder.path)}
-                            className="flex min-h-7 w-full items-center gap-2 rounded-md py-1 pl-4 pr-1 text-left text-[13px] leading-4 text-fgmuted transition hover:bg-hover/70 hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
-                          >
-                            <span aria-hidden className="flex w-3.5 shrink-0 justify-center">
-                              <PlusIcon size={12} />
-                            </span>
-                            {t('sidebar.addWorkspace')}
-                          </button>
-                        </li>
+                    <div className="superior-sidebar-tree ml-[22px] mt-1 border-l border-edge py-1">
+                      {directWorkspace ? (
+                        <SessionList sessions={directSessions} activeSessionId={activeSessionId}
+                          onSelect={onSelectSession} className="pl-[18px]" />
+                      ) : (
+                        <ul className="space-y-0.5 pl-2">
+                          {folderWorkspaces.map((ws) => (
+                            <WorkspaceRow
+                              key={ws.id}
+                              ws={ws}
+                              folder={folder}
+                              active={ws.id === activeWorkspaceId}
+                              sessions={ws.id === activeWorkspaceId ? sessionsByWorkspace.get(ws.id) ?? [] : []}
+                              activeSessionId={activeSessionId}
+                              onSelectSession={onSelectSession}
+                              dragging={workspaceDrag?.id === ws.id}
+                              attention={attentionWorkspaceIds.has(ws.id)}
+                              busy={busyWorkspaceIds.has(ws.id)}
+                              attentionColor={attentionColor}
+                              runningCount={counts[ws.id] ?? 0}
+                              stat={gitStats[ws.id]}
+                              editing={editingId === ws.id}
+                              draft={draft}
+                              onDraftChange={setDraft}
+                              onCommitRename={commitRename}
+                              onCancelRename={() => setEditingId(null)}
+                              favorite={workspaceToolsVisible ? favoriteWorkspaceIds.has(ws.id) : null}
+                              onToggleFavorite={() => toggleFavorite(ws.id)}
+                              onPointerDown={beginWorkspaceDrag(folder.path, ws.id, folderWorkspaces.map((w) => w.id))}
+                              onSelect={() => selectWorkspace(ws.id)}
+                              onStartRename={() => startRename(ws)}
+                              onMenu={(anchor) => setWsMenu({ id: ws.id, anchor })}
+                            />
+                          ))}
+                          {/* An emptied project keeps a direct way to add a workspace back. */}
+                          {folderWorkspaces.length === 0 && (
+                            <li>
+                              <button
+                                type="button"
+                                onClick={() => startAdd(folder.path)}
+                                className="flex min-h-7 w-full items-center gap-2 rounded-md py-1 pl-4 pr-1 text-left text-[13px] leading-4 text-fgmuted transition hover:bg-hover/70 hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+                              >
+                                <span aria-hidden className="flex w-3.5 shrink-0 justify-center">
+                                  <PlusIcon size={12} />
+                                </span>
+                                {t('sidebar.addWorkspace')}
+                              </button>
+                            </li>
+                          )}
+                        </ul>
                       )}
-                    </ul>
+                    </div>
                   )}
                 </div>
               )
@@ -738,16 +807,14 @@ export const Sidebar = memo(function Sidebar({
         )}
       </nav>
       <SidebarUpdate update={update} />
-      <div className="shrink-0 border-t border-edge p-2">
+      <div className="shrink-0 px-3 pb-4">
         <button
           type="button"
           onClick={onOpenSettings}
           title={shortcutTitle(t('sidebar.settings'), 'openSettings')}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+          className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-[13px] text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
         >
-          <span className="flex h-5 w-5 items-center justify-center">
-            <GearIcon size={17} />
-          </span>
+          <GearIcon size={16} />
           {t('sidebar.settings')}
         </button>
       </div>

@@ -58,7 +58,7 @@ const SHORTCUT_ACTIONS: ShortcutAction[] = [
 const DEFAULT_UI: UiState = {
   onboardingCompleted: false,
   sidebarCollapsed: false,
-  rightSidebarOpen: false,
+  rightSidebarOpen: true,
   sidebarWorkspaceTools: false
 }
 /** Catppuccin peach — a warm "done" tint that reads against the dark UI. */

@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { GripIcon, KebabIcon, PlusIcon } from '../ui'
-import { FolderGlyph, RunningBadge, folderLabel, folderTitle } from './parts'
+import { FolderGlyph, folderLabel, folderTitle } from './parts'
 import type { Folder } from '../../types'
 
 type MenuAnchor = HTMLElement | { x: number; y: number }
@@ -8,12 +8,13 @@ type MenuAnchor = HTMLElement | { x: number; y: number }
 interface Props {
   folder: Folder
   open: boolean
+  expandable: boolean
   /** the active workspace lives in this project */
   active: boolean
   dragging: boolean
-  /** visible workspaces under this project (after filtering) */
-  workspaceCount: number
-  runningCount: number
+  waitingCount: number
+  running: boolean
+  onActivate: () => void
   onToggle: () => void
   onMenu: (anchor: MenuAnchor) => void
   onAddWorkspace: () => void
@@ -24,39 +25,54 @@ const HEADER_ACTION =
   'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-fgdim transition hover:bg-hover hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50'
 
 /**
- * Project header row — click to collapse / expand; the grip drags to reorder.
+ * Project header row — opens the project or toggles its children. The grip reorders projects.
  * Its actions (add workspace, the folder menu) show on hover and whenever
  * focus is inside the row, so they're reachable from the keyboard too.
  */
 export function FolderHeader({
   folder,
   open,
+  expandable,
   active,
   dragging,
-  workspaceCount,
-  runningCount,
+  waitingCount,
+  running,
+  onActivate,
   onToggle,
   onMenu,
   onAddWorkspace,
   onGripPointerDown
 }: Props): React.JSX.Element {
   const { t } = useI18n()
+  const label = folderLabel(folder)
+  const [firstWord = '?', secondWord] = label.replace(/([\p{Ll}\p{N}])(\p{Lu})/gu, '$1 $2').match(/[\p{L}\p{N}]+/gu) ?? []
+  const localPath = folder.path.replace(/\\/g, '/').replace(/(.)\/+$/, '$1')
+  const lastSlash = localPath.lastIndexOf('/')
+  const rootLength = /^[a-z]:\//i.test(localPath) ? 3 : 1
+  const parentPath = lastSlash < 0 ? localPath : localPath.slice(0, Math.max(lastSlash, rootLength))
+  const subtitle = folder.kind === 'remote' && folder.remote
+    ? `ssh · ${folder.remote.host}`
+    : parentPath.replace(/^\/(?:Users|home)\/[^/]+(?=\/|$)/, '~')
+  const initials = secondWord ? firstWord.charAt(0) + secondWord.charAt(0) : firstWord.slice(0, 2)
   return (
     <div
       role="button"
       tabIndex={0}
-      aria-expanded={open}
+      aria-label={label}
+      aria-description={waitingCount > 0 ? `${t('terminal.activityWaiting')}: ${waitingCount}` : undefined}
+      aria-current={active || undefined}
+      aria-expanded={expandable ? open : undefined}
       aria-haspopup="menu"
-      onClick={onToggle}
+      onClick={onActivate}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onToggle()
-        } else if (e.key === 'ArrowLeft' && open) {
+          onActivate()
+        } else if (e.key === 'ArrowLeft' && expandable && open) {
           e.preventDefault()
           onToggle()
-        } else if (e.key === 'ArrowRight' && !open) {
+        } else if (e.key === 'ArrowRight' && expandable && !open) {
           e.preventDefault()
           onToggle()
         } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
@@ -69,20 +85,33 @@ export function FolderHeader({
         onMenu({ x: e.clientX, y: e.clientY })
       }}
       title={folderTitle(folder)}
-      className="group relative flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 text-fg transition hover:bg-hover/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
+      data-active={active}
+      className="superior-project-row group relative flex h-[46px] cursor-pointer items-center gap-2.5 rounded-[10px] border border-transparent px-2 text-fg transition hover:bg-hover/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50"
     >
-      <span style={folder.color ? { color: folder.color } : undefined} className="flex w-3.5 shrink-0 justify-center text-fgdim">
-        <FolderGlyph folder={folder} size={14} />
+      <span style={folder.color ? { color: folder.color } : undefined}
+        className="superior-project-icon grid size-7 shrink-0 place-items-center rounded-lg text-xs font-bold" aria-hidden>
+        {folder.icon
+          ? <FolderGlyph folder={folder} size={18} />
+          : initials.toUpperCase()}
       </span>
-      <span className={`min-w-0 flex-1 truncate text-[13px] font-semibold tracking-[-0.01em] ${active ? 'text-fg' : 'text-fg2'}`}>
-        {folderLabel(folder)}
-      </span>
-      {(!open || workspaceCount > 1) && (
-        <span className="mr-1 shrink-0 px-1 text-[11px] font-medium tabular-nums text-fgdim transition group-hover:opacity-0 group-focus-within:opacity-0">
-          {workspaceCount}
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate text-[13px] leading-4 ${active ? 'font-semibold text-fg' : 'font-medium text-fg2'}`}>
+          {label}
         </span>
+        <span className="block truncate font-mono text-[11px] leading-[14px] text-fgmuted">
+          {subtitle}
+        </span>
+      </span>
+      {waitingCount > 0 ? (
+        <span
+          title={t('terminal.activityWaiting')}
+          className="superior-project-waiting shrink-0 rounded-full bg-warnBg px-[7px] py-0.5 text-[11px] font-semibold leading-[14px] text-warn"
+        >
+          {waitingCount}
+        </span>
+      ) : !active && running && (
+        <span role="img" aria-label={t('sidebar.runningTerminals')} className="size-2 shrink-0 rounded-full bg-status" />
       )}
-      {!open && runningCount > 0 && <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />}
       {/* Drag handle — the drag itself runs on window listeners
           (see beginFolderDrag), the list live-reorders under the pointer. */}
       <span className="absolute right-1 flex items-center gap-px rounded-full bg-panel opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">

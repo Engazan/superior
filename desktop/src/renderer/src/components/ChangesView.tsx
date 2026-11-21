@@ -1,9 +1,9 @@
 import { PullRequestCard } from './PullRequestCard'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import { createReviewAnchor, sameReviewAnchor, type ReviewAnchor, type ReviewNote } from '../diffReview'
 import { DiffFileView } from './DiffFileView'
-import { BranchIcon, Button, EmptyState, IconButton, Notice, RefreshIcon, Textarea, useToast } from './ui'
+import { BranchIcon, Button, EmptyState, IconButton, Modal, Notice, RefreshIcon, Textarea, useToast } from './ui'
 import type { GitDiff, GitDiffFile } from '../types'
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
   /** Trigger an immediate refetch. */
   onRefresh: () => void
   reviewNotes: ReviewNote[]
+  reviewPanel?: ReactNode
   onComment: (anchor: ReviewAnchor) => void
 }
 
@@ -51,7 +52,7 @@ function SectionHead({
   onAction: () => void
 }): React.JSX.Element {
   return (
-    <div className="flex h-6 items-center justify-between bg-bar px-2 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
+    <div className="flex h-6 items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wide text-fgmuted">
       <span>
         {label} ({count})
       </span>
@@ -68,15 +69,12 @@ function SectionHead({
   )
 }
 
-// Above these sizes a file's diff starts collapsed — a refactor touching a
-// hundred files must not render tens of thousands of rows at once.
-const AUTO_COLLAPSE_LINES = 400
-const AUTO_COLLAPSE_FILES = 20
-
-export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes, onComment }: Props): React.JSX.Element {
+export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes, reviewPanel, onComment }: Props): React.JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const [message, setMessage] = useState('')
+  const [commitOpen, setCommitOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [syncing, setSyncing] = useState<'push' | 'pull' | null>(null)
   // Expansion state owned here and keyed by path, so a row keeps its state
@@ -152,6 +150,7 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
     } else {
       toast.success(t('changes.committed'))
       setMessage('')
+      setCommitOpen(false)
     }
     onRefresh()
   }
@@ -192,26 +191,81 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
   const canPush = diff.upstream ? (diff.ahead ?? 0) > 0 : true
   const canPull = !!diff.upstream && (diff.behind ?? 0) > 0
 
-  const isOpen = (file: GitDiffFile): boolean =>
-    openMap[file.path] ??
-    (file.additions + file.deletions <= AUTO_COLLAPSE_LINES &&
-      staged.length + unstaged.length <= AUTO_COLLAPSE_FILES)
+  const isOpen = (file: GitDiffFile): boolean => openMap[file.path] ?? false
   const toggleOpen = (file: GitDiffFile): void =>
     setOpenMap((prev) => ({ ...prev, [file.path]: !isOpen(file) }))
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-edge px-2 text-xs">
-        {diff?.branch && (
-          <span
-            className="flex min-w-0 items-center gap-1.5 px-1 font-medium text-fgdim"
-            title={diff.upstream ? `${diff.branch} → ${diff.upstream}` : diff.branch}
-          >
-            <BranchIcon size={14} className="shrink-0" />
-            <span className="truncate">{diff.branch}</span>
+      <div className="min-h-0 flex-1 overflow-y-auto pt-3.5">
+        {folderPath && <PullRequestCard folderPath={folderPath} branch={diff.branch} />}
+        <div className="mb-2 mt-3 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-fgmuted">
+            {t('changes.fileCount', { count: totals.files })}
           </span>
+          {reviewPanel && (
+            <button type="button" aria-expanded={reviewOpen} onClick={() => setReviewOpen(!reviewOpen)}
+              className="rounded-sm text-xs font-medium text-accent hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent">
+              {t('changes.review')}{reviewNotes.length > 0 && ` (${reviewNotes.length})`}
+            </button>
+          )}
+        </div>
+        {reviewOpen && reviewPanel}
+        {diff.truncated && (
+          <div className="p-2">
+            <Notice tone="warn">{t('changes.truncated')}</Notice>
+          </div>
         )}
+        {totals.files === 0 ? (
+          <div className="p-3">
+            <EmptyState icon={<BranchIcon size={20} />} title={t('changes.empty')} />
+          </div>
+        ) : (
+          <>
+            {staged.length > 0 && <SectionHead
+              label={t('changes.staged')}
+              count={staged.length}
+              actionLabel={t('changes.unstageAll')}
+              onAction={() => void run(() => window.api.gitUnstageAll(folderPath ?? ''))}
+            />}
+            {staged.map((file) => (
+              <DiffFileView
+                key={`s:${file.oldPath ? `${file.oldPath}>${file.path}` : file.path}`}
+                file={file}
+                open={isOpen(file)}
+                onToggleOpen={() => toggleOpen(file)}
+                action={unstageAction(file)}
+                onComment={(hunk, index) => onComment(createReviewAnchor(file, hunk, index, 'staged', diff.branch ?? null))}
+                hasComment={(hunk, index) => reviewNotes.some((note) => sameReviewAnchor(note, createReviewAnchor(file, hunk, index, 'staged', diff.branch ?? null)))}
+              />
+            ))}
 
+            {unstaged.length > 0 && <SectionHead
+              label={t('changes.unstaged')}
+              count={unstaged.length}
+              actionLabel={t('changes.stageAll')}
+              onAction={() => void run(() => window.api.gitStageAll(folderPath ?? ''))}
+            />}
+            {unstaged.map((file) => (
+              <DiffFileView
+                key={`u:${file.oldPath ? `${file.oldPath}>${file.path}` : file.path}`}
+                file={file}
+                open={isOpen(file)}
+                onToggleOpen={() => toggleOpen(file)}
+                action={stageAction(file)}
+                onComment={(hunk, index) => onComment(createReviewAnchor(file, hunk, index, 'unstaged', diff.branch ?? null))}
+                hasComment={(hunk, index) => reviewNotes.some((note) => sameReviewAnchor(note, createReviewAnchor(file, hunk, index, 'unstaged', diff.branch ?? null)))}
+              />
+            ))}
+          </>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1 pt-2">
+        <Button size="sm" variant="secondary" className="h-9! flex-1 rounded-[9px]! border-[var(--c-edge-strong)]! bg-bar!"
+          disabled={totals.files === 0} onClick={() => setCommitOpen(true)}>
+          {t('changes.openCommit')}
+        </Button>
         {/* Pull / push with ahead-behind counts; publish when there's no upstream. */}
         {canPull && (
           <Button
@@ -240,102 +294,44 @@ export function ChangesView({ folderPath, diff, loading, onRefresh, reviewNotes,
           </Button>
         )}
 
-        <span className="ml-auto shrink-0 font-mono tabular-nums text-fgmuted">
-          {totals.additions > 0 && <span className="text-status">+{totals.additions}</span>}
-          {totals.additions > 0 && totals.deletions > 0 && ' '}
-          {totals.deletions > 0 && <span className="text-danger">−{totals.deletions}</span>}
-        </span>
         <IconButton size="sm" label={t('changes.refresh')} onClick={onRefresh}>
           <RefreshIcon size={14} />
         </IconButton>
       </div>
 
-      {folderPath && <PullRequestCard folderPath={folderPath} branch={diff.branch} />}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {diff.truncated && (
-          <div className="p-2">
-            <Notice tone="warn">{t('changes.truncated')}</Notice>
-          </div>
-        )}
-        {totals.files === 0 ? (
-          <div className="p-3">
-            <EmptyState icon={<BranchIcon size={20} />} title={t('changes.empty')} />
-          </div>
-        ) : (
-          <>
-            <SectionHead
-              label={t('changes.staged')}
-              count={staged.length}
-              actionLabel={t('changes.unstageAll')}
-              onAction={() => void run(() => window.api.gitUnstageAll(folderPath ?? ''))}
-            />
-            {staged.map((file) => (
-              <DiffFileView
-                key={`s:${file.oldPath ? `${file.oldPath}>${file.path}` : file.path}`}
-                file={file}
-                open={isOpen(file)}
-                onToggleOpen={() => toggleOpen(file)}
-                action={unstageAction(file)}
-                onComment={(hunk, index) => onComment(createReviewAnchor(file, hunk, index, 'staged', diff.branch ?? null))}
-                hasComment={(hunk, index) => reviewNotes.some((note) => sameReviewAnchor(note, createReviewAnchor(file, hunk, index, 'staged', diff.branch ?? null)))}
-              />
-            ))}
-
-            <SectionHead
-              label={t('changes.unstaged')}
-              count={unstaged.length}
-              actionLabel={t('changes.stageAll')}
-              onAction={() => void run(() => window.api.gitStageAll(folderPath ?? ''))}
-            />
-            {unstaged.map((file) => (
-              <DiffFileView
-                key={`u:${file.oldPath ? `${file.oldPath}>${file.path}` : file.path}`}
-                file={file}
-                open={isOpen(file)}
-                onToggleOpen={() => toggleOpen(file)}
-                action={stageAction(file)}
-                onComment={(hunk, index) => onComment(createReviewAnchor(file, hunk, index, 'unstaged', diff.branch ?? null))}
-                hasComment={(hunk, index) => reviewNotes.some((note) => sameReviewAnchor(note, createReviewAnchor(file, hunk, index, 'unstaged', diff.branch ?? null)))}
-              />
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* Commit box — a message plus anything to commit enables it; with an
-          empty stage it stages everything first. */}
-      <div className="shrink-0 space-y-1.5 border-t border-edge p-2">
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault()
-              void doCommit()
-            }
-          }}
-          rows={2}
-          aria-label={t('changes.commitPlaceholder')}
-          aria-keyshortcuts="Meta+Enter Control+Enter"
-          placeholder={t('changes.commitPlaceholder')}
-          className="resize-none px-2! py-1.5! text-xs!"
-        />
-        <Button
-          size="sm"
-          className="w-full"
-          disabled={(staged.length === 0 && unstaged.length === 0) || !message.trim()}
-          loading={committing}
-          onClick={() => void doCommit()}
-        >
-          {staged.length === 0 && unstaged.length > 0
-            ? t('changes.stageAllCommit')
-            : t('changes.commit')}
-          <kbd className="font-mono text-[10px] font-normal opacity-70">{SUBMIT_HINT}</kbd>
-        </Button>
-        {totals.files > 0 && !message.trim() && (
-          <p className="px-0.5 text-[10px] text-fgmuted">{t('changes.commitHint')}</p>
-        )}
-      </div>
+      {commitOpen && (
+        <Modal title={t('changes.openCommit')} onClose={() => setCommitOpen(false)}
+          dismissable={!committing}
+          footer={(
+            <Button
+              size="sm"
+              disabled={(staged.length === 0 && unstaged.length === 0) || !message.trim()}
+              loading={committing}
+              onClick={() => void doCommit()}
+            >
+              {staged.length === 0 && unstaged.length > 0
+                ? t('changes.stageAllCommit')
+                : t('changes.commit')}
+              <kbd className="font-mono text-[10px] font-normal opacity-70">{SUBMIT_HINT}</kbd>
+            </Button>
+          )}>
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                void doCommit()
+              }
+            }}
+            rows={2}
+            aria-label={t('changes.commitPlaceholder')}
+            aria-keyshortcuts="Meta+Enter Control+Enter"
+            placeholder={t('changes.commitPlaceholder')}
+            className="resize-none px-2! py-1.5! text-xs!"
+          />
+        </Modal>
+      )}
     </div>
   )
 }

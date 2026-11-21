@@ -1,9 +1,40 @@
 @import '@xterm/xterm/css/xterm.css' layer(base);
 
 @import 'tailwindcss';
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
-.dark .superior-usage-codex-icon {
-  filter: invert(1);
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('./assets/fonts/jetbrains-mono-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('./assets/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 /*
@@ -28,6 +59,13 @@
 :root,
 .dark {
   --c-bar: #0f131a;
+  --c-canvas: var(--c-bar);
+  --c-brand-fill: var(--c-accent);
+  --c-edge-strong: var(--c-edge);
+  --c-warn-panel: var(--c-warn-bg);
+  --c-warn-solid: var(--c-warn);
+  --c-agent-claude-bg: #3b2518;
+  --c-agent-claude-fg: #e8956a;
   --c-panel: #171c25;
   --c-edge: #2d3542;
   --c-hover: #232b37;
@@ -53,35 +91,43 @@
 }
 
 .light {
-  --c-bar: #edf1f7;
+  --c-canvas: #f4f6f9;
+  --c-bar: #f1f3f7;
   --c-panel: #ffffff;
-  --c-edge: #d8dee8;
-  --c-hover: #e8edf5;
-  --c-fg: #202633;
-  --c-fg2: #465064;
-  --c-fgdim: #687386;
-  --c-fgmuted: #929bab;
-  --c-accent: #bd5845;
-  --c-accent-bg: #f9e5e0;
-  --c-accent-border: #e7b2a7;
-  --c-accent-solid: #c85e49;
-  --c-accent-solid-hover: #ae4e3c;
-  --c-status: #2f7658;
-  --c-status-bg: #e3f2e9;
+  --c-edge: #e1e5ec;
+  --c-edge-strong: #d3d9e2;
+  --c-hover: #e8ecf3;
+  --c-fg: #171b22;
+  --c-fg2: #3f4756;
+  --c-fgdim: #5f6878;
+  --c-fgmuted: #5f6878;
+  --c-accent: #3550c8;
+  --c-accent-bg: #e6ecff;
+  --c-accent-border: #aebdff;
+  --c-accent-solid: #3550c8;
+  --c-accent-solid-hover: #2941ae;
+  --c-brand-fill: #8fa8ff;
+  --c-status: #1e7f52;
+  --c-status-bg: #e1f4ea;
   --c-status-border: #a5ceb6;
-  --c-danger: #a33d42;
+  --c-danger: #b93a3a;
   --c-danger-solid: #bd4c52;
-  --c-danger-bg: #f9e5e6;
+  --c-danger-bg: #fbe4e4;
   --c-danger-border: #e5b0b3;
-  --c-warn: #8b641f;
-  --c-warn-bg: #fff3d4;
-  --c-warn-border: #dfc681;
+  --c-warn: #8a5a0b;
+  --c-warn-bg: #fcefd6;
+  --c-warn-border: #ebcf95;
+  --c-warn-panel: #fff8ea;
+  --c-warn-solid: #e7a93f;
+  --c-agent-claude-bg: #fbe7dc;
+  --c-agent-claude-fg: #a24b22;
 }
 
 /* Keep the semantic Tailwind palette coupled to the same runtime CSS tokens
    that powered the v3 config. `inline` preserves theme switching because the
    generated utilities resolve the variables at render time. */
 @theme inline {
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --color-bar: var(--c-bar);
   --color-panel: var(--c-panel);
   --color-edge: var(--c-edge);
@@ -251,48 +297,63 @@ body,
 
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: var(--c-bar);
+    Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--c-canvas);
+  font-size: 13px;
   color: var(--c-fg);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Keep the shared shell transparent so gaps around the floating titlebar,
-   sidebar and panels reveal the theme's single body background. */
 .superior-app {
+  --inspector-max: max(248px, calc(100vw - 492px));
   position: relative;
   isolation: isolate;
-  background: transparent;
 }
 
 .superior-titlebar {
-  margin: 8px 8px 0;
-  border: 1px solid color-mix(in srgb, var(--c-edge) 76%, white 24%);
-  border-bottom: 0;
-  border-radius: 17px 17px 12px 12px;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
+  gap: clamp(8px, 1.2vw, 18px);
+  padding: 6px 16px 6px 0;
+  border-bottom: 1px solid var(--c-edge);
 }
 
-.light .superior-mode-switch > button[aria-pressed='true'] {
-  background: #fff;
+.superior-command-strip {
+  max-width: 728px;
+  margin-inline: auto;
+}
+
+.superior-panel-toggle[aria-expanded='true'] {
+  background: var(--c-hover);
+}
+
+.superior-branch-chip,
+.superior-profile-switch {
+  border-color: var(--c-edge-strong);
+}
+
+.superior-launch-button,
+.superior-profile-initial {
+  color: #0a0c10;
+  background: var(--c-brand-fill);
+}
+
+.superior-launch-button:hover:enabled {
+  background: color-mix(in srgb, var(--c-brand-fill) 86%, var(--c-accent));
+}
+
+.superior-launch-button:disabled:hover {
+  background: var(--c-brand-fill);
+}
+
+.superior-mode-switch > button[aria-pressed='true'],
+.superior-inspector-tabs > button[aria-selected='true'] {
+  background: var(--c-panel);
+  color: var(--c-fg);
   font-weight: 600;
-  box-shadow:
-    0 1px 2px rgb(32 38 51 / 8%),
-    inset 0 0 0 1px rgb(32 38 51 / 6%);
+  box-shadow: 0 1px 2px rgb(20 27 40 / 12%);
 }
 
-.light .superior-mode-switch > button[aria-pressed='false'] {
-  color: var(--c-fgdim);
-}
-
-.superior-workspace {
-  gap: 8px;
-  padding: 8px 0 8px 8px;
-}
-
-.superior-workspace--right-open,
 .superior-workspace--settings {
-  padding-right: 8px;
+  padding: 8px;
 }
 
 .superior-settings-panel {
@@ -314,70 +375,169 @@ body {
 }
 
 .superior-right-panel {
-  border: 1px solid color-mix(in srgb, var(--c-edge) 82%, white 18%);
-  border-radius: 16px;
-  box-shadow:
-    0 12px 34px color-mix(in srgb, #080b10 10%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
+  border-left: 1px solid var(--c-edge);
+  max-width: var(--inspector-max);
 }
 
 .superior-sidebar {
   background-color: var(--c-panel);
-  border-radius: 16px;
+  border-right: 1px solid var(--c-edge);
+}
+
+.superior-project-row[data-active='true'] {
+  height: 48px;
+  border-color: var(--c-edge);
+  background: var(--c-bar);
+}
+
+.superior-project-icon {
+  background: var(--c-bar);
+  color: var(--c-fgdim);
+}
+
+.superior-terminal-icon,
+.superior-usage-icon {
+  background: var(--c-hover);
+  color: var(--c-fg2);
+}
+
+.superior-usage-icon[data-provider='claude'],
+.superior-terminal-icon[data-provider='claude'] {
+  background: var(--c-agent-claude-bg);
+  color: var(--c-agent-claude-fg);
+}
+
+.superior-project-row[data-active='true'] .superior-project-icon {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+}
+
+.superior-sidebar-session .superior-session-status-dot {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
 }
 
 .superior-main {
+  min-width: 0;
+  padding: 10px;
   overflow: hidden;
-  border-radius: 16px;
-  background-color: transparent;
 }
 
 .superior-terminal-cell {
-  padding: 4px;
-}
-
-.superior-terminal-cell--flush-right {
-  padding-right: 0;
+  padding: 6px;
 }
 
 .superior-terminal-surface {
   border: 1px solid var(--c-edge);
-  border-radius: 13px;
+  border-radius: 14px;
   background-clip: padding-box;
-  box-shadow: 0 8px 22px color-mix(in srgb, #080b10 12%, transparent);
 }
 
-/* Dark chrome uses surface contrast and a single muted edge for separation.
-   White bevels make nested panels look illuminated, especially in settings.
-   Keep the same matte treatment when System or Glass resolves to dark; the
-   translucent fills and gradient backdrop remain controlled by their themes. */
-.dark :is(
-  .superior-titlebar,
-  .superior-settings-panel,
-  .settings-island,
-  .superior-right-panel,
-  .superior-terminal-surface
-) {
+.superior-terminal-surface[data-focused='true'] {
+  border-color: var(--c-accent-border);
+}
+
+.superior-terminal-surface[data-waiting='true'] {
+  border-color: var(--c-warn-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-warn-solid) 20%, transparent);
+}
+
+.superior-terminal-actions button {
+  border-radius: 7px;
+}
+
+.superior-terminal-appearance {
+  opacity: 0;
+}
+
+.superior-terminal-header:is(:hover, :focus-within) .superior-terminal-appearance {
+  opacity: 1;
+}
+
+.superior-terminal-host {
+  margin: 10px 12px 0 14px;
+}
+
+.superior-terminal-composer:focus-within {
+  border-color: var(--c-accent-border);
+}
+
+.superior-context-fill {
+  background: var(--c-brand-fill);
+}
+
+.superior-chat-approval {
+  background: var(--c-warn-panel);
+}
+
+.superior-approval-action {
+  background: var(--c-warn-solid);
+  color: #1a1408;
+}
+
+.superior-approval-action:hover {
+  background: color-mix(in srgb, var(--c-warn-solid) 85%, var(--c-warn));
+}
+
+.superior-right-panel .superior-diff-row {
+  border-bottom: 0;
+}
+
+.dark :is(.superior-settings-panel, .settings-island) {
   border-color: var(--c-edge);
   box-shadow: none;
 }
 
-.dark .superior-titlebar {
-  border-bottom: 1px solid var(--c-edge);
+@media (max-width: 1120px) {
+  .superior-project-crumb,
+  .superior-command-key {
+    display: none;
+  }
 }
 
-.dark .settings-island {
-  border-color: color-mix(in srgb, var(--c-edge) 70%, var(--c-bar));
-}
-
-@media (max-width: 760px) {
-  .superior-workspace {
-    gap: 5px;
-    padding: 5px 0 5px 5px;
+@media (max-width: 900px) {
+  .superior-titlebar {
+    gap: 6px;
+    padding-right: 8px;
   }
 
-  .superior-titlebar {
-    margin: 5px 5px 0;
+  .superior-titlebar-start > div,
+  .superior-titlebar-end {
+    gap: 4px;
+  }
+
+  .superior-command-search > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .superior-command-search {
+    justify-content: center;
+  }
+
+  .superior-branch-chip {
+    max-width: 112px;
+  }
+
+  .superior-titlebar .superior-prompt-action {
+    display: none;
+  }
+
+  .superior-titlebar .superior-profile-switch {
+    max-width: 82px;
+  }
+
+  .superior-sidebar--expanded {
+    width: 200px;
+  }
+
+  .superior-main {
+    padding: 4px;
   }
 }
 

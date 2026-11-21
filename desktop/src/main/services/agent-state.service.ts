@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import { BrowserWindow } from 'electron'
 import { IPC } from '@shared/types'
-import { agentStateFromHook, type AgentState, type AgentStateEvent } from '@shared/agent-state'
+import { agentStateFromHook, pendingCommandFromHook, type AgentStateEvent } from '@shared/agent-state'
 import { userDataFile } from '../lib/jsonStore'
 
 /**
@@ -12,7 +12,7 @@ import { userDataFile } from '../lib/jsonStore'
 
 const FILE_RE = /^([0-9a-f-]{36})\.json$/
 const STALE_MS = 7 * 24 * 60 * 60_000
-const states = new Map<string, AgentState>()
+const states = new Map<string, AgentStateEvent>()
 const pending = new Map<string, ReturnType<typeof setTimeout>>()
 let watcher: fs.FSWatcher | null = null
 
@@ -40,15 +40,19 @@ function read(id: string): void {
     return // removed or mid-replace; the next event rewrites it
   }
   const state = agentStateFromHook(payload)
-  if (state === undefined || (state ?? undefined) === states.get(id)) return
-  if (state) states.set(id, state)
+  if (state === undefined) return
+  const pendingCommand = state === 'waiting' ? pendingCommandFromHook(payload) : undefined
+  const previous = states.get(id)
+  if ((state ?? undefined) === previous?.state && pendingCommand === previous?.pendingCommand) return
+  const event = { id, state, pendingCommand }
+  if (state) states.set(id, event)
   else states.delete(id)
-  broadcast({ id, state })
+  broadcast(event)
 }
 
 /** Latest known hook state for each session, for a renderer that loads later. */
 export function getAgentStates(): AgentStateEvent[] {
-  return [...states].map(([id, state]) => ({ id, state }))
+  return [...states.values()]
 }
 
 export function forgetAgentState(id: string): void {

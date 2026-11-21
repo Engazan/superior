@@ -6,12 +6,13 @@ import { ChangesView } from './ChangesView'
 import { FilesView } from './FilesView'
 import { HistoryView } from './HistoryView'
 import { TasksView } from './TasksView'
-import { BranchIcon, Button, FolderIcon, HistoryIcon, Notice, TasksIcon } from './ui'
+import { Button, FolderIcon, Notice } from './ui'
 import { useI18n } from '../i18n'
 import type { TaskQueueApi } from '../hooks/useTaskQueue'
-import type { AgentSession, AgentTask, FsEntry, GitDiff, GitStatus, TerminalPreset } from '../types'
+import type { AgentSession, AgentTask, FsEntry, GitDiff, TerminalPreset } from '../types'
 
-type Tab = 'files' | 'changes' | 'history' | 'tasks'
+const TABS = ['files', 'changes', 'history', 'tasks'] as const
+type Tab = (typeof TABS)[number]
 
 interface Props {
   /** Increment to reveal the file tree without locking the selected tab. */
@@ -19,7 +20,6 @@ interface Props {
   /** Whether the panel is open. Kept mounted while closed (for the slide
       animation), so polling is gated on this to stay idle when hidden. */
   active: boolean
-  gitStatus: GitStatus | null
   codeEnabled: boolean
   onOpenSettings: () => void
   workspaceId: string | null
@@ -46,13 +46,11 @@ interface Props {
 
 /**
  * Right-hand panel toggled from the title bar. Hosts the Files (project tree)
- * and Changes (working-tree diff) tabs. The diff is fetched here so the +/−
- * totals can show on the Changes tab even while the Files tab is open.
+ * and Changes (working-tree diff) tabs.
  */
 export function RightPanel({
   filesRevealRequest,
   active,
-  gitStatus,
   codeEnabled,
   onOpenSettings,
   workspaceId,
@@ -73,7 +71,7 @@ export function RightPanel({
   const review = useDiffReview(scope)
   const [editor, setEditor] = useState<{ scope: string; anchor: ReviewAnchor; note?: ReviewNote } | null>(null)
   const openComment = (anchor: ReviewAnchor): void => setEditor({ scope, anchor, note: review.notes.find((note) => sameReviewAnchor(note, anchor)) })
-  const [tab, setTab] = useState<Tab>('files')
+  const [tab, setTab] = useState<Tab>('changes')
   // Keep only expansion paths while the heavy file tree is unmounted.
   const [treeState, setTreeState] = useState<{ folder: string | null; paths: ReadonlySet<string> }>({ folder: folderPath, paths: new Set() })
   const expandedPaths = treeState.folder === folderPath ? treeState.paths : new Set<string>()
@@ -158,12 +156,6 @@ export function RightPanel({
     void fetchDiff(true)
   }, [fetchDiff])
 
-  const totals = diffActive && diffFolder === folderPath && diff?.isRepository && !diff.error
-    ? diff.totals
-    : gitStatus?.isRepository && !gitStatus.error
-      ? { additions: gitStatus.additions ?? 0, deletions: gitStatus.deletions ?? 0 }
-      : null
-
   // Queued + running task count for this folder, badged on the Tasks tab.
   const pendingTasks = useMemo(
     () =>
@@ -175,13 +167,6 @@ export function RightPanel({
     [taskQueue.tasks, tasksFolder]
   )
 
-  const tabClass = (active: boolean): string =>
-    `flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 truncate px-2 text-xs font-medium transition border-b-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
-      active ? 'border-accent text-fg' : 'border-transparent text-fgmuted hover:text-fg'
-    }`
-
-  // One Tab stop + arrow/Home/End keys, per the tabs pattern.
-  const TABS: Tab[] = ['files', 'changes', 'history', 'tasks']
   const onTabKeyDown = (e: React.KeyboardEvent): void => {
     const idx = TABS.indexOf(tab)
     const next =
@@ -212,32 +197,18 @@ export function RightPanel({
   return (
     <aside
       style={{ width }}
-      className="superior-right-panel flex shrink-0 flex-col overflow-hidden bg-bar"
+      className="superior-right-panel flex shrink-0 flex-col overflow-hidden bg-panel px-4 pb-4 pt-4"
       aria-label={t('rightPanel.tabListLabel')}
     >
-      <div role="tablist" aria-label={t('rightPanel.tabListLabel')} className="flex shrink-0 border-b border-edge bg-panel/75 p-1">
-        <button className={tabClass(tab === 'files')} {...tabA11y('files')}>
-          <FolderIcon size={17} className="shrink-0" />
-        </button>
-        <button className={tabClass(tab === 'changes')} {...tabA11y('changes')}>
-          <BranchIcon size={17} className="shrink-0" />
-          {totals && (totals.additions > 0 || totals.deletions > 0) && (
-            <span className="font-mono text-[10px] tabular-nums">
-              {totals.additions > 0 && <span className="text-status">+{totals.additions}</span>}
-              {totals.additions > 0 && totals.deletions > 0 && ' '}
-              {totals.deletions > 0 && <span className="text-danger">−{totals.deletions}</span>}
-            </span>
-          )}
-        </button>
-        <button className={tabClass(tab === 'history')} {...tabA11y('history')}>
-          <HistoryIcon size={17} className="shrink-0" />
-        </button>
-        <button className={tabClass(tab === 'tasks')} {...tabA11y('tasks')}>
-          <TasksIcon size={17} className="shrink-0" />
-          {pendingTasks > 0 && (
-            <span className="font-mono text-[10px] tabular-nums text-accent">{pendingTasks}</span>
-          )}
-        </button>
+      <div role="tablist" aria-label={t('rightPanel.tabListLabel')}
+        className="superior-inspector-tabs grid shrink-0 grid-cols-4 gap-0.5 rounded-[10px] border border-edge bg-bar p-[3px]">
+        {TABS.map((id) => (
+          <button key={id} {...tabA11y(id)}
+            className="flex h-7 min-w-0 items-center justify-center gap-1 rounded-[7px] px-1 text-xs text-fgmuted transition hover:text-fg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent">
+            <span className="truncate">{t(`rightPanel.${id}`)}</span>
+            {id === 'tasks' && pendingTasks > 0 && <span className="shrink-0 font-mono text-[10px] text-accent">{pendingTasks}</span>}
+          </button>
+        ))}
       </div>
 
       {/* One panel region for every tab; each view supplies the same
@@ -260,13 +231,15 @@ export function RightPanel({
         </div>
       ) : tab === 'changes' ? (
         <>
-          {workspaceId && folderPath && <DiffReview key={`review:${scope}`} notes={review.notes}
-            onEdit={(note) => setEditor({ scope, anchor: note, note })}
-            onRemove={(id) => review.update(review.notes.filter((note) => note.id !== id))}
-            targets={reviewTargets(sessions, workspaceId)} workspaceId={workspaceId} folderPath={folderPath}
-            onSent={onReviewSent} storageFailed={review.storageFailed} />}
           <ChangesView key={`changes:${scope}`} folderPath={folderPath} diff={diffFolder === folderPath ? diff : null}
-            loading={loading} onRefresh={refresh} reviewNotes={review.notes} onComment={openComment} />
+            loading={loading} onRefresh={refresh} reviewNotes={review.notes} onComment={openComment}
+            reviewPanel={workspaceId && folderPath ? (
+              <DiffReview key={`review:${scope}`} notes={review.notes}
+                onEdit={(note) => setEditor({ scope, anchor: note, note })}
+                onRemove={(id) => review.update(review.notes.filter((note) => note.id !== id))}
+                targets={reviewTargets(sessions, workspaceId)} workspaceId={workspaceId} folderPath={folderPath}
+                onSent={onReviewSent} storageFailed={review.storageFailed} />
+            ) : undefined} />
           {active && editor?.scope === scope && <ReviewCommentEditor key={JSON.stringify(editor.anchor)}
             anchor={editor.anchor} note={editor.note} onClose={() => setEditor(null)}
             onSave={(note) => review.update([...review.notes.filter((item) => item.id !== note.id), note])} />}

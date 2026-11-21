@@ -15,7 +15,7 @@ import { insertIntoTerminal } from './terminalInput'
 import type { Command } from './commands'
 import { TooltipLayer } from './components/TooltipLayer'
 import { useConfirm, useToast } from './components/ui'
-import type { FileContentMatch, FileLinkTarget, FsEntry } from './types'
+import type { AgentSession, FileContentMatch, FileLinkTarget, FsEntry } from './types'
 import { fileLinkTargetToEntry } from './filePreview'
 import { ensureBus } from './terminalBus'
 import { useI18n } from './i18n'
@@ -386,6 +386,13 @@ export default function App(): React.JSX.Element {
   const codeActionsRef = useRef({ act: actCode, mode: workspaceMode, disabledModes })
   codeActionsRef.current = { act: actCode, mode: workspaceMode, disabledModes }
 
+  const openAgentSession = useCallback((session: AgentSession): void => {
+    dispatchCode(session.workspaceId, { type: 'mode', mode: 'terminals' })
+    const current = wsRef.current
+    void current.selectWorkspace(session.workspaceId)
+    current.selectSession(session)
+  }, [dispatchCode])
+
   // ⌘K command registry — every currently actionable thing, rebuilt from live
   // state. Terminal/git-scoped entries appear only when their target exists.
   const paletteCommands = useMemo<Command[]>(() => {
@@ -402,6 +409,16 @@ export default function App(): React.JSX.Element {
         keywords: w.branch ?? '',
         section: t('palette.sectionWorkspaces'),
         run: () => wsRef.current.selectWorkspace(w.id)
+      })
+    }
+    for (const session of ws.sessions) {
+      const workspace = ws.workspaces.find((item) => item.id === session.workspaceId)
+      if (!workspace) continue
+      cmds.push({
+        id: `session:${session.id}`,
+        title: [session.label, session.nickname, workspace.name].filter(Boolean).join(' · '),
+        section: t('palette.sectionTerminals'),
+        run: () => openAgentSession(session)
       })
     }
     for (const p of ws.profiles) {
@@ -587,6 +604,7 @@ export default function App(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     ws.workspaces,
+    ws.sessions,
     ws.folders,
     ws.profiles,
     ws.activeProfileId,
@@ -597,6 +615,7 @@ export default function App(): React.JSX.Element {
     presets,
     layoutPresets.layouts,
     shortcuts,
+    openAgentSession,
     update.info,
     update.progress.phase,
     t
@@ -837,6 +856,8 @@ export default function App(): React.JSX.Element {
         workspaceModes={WORKSPACE_MODES.filter((mode) => !disabledModes.includes(mode))}
         onWorkspaceModeChange={(mode) => actCode({ type: 'mode', mode })}
         workspaceModeEnabled={!!ws.activeWorkspaceId}
+        projectName={ws.activeFolder?.displayName?.trim() || ws.activeFolder?.name}
+        onOpenPalette={() => setPaletteOpen(true)}
         gitStatus={view === 'main' ? gitStatus : null}
         gitLoading={gitLoading}
         onToggle={() => setSidebarCollapsed((c) => !c)}
@@ -870,9 +891,7 @@ export default function App(): React.JSX.Element {
       />
 
       <div
-        className={`superior-workspace flex min-h-0 flex-1 ${
-          rightSidebarOpen ? 'superior-workspace--right-open' : ''
-        } ${view === 'settings' ? 'superior-workspace--settings' : ''}`}
+        className={`superior-workspace flex min-h-0 flex-1 ${view === 'settings' ? 'superior-workspace--settings' : ''}`}
       >
         {view === 'settings' && (
           <Suspense fallback={<DeferredPanel />}>
@@ -895,11 +914,14 @@ export default function App(): React.JSX.Element {
             />
           </Suspense>
         )}
-        <div className="flex min-h-0 min-w-0 flex-1 gap-2" style={{ display: view === 'settings' ? 'none' : undefined }}>
+        <div className="flex min-h-0 min-w-0 flex-1" style={{ display: view === 'settings' ? 'none' : undefined }}>
             <Sidebar
               folders={ws.visibleFolders}
               workspaces={ws.workspaces}
               activeWorkspaceId={ws.activeWorkspaceId}
+              sessions={ws.sessions}
+              activeSessionId={terminalActive ? ws.activeSessionId : null}
+              onSelectSession={openAgentSession}
               counts={ws.counts}
               gitStats={workspaceGitStats}
               update={update}
@@ -919,7 +941,7 @@ export default function App(): React.JSX.Element {
               onSelectWorkspace={ws.selectWorkspace}
             />
 
-            <div className="superior-main flex min-h-0 min-w-0 flex-1 flex-col">
+            <main className="superior-main flex min-h-0 min-w-0 flex-1 flex-col">
               <div className="flex min-h-0 min-w-0 flex-1">
                 <div className="relative flex min-h-0 min-w-0 flex-1">
                 <div className="absolute inset-0 flex" style={{ display: terminalActive ? undefined : 'none' }}>
@@ -927,6 +949,7 @@ export default function App(): React.JSX.Element {
                     sessions={ws.sessions}
                     activeWorkspaceId={ws.activeWorkspaceId}
                     workingDir={ws.workingDirLabel}
+                    branch={gitStatus?.branch}
                     layoutPresets={layoutPresets.layouts}
                     startupLayoutId={ws.activeWorkspace?.startupLayoutId}
                     onSetStartupLayout={(layoutId) => {
@@ -983,22 +1006,23 @@ export default function App(): React.JSX.Element {
                 ))}
                 </div>
               </div>
-            </div>
+            </main>
 
             {/* Drag handle for resizing the right panel. */}
             {rightSidebarOpen && (
               <div
                 onPointerDown={startRightResize}
-                className="group flex w-1.5 shrink-0 cursor-col-resize items-stretch"
+                className="superior-inspector-resize group relative z-10 -mr-1.5 flex w-1.5 shrink-0 cursor-col-resize items-stretch"
               >
-                <span className="w-full bg-edge transition group-hover:bg-accent" />
+                <span className="w-full transition group-hover:bg-accent" />
               </div>
             )}
             {/* The width wrapper stays mounted for the close animation. The panel
                 shell stays mounted to preserve drafts and expansion paths;
                 hidden file/history views and full diff data are released. */}
             <div
-              style={{ width: rightSidebarOpen ? rightPanelWidth : 0 }}
+              style={{ width: rightSidebarOpen ? `min(${rightPanelWidth}px, var(--inspector-max))` : 0 }}
+              inert={!rightSidebarOpen}
               className={`flex shrink-0 overflow-hidden ${
                 rightResizing ? '' : 'transition-[width] duration-200 ease-out'
               }`}
@@ -1017,7 +1041,6 @@ export default function App(): React.JSX.Element {
                     }}
                     width={rightPanelWidth}
                     active={rightSidebarOpen && view === 'main'}
-                    gitStatus={gitStatus}
                     codeEnabled={codeEnabled}
                     onOpenSettings={() => setView('settings')}
                     folderPath={ws.effectiveDir}
@@ -1105,7 +1128,8 @@ export default function App(): React.JSX.Element {
 
       {paletteOpen && (
         <Suspense fallback={null}>
-          <CommandPalette commands={paletteCommands} onClose={() => setPaletteOpen(false)} />
+          <CommandPalette commands={paletteCommands} folderPath={ws.effectiveDir}
+            onOpenFile={setCodeFile} onClose={() => setPaletteOpen(false)} />
         </Suspense>
       )}
 

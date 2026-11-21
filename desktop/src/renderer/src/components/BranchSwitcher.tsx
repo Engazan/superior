@@ -207,7 +207,7 @@ export function BranchSwitcher({ gitDir, currentBranch, onSwitched }: Props): Re
         aria-label={`${t('branch.switch')}: ${currentBranch}`}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex h-8 min-w-0 max-w-64 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-fgdim transition hover:bg-hover hover:text-fg aria-expanded:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex h-6 min-w-0 max-w-40 items-center gap-1.5 rounded-md text-xs font-medium text-fg transition hover:bg-hover hover:text-fg aria-expanded:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <BranchIcon className="block h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{currentBranch}</span>

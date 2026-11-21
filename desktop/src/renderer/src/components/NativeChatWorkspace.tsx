@@ -104,9 +104,9 @@ function ChatBody({ chat, workspace, act, busy, onOpenWorker }: { chat: NativeCh
 function Approval({ approval, chatId, act, busy }: { approval: ChatApproval; chatId: string; act: (action: ChatAction) => Promise<boolean>; busy: boolean }): React.JSX.Element {
   const { t } = useI18n()
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  return <section className="space-y-3 rounded-lg border border-accent p-3" aria-label={t('chat.approval')}>
-    <p className="font-medium">{approval.title}</p>
-    <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs">{approval.detail}</pre>
+  return <section className="superior-chat-approval space-y-2.5 rounded-[10px] border border-warnBorder bg-warnBg p-3" aria-label={t('chat.approval')}>
+    <p className="text-xs font-semibold text-warn">{approval.title}</p>
+    <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-bar px-2.5 py-2 text-xs">{approval.detail}</pre>
     {approval.questions?.map(q => <label key={q.id} className="block text-sm">{q.question}
       {!!q.options.length && <Select value={answers[q.id] ?? ''} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}><option value="">—</option>{q.options.map(o => <option key={o}>{o}</option>)}</Select>}
       <input className="mt-1 block w-full rounded border border-edge bg-panel p-2" type={q.secret ? 'password' : 'text'} value={answers[q.id] ?? ''} maxLength={10000} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))} />

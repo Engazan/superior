@@ -28,9 +28,9 @@ export const TERM_THEMES: Record<'light' | 'dark', ITheme> = {
   },
   light: {
     background: '#ffffff',
-    foreground: '#202633',
-    cursor: '#bd5845',
-    selectionBackground: '#f5d6cf',
+    foreground: '#171b22',
+    cursor: '#3550c8',
+    selectionBackground: '#e6ecff',
     black: '#5c5f77',
     red: '#d20f39',
     green: '#40a02b',

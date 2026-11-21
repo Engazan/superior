@@ -49,6 +49,7 @@ const reported = new Set<string>()
 const pendingReports = new Map<string, object>()
 const exitedSessions = new Set<string>()
 const hookStates = new Map<string, AgentState>()
+const pendingCommands = new Map<string, string>()
 const titleStates = new Map<string, AgentState>()
 const listeners = new Set<() => void>()
 let started = false
@@ -66,6 +67,7 @@ let sessionAttentionSnap = new Set<string>()
 let workspaceActivitySnap: ReadonlyMap<string, number> = new Map()
 let agentWorkspaceSnap: ReadonlyMap<string, 'waiting' | 'working'> = new Map()
 let agentWorkspaceKey = ''
+let agentSessionSnap: ReadonlyMap<string, AgentState> = new Map()
 
 function bumpWorkspace(workspaceId: string, at = Date.now()): void {
   if ((workspaceActivity.get(workspaceId) ?? 0) >= at) return
@@ -107,11 +109,18 @@ function refresh(): void {
     sessionAttentionSnap = new Set(sessionAttention)
     changed = true
   }
+  const agentSessions = new Map<string, AgentState>()
   const agentWorkspaces = new Map<string, 'waiting' | 'working'>()
   for (const [id, info] of sessionInfo) {
     const state = info.running ? agentState(id) : undefined
+    if (state) agentSessions.set(id, state)
     if (state === 'waiting') agentWorkspaces.set(info.workspaceId, 'waiting')
     else if (state === 'working' && !agentWorkspaces.has(info.workspaceId)) agentWorkspaces.set(info.workspaceId, 'working')
+  }
+  if (agentSessions.size !== agentSessionSnap.size ||
+      [...agentSessions].some(([id, state]) => agentSessionSnap.get(id) !== state)) {
+    agentSessionSnap = agentSessions
+    changed = true
   }
   const key = JSON.stringify([...agentWorkspaces])
   if (key !== agentWorkspaceKey) {
@@ -184,6 +193,7 @@ function setAgentState(source: Map<string, AgentState>, id: string, state: Agent
 
 function forgetAgentState(id: string): void {
   hookStates.delete(id)
+  pendingCommands.delete(id)
   titleStates.delete(id)
 }
 
@@ -249,15 +259,24 @@ function start(): void {
     }
   })
 
-  window.api.onAgentState(({ id, state }) => {
-    if (sessionInfo.get(id)?.running && !exitedSessions.has(id)) setAgentState(hookStates, id, state)
+  window.api.onAgentState(({ id, state, pendingCommand }) => {
+    if (!sessionInfo.get(id)?.running || exitedSessions.has(id)) return
+    const previousState = agentState(id)
+    const previousCommand = pendingCommands.get(id)
+    if (state === 'waiting' && pendingCommand) pendingCommands.set(id, pendingCommand)
+    else pendingCommands.delete(id)
+    setAgentState(hookStates, id, state)
+    if (previousState === agentState(id) && previousCommand !== pendingCommands.get(id)) {
+      for (const listener of listeners) listener()
+    }
   })
   // Sessions restored after a reload resume their last reported state quietly.
   void window.api.getAgentStates().then((states) => {
-    for (const { id, state } of states) {
+    for (const { id, state, pendingCommand } of states) {
       // The session list may still be loading; unknown ids are dropped with it.
       if (state && !hookStates.has(id)) {
         hookStates.set(id, state)
+        if (state === 'waiting' && pendingCommand) pendingCommands.set(id, pendingCommand)
         if (state === 'working' && sessionInfo.get(id)?.running) busySessions.add(id)
       }
     }
@@ -385,4 +404,17 @@ export function useAgentWorkspaceStates(): ReadonlyMap<string, 'waiting' | 'work
     () => agentWorkspaceSnap,
     () => agentWorkspaceSnap
   )
+}
+
+/** Live state from the agent hooks or terminal title, when either is available. */
+export function useAgentSessionState(id: string): AgentState | undefined {
+  return useSyncExternalStore(subscribe, () => agentSessionSnap.get(id))
+}
+
+export function useAgentSessionStates(): ReadonlyMap<string, AgentState> {
+  return useSyncExternalStore(subscribe, () => agentSessionSnap)
+}
+
+export function usePendingAgentCommand(id: string): string | undefined {
+  return useSyncExternalStore(subscribe, () => pendingCommands.get(id))
 }

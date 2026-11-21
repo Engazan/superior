@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom'
 import { useI18n } from '../i18n'
 import { useDismiss } from './ui'
 import { SearchIcon } from './ui/icons'
+import type { FsEntry } from '../types'
 import { filterCommands, type Command } from '../commands'
 
 /*
@@ -233,6 +234,8 @@ export function useActiveRowInView(listRef: RefObject<HTMLElement | null>, index
 
 interface Props {
   commands: Command[]
+  folderPath: string | null
+  onOpenFile: (file: FsEntry) => Promise<boolean>
   onClose: () => void
 }
 
@@ -241,11 +244,12 @@ interface Props {
  * workspaces, presets, prompts, panels, git — grouped by section, driven
  * entirely by the keyboard (↑↓ move, Enter runs, Escape closes).
  */
-export function CommandPalette({ commands, onClose }: Props): React.JSX.Element {
+export function CommandPalette({ commands, folderPath, onOpenFile, onClose }: Props): React.JSX.Element {
   const { t } = useI18n()
   const listId = useId()
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
+  const [fileSearch, setFileSearch] = useState<{ folder: string; query: string; entries: FsEntry[] } | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -253,11 +257,39 @@ export function CommandPalette({ commands, onClose }: Props): React.JSX.Element 
   // backdrop handles outside clicks itself.
   useDismiss(panelRef, true, onClose, { outside: false })
 
-  const filtered = useMemo(() => filterCommands(commands, query), [commands, query])
-
+  const search = query.trim()
   useEffect(() => {
-    setIndex(0)
-  }, [query])
+    if (!folderPath || !search) return
+    let active = true
+    const timer = window.setTimeout(() => {
+      void window.api.searchFiles(folderPath, search).then(({ entries }) => {
+        if (active) setFileSearch({ folder: folderPath, query: search, entries })
+      }).catch(() => {
+        if (active) setFileSearch({ folder: folderPath, query: search, entries: [] })
+      })
+    }, 150)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [folderPath, search])
+
+  const fileResults = fileSearch?.folder === folderPath && fileSearch?.query === search ? fileSearch : null
+  const filtered = useMemo(() => {
+    const matched = filterCommands(commands, query)
+    if (!fileResults?.entries.length) return matched
+    const files: Command[] = fileResults.entries.slice(0, 20).map((file) => ({
+      id: `file:${file.path}`,
+      title: file.path.startsWith(fileResults.folder)
+        ? file.path.slice(fileResults.folder.length).replace(/^[/\\]/, '')
+        : file.name,
+      section: t('rightPanel.files'),
+      run: () => { void onOpenFile(file) }
+    }))
+    return [...matched, ...files]
+  }, [commands, fileResults, onOpenFile, query, t])
+
+  const searching = !!(folderPath && search && !fileResults)
 
   useActiveRowInView(listRef, index)
 
@@ -282,7 +314,7 @@ export function CommandPalette({ commands, onClose }: Props): React.JSX.Element 
 
   return (
     <PaletteShell
-      label={t('palette.placeholder')}
+      label={t('titlebar.search')}
       width="max-w-4xl"
       height="max-h-[min(38rem,76vh)]"
       panelRef={panelRef}
@@ -292,16 +324,16 @@ export function CommandPalette({ commands, onClose }: Props): React.JSX.Element 
         listId={listId}
         activeId={filtered[index] ? optionId(index) : undefined}
         expanded={filtered.length > 0}
-        aria-label={t('palette.placeholder')}
-        placeholder={t('palette.placeholder')}
+        aria-label={t('titlebar.search')}
+        placeholder={t('titlebar.search')}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => { setQuery(e.target.value); setIndex(0) }}
         onKeyDown={(e) => handlePaletteKey(e, filtered.length, setIndex, () => run(filtered[index]), onClose)}
       />
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-1.5">
-        {filtered.length === 0 && <PaletteMessage>{t('palette.noResults')}</PaletteMessage>}
-        <div id={listId} role="listbox" aria-label={t('palette.placeholder')}>
+        {filtered.length === 0 && <PaletteMessage>{t(searching ? 'files.searching' : 'palette.noResults')}</PaletteMessage>}
+        <div id={listId} role="listbox" aria-label={t('titlebar.search')}>
           {grouped.map(([section, cmds], gi) => (
             <div key={section} role="group" aria-labelledby={`${listId}-g${gi}`}>
               <div

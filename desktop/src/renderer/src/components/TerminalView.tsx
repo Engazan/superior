@@ -13,8 +13,8 @@ import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
 import { registerFileLinkProvider } from '../terminalLinks'
 import { formatPathForPrompt } from '../terminalInput'
-import { noteActivityInput, useAttentionSessions, useBusySessions } from '../activityStore'
-import { useAttentionColor } from '../attentionColor'
+import { noteActivityInput, useAgentSessionState, usePendingAgentCommand } from '../activityStore'
+import { useUsage } from '../usageStore'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
 import { formatChord, useShortcutTitle } from '../shortcuts'
@@ -22,6 +22,7 @@ import { PresetIcon } from './PresetIcon'
 import { PresetMenu } from './PresetMenu'
 import type { PaneDirection, TerminalPreset } from '@shared/types'
 import { CloseIcon, IconButton, PencilIcon, RestartIcon, useToast } from './ui'
+import { SessionStatus } from './SessionStatus'
 import { UsageBadge } from './UsageBadge'
 import { Menu } from './ui/Menu'
 import { barTint } from '../tint'
@@ -30,47 +31,6 @@ import type { AgentSession, FileLinkTarget } from '../types'
 
 const FULL_RECT: Rect = { top: 0, left: 0, width: 100, height: 100 }
 const MAX_PASTED_IMAGE_BYTES = 10 * 1024 * 1024
-
-const STATUS_DOT: Record<AgentSession['status'], string> = {
-  running: 'bg-status',
-  exited: 'bg-fgmuted',
-  error: 'bg-dangerSolid'
-}
-
-/**
- * Per-cell status dot: layers live activity on top of the process state so a
- * glance tells *which* terminal is streaming output (pulsing green), which one
- * finished and awaits input (attention color), and which merely runs idle.
- * A separate subscriber component so busy churn re-renders only the dot.
- */
-function CellStatusDot({ session }: { session: AgentSession }): React.JSX.Element {
-  const { t } = useI18n()
-  const busy = useBusySessions()
-  const attention = useAttentionSessions()
-  const { attentionColor } = useAttentionColor()
-  if (session.status === 'running' && attention.has(session.id)) {
-    return (
-      <span
-        className="h-2 w-2 shrink-0 animate-pulse rounded-full"
-        style={{ backgroundColor: attentionColor }}
-        title={t('terminal.statusFinished')}
-      />
-    )
-  }
-  const isBusy = session.status === 'running' && busy.has(session.id)
-  return (
-    <span
-      className={`h-2 w-2 shrink-0 rounded-full ${isBusy ? 'animate-pulse' : ''} ${STATUS_DOT[session.status]}`}
-      title={
-        isBusy
-          ? t('terminal.statusWorking')
-          : session.status === 'error'
-            ? t('terminal.statusError')
-            : undefined
-      }
-    />
-  )
-}
 
 // Older builds could accidentally feed xterm's OSC 10/11 color responses into
 // the PTY during attach. Remove only that exact stale response shape while
@@ -88,6 +48,7 @@ interface Props {
   session: AgentSession
   /** working dir file-path links resolve against (the workspace's effective dir) */
   workingDir?: string | null
+  branch?: string | null
   /** the cell this terminal occupies, in percentages; defaults to filling the panel */
   rect?: Rect
   /** whether this terminal is shown (vs. kept mounted but hidden) */
@@ -141,6 +102,7 @@ function propsEqual(prev: Props, next: Props): boolean {
     prev.onSplit === next.onSplit && prev.onManagePresets === next.onManagePresets && prev.onPaneDrag === next.onPaneDrag &&
     prev.session === next.session &&
     prev.workingDir === next.workingDir &&
+    prev.branch === next.branch &&
     rectEqual(prev.rect, next.rect) &&
     prev.visible === next.visible &&
     prev.focused === next.focused &&
@@ -164,6 +126,7 @@ export const TerminalView = memo(function TerminalView({
   presets, splitDisabled, onSplit, onManagePresets, onPaneDrag,
   session,
   workingDir,
+  branch,
   rect,
   visible,
   focused,
@@ -182,7 +145,13 @@ export const TerminalView = memo(function TerminalView({
   onExit
 }: Props): React.JSX.Element {
   const r = rect ?? FULL_RECT
-  const flushRight = r.left + r.width >= 99.999
+  const agentState = useAgentSessionState(session.id)
+  const pendingCommand = usePendingAgentCommand(session.id)
+  const usage = useUsage(session.id)
+  const contextPercent = usage && usage.contextLimit > 0
+    ? Math.max(0, Math.min(100, Math.round(usage.contextTokens / usage.contextLimit * 100)))
+    : null
+  const [prompt, setPrompt] = useState('')
   const hostRef = useRef<HTMLDivElement>(null)
   const [copyMenu, setCopyMenu] = useState<{
     x: number
@@ -530,7 +499,8 @@ export const TerminalView = memo(function TerminalView({
   return (
     <div
       data-terminal-session={session.id}
-      className={`superior-terminal-cell absolute ${flushRight ? 'superior-terminal-cell--flush-right' : ''} ${
+      inert={!visible}
+      className={`superior-terminal-cell absolute ${
         animate
           ? 'transition-[top,left,width,height,opacity] duration-200 ease-out'
           : 'transition-opacity'
@@ -552,6 +522,8 @@ export const TerminalView = memo(function TerminalView({
       }}
     >
       <div
+        data-waiting={agentState === 'waiting'}
+        data-focused={highlight}
         className="superior-terminal-surface relative flex h-full w-full flex-col overflow-hidden"
         // xterm's bundled stylesheet defaults its scroll viewport to #000. The
         // canvas is row-aligned, so a fractional row at the bottom otherwise
@@ -564,10 +536,6 @@ export const TerminalView = memo(function TerminalView({
           } as React.CSSProperties
         }
       >
-        {/* Active-cell highlight, drawn above the terminal content so it stays visible. */}
-        {highlight && (
-          <div className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] ring-2 ring-inset ring-accent" />
-        )}
         {/* Always-visible topbar; the terminal sits below it, never behind it. */}
         {showBar && (
           <div
@@ -583,68 +551,69 @@ export const TerminalView = memo(function TerminalView({
                 ? `${t('terminal.focusHint')}: ${formatChord(`ctrl+${shortcutNumber}`)}`
                 : undefined
             }
-            className={`flex shrink-0 cursor-grab touch-none items-center gap-1.5 border-b border-edge px-3 py-1.5 text-xs ${
-              active ? 'bg-bar text-fg' : 'bg-bar/80 text-fgdim'
-            }`}
+            className="superior-terminal-header flex h-[51px] shrink-0 cursor-grab touch-none items-center gap-2.5 border-b border-edge bg-panel px-3 text-[13px] text-fg"
           >
-            {/* Identity zone — status, icon, name, nickname. Truncates first. */}
-            <span aria-hidden="true" className="shrink-0 select-none text-fgdim">⠿</span>
-            <div className="group flex min-w-0 flex-1 items-center gap-1.5">
-              <CellStatusDot session={session} />
-              <PresetIcon
-                iconType={session.iconType}
-                icon={session.icon}
-                className="h-4 w-4 text-sm"
-              />
-              <span className="shrink truncate">{session.label}</span>
-              {editingNick ? (
-                <>
-                  <span className="shrink-0 text-fgmuted">·</span>
-                  <input
-                    autoFocus
-                    value={nickDraft}
-                    onChange={(e) => setNickDraft(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      e.stopPropagation()
-                      if (e.key === 'Enter') commitNick()
-                      else if (e.key === 'Escape') setEditingNick(false)
-                    }}
-                    onBlur={commitNick}
-                    placeholder={t('terminal.nicknamePlaceholder')}
-                    size={12}
-                    className="w-28 max-w-full shrink-0 rounded-sm border border-edge bg-panel px-1 py-0.5 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-hidden"
-                  />
-                </>
-              ) : (
-                <>
-                  {session.nickname && (
-                    <span className="truncate text-fgmuted" title={session.nickname}>
-                      · {session.nickname}
-                    </span>
-                  )}
-                  {/* Pencil appears on hover; opens the inline nickname editor. */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openNickEditor()
-                    }}
-                    className="shrink-0 text-fgmuted opacity-0 transition hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
-                    aria-label={t('terminal.setNickname')}
-                    title={t('terminal.setNickname')}
-                  >
-                    <PencilIcon size={12} />
-                  </button>
-                </>
-              )}
+            <span className="superior-terminal-icon grid size-6 shrink-0 place-items-center rounded-[7px]"
+              data-provider={/^claude(?:\s|$)/i.test(session.label) ? 'claude' : undefined} aria-hidden>
+              <PresetIcon iconType={session.iconType} icon={session.icon} className="size-4 text-sm" />
+            </span>
+            <div className="group min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5 font-semibold leading-4">
+                <span className="truncate">{session.label}</span>
+                {editingNick ? (
+                  <>
+                    <span className="shrink-0 text-fgmuted">·</span>
+                    <input
+                      autoFocus
+                      value={nickDraft}
+                      onChange={(e) => setNickDraft(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        e.stopPropagation()
+                        if (e.key === 'Enter') commitNick()
+                        else if (e.key === 'Escape') setEditingNick(false)
+                      }}
+                      onBlur={commitNick}
+                      placeholder={t('terminal.nicknamePlaceholder')}
+                      size={12}
+                      className="w-28 max-w-full shrink-0 rounded-sm border border-edge bg-panel px-1 py-0.5 text-xs text-fg placeholder:text-fgmuted focus:border-fgdim focus:outline-hidden"
+                    />
+                  </>
+                ) : (
+                  <>
+                    {session.nickname && (
+                      <span className="truncate text-fgmuted" title={session.nickname}>
+                        · {session.nickname}
+                      </span>
+                    )}
+                    {/* Pencil appears on hover; opens the inline nickname editor. */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openNickEditor()
+                      }}
+                      className="shrink-0 text-fgmuted opacity-0 transition hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
+                      aria-label={t('terminal.setNickname')}
+                      title={t('terminal.setNickname')}
+                    >
+                      <PencilIcon size={12} />
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
+                <SessionStatus session={session} />
+                {(usage?.model || branch) && (
+                  <span className="min-w-0 truncate font-mono text-[11px] text-fgmuted">
+                    · {[usage?.model?.replace(/^claude-/, ''), branch].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Meta zone — live usage readout. */}
-            <UsageBadge sessionId={session.id} />
-
             {/* Action zone — restart / maximize / close, right-aligned. */}
-            <div className="flex shrink-0 items-center">
-              <IconButton size="sm" label={t(terminalTheme === 'dark' ? 'terminal.lightMode' : 'terminal.darkMode')}
+            <div className="superior-terminal-actions flex shrink-0 items-center gap-0.5">
+              <IconButton className="superior-terminal-appearance" size="sm" label={t(terminalTheme === 'dark' ? 'terminal.lightMode' : 'terminal.darkMode')}
                 onClick={(event) => {
                   event.stopPropagation()
                   setThemeOverride(terminalTheme === 'dark' ? 'light' : 'dark')
@@ -728,7 +697,7 @@ export const TerminalView = memo(function TerminalView({
         <div
           ref={hostRef}
           data-terminal-host
-          className="min-h-0 w-full flex-1"
+          className="superior-terminal-host min-h-0 min-w-0 flex-1 overflow-hidden"
           onPointerEnter={(event) => {
             if (terminalSettings.focusFollowsMouse && visible && document.hasFocus() && event.buttons === 0 && !window.getSelection()?.toString()) {
               onSelect(session.id)
@@ -757,6 +726,53 @@ export const TerminalView = memo(function TerminalView({
             })
           }}
         />
+        {visible && showBar && agentState === 'waiting' && (
+          <div className="superior-chat-approval mx-3 mb-3 flex shrink-0 flex-col items-start gap-2 rounded-[10px] border border-warnBorder p-3">
+            <span className="text-xs font-semibold text-warn">{t('terminal.activityWaiting')}</span>
+            {pendingCommand && <pre className="max-h-20 w-full overflow-auto whitespace-pre-wrap break-words rounded-[7px] bg-bar px-2.5 py-2 font-mono text-xs text-fg">{pendingCommand}</pre>}
+            <button type="button" onClick={() => { onSelect(session.id); termRef.current?.focus() }}
+              className="superior-approval-action rounded-[7px] px-2.5 py-1.5 text-xs font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-warn">
+              {t('terminal.replyInTerminal')}
+            </button>
+          </div>
+        )}
+        {visible && showBar && agentState === 'idle' && session.status === 'running' && (
+          <form className="superior-terminal-composer mx-3 mb-3 flex shrink-0 items-center gap-2 rounded-[10px] border border-edge bg-bar p-1.5 pl-3"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const term = termRef.current
+              if (!prompt.trim() || !term || exitedRef.current || replayWritesRef.current > 0) return
+              onSelect(session.id)
+              noteActivityInput(session.id)
+              term.paste(prompt)
+              window.api.sendInput(session.id, '\r')
+              setPrompt('')
+              term.focus()
+            }}>
+            <input value={prompt} onChange={(event) => setPrompt(event.target.value)}
+              aria-label={t('terminal.composer')} placeholder={t('terminal.composer')}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-fg placeholder:text-fgmuted focus-visible:outline-hidden" />
+            <button type="submit" disabled={!prompt.trim()} aria-label={t('context.send')}
+              className="grid size-7 shrink-0 place-items-center rounded-lg bg-accentBg text-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60">
+              <span aria-hidden>→</span>
+            </button>
+          </form>
+        )}
+        {visible && showBar && usage && (
+          <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-t border-edge bg-panel px-3 py-1.5 text-[11px] text-fgmuted">
+            {contextPercent !== null && (
+              <>
+                <span>{t('usage.context')}</span>
+                <div role="meter" aria-label={t('usage.context')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={contextPercent}
+                  className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-edge">
+                  <div className="superior-context-fill h-full" style={{ width: `${contextPercent}%` }} />
+                </div>
+                <span className="shrink-0 font-mono text-fg2">{contextPercent} %</span>
+              </>
+            )}
+            <UsageBadge sessionId={session.id} />
+          </div>
+        )}
         {visible && copyMenu && (
           <Menu
             anchor={copyMenu}

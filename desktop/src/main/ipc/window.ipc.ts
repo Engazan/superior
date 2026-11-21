@@ -39,7 +39,7 @@ export function registerWindowIpc(): void {
     if (!win) return
     win.setVibrancy(enabled ? 'fullscreen-ui' : null)
     // An opaque window background would paint over the blur.
-    win.setBackgroundColor(enabled ? '#00000000' : ['light', 'gradient-light'].includes(getSettings().theme) ? '#edf1f7' : '#0f131a')
+    win.setBackgroundColor(enabled ? '#00000000' : ['light', 'gradient-light'].includes(getSettings().theme) ? '#f4f6f9' : '#0f131a')
   })
 }
 
