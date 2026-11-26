@@ -71,23 +71,6 @@ function RemoteGlyph({ size }: { size: number }): React.JSX.Element {
   )
 }
 
-export function RunningBadge({ count, title }: { count: number; title: string }): React.JSX.Element {
-  return (
-    <span
-      role="img"
-      title={title}
-      aria-label={`${title}: ${count}`}
-      className="flex h-5 shrink-0 items-center justify-center gap-1 rounded px-1 text-[11px] font-medium leading-none tabular-nums text-fgdim"
-    >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <rect x="3" y="4" width="18" height="16" rx="3" />
-        <path d="m7 9 3 3-3 3m6 0h4" />
-      </svg>
-      {count}
-    </span>
-  )
-}
-
 /**
  * Compact +added / −removed line counts from git, shown beside a workspace
  * name. Renders nothing when the tree is clean so unchanged workspaces stay

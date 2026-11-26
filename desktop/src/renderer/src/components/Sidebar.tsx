@@ -775,7 +775,7 @@ export const Sidebar = memo(function Sidebar({
                     <div className="superior-sidebar-tree ml-[22px] mt-1 border-l border-edge py-1">
                       {directWorkspace ? (
                         <SessionList sessions={directSessions} activeSessionId={activeSessionId}
-                          onSelect={onSelectSession} className="pl-[18px]" />
+                          onSelect={onSelectSession} className="pl-2" />
                       ) : (
                         <ul className="space-y-0.5 pl-2">
                           {folderWorkspaces.map((ws) => (
@@ -785,6 +785,7 @@ export const Sidebar = memo(function Sidebar({
                               folder={folder}
                               active={ws.id === activeWorkspaceId}
                               sessions={ws.id === activeWorkspaceId ? sessionsByWorkspace.get(ws.id) ?? [] : []}
+                              allSessions={sessionsByWorkspace.get(ws.id) ?? []}
                               activeSessionId={activeSessionId}
                               onSelectSession={onSelectSession}
                               dragging={workspaceDrag?.id === ws.id}

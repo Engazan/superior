@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useI18n } from '../../i18n'
 import { KebabIcon, StarIcon } from '../ui'
-import { DiffStat, RemoteBadge, RunningBadge, WorkingSpinner, folderTitle } from './parts'
+import { DiffStat, RemoteBadge, WorkingSpinner, folderTitle } from './parts'
+import { AgentDots } from './AgentDots'
 import type { WorkspaceGitStat } from '../../hooks/useWorkspaceGitStats'
 import { SessionList } from './SessionList'
 import type { AgentSession, Folder, Workspace } from '../../types'
@@ -13,6 +14,8 @@ interface Props {
   folder: Folder
   active: boolean
   sessions: AgentSession[]
+  /** every terminal of this worktree, for the status dots (sessions above lists only the active one's) */
+  allSessions: AgentSession[]
   activeSessionId: string | null
   onSelectSession: (session: AgentSession) => void
   /** this row is the one being dragged */
@@ -51,6 +54,7 @@ export function WorkspaceRow({
   folder,
   active,
   sessions,
+  allSessions,
   activeSessionId,
   onSelectSession,
   dragging,
@@ -103,7 +107,8 @@ export function WorkspaceRow({
           onMenu({ x: e.clientX, y: e.clientY })
         }}
         style={attention ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-        className={`group relative flex min-h-7 cursor-pointer items-center gap-2 rounded-md py-1 pl-4 pr-1 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
+        data-active={active || undefined}
+        className={`superior-worktree-row group relative flex min-h-7 cursor-pointer items-center gap-2 rounded-md py-1 pl-4 pr-1 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50 ${
           dragging ? 'opacity-60 ring-1 ring-accentBorder ' : ''
         }${active ? 'bg-hover text-fg' : 'text-fg2 hover:bg-hover/70'}`}
       >
@@ -147,7 +152,7 @@ export function WorkspaceRow({
                 e.stopPropagation()
                 onStartRename()
               }}
-              className={`truncate text-[13px] leading-4 ${active ? 'font-semibold text-fg' : 'font-medium text-fg2'}`}
+              className={`truncate font-mono text-[12.5px] leading-4 ${active ? 'font-semibold text-fg' : 'font-medium text-fg2'}`}
               // The tooltip shows the workspace itself (its branch/
               // path live only on the collapsed rail otherwise);
               // rename stays discoverable via the kebab menu.
@@ -191,7 +196,7 @@ export function WorkspaceRow({
           <span className="ml-auto grid shrink-0 place-items-center">
             {runningCount > 0 && (
               <span className="transition [grid-area:1/1] group-hover:opacity-0 group-focus-within:opacity-0">
-                <RunningBadge count={runningCount} title={t('sidebar.runningTerminals')} />
+                <AgentDots sessions={allSessions.filter((s) => s.status === 'running')} />
               </span>
             )}
             <button
@@ -210,7 +215,7 @@ export function WorkspaceRow({
           </span>
         )}
       </div>
-      <SessionList sessions={sessions} activeSessionId={activeSessionId} onSelect={onSelectSession} className="mt-1 pl-2.5" />
+      <SessionList sessions={sessions} activeSessionId={activeSessionId} onSelect={onSelectSession} className="mb-1 ml-[23px] mt-0.5 border-l border-edge pl-2" />
     </li>
   )
 }

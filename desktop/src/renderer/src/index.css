@@ -428,11 +428,62 @@ body {
   color: var(--c-accent);
 }
 
-.superior-sidebar-session .superior-session-status-dot {
+/* Worktree rows: the active one carries an accent bar, like the design. */
+.superior-worktree-row[data-active='true'] {
+  box-shadow: inset 2px 0 0 var(--c-accent);
+}
+
+/* Terminals nested under a worktree: a short connector from the guide line. */
+.superior-sidebar-session-item::before {
+  content: '';
   position: absolute;
   top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
+  left: -8px;
+  width: 7px;
+  border-top: 1px solid var(--c-edge);
+  pointer-events: none;
+}
+
+.superior-session-icon[data-provider='claude'] {
+  background: var(--c-agent-claude-bg);
+  color: var(--c-agent-claude-fg);
+}
+
+.superior-session-icon[data-provider='codex'] {
+  color: var(--c-agent-codex-fg);
+}
+
+/* Per-terminal dots on a worktree row share the terminal spine colors. */
+.superior-agent-dot {
+  background: var(--c-fgmuted);
+}
+
+.superior-agent-dot[data-spine='working'] {
+  background: var(--c-status);
+}
+
+.superior-agent-dot[data-spine='working'][data-agent='claude'] {
+  background: var(--c-agent-claude-fg);
+}
+
+.superior-agent-dot[data-spine='working'][data-agent='codex'] {
+  background: var(--c-agent-codex-fg);
+}
+
+.superior-agent-dot[data-spine='idle'][data-agent='claude'] {
+  background: color-mix(in srgb, var(--c-agent-claude-fg) 55%, transparent);
+}
+
+.superior-agent-dot[data-spine='idle'][data-agent='codex'] {
+  background: color-mix(in srgb, var(--c-agent-codex-fg) 55%, transparent);
+}
+
+.superior-agent-dot[data-spine='attention'] {
+  background: var(--attn, var(--c-warn-solid));
+}
+
+.superior-agent-dot[data-spine='error'] {
+  background: var(--c-danger);
 }
 
 .superior-main {
