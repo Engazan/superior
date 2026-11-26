@@ -596,14 +596,18 @@ export default function App(): React.JSX.Element {
       })
     }
     const sections: { id: SettingsSection; label: string }[] = [
+      { id: 'general', label: t('settings.general') },
       { id: 'appearance', label: t('settings.appearance') },
+      { id: 'keyboard', label: t('settings.keyboard') },
       { id: 'terminal', label: t('terminalSettings.title') },
-      { id: 'integrations', label: t('settings.integrations') },
+      { id: 'codeBrowser', label: t('settings.codeBrowser') },
+      { id: 'agents', label: t('settings.agentStatus') },
       { id: 'presets', label: t('settings.terminalPresets') },
       { id: 'prompts', label: t('settings.prompts') },
-      { id: 'daemons', label: t('settings.daemons') },
-      { id: 'keyboard', label: t('settings.keyboard') },
-      { id: 'shell', label: t('settings.shellCommand') }
+      { id: 'integrations', label: t('settings.integrations') },
+      { id: 'mobile', label: t('settings.mobileAccess') },
+      { id: 'shell', label: t('settings.shellCommand') },
+      { id: 'daemons', label: t('settings.daemons') }
     ]
     for (const s of sections) {
       cmds.push({
@@ -1005,6 +1009,10 @@ export default function App(): React.JSX.Element {
                       projectKey={dashboard.projectKey} reviews={dashboard.reviews} />
                   </Suspense>
                 )}
+                {workspaceMode === 'orchestrate' && ws.activeWorkspace && <Suspense fallback={<DeferredPanel />}>
+                  <NativeChatWorkspace key={`orchestrate-${ws.activeWorkspace.id}`} workspace={ws.activeWorkspace} coordinatorOnly
+                    onOpenWorker={id => { dispatchCode(id, { type: 'mode', mode: 'chat' }); void ws.selectWorkspace(id) }} />
+                </Suspense>}
                 {workspaceMode === 'chat' && ws.activeWorkspace && <Suspense fallback={<DeferredPanel />}>
                   <NativeChatWorkspace key={ws.activeWorkspace.id} workspace={ws.activeWorkspace} onOpenWorker={id => { dispatchCode(id, { type: 'mode', mode: 'chat' }); void ws.selectWorkspace(id) }} />
                 </Suspense>}

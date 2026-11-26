@@ -75,4 +75,16 @@ describe('scoped worker orchestration', () => {
     await nativeChatAction({ type: 'stop', id: chat.id })
     expect(listNativeChats(worker.workspaceId)[0].stopRequested).toBe(true)
   })
+
+  it('lets the user add a worker to a coordinator, but not to a plain chat', async () => {
+    const coordinator = (await nativeChatAction({ type: 'create', workspaceId: 'w', coordinator: true }))!
+    const calls = mock.worktree.mock.calls.length
+    await nativeChatAction({ type: 'addWorker', id: coordinator.id, name: 'Docs', prompt: 'Document the outline option' })
+    await vi.waitFor(() => expect(mock.worktree).toHaveBeenCalledTimes(calls + 1))
+    const added = listNativeChats('w').find(c => c.id === coordinator.id)!.workers!
+    expect(added.map(w => w.title)).toEqual(['Docs'])
+    const plain = (await nativeChatAction({ type: 'create', workspaceId: 'w' }))!
+    await expect(nativeChatAction({ type: 'addWorker', id: plain.id, name: 'Docs', prompt: 'x' })).rejects.toThrow('only be added to a coordinator')
+    await expect(nativeChatAction({ type: 'addWorker', id: coordinator.id, name: ' ', prompt: 'x' })).rejects.toThrow('Invalid worker task')
+  })
 })

@@ -13,7 +13,15 @@ import { subscribe } from '../terminalBus'
 import { registerSearch, unregisterSearch } from '../terminalSearch'
 import { registerFileLinkProvider } from '../terminalLinks'
 import { formatPathForPrompt } from '../terminalInput'
-import { noteActivityInput, useAgentSessionState, usePendingAgentCommand } from '../activityStore'
+import {
+  noteActivityInput,
+  useAgentSessionState,
+  useAttentionSessions,
+  useBusySessions,
+  usePendingAgentCommand
+} from '../activityStore'
+import { useAttentionColor } from '../attentionColor'
+import { agentKind, terminalSpine } from '../terminalSpine'
 import { useUsage } from '../usageStore'
 import { useTheme } from '../theme'
 import { useI18n } from '../i18n'
@@ -147,6 +155,15 @@ export const TerminalView = memo(function TerminalView({
   const r = rect ?? FULL_RECT
   const agentState = useAgentSessionState(session.id)
   const pendingCommand = usePendingAgentCommand(session.id)
+  const needsAttention = useAttentionSessions().has(session.id)
+  const producingOutput = useBusySessions().has(session.id)
+  const { attentionColor } = useAttentionColor()
+  const spine = terminalSpine({
+    attention: needsAttention || agentState === 'waiting',
+    working: agentState === 'working' || (agentState === undefined && producingOutput),
+    status: session.status,
+    exitCode: session.exitCode
+  })
   const usage = useUsage(session.id)
   const contextPercent = usage && usage.contextLimit > 0
     ? Math.max(0, Math.min(100, Math.round(usage.contextTokens / usage.contextLimit * 100)))
@@ -523,6 +540,8 @@ export const TerminalView = memo(function TerminalView({
       <div
         data-waiting={agentState === 'waiting'}
         data-focused={highlight}
+        data-spine={spine}
+        data-agent={agentKind(session.label)}
         className="superior-terminal-surface relative flex h-full w-full flex-col overflow-hidden"
         // xterm's bundled stylesheet defaults its scroll viewport to #000. The
         // canvas is row-aligned, so a fractional row at the bottom otherwise
@@ -531,7 +550,8 @@ export const TerminalView = memo(function TerminalView({
         style={
           {
             backgroundColor: palette.background,
-            '--terminal-background': palette.background
+            '--terminal-background': palette.background,
+            '--attn': attentionColor
           } as React.CSSProperties
         }
       >

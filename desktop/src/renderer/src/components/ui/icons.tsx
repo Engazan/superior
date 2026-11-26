@@ -324,3 +324,51 @@ export function DashboardIcon(props: IconProps): React.JSX.Element {
 export function KeyboardIcon(props: IconProps): React.JSX.Element {
   return <svg {...base(props)}><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10" /></svg>
 }
+
+export function SunIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  )
+}
+
+export function MoonIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+    </svg>
+  )
+}
+
+export function MonitorIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.8)}>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+    </svg>
+  )
+}
+
+export function ServerIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.8)}>
+      <rect x="3" y="4" width="18" height="7" rx="1.5" />
+      <rect x="3" y="13" width="18" height="7" rx="1.5" />
+      <path d="M7 7.5h.01M7 16.5h.01" />
+    </svg>
+  )
+}
+
+export function OrchestrateIcon(props: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(props, 1.7)}>
+      <circle cx="12" cy="5" r="2.5" />
+      <circle cx="5" cy="19" r="2.5" />
+      <circle cx="12" cy="19" r="2.5" />
+      <circle cx="19" cy="19" r="2.5" />
+      <path d="M12 7.5v9M12 11l-7 5.5M12 11l7 5.5" />
+    </svg>
+  )
+}

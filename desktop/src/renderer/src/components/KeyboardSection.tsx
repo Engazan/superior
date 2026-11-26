@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useI18n, type MessageKey } from '../i18n'
-import { Button, IconButton, RestartIcon, SectionHeader, SettingRow, SettingsCard, useToast } from './ui'
+import { IconButton, RestartIcon, SectionHeader, useToast } from './ui'
 import { useShortcuts, eventToChord, formatChord, setRecording } from '../shortcuts'
 import type { ShortcutAction } from '../types'
 
-const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
+export const ACTIONS: { id: ShortcutAction; labelKey: MessageKey }[] = [
   { id: 'toggleSidebar', labelKey: 'keyboard.toggleSidebar' },
   { id: 'openSettings', labelKey: 'keyboard.openSettings' },
   { id: 'maximizeFocusedCell', labelKey: 'keyboard.maximizeCell' },
@@ -32,28 +32,22 @@ export function KeyboardSection(): React.JSX.Element {
   const { t } = useI18n()
   const toast = useToast()
   const { shortcuts, setShortcut, resetShortcut } = useShortcuts()
-  // Which binding is being recorded: an app action, or the system-wide hotkey.
-  const [recordingFor, setRecordingFor] = useState<ShortcutAction | 'global' | null>(null)
+  // Which app action is being recorded. The system-wide hotkey lives in General.
+  const [recordingFor, setRecordingFor] = useState<ShortcutAction | null>(null)
+  // Read only, so an app shortcut cannot silently reuse the global hotkey.
   const [globalHotkey, setGlobalHotkeyState] = useState<string | null>(null)
 
   useEffect(() => {
     window.api.getSettings().then((s) => setGlobalHotkeyState(s.globalHotkey))
   }, [])
 
-  const applyGlobal = (chord: string | null): void => {
-    void window.api.setGlobalHotkey(chord).then((res) => {
-      setGlobalHotkeyState(res.settings.globalHotkey)
-      if (res.error) toast.error(res.error)
-    })
-  }
-
   // Which action already owns a chord — assigning the same chord twice would
   // silently leave the winner to dispatcher order.
-  const findConflict = (chord: string, self: ShortcutAction | 'global'): string | null => {
+  const findConflict = (chord: string, self: ShortcutAction): string | null => {
     for (const { id, labelKey } of ACTIONS) {
       if (id !== self && shortcuts[id] === chord) return t(labelKey)
     }
-    if (self !== 'global' && globalHotkey === chord) return t('keyboard.globalHotkey')
+    if (globalHotkey === chord) return t('keyboard.globalHotkey')
     return null
   }
 
@@ -79,8 +73,7 @@ export function KeyboardSection(): React.JSX.Element {
         setRecordingFor(null)
         return
       }
-      if (recordingFor === 'global') applyGlobal(chord)
-      else setShortcut(recordingFor, chord)
+      setShortcut(recordingFor, chord)
       setRecordingFor(null)
     }
     window.addEventListener('keydown', onKeyDown, true)
@@ -96,24 +89,6 @@ export function KeyboardSection(): React.JSX.Element {
       <SectionHeader title={t('settings.keyboard')} description={t('keyboard.desc')} />
 
       <div className="space-y-3">
-        {/* System-wide hotkey — registered with the OS, works while the app is
-            hidden. Separate from the in-app action table below. */}
-        <SettingsCard>
-          <SettingRow title={t('keyboard.globalHotkey')} description={t('keyboard.globalHotkeyDesc')}>
-            {globalHotkey && (
-              <Button variant="ghost" size="sm" onClick={() => applyGlobal(null)}>
-                {t('keyboard.globalHotkeyClear')}
-              </Button>
-            )}
-            <ChordButton
-              action={t('keyboard.globalHotkey')}
-              recording={recordingFor === 'global'}
-              chord={globalHotkey ? formatChord(globalHotkey) : t('keyboard.globalHotkeyUnset')}
-              onClick={() => setRecordingFor(recordingFor === 'global' ? null : 'global')}
-            />
-          </SettingRow>
-        </SettingsCard>
-
         <div className="settings-island">
           <div className="flex items-center gap-3 border-b border-edge bg-bar px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-fgmuted">
             <span className="min-w-0 flex-1">{t('keyboard.colAction')}</span>
@@ -164,7 +139,7 @@ export function KeyboardSection(): React.JSX.Element {
 }
 
 /** The recordable chord pill; the accessible name pairs the action with its keys. */
-function ChordButton({
+export function ChordButton({
   action,
   chord,
   recording,

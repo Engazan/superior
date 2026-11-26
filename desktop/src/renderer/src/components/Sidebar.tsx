@@ -26,6 +26,8 @@ import {
   PlusIcon,
   PhoneIcon,
   SearchIcon,
+  ServerIcon,
+  MonitorIcon,
   SlidersIcon,
   StarIcon,
   TrashIcon,
@@ -37,6 +39,7 @@ import { SidebarRail } from './sidebar/SidebarRail'
 import { SessionList } from './sidebar/SessionList'
 import { SidebarUpdate } from './sidebar/SidebarUpdate'
 import { WorkspaceRow } from './sidebar/WorkspaceRow'
+import { NeedsYou } from './sidebar/NeedsYou'
 import { WorktreeSetup } from './WorktreeSetup'
 import { WorkspaceCreateModal } from './sidebar/WorkspaceCreateModal'
 import { FolderEditModal } from './sidebar/FolderEditModal'
@@ -80,6 +83,11 @@ interface Props {
 
 /** Anchor for a shared kebab/context menu: an element (kebab) or a point (right-click). */
 type MenuAnchor = HTMLElement | { x: number; y: number }
+
+/** Host group a project belongs to in the sidebar: "local" or "ssh · <alias>". */
+function folderHostLabel(folder: Folder, localLabel: string): string {
+  return folder.kind === 'remote' && folder.remote ? `ssh · ${folder.remote.host}` : localLabel
+}
 
 /** The project's automatic workspace is implied by the project row. */
 function defaultWorkspace(workspaces: Workspace[]): Workspace | undefined {
@@ -561,6 +569,8 @@ export const Sidebar = memo(function Sidebar({
   // A folder with no workspaces stays listed (so one can be added back); only
   // an active search/favorites filter hides projects without matches.
   const filterActive = !!normalizedQuery || favoritesOnly
+  // Host headers only help once SSH projects sit next to local ones.
+  const showHostGroups = displayFolders.some((folder) => folder.kind === 'remote')
   const clearFilters = (): void => {
     setWorkspaceQuery('')
     setFavoritesOnly(false)
@@ -571,6 +581,12 @@ export const Sidebar = memo(function Sidebar({
       className="superior-sidebar superior-sidebar--expanded flex w-60 shrink-0 select-none flex-col overflow-hidden bg-bar transition-[width] duration-200 ease-out"
     >
       {overlays}
+      <NeedsYou
+        sessions={sessions}
+        workspaces={workspaces}
+        attentionColor={attentionColor}
+        onSelectSession={onSelectSession}
+      />
       <div className="px-3 pt-4">
         <div className="group/heading flex h-7 items-center gap-1 px-1.5">
           <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fgmuted">
@@ -700,7 +716,11 @@ export const Sidebar = memo(function Sidebar({
                 />
               </div>
             ) : (
-            displayFolders.map((folder) => {
+            displayFolders.map((folder, folderIndex) => {
+              const hostLabel = showHostGroups ? folderHostLabel(folder, t('sidebar.hostLocal')) : null
+              const showHostHeader =
+                hostLabel !== null &&
+                (folderIndex === 0 || folderHostLabel(displayFolders[folderIndex - 1], t('sidebar.hostLocal')) !== hostLabel)
               const allWorkspaces = projectWorkspaces(folder.path)
               const folderWorkspaces = allWorkspaces.filter((workspace) => filteredWorkspaceIds.has(workspace.id))
               if (folderWorkspaces.length === 0 && filterActive) return null
@@ -730,6 +750,12 @@ export const Sidebar = memo(function Sidebar({
                   data-folder-path={folder.path}
                   className={beingDragged ? 'rounded-lg opacity-60 ring-1 ring-accentBorder' : undefined}
                 >
+                  {showHostHeader && (
+                    <div className="flex h-7 items-center gap-1.5 px-2.5 pt-2 font-mono text-[11px] text-fgmuted">
+                      {folder.kind === 'remote' ? <ServerIcon size={12} /> : <MonitorIcon size={12} />}
+                      <span className="truncate">{hostLabel}</span>
+                    </div>
+                  )}
                   <FolderHeader
                     folder={folder}
                     open={open}

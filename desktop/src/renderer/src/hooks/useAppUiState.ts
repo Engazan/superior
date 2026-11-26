@@ -11,7 +11,7 @@ export type ProjectModalSource = 'local' | 'git' | 'remote'
  */
 export function useAppUiState() {
   const [view, setView] = useState<AppView>('main')
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>('appearance')
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('general')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   const [rightPanelLoaded, setRightPanelLoaded] = useState(false)

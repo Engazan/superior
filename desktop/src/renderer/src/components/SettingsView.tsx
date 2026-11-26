@@ -7,12 +7,8 @@ import { KeyboardSection } from './KeyboardSection'
 import { IntegrationsSection } from './IntegrationsSection'
 import { ShellCommandSection } from './ShellCommandSection'
 import { MobileRelaySection } from './MobileRelaySection'
-import { THEME_OPTIONS } from '../themeOptions'
-import { useTheme } from '../theme'
-import { useAttentionColor, DEFAULT_ATTENTION_COLOR } from '../attentionColor'
-import { clearUsageStore, primeUsageStore } from '../usageStore'
-import { useUsagePrimary } from '../usagePrimary'
-import { useI18n, LANGUAGES } from '../i18n'
+import { GeneralSection, AppearanceSection, CodeBrowserSection, AgentStatusSection } from './settings/GeneralSections'
+import { useI18n, type MessageKey } from '../i18n'
 import {
   Button,
   ChevronIcon,
@@ -23,46 +19,46 @@ import {
   PhoneIcon,
   KeyboardIcon,
   TerminalIcon,
-  Menu,
-  SectionHeader,
-  SegmentedControl,
-  Select,
-  SettingRow,
-  SettingsCard,
-  Toggle
+  SearchIcon,
+  AgentIcon,
+  CodeIcon,
+  SlidersIcon,
+  Select
 } from './ui'
-import type {
-  AgentSession,
-  FileOpener,
-  Folder,
-  PresetsState,
-  TerminalPreset,
-  UsagePrimary,
-  Workspace
-} from '../types'
+import type { AgentSession, Folder, PresetsState, TerminalPreset, Workspace } from '../types'
 
 const SECTION_ICONS = {
+  general: SlidersIcon,
   appearance: GearIcon,
+  keyboard: KeyboardIcon,
   terminal: TerminalIcon,
-  integrations: BranchIcon,
+  codeBrowser: CodeIcon,
+  agents: AgentIcon,
   presets: TerminalIcon,
   prompts: PromptIcon,
-  daemons: BroadcastIcon,
-  keyboard: KeyboardIcon,
+  integrations: BranchIcon,
+  mobile: PhoneIcon,
   shell: TerminalIcon,
-  mobile: PhoneIcon
+  daemons: BroadcastIcon
 }
 
-export type SettingsSection =
-  | 'appearance'
-  | 'terminal'
-  | 'integrations'
-  | 'presets'
-  | 'prompts'
-  | 'daemons'
-  | 'keyboard'
-  | 'shell'
-  | 'mobile'
+export type SettingsSection = keyof typeof SECTION_ICONS
+
+/** Row titles each section holds, so the nav search also finds individual settings. */
+const SECTION_KEYWORDS: Partial<Record<SettingsSection, MessageKey[]>> = {
+  general: ['settings.language', 'keyboard.globalHotkey', 'notify.setting', 'onboarding.replayTitle', 'elevation.setting'],
+  appearance: ['appearance.theme', 'appearance.accentColor', 'appearance.attentionColor', 'appearance.sidebarWorkspaceTools'],
+  keyboard: ['keyboard.openPalette', 'keyboard.toggleSidebar', 'keyboard.searchTerminal'],
+  terminal: [
+    'terminalSettings.fontFamily',
+    'terminalSettings.cursorStyle',
+    'terminalSettings.scrollback',
+    'terminalSettings.copyOnSelect',
+    'terminalSettings.gpuAcceleration'
+  ],
+  codeBrowser: ['workspaceModes.code', 'workspaceModes.browser', 'fileOpener.title'],
+  agents: ['agentHooks.setting', 'usage.tracking', 'usage.primary']
+}
 
 interface Props {
   initialSection: SettingsSection
@@ -83,396 +79,6 @@ interface Props {
   workspaces: Workspace[]
   folders: Folder[]
   onKillSession: (id: string) => void
-}
-
-const USAGE_PRIMARY_OPTIONS: {
-  value: UsagePrimary
-  labelKey:
-    | 'usage.primaryRemaining'
-    | 'usage.primarySevenDay'
-    | 'usage.primaryCost'
-    | 'usage.primaryTokens'
-    | 'usage.primaryContext'
-}[] = [
-  { value: 'remaining', labelKey: 'usage.primaryRemaining' },
-  { value: 'sevenDay', labelKey: 'usage.primarySevenDay' },
-  { value: 'cost', labelKey: 'usage.primaryCost' },
-  { value: 'tokens', labelKey: 'usage.primaryTokens' },
-  { value: 'context', labelKey: 'usage.primaryContext' }
-]
-
-// Fixed product names — not translated. Badge = brand color + monogram, so the
-// options scan visually without shipping (trademarked) logo artwork.
-const FILE_OPENER_OPTIONS: {
-  value: FileOpener
-  label: string
-  color?: string
-  monogram?: string
-}[] = [
-  { value: 'superior', label: 'Superior', color: '#e67861', monogram: 'S' },
-  { value: 'system', label: '' }, // label resolved via i18n at render time
-  { value: 'vscode', label: 'Visual Studio Code', color: '#007acc', monogram: 'VS' },
-  { value: 'cursor', label: 'Cursor', color: '#1a1a1a', monogram: 'C' },
-  { value: 'zed', label: 'Zed', color: '#2472f2', monogram: 'Z' },
-  { value: 'sublime', label: 'Sublime Text', color: '#ff9800', monogram: 'S' },
-  { value: 'phpstorm', label: 'PhpStorm', color: '#a347ff', monogram: 'PS' },
-  { value: 'webstorm', label: 'WebStorm', color: '#07a3f2', monogram: 'WS' }
-]
-
-/** Small brand badge (or a monitor glyph for the OS default). */
-function EditorBadge({ opener }: { opener: FileOpener }): React.JSX.Element {
-  const opt = FILE_OPENER_OPTIONS.find((o) => o.value === opener)
-  if (!opt?.color || !opt.monogram) {
-    return (
-      <svg
-        className="h-4 w-4 shrink-0 text-fgmuted"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <rect x="1.5" y="2.5" width="13" height="9" rx="1.5" />
-        <path d="M6 14h4M8 11.5V14" />
-      </svg>
-    )
-  }
-  return (
-    <span
-      aria-hidden
-      style={{ backgroundColor: opt.color }}
-      className="grid h-4 w-4 shrink-0 place-items-center rounded-sm text-[7px] font-bold leading-none text-white ring-1 ring-inset ring-white/20"
-    >
-      {opt.monogram}
-    </span>
-  )
-}
-
-/** Icon-capable replacement for the native select (options can't render icons). */
-function FileOpenerSelect({
-  value,
-  onChange
-}: {
-  value: FileOpener
-  onChange: (next: FileOpener) => void
-}): React.JSX.Element {
-  const { t } = useI18n()
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
-  const labelOf = (opener: FileOpener): string =>
-    opener === 'system'
-      ? t('fileOpener.system')
-      : (FILE_OPENER_OPTIONS.find((o) => o.value === opener)?.label ?? opener)
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={anchor !== null}
-        aria-label={t('fileOpener.title')}
-        onClick={(e) => setAnchor((cur) => (cur ? null : e.currentTarget))}
-        className="flex h-8 w-56 max-w-full items-center gap-2 rounded-md border border-edge bg-bar px-2.5 text-sm text-fg transition hover:bg-hover focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
-      >
-        <EditorBadge opener={value} />
-        <span className="min-w-0 flex-1 truncate text-left">{labelOf(value)}</span>
-        <svg
-          className="h-3 w-3 shrink-0 text-fgmuted"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
-      {anchor && (
-        <Menu
-          anchor={anchor}
-          onClose={() => setAnchor(null)}
-          items={FILE_OPENER_OPTIONS.map((opt) => ({
-            id: opt.value,
-            label: opt.value === 'system' ? t('fileOpener.system') : opt.label,
-            icon: <EditorBadge opener={opt.value} />,
-            onSelect: () => onChange(opt.value)
-          }))}
-        />
-      )}
-    </>
-  )
-}
-
-function AppearanceSection({ onOpenOnboarding }: { onOpenOnboarding: () => void }): React.JSX.Element {
-  const { mode, resolved, setMode, accentColor, setAccentColor } = useTheme()
-  const displayedAccent = accentColor ?? (resolved === 'dark' ? '#f08a72' : '#bd5845')
-  const { lang, setLang, t } = useI18n()
-  const { attentionColor, setAttentionColor, resetAttentionColor } = useAttentionColor()
-  const isDefaultAttention = attentionColor.toLowerCase() === DEFAULT_ATTENTION_COLOR
-  const { usagePrimary, setUsagePrimary } = useUsagePrimary()
-
-  const [usageTracking, setUsageTracking] = useState<boolean | null>(null)
-  const [notifications, setNotifications] = useState<boolean | null>(null)
-  const [sidebarWorkspaceTools, setSidebarWorkspaceTools] = useState<boolean | null>(null)
-  const [elevationWarning, setElevationWarning] = useState<boolean | null>(null)
-  const [codeWorkspace, setCodeWorkspace] = useState<boolean | null>(null)
-  const [browserWorkspace, setBrowserWorkspace] = useState<boolean | null>(null)
-  const [agentHooks, setAgentHooksState] = useState<boolean | null>(null)
-  const [fileOpener, setFileOpenerState] = useState<FileOpener>('system')
-  useEffect(() => {
-    window.api.getSettings().then((s) => {
-      setUsageTracking(s.usageTracking)
-      setNotifications(s.notifications)
-      setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools)
-      setElevationWarning(!s.ui.elevationWarningDismissed)
-      setCodeWorkspace(!s.ui.codeWorkspaceDisabled)
-      setBrowserWorkspace(!s.ui.browserWorkspaceDisabled)
-      setAgentHooksState(s.agentHooks)
-      setFileOpenerState(s.fileOpener)
-    })
-  }, [])
-
-  const changeFileOpener = (next: FileOpener): void => {
-    setFileOpenerState(next)
-    void window.api.setFileOpener(next).then((s) => setFileOpenerState(s.fileOpener))
-  }
-
-  const toggleNotifications = (next: boolean): void => {
-    setNotifications(next)
-    window.api.setNotifications(next).then((s) => setNotifications(s.notifications))
-  }
-
-  const toggleAgentHooks = (next: boolean): void => {
-    setAgentHooksState(next)
-    window.api.setAgentHooks(next).then((s) => setAgentHooksState(s.agentHooks))
-  }
-
-  const toggleElevationWarning = (next: boolean): void => {
-    setElevationWarning(next)
-    window.api
-      .setUiState({ elevationWarningDismissed: !next })
-      .then((s) => setElevationWarning(!s.ui.elevationWarningDismissed))
-  }
-
-  const toggleCodeWorkspace = (next: boolean): void => {
-    setCodeWorkspace(next)
-    window.api
-      .setUiState({ codeWorkspaceDisabled: !next })
-      .then((s) => setCodeWorkspace(!s.ui.codeWorkspaceDisabled))
-  }
-
-  const toggleBrowserWorkspace = (next: boolean): void => {
-    setBrowserWorkspace(next)
-    window.api
-      .setUiState({ browserWorkspaceDisabled: !next })
-      .then((s) => setBrowserWorkspace(!s.ui.browserWorkspaceDisabled))
-  }
-
-  const toggleUsageTracking = (next: boolean): void => {
-    setUsageTracking(next)
-    // Reflect the change immediately, then persist (main starts/stops tracking).
-    if (next) primeUsageStore()
-    else clearUsageStore()
-    window.api.setUsageTracking(next).then((s) => setUsageTracking(s.usageTracking))
-  }
-
-  const toggleSidebarWorkspaceTools = (next: boolean): void => {
-    setSidebarWorkspaceTools(next)
-    window.api
-      .setUiState({ sidebarWorkspaceTools: next })
-      .then((s) => setSidebarWorkspaceTools(s.ui.sidebarWorkspaceTools))
-  }
-
-  return (
-    <div className="settings-section">
-      <SectionHeader title={t('settings.appearance')} description={t('appearance.desc')} />
-
-      <div className="space-y-3">
-        <SettingsCard>
-          <SettingRow title={t('appearance.theme')} description={t('appearance.themeDesc')}>
-            <SegmentedControl
-              aria-label={t('appearance.theme')}
-              size="sm"
-              wrap
-              options={THEME_OPTIONS.map((opt) => ({ value: opt.value, label: t(opt.labelKey) }))}
-              value={mode}
-              onChange={setMode}
-            />
-          </SettingRow>
-
-          <SettingRow title={t('settings.language')} description={t('language.desc')}>
-            <SegmentedControl
-              aria-label={t('settings.language')}
-              size="sm"
-              options={LANGUAGES.map((opt) => ({ value: opt.value, label: opt.label }))}
-              value={lang}
-              onChange={setLang}
-            />
-          </SettingRow>
-        </SettingsCard>
-
-        <SettingsCard>
-          <SettingRow
-            title={t('appearance.accentColor')}
-            description={t('appearance.accentColorDesc')}
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => void setAccentColor(null)}
-              className={accentColor === null ? 'invisible' : ''}
-              aria-hidden={accentColor === null || undefined}
-              tabIndex={accentColor === null ? -1 : undefined}
-            >
-              {t('appearance.resetColor')}
-            </Button>
-            <span className="font-mono text-xs uppercase text-fgdim">{displayedAccent}</span>
-            <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-accent bg-accentBg focus-within:ring-2 focus-within:ring-accent/50">
-              <span className="h-5 w-5 rounded-full bg-accent" />
-              <input
-                type="color"
-                value={displayedAccent}
-                onChange={(e) => void setAccentColor(e.target.value)}
-                className="absolute inset-0 cursor-pointer opacity-0"
-                aria-label={t('appearance.accentColor')}
-              />
-            </label>
-          </SettingRow>
-
-          <SettingRow
-            title={t('appearance.sidebarWorkspaceTools')}
-            description={t('appearance.sidebarWorkspaceToolsDesc')}
-          >
-            <Toggle
-              checked={sidebarWorkspaceTools === true}
-              onChange={toggleSidebarWorkspaceTools}
-              label={t('appearance.sidebarWorkspaceTools')}
-            />
-          </SettingRow>
-
-          <SettingRow
-            title={t('appearance.attentionColor')}
-            description={t('appearance.attentionColorDesc')}
-          >
-            {/* invisible (not unmounted) when at the default, so the hex label
-                and swatch don't shift when the button appears */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetAttentionColor}
-              className={isDefaultAttention ? 'invisible' : ''}
-              aria-hidden={isDefaultAttention || undefined}
-              tabIndex={isDefaultAttention ? -1 : undefined}
-            >
-              {t('appearance.resetColor')}
-            </Button>
-            <span className="font-mono text-xs uppercase text-fgdim">{attentionColor}</span>
-            <label className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-edge focus-within:ring-2 focus-within:ring-accent/50">
-              <span
-                className="attention-pulse-dot h-5 w-5 rounded-full"
-                style={{ ['--attn' as string]: attentionColor }}
-              />
-              <input
-                type="color"
-                value={attentionColor}
-                onChange={(e) => setAttentionColor(e.target.value)}
-                className="absolute inset-0 cursor-pointer opacity-0"
-                aria-label={t('appearance.attentionColor')}
-              />
-            </label>
-          </SettingRow>
-        </SettingsCard>
-
-        <SettingsCard>
-          <SettingRow title={t('workspaceModes.code')} description={t('workspaceModes.codeDesc')}>
-            <Toggle
-              checked={codeWorkspace === true}
-              onChange={toggleCodeWorkspace}
-              label={t('workspaceModes.code')}
-            />
-          </SettingRow>
-
-          <SettingRow title={t('workspaceModes.browser')} description={t('workspaceModes.browserDesc')}>
-            <Toggle
-              checked={browserWorkspace === true}
-              onChange={toggleBrowserWorkspace}
-              label={t('workspaceModes.browser')}
-            />
-          </SettingRow>
-        </SettingsCard>
-
-        <SettingsCard>
-          <SettingRow title={t('fileOpener.title')} description={t('fileOpener.desc')}>
-            <FileOpenerSelect value={fileOpener} onChange={changeFileOpener} />
-          </SettingRow>
-
-          <SettingRow title={t('notify.setting')} description={t('notify.settingDesc')}>
-            <Toggle
-              checked={notifications === true}
-              onChange={toggleNotifications}
-              label={t('notify.setting')}
-            />
-          </SettingRow>
-
-          {window.api.platform !== 'win32' && (
-            <SettingRow title={t('agentHooks.setting')} description={t('agentHooks.settingDesc')}>
-              <Toggle
-                checked={agentHooks === true}
-                onChange={toggleAgentHooks}
-                label={t('agentHooks.setting')}
-              />
-            </SettingRow>
-          )}
-
-          {window.api.platform === 'win32' && (
-            <SettingRow title={t('elevation.setting')} description={t('elevation.settingDesc')}>
-              <Toggle
-                checked={elevationWarning === true}
-                onChange={toggleElevationWarning}
-                label={t('elevation.setting')}
-              />
-            </SettingRow>
-          )}
-        </SettingsCard>
-
-        <SettingsCard>
-          <SettingRow title={t('usage.tracking')} description={t('usage.trackingDesc')}>
-            <Toggle
-              checked={usageTracking === true}
-              onChange={toggleUsageTracking}
-              label={t('usage.tracking')}
-            />
-          </SettingRow>
-
-          {usageTracking === true && (
-            <SettingRow title={t('usage.primary')} description={t('usage.primaryDesc')}>
-              {/* Fixed-width wrapper — the Select itself is w-full by design. */}
-              <div className="w-56 max-w-full">
-                <Select
-                  value={usagePrimary}
-                  onChange={(e) => setUsagePrimary(e.target.value as UsagePrimary)}
-                >
-                  {USAGE_PRIMARY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {t(opt.labelKey)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </SettingRow>
-          )}
-        </SettingsCard>
-        <SettingsCard>
-          <SettingRow title={t('onboarding.replayTitle')} description={t('onboarding.replayDescription')}>
-            <Button variant="secondary" onClick={onOpenOnboarding}>{t('onboarding.replay')}</Button>
-          </SettingRow>
-        </SettingsCard>
-      </div>
-    </div>
-  )
 }
 
 export function SettingsView({
@@ -518,30 +124,57 @@ export function SettingsView({
     return () => window.clearInterval(id)
   }, [refreshDaemons])
 
-  const groups: {
+  const allGroups: {
     label: string
     items: { id: SettingsSection; label: string; badge?: number }[]
   }[] = [
     {
-      label: t('settings.personal'),
+      label: t('settings.groupYou'),
       items: [
+        { id: 'general', label: t('settings.general') },
         { id: 'appearance', label: t('settings.appearance') },
-        { id: 'terminal', label: t('terminalSettings.title') },
         { id: 'keyboard', label: t('settings.keyboard') }
       ]
     },
     {
-      label: t('settings.workflow'),
+      label: t('settings.groupWorkspace'),
       items: [
-        { id: 'presets', label: t('settings.terminalPresets') },
-        { id: 'prompts', label: t('settings.prompts') },
-        { id: 'integrations', label: t('settings.integrations') },
-        { id: 'daemons', label: t('settings.daemons'), badge: daemonSessions.length },
-        { id: 'shell', label: t('settings.shellCommand') },
-        { id: 'mobile', label: 'Mobile access' }
+        { id: 'terminal', label: t('terminalSettings.title') },
+        { id: 'codeBrowser', label: t('settings.codeBrowser') }
       ]
+    },
+    {
+      label: t('settings.groupAgents'),
+      items: [
+        { id: 'agents', label: t('settings.agentStatus') },
+        { id: 'presets', label: t('settings.terminalPresets') },
+        { id: 'prompts', label: t('settings.prompts') }
+      ]
+    },
+    {
+      label: t('settings.groupConnections'),
+      items: [
+        { id: 'integrations', label: t('settings.integrations') },
+        { id: 'mobile', label: t('settings.mobileAccess') },
+        { id: 'shell', label: t('settings.shellCommand') }
+      ]
+    },
+    {
+      label: t('settings.groupSystem'),
+      items: [{ id: 'daemons', label: t('settings.daemons'), badge: daemonSessions.length }]
     }
   ]
+
+  // Search matches a section's name or the titles of the settings it holds.
+  const [query, setQuery] = useState('')
+  const needle = query.trim().toLocaleLowerCase()
+  const matches = (item: { id: SettingsSection; label: string }): boolean =>
+    !needle ||
+    item.label.toLocaleLowerCase().includes(needle) ||
+    (SECTION_KEYWORDS[item.id] ?? []).some((key) => t(key).toLocaleLowerCase().includes(needle))
+  const groups = allGroups
+    .map((group) => ({ ...group, items: group.items.filter(matches) }))
+    .filter((group) => group.items.length > 0)
 
   // Arrow keys / Home / End move between nav items (Tab still leaves the nav).
   const onNavKeyDown = (e: React.KeyboardEvent<HTMLElement>): void => {
@@ -562,13 +195,13 @@ export function SettingsView({
       <div className="settings-mobile-nav superior-settings-panel items-center gap-3 bg-bar p-2">
         <Button variant="ghost" onClick={onBack}><ChevronIcon direction="left" />{t('settings.back')}</Button>
         <Select aria-label={t('sidebar.settings')} value={section} onChange={(event) => setSection(event.target.value as SettingsSection)}>
-          {groups.map((group) => <optgroup key={group.label} label={group.label}>
+          {allGroups.map((group) => <optgroup key={group.label} label={group.label}>
             {group.items.map((item) => <option key={item.id} value={item.id}>{item.label}{item.badge ? ` (${item.badge})` : ''}</option>)}
           </optgroup>)}
         </Select>
       </div>
       {/* Settings sidebar */}
-      <aside className="settings-navigation superior-settings-panel flex w-52 shrink-0 flex-col overflow-hidden bg-bar">
+      <aside className="settings-navigation superior-settings-panel flex w-56 shrink-0 flex-col overflow-hidden bg-bar">
         <div className="border-b border-edge px-2 py-2">
           <button
             type="button"
@@ -578,12 +211,30 @@ export function SettingsView({
             <ChevronIcon direction="left" size={16} />
             {t('settings.back')}
           </button>
+          <div className="relative mt-2">
+            <SearchIcon size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fgmuted" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && groups[0]) setSection(groups[0].items[0].id)
+                if (e.key === 'Escape') setQuery('')
+              }}
+              placeholder={t('settings.search')}
+              aria-label={t('settings.search')}
+              className="h-8 w-full rounded-md border border-edge bg-panel pl-8 pr-2 text-sm text-fg placeholder:text-fgmuted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
+            />
+          </div>
         </div>
         <nav
           aria-label={t('sidebar.settings')}
           onKeyDown={onNavKeyDown}
           className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
         >
+          {groups.length === 0 && (
+            <p role="status" className="px-2 text-sm text-fgmuted">{t('settings.searchEmpty')}</p>
+          )}
           {groups.map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
               <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-fgmuted">
@@ -629,7 +280,10 @@ export function SettingsView({
       <div ref={contentRef} className="settings-content superior-settings-panel min-h-0 min-w-0 flex-1 overflow-y-auto bg-panel">
         <div className="settings-content-inner mx-auto w-full max-w-4xl">
           {section === 'terminal' && <TerminalSettingsSection />}
-          {section === 'appearance' && <AppearanceSection onOpenOnboarding={onOpenOnboarding} />}
+          {section === 'general' && <GeneralSection onOpenOnboarding={onOpenOnboarding} />}
+          {section === 'appearance' && <AppearanceSection />}
+          {section === 'codeBrowser' && <CodeBrowserSection />}
+          {section === 'agents' && <AgentStatusSection />}
           {section === 'integrations' && (
             <IntegrationsSection onChanged={onIntegrationsChanged} />
           )}

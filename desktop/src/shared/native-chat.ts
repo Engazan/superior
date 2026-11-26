@@ -51,6 +51,8 @@ export type ChatAction =
   | { type: 'answer'; id: string; requestId: string; decision?: 'accept' | 'decline'; answers?: Record<string, string> }
   | { type: 'fork'; id: string; turnId: string }
   | { type: 'delete'; id: string }
+  /** User-started worker for a coordinator; same isolation and limits as superior_worker_start. */
+  | { type: 'addWorker'; id: string; name: string; prompt: string }
 
 export function chatItem(raw: Record<string, unknown>, turnId: string, complete: boolean): ChatItem {
   const type = String(raw.type)
@@ -64,4 +66,4 @@ export function chatItem(raw: Record<string, unknown>, turnId: string, complete:
     title: type, text: text.slice(0, 500_000), complete }
 }
 
-export type NativeChatSummary = Pick<NativeChat, 'id' | 'workspaceId' | 'title' | 'plan' | 'status'>
+export type NativeChatSummary = Pick<NativeChat, 'id' | 'workspaceId' | 'title' | 'plan' | 'status' | 'coordinator'>

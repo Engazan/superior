@@ -166,6 +166,12 @@ export async function nativeChatAction(action: ChatAction): Promise<NativeChat |
     return chat
   }
   if (action.type === 'message') { deliverMail(chat, action.to, action.text); return chat }
+  if (action.type === 'addWorker') {
+    if (chat.stopRequested && (chat.status === 'working' || chat.status === 'waiting')) throw new Error('Coordinator is stopping.')
+    chat.stopRequested = false
+    dispatchWorker(chat, action.name, action.prompt, `user:${randomUUID()}`)
+    return chat
+  }
   if (action.type === 'stop') {
     chat.stopRequested = true
     await Promise.allSettled(all().filter(c => c.parentId === chat.id).map(child => nativeChatAction({ type: 'stop', id: child.id })))
@@ -248,21 +254,31 @@ async function workerTool(chat: NativeChat, params: RpcRecord): Promise<unknown>
     return state()
   }
   if (params.tool !== 'superior_worker_start' || !chat.coordinator || chat.parentId || chat.plan) throw new Error('Worker dispatch is only available in coordinator execution mode.')
-  if (typeof args.name !== 'string' || !args.name.trim() || args.name.length > 80 || typeof args.prompt !== 'string' || !args.prompt.trim() || args.prompt.length > 50000 || typeof params.callId !== 'string') throw new Error('Invalid worker task.')
-  const previous = all().find(c => c.parentId === chat.id && c.dispatchCallId === params.callId)
+  if (typeof params.callId !== 'string') throw new Error('Invalid worker task.')
+  return dispatchWorker(chat, args.name, args.prompt, params.callId)
+}
+/**
+ * Start one worker of a coordinator in a new worktree from its committed HEAD.
+ * Shared by the coordinator's superior_worker_start tool and the Orchestrate
+ * screen's "Add worker" action; `callId` makes a repeated request idempotent.
+ */
+function dispatchWorker(chat: NativeChat, name: unknown, task: unknown, callId: string): { dispatchId: string; status: string; base?: string } {
+  if (!chat.coordinator || chat.parentId) throw new Error('Workers can only be added to a coordinator.')
+  if (typeof name !== 'string' || !name.trim() || name.length > 80 || typeof task !== 'string' || !task.trim() || task.length > 50000) throw new Error('Invalid worker task.')
+  const previous = all().find(c => c.parentId === chat.id && c.dispatchCallId === callId)
   if (previous) return { dispatchId: previous.id, status: previous.status }
   if (all().filter(c => c.parentId === chat.id && ['working', 'waiting'].includes(c.status)).length >= 3) throw new Error('Three workers are already running. Wait for a result before dispatching another.')
   if (all().length >= 200) throw new Error('Chat history limit reached.')
-  const worker: NativeChat = { id: randomUUID(), workspaceId: chat.workspaceId, cwd: chat.cwd, title: args.name,
-    parentId: chat.id, dispatchCallId: params.callId, plan: false, status: 'working', items: [], approvals: [], createdAt: Date.now() }
+  const worker: NativeChat = { id: randomUUID(), workspaceId: chat.workspaceId, cwd: chat.cwd, title: name,
+    parentId: chat.id, dispatchCallId: callId, plan: false, status: 'working', items: [], approvals: [], createdAt: Date.now() }
   all().push(worker); persist()
-  const prompt = args.prompt
+  const prompt = task
   void (async () => {
     try {
       const parent = workspace(chat.workspaceId)
       const base = await runGit(chat.cwd, ['rev-parse', 'HEAD'])
       if (worker.stopRequested || chat.stopRequested) return
-      const state = await addWorktreeWorkspace({ folderPath: parent.folderPath, name: args.name as string, branch: `worker/${worker.id}`, createBranch: true }, false, base)
+      const state = await addWorktreeWorkspace({ folderPath: parent.folderPath, name, branch: `worker/${worker.id}`, createBranch: true }, false, base)
       const ws = state.workspaces.find(w => w.branch === `worker/${worker.id}`)
       if (!ws?.worktreePath) throw new Error('Worker worktree was not created.')
       worker.workspaceId = ws.id; worker.cwd = ws.worktreePath
@@ -270,7 +286,7 @@ async function workerTool(chat: NativeChat, params: RpcRecord): Promise<unknown>
       for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.webContents.send(IPC.WORKSPACE_STATE_CHANGED, { ...state, source: 'tasks' })
       if (worker.stopRequested || chat.stopRequested) return
       worker.status = 'idle'
-      await nativeChatAction({ type: 'send', id: worker.id, text: `Task ownership: ${args.name}\nDispatch: ${worker.id}\nBase commit: ${base}\n\n${prompt}\n\nWork only in your isolated worktree. Do not push or merge. Report changed files, checks, local commit ids and blockers in the final response.`, plan: false })
+      await nativeChatAction({ type: 'send', id: worker.id, text: `Task ownership: ${name}\nDispatch: ${worker.id}\nBase commit: ${base}\n\n${prompt}\n\nWork only in your isolated worktree. Do not push or merge. Report changed files, checks, local commit ids and blockers in the final response.`, plan: false })
     } catch (error) { worker.status = worker.stopRequested ? 'interrupted' : 'error'; worker.error = (error as Error).message; persist() }
   })().catch(error => console.error('[workers] failed to persist worker result:', error))
   return { dispatchId: worker.id, status: 'preparing', base: 'Coordinator committed HEAD; uncommitted edits are not copied.' }

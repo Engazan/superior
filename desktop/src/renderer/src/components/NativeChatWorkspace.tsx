@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { ChatAction, ChatApproval, NativeChat, NativeChatSummary, WorkerSummary } from '@shared/native-chat'
+import type { ChatAction, ChatApproval, NativeChat, NativeChatSummary } from '@shared/native-chat'
+import { CoordinatorHeader, GoalForm, InboxTimeline, WorkerGrid } from './chat/Orchestration'
 import type { Workspace } from '../types'
 import { useI18n } from '../i18n'
 import { Button, Notice, Select, Textarea } from './ui'
 
-export function NativeChatWorkspace({ workspace, onOpenWorker }: { workspace: Workspace; onOpenWorker: (workspaceId: string) => void }): React.JSX.Element {
+/**
+ * Codex chats of a workspace. With `coordinatorOnly` it is the Orchestrate
+ * screen: only coordinator chats, created with worker tools enabled.
+ */
+export function NativeChatWorkspace({ workspace, onOpenWorker, coordinatorOnly = false }: { workspace: Workspace; onOpenWorker: (workspaceId: string) => void; coordinatorOnly?: boolean }): React.JSX.Element {
   const { t } = useI18n()
   const [chats, setChats] = useState<NativeChatSummary[]>([])
   const [detail, setDetail] = useState<NativeChat | null>(null)
@@ -21,7 +26,7 @@ export function NativeChatWorkspace({ workspace, onOpenWorker }: { workspace: Wo
     let timer: ReturnType<typeof setTimeout>
     const refresh = async (): Promise<void> => {
       try {
-        const next = await window.api.listNativeChats(workspace.id)
+        const next = (await window.api.listNativeChats(workspace.id)).filter(c => !coordinatorOnly || c.coordinator)
         const id = next.some(c => c.id === selected) ? selected : next.at(-1)?.id
         const nextDetail = id ? await window.api.getNativeChat(id) : null
         if (active) { setChats(next); setDetail(nextDetail) }
@@ -31,30 +36,52 @@ export function NativeChatWorkspace({ workspace, onOpenWorker }: { workspace: Wo
     }
     void refresh()
     return () => { active = false; clearTimeout(timer) }
-  }, [workspace.id, selected])
+  }, [workspace.id, selected, coordinatorOnly])
   const act = async (action: ChatAction): Promise<boolean> => {
     if (locked.current) return false
     locked.current = true; setBusy(true); setError('')
     try {
       const result = await window.api.nativeChatAction(action)
       if (result && result.workspaceId === workspace.id) { setSelected(result.id); setDetail(result) }
-      setChats(await window.api.listNativeChats(workspace.id))
+      setChats((await window.api.listNativeChats(workspace.id)).filter(c => !coordinatorOnly || c.coordinator))
       return true
     } catch (e) { setError(String(e)); return false }
+    finally { locked.current = false; setBusy(false) }
+  }
+  // New orchestration = a coordinator chat whose first message is the goal.
+  const [goalOpen, setGoalOpen] = useState(false)
+  const startOrchestration = async (goal: string): Promise<void> => {
+    if (locked.current) return
+    locked.current = true; setBusy(true); setError('')
+    try {
+      const created = await window.api.nativeChatAction({ type: 'create', workspaceId: workspace.id, coordinator: true })
+      if (created) {
+        setSelected(created.id)
+        const started = await window.api.nativeChatAction({ type: 'send', id: created.id, text: goal, plan: false })
+        setDetail(started ?? created)
+      }
+      setChats((await window.api.listNativeChats(workspace.id)).filter(c => !coordinatorOnly || c.coordinator))
+      setGoalOpen(false)
+    } catch (e) { setError(String(e)) }
     finally { locked.current = false; setBusy(false) }
   }
   return <div className="flex h-full min-w-0 flex-1 flex-col bg-panel">
     <div className="flex shrink-0 items-center gap-2 border-b border-edge p-2">
       <Select aria-label="Chat" value={chat?.id ?? ''} onChange={e => setSelected(e.target.value)} className="min-w-0 flex-1">
-        {!chats.length && <option value="">Codex</option>}{chats.map(c => <option key={c.id} value={c.id}>{c.title} · {c.status}</option>)}
+        {!chats.length && <option value="">{coordinatorOnly ? t('chat.coordinator') : 'Codex'}</option>}{chats.map(c => <option key={c.id} value={c.id}>{c.title} · {c.status}</option>)}
       </Select>
-      <Button size="sm" disabled={busy} onClick={() => void act({ type: 'create', workspaceId: workspace.id })}>{t('chat.new')}</Button>
-      <Button size="sm" variant="secondary" disabled={busy} onClick={() => void act({ type: 'create', workspaceId: workspace.id, coordinator: true })}>{t('chat.coordinator')}</Button>
+      {coordinatorOnly
+        ? <Button size="sm" disabled={busy} aria-expanded={goalOpen} onClick={() => setGoalOpen(v => !v)}>{t('orchestrate.new')}</Button>
+        : <>
+          <Button size="sm" disabled={busy} onClick={() => void act({ type: 'create', workspaceId: workspace.id })}>{t('chat.new')}</Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => void act({ type: 'create', workspaceId: workspace.id, coordinator: true })}>{t('chat.coordinator')}</Button>
+        </>}
       {chat && <Button variant="ghost" size="sm" disabled={busy || chat.status === 'working' || chat.status === 'waiting'} onClick={() => void act({ type: 'delete', id: chat.id })}>{t('review.remove')}</Button>}
     </div>
+    {goalOpen && <GoalForm busy={busy} onCancel={() => setGoalOpen(false)} onSubmit={goal => void startOrchestration(goal)} />}
     {error && <Notice>{error}</Notice>}
     {chat ? <ChatBody key={chat.id} chat={chat} workspace={workspace} act={act} busy={busy} onOpenWorker={onOpenWorker} />
-      : <p className="p-6 text-sm text-fgmuted">{t('chat.intro')}</p>}
+      : <p className="p-6 text-sm text-fgmuted">{t(coordinatorOnly ? 'orchestrate.intro' : 'chat.intro')}</p>}
   </div>
 }
 function ChatBody({ chat, workspace, act, busy, onOpenWorker }: { chat: NativeChat; workspace: Workspace; act: (action: ChatAction) => Promise<boolean>; busy: boolean; onOpenWorker: (workspaceId: string) => void }): React.JSX.Element {
@@ -75,10 +102,21 @@ function ChatBody({ chat, workspace, act, busy, onOpenWorker }: { chat: NativeCh
     if (!text.trim() || running || busy) return
     if (await act({ type: 'send', id: chat.id, text, plan })) draft('')
   }
+  // Coordinator chats use the Orchestrate layout: goal + workers on the left,
+  // the durable mailbox in its own column on the right.
+  const inbox = chat.inbox?.length ? <InboxTimeline inbox={chat.inbox} workers={chat.workers ?? []} />
+    : <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-fgmuted">{t('chat.inbox')} · 0</p>
+  const mailbox = chat.coordinator
+    ? <aside aria-label={t('chat.inbox')} className="superior-orchestrate-mailbox hidden min-h-0 w-80 shrink-0 overflow-y-auto border-l border-edge p-4 @4xl:block">{inbox}</aside>
+    : null
   return <>
+    <div className={chat.coordinator ? '@container flex min-h-0 flex-1 flex-col' : 'contents'}>
+    <div className={chat.coordinator ? 'flex min-h-0 flex-1 flex-col @4xl:flex-row' : 'contents'}>
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" onScroll={e => { const el = e.currentTarget; following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100 }}>
-      {!!chat.workers?.length && <section className="space-y-2"><h3 className="text-sm font-medium">{t('chat.workers')}</h3>{chat.workers.map(worker => <WorkerCard key={worker.id} worker={worker} chatId={chat.id} act={act} busy={busy} onOpen={onOpenWorker} />)}</section>}
-      {!!chat.inbox?.length && <details className="rounded border border-edge p-2 text-xs"><summary>{t('chat.inbox')} ({chat.inbox.length})</summary>{chat.inbox.map(m => <p key={m.id} className="whitespace-pre-wrap py-1">{m.from.slice(0, 8)} · {m.text}</p>)}</details>}
+      {chat.coordinator && <CoordinatorHeader chat={chat} act={act} busy={busy} />}
+      {!!chat.workers?.length && <WorkerGrid workers={chat.workers} chatId={chat.id} act={act} busy={busy} onOpen={onOpenWorker} />}
+      {chat.coordinator && <div className="@4xl:hidden">{inbox}</div>}
+      {!chat.coordinator && !!chat.inbox?.length && <InboxTimeline inbox={chat.inbox} workers={chat.workers ?? []} />}
       {chat.items.map(item => <article key={item.id} className="rounded-lg border border-edge p-3 text-sm">
         <div className="mb-2 text-xs text-fgmuted">{item.kind} · {item.title}{!item.complete ? ' …' : ''}</div>
         {item.kind === 'tool' ? <details><summary className="cursor-pointer">{item.text.split('\n')[0].slice(0, 160)}</summary><pre className="overflow-auto whitespace-pre-wrap break-words text-xs">{item.text}</pre></details>
@@ -88,6 +126,9 @@ function ChatBody({ chat, workspace, act, busy, onOpenWorker }: { chat: NativeCh
       {chat.approvals.map(approval => <Approval key={approval.id} approval={approval} chatId={chat.id} act={act} busy={busy} />)}
       {chat.error && <Notice>{chat.error}</Notice>}
       <div ref={bottom} />
+    </div>
+    {mailbox}
+    </div>
     </div>
     <div className="shrink-0 space-y-2 border-t border-edge p-3">
       <p className="text-xs text-fgmuted">{workspace.name} · {workspace.branch ?? chat.cwd} · Codex · {chat.status}</p>
@@ -119,16 +160,3 @@ function Approval({ approval, chatId, act, busy }: { approval: ChatApproval; cha
   </section>
 }
 
-function WorkerCard({ worker, chatId, act, busy, onOpen }: { worker: WorkerSummary; chatId: string; act: (action: ChatAction) => Promise<boolean>; busy: boolean; onOpen: (id: string) => void }): React.JSX.Element {
-  const { t } = useI18n()
-  const [message, setMessage] = useState('')
-  return <article className="space-y-2 rounded border border-edge p-2 text-xs">
-    <div className="flex items-center justify-between"><span>{worker.title} · {worker.status}</span><Button size="xs" variant="ghost" onClick={() => onOpen(worker.workspaceId)}>{t('chat.openWorker')}</Button></div>
-    <p className="break-all text-fgmuted">{worker.branch} · {worker.id.slice(0, 8)}</p>
-    {worker.summary && <details><summary>{t('chat.result')}</summary><pre className="whitespace-pre-wrap break-words">{worker.summary}</pre></details>}
-    <Textarea rows={2} maxLength={10000} value={message} aria-label={t('chat.messageWorker')} onChange={e => setMessage(e.target.value)} />
-    <div className="flex gap-2"><Button size="xs" disabled={busy || !message.trim()} onClick={() => void act({ type: 'message', id: chatId, to: worker.id, text: message }).then(ok => { if (ok) setMessage('') })}>{t('chat.messageWorker')}</Button>
-      {['working', 'waiting'].includes(worker.status) && <Button size="xs" variant="ghost" disabled={busy} onClick={() => void act({ type: 'stop', id: worker.id })}>{t('chat.stop')}</Button>}
-    </div>
-  </article>
-}

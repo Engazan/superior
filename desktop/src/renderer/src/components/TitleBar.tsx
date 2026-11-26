@@ -3,8 +3,9 @@ import { WindowControls } from './WindowControls'
 import { SidebarToggle } from './SidebarToggle'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { BranchSwitcher } from './BranchSwitcher'
-import { AgentIcon, BranchIcon, BroadcastIcon, ChatIcon, CodeIcon, DashboardIcon, GlobeIcon, PlusIcon, PromptIcon, SearchIcon } from './ui'
+import { AgentIcon, BranchIcon, BroadcastIcon, ChatIcon, CodeIcon, DashboardIcon, GlobeIcon, PlusIcon, PromptIcon, SearchIcon, SunIcon, MoonIcon, OrchestrateIcon } from './ui'
 import { useI18n } from '../i18n'
+import { useTheme } from '../theme'
 import { formatChord, useShortcuts, useShortcutTitle } from '../shortcuts'
 import { barTint } from '../tint'
 import type { GitStatus, Profile } from '../types'
@@ -16,6 +17,7 @@ const MODE_ICONS = {
   code: CodeIcon,
   browser: GlobeIcon,
   chat: ChatIcon,
+  orchestrate: OrchestrateIcon,
   dashboard: DashboardIcon
 } satisfies Record<WorkspaceMode, typeof AgentIcon>
 
@@ -112,6 +114,7 @@ export function TitleBar({
   tintColor
 }: Props): React.JSX.Element {
   const { t } = useI18n()
+  const { resolved, setMode } = useTheme()
   const shortcutTitle = useShortcutTitle()
   const { shortcuts } = useShortcuts()
   const paletteShortcut = formatChord(shortcuts.openPalette)
@@ -128,6 +131,8 @@ export function TitleBar({
       className="superior-titlebar app-drag relative z-40 flex min-h-[59px] shrink-0 items-center bg-panel transition-colors duration-200"
       style={tint}
     >
+      {/* Brand gradient hairline, matching the website's window mockup. */}
+      <span aria-hidden className="superior-brand-line pointer-events-none absolute inset-x-0 top-0 h-px" />
       {/* LEFT — sidebar toggle + git status. */}
       <div
         className={`superior-titlebar-start flex min-w-0 items-center ${isMac ? 'pl-20' : 'pl-4'}`}
@@ -282,6 +287,18 @@ export function TitleBar({
               onManage={onManageProfiles}
             />
           </div>
+        )}
+
+        {showToggle && (
+          <button
+            type="button"
+            onClick={() => void setMode(resolved === 'dark' ? 'light' : 'dark')}
+            title={t('titlebar.toggleTheme')}
+            aria-label={t('titlebar.toggleTheme')}
+            className={`${TB_BTN} superior-theme-toggle text-fgdim`}
+          >
+            {resolved === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+          </button>
         )}
 
         {showToggle && (

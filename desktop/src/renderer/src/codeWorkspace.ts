@@ -1,7 +1,7 @@
 import type { FsEntry } from './types'
 
-export type WorkspaceMode = 'terminals' | 'code' | 'browser' | 'chat' | 'dashboard'
-export const WORKSPACE_MODES: readonly WorkspaceMode[] = ['terminals', 'code', 'browser', 'chat', 'dashboard']
+export type WorkspaceMode = 'terminals' | 'code' | 'browser' | 'chat' | 'orchestrate' | 'dashboard'
+export const WORKSPACE_MODES: readonly WorkspaceMode[] = ['terminals', 'code', 'browser', 'chat', 'orchestrate', 'dashboard']
 /** Cycle to the next mode, skipping modes turned off in settings; the terminals mode is always available. */
 export function nextWorkspaceMode(mode: WorkspaceMode, disabled: readonly WorkspaceMode[] = []): WorkspaceMode {
   const enabled = WORKSPACE_MODES.filter((item) => item === 'terminals' || !disabled.includes(item))
@@ -108,7 +108,7 @@ export function restoreCodeWorkspaces(raw: string | null): Record<string, CodeWo
       if (Array.isArray(value.selected)) {
         for (const path of value.selected) if (typeof path === 'string') state = reduceCodeWorkspace(state, { type: 'select', path })
       }
-      result[id] = { ...state, mode: value.mode === 'dashboard' ? 'dashboard' : value.mode === 'chat' ? 'chat' : value.mode === 'browser' ? 'browser' : value.mode === 'code' ? 'code' : 'terminals', split: value.split === true,
+      result[id] = { ...state, mode: value.mode === 'dashboard' ? 'dashboard' : value.mode === 'chat' ? 'chat' : value.mode === 'orchestrate' ? 'orchestrate' : value.mode === 'browser' ? 'browser' : value.mode === 'code' ? 'code' : 'terminals', split: value.split === true,
         focusedGroup: value.split === true && value.focusedGroup === 1 ? 1 : 0,
         ratio: typeof value.ratio === 'number' && Number.isFinite(value.ratio) ? Math.max(0.2, Math.min(0.8, value.ratio)) : 0.5 }
     }
