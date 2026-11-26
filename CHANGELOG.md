@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0] - 2026-11-26
+
+### Added
+
+- **Orchestrate mode.** Set a goal for a coordinator chat, track its four phases,
+  add workers directly, and pause the coordinator and its workers together.
+  View worker status and messages in the same workspace.
+- **Terminal attention.** The sidebar's Needs you queue links to terminals that
+  need attention. Terminal panes show whether an agent is working, needs
+  attention, or has exited, and flag failures.
+
+### Changed
+
+- **Desktop settings.** Group settings into You, Workspace, Agents, Connections,
+  and System. Search the settings navigation, preview themes, and find the
+  global hotkey under General.
+- **Project sidebar.** Group local and SSH projects by host when both are
+  present. Nest terminal sessions under their worktrees and show running agents
+  as status dots. The collapsed sidebar shows project and worktree initials.
+- **Title bar.** Show the active project and worktree, add a light and dark theme
+  toggle, and highlight the active workspace mode with the accent color.
+
 ## [0.39.3] - 2026-11-21
 
 ### Changed
