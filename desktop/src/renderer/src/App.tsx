@@ -880,6 +880,7 @@ export default function App(): React.JSX.Element {
         workspaceModeEnabled={!!ws.activeWorkspaceId}
         dashboardPendingCount={dashboard.reviews.data?.pendingCount ?? null}
         projectName={ws.activeFolder?.displayName?.trim() || ws.activeFolder?.name}
+        workspaceName={ws.activeWorkspace?.name}
         onOpenPalette={() => setPaletteOpen(true)}
         gitStatus={view === 'main' ? gitStatus : null}
         gitLoading={gitLoading}

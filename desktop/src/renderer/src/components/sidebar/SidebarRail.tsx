@@ -2,10 +2,11 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useI18n } from '../../i18n'
 import { useShortcutTitle } from '../../shortcuts'
 import { GearIcon, PhoneIcon, PlusIcon } from '../ui'
-import { FolderGlyph, WorkingSpinner, folderLabel, folderTitle, initial } from './parts'
+import { FolderGlyph, WorkingSpinner, folderLabel, folderTitle, initials } from './parts'
+import { AgentDots } from './AgentDots'
 import { SidebarUpdate } from './SidebarUpdate'
 import type { UpdateController } from '../../hooks/useUpdateCheck'
-import type { Folder, Workspace } from '../../types'
+import type { AgentSession, Folder, Workspace } from '../../types'
 
 type MenuAnchor = HTMLElement | { x: number; y: number }
 
@@ -14,6 +15,8 @@ interface Props {
   /** a project's workspaces in display order */
   projectWorkspaces: (folderPath: string) => Workspace[]
   activeWorkspaceId: string | null
+  /** terminals per workspace id, for the status dots under each worktree */
+  sessionsByWorkspace: ReadonlyMap<string, AgentSession[]>
   busyWorkspaceIds: Set<string>
   attentionWorkspaceIds: Set<string>
   attentionColor: string
@@ -33,11 +36,16 @@ interface Props {
 const RAIL_BTN =
   'relative flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50'
 
-/** Collapsed sidebar: workspace initials with the same activity and selection cues. */
+/**
+ * Collapsed sidebar: each project is its initials tile (accented while active),
+ * and its worktrees hang below it on a guide line as two-letter marks with the
+ * same agent status dots as the expanded rows.
+ */
 export function SidebarRail({
   folders,
   projectWorkspaces,
   activeWorkspaceId,
+  sessionsByWorkspace,
   busyWorkspaceIds,
   attentionWorkspaceIds,
   attentionColor,
@@ -61,7 +69,7 @@ export function SidebarRail({
     }
   }
   return (
-    <aside className="superior-sidebar flex w-14 shrink-0 select-none flex-col items-stretch overflow-hidden bg-bar transition-[width] duration-200 ease-out">
+    <aside className="superior-sidebar flex w-16 shrink-0 select-none flex-col items-stretch overflow-hidden bg-bar transition-[width] duration-200 ease-out">
       {overlays}
       <div className="flex flex-col items-center gap-1 border-b border-edge p-2">
         <button
@@ -90,12 +98,14 @@ export function SidebarRail({
             const folderWorkspaces = projectWorkspaces(folder.path)
             const folderBusy = folderWorkspaces.some((w) => busyWorkspaceIds.has(w.id))
             const folderAttn = folderWorkspaces.some((w) => attentionWorkspaceIds.has(w.id))
+            const folderActive = folderWorkspaces.some((w) => w.id === activeWorkspaceId)
+            const label = folderLabel(folder)
             return (
               <div key={folder.path} className="flex w-full flex-col items-center gap-1.5">
-                {i > 0 && <div className="my-1 h-px w-6 bg-edge" />}
+                {i > 0 && <div className="my-1 h-px w-8 bg-edge" />}
 
-                {/* Project marker — folder glyph; jumps to its first workspace.
-                    With no workspaces it expands the sidebar instead of no-oping. */}
+                {/* Project tile — its initials, like the expanded header; jumps to
+                    its first workspace, or expands the sidebar when it has none. */}
                 <button
                   type="button"
                   onClick={() => {
@@ -108,61 +118,68 @@ export function SidebarRail({
                   }}
                   onKeyDown={(e) => menuKey(e, (anchor) => onFolderMenu(folder.path, anchor))}
                   title={folderTitle(folder)}
-                  aria-label={folderLabel(folder)}
+                  aria-label={label}
+                  aria-current={folderActive || undefined}
                   aria-haspopup="menu"
-                  style={folder.color ? { color: folder.color } : undefined}
-                  className={`${RAIL_BTN} text-fgmuted hover:bg-hover hover:text-fg`}
+                  data-active={folderActive}
+                  className="superior-rail-project relative grid h-9 w-9 place-items-center rounded-[10px] text-xs font-bold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50"
                 >
-                  <FolderGlyph folder={folder} />
+                  <span style={folder.color ? { color: folder.color } : undefined} className="leading-none">
+                    {folder.icon ? <FolderGlyph folder={folder} size={16} /> : initials(label).toUpperCase()}
+                  </span>
                   {folderAttn ? (
                     <span
                       style={{ '--attn': attentionColor } as CSSProperties}
-                      className="attention-pulse-dot absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-bar"
+                      className="attention-pulse-dot absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-bar"
                     />
                   ) : folderBusy ? (
-                    <WorkingSpinner className="absolute -right-0.5 -top-0.5 h-3 w-3" />
+                    <WorkingSpinner className="absolute -right-1 -top-1 h-3 w-3" />
                   ) : null}
                 </button>
 
-                {/* Workspaces — square initial badges */}
-                {folderWorkspaces.map((ws) => {
-                  const active = ws.id === activeWorkspaceId
-                  const busy = busyWorkspaceIds.has(ws.id)
-                  const attn = attentionWorkspaceIds.has(ws.id)
-                  const label = `${folderLabel(folder)} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`
-                  return (
-                    <button
-                      key={ws.id}
-                      type="button"
-                      onClick={() => onSelectWorkspace(ws.id)}
-                      onContextMenu={(e) => {
-                        e.preventDefault()
-                        onWorkspaceMenu(ws.id, { x: e.clientX, y: e.clientY })
-                      }}
-                      onKeyDown={(e) => menuKey(e, (anchor) => onWorkspaceMenu(ws.id, anchor))}
-                      aria-current={active || undefined}
-                      aria-label={label}
-                      title={label}
-                      style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
-                      className={`${RAIL_BTN} text-xs font-semibold ${
-                        active
-                          ? 'bg-accentBg text-accent ring-1 ring-inset ring-accentBorder'
-                          : 'text-fgdim hover:bg-hover hover:text-fg'
-                      }`}
-                    >
-                      {initial(ws.name)}
-                      {active && <span aria-hidden className="absolute inset-y-2 -left-2 w-0.5 rounded-full bg-accent" />}
-                      {attn ? (
-                        <span
-                          style={{ '--attn': attentionColor } as CSSProperties}
-                          className="attention-pulse-dot absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-bar"
-                        />
-                      ) : busy ? (
-                        <WorkingSpinner className="absolute -right-1 -top-1 h-3.5 w-3.5" />
-                      ) : null}
-                    </button>
-                  )
-                })}
+                {/* Worktrees — two-letter marks on a guide line under their project. */}
+                {folderWorkspaces.length > 0 && (
+                  <div className="ml-3 flex flex-col gap-1 self-stretch border-l border-edge pl-1.5">
+                    {folderWorkspaces.map((ws) => {
+                      const active = ws.id === activeWorkspaceId
+                      const attn = attentionWorkspaceIds.has(ws.id)
+                      const running = (sessionsByWorkspace.get(ws.id) ?? []).filter((s) => s.status === 'running')
+                      const wsLabel = `${label} / ${ws.name}${ws.branch ? ` · ${ws.branch}` : ''}`
+                      const mark = initials(ws.name)
+                      return (
+                        <button
+                          key={ws.id}
+                          type="button"
+                          onClick={() => onSelectWorkspace(ws.id)}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            onWorkspaceMenu(ws.id, { x: e.clientX, y: e.clientY })
+                          }}
+                          onKeyDown={(e) => menuKey(e, (anchor) => onWorkspaceMenu(ws.id, anchor))}
+                          aria-current={active || undefined}
+                          aria-label={wsLabel}
+                          title={wsLabel}
+                          data-active={active || undefined}
+                          style={attn ? ({ '--attn': attentionColor } as CSSProperties) : undefined}
+                          className={`superior-worktree-row relative flex h-9 w-9 flex-col items-center justify-center gap-1 rounded-md transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                            active ? 'bg-hover text-fg' : 'text-fgdim hover:bg-hover hover:text-fg'
+                          }`}
+                        >
+                          <span className="font-mono text-[11px] font-semibold leading-none">
+                            {mark.charAt(0).toUpperCase() + mark.slice(1).toLowerCase()}
+                          </span>
+                          {running.length > 0 ? <AgentDots sessions={running} max={3} /> : <span aria-hidden className="h-1.5" />}
+                          {attn && (
+                            <span
+                              style={{ '--attn': attentionColor } as CSSProperties}
+                              className="attention-pulse-dot absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-bar"
+                            />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })}

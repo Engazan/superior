@@ -423,6 +423,22 @@ body {
   color: var(--c-agent-claude-fg);
 }
 
+.superior-rail-project {
+  background: var(--c-panel);
+  color: var(--c-fgdim);
+  box-shadow: inset 0 0 0 1px var(--c-edge);
+}
+
+.superior-rail-project:hover {
+  color: var(--c-fg);
+}
+
+.superior-rail-project[data-active='true'] {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+  box-shadow: inset 0 0 0 1px var(--c-accent-border);
+}
+
 .superior-project-row[data-active='true'] .superior-project-icon {
   background: var(--c-accent-bg);
   color: var(--c-accent);
@@ -591,6 +607,12 @@ body {
 @media (max-width: 1120px) {
   .superior-project-crumb {
     display: none;
+  }
+
+  /* With the sidebar collapsed the title bar is the only place that names
+     the project, so keep the crumb even on narrow windows. */
+  .superior-titlebar[data-sidebar='collapsed'] .superior-project-crumb {
+    display: inline;
   }
 }
 

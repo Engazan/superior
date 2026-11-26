@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { GripIcon, KebabIcon, PlusIcon } from '../ui'
-import { FolderGlyph, folderLabel, folderTitle } from './parts'
+import { FolderGlyph, folderLabel, folderTitle, initials } from './parts'
 import type { Folder } from '../../types'
 
 type MenuAnchor = HTMLElement | { x: number; y: number }
@@ -45,7 +45,6 @@ export function FolderHeader({
 }: Props): React.JSX.Element {
   const { t } = useI18n()
   const label = folderLabel(folder)
-  const [firstWord = '?', secondWord] = label.replace(/([\p{Ll}\p{N}])(\p{Lu})/gu, '$1 $2').match(/[\p{L}\p{N}]+/gu) ?? []
   const localPath = folder.path.replace(/\\/g, '/').replace(/(.)\/+$/, '$1')
   const lastSlash = localPath.lastIndexOf('/')
   const rootLength = /^[a-z]:\//i.test(localPath) ? 3 : 1
@@ -53,7 +52,7 @@ export function FolderHeader({
   const subtitle = folder.kind === 'remote' && folder.remote
     ? `ssh · ${folder.remote.host}`
     : parentPath.replace(/^\/(?:Users|home)\/[^/]+(?=\/|$)/, '~')
-  const initials = secondWord ? firstWord.charAt(0) + secondWord.charAt(0) : firstWord.slice(0, 2)
+  const mark = initials(label)
   return (
     <div
       role="button"
@@ -92,7 +91,7 @@ export function FolderHeader({
         className="superior-project-icon grid size-7 shrink-0 place-items-center rounded-lg text-xs font-bold" aria-hidden>
         {folder.icon
           ? <FolderGlyph folder={folder} size={18} />
-          : initials.toUpperCase()}
+          : mark.toUpperCase()}
       </span>
       <span className="min-w-0 flex-1">
         <span className={`block truncate text-[13px] leading-4 ${active ? 'font-semibold text-fg' : 'font-medium text-fg2'}`}>

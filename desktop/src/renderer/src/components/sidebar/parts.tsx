@@ -4,6 +4,12 @@ import type { WorkspaceGitStat } from '../../hooks/useWorkspaceGitStats'
 import { FolderIcon } from '../ui'
 import type { Folder } from '../../types'
 
+/** Two-letter mark for a name: initials of its first two words, else its first two letters. */
+export function initials(name: string): string {
+  const [first = '?', second] = name.replace(/([\p{Ll}\p{N}])(\p{Lu})/gu, '$1 $2').match(/[\p{L}\p{N}]+/gu) ?? []
+  return second ? first.charAt(0) + second.charAt(0) : first.slice(0, 2)
+}
+
 export function initial(name: string): string {
   return (name.trim().charAt(0) || '?').toUpperCase()
 }

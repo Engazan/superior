@@ -35,6 +35,8 @@ interface Props {
   /** Show the sidebar toggle (hidden in settings, where there is no sidebar). */
   showToggle: boolean
   projectName?: string
+  /** Active workspace name; shown after the project when it differs from the branch. */
+  workspaceName?: string
   onOpenPalette: () => void
   gitStatus: GitStatus | null
   gitLoading: boolean
@@ -89,6 +91,7 @@ export function TitleBar({
   dashboardPendingCount,
   showToggle,
   projectName,
+  workspaceName,
   onOpenPalette,
   gitStatus,
   gitLoading,
@@ -128,6 +131,7 @@ export function TitleBar({
   const onMaximize = isMac ? undefined : () => window.api.windowToggleMaximize()
   return (
     <header
+      data-sidebar={sidebarCollapsed ? 'collapsed' : 'expanded'}
       className="superior-titlebar app-drag relative z-40 flex min-h-[59px] shrink-0 items-center bg-panel transition-colors duration-200"
       style={tint}
     >
@@ -141,7 +145,13 @@ export function TitleBar({
         {showToggle && (
           <div className="app-no-drag flex min-w-0 items-center gap-3">
             <SidebarToggle onClick={onToggle} expanded={!sidebarCollapsed} />
-            {projectName && <span className="superior-project-crumb max-w-28 truncate font-semibold text-fgdim" title={projectName}>{projectName}</span>}
+            {projectName && <span className="superior-project-crumb max-w-40 truncate font-semibold text-fgdim" title={projectName}>{projectName}</span>}
+            {projectName && workspaceName && workspaceName.toLowerCase() !== (gitStatus?.branch ?? '').toLowerCase() && workspaceName !== 'Main' && (
+              <>
+                <span className="superior-project-crumb text-fgmuted" aria-hidden>/</span>
+                <span className="superior-project-crumb max-w-40 truncate font-mono text-[12.5px] text-fg" title={workspaceName}>{workspaceName}</span>
+              </>
+            )}
             {showGit && (
               <>
                 {projectName && <span className="superior-project-crumb text-fgmuted" aria-hidden>/</span>}

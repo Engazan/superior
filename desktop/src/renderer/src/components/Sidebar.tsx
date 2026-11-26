@@ -550,6 +550,7 @@ export const Sidebar = memo(function Sidebar({
         folders={folders}
         projectWorkspaces={(path) => projectWorkspaces(path)}
         activeWorkspaceId={activeWorkspaceId}
+        sessionsByWorkspace={sessionsByWorkspace}
         busyWorkspaceIds={busyWorkspaceIds}
         attentionWorkspaceIds={attentionWorkspaceIds}
         attentionColor={attentionColor}

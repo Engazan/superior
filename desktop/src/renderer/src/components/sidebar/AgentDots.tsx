@@ -10,13 +10,13 @@ const MAX_DOTS = 4
  * One dot per terminal of a worktree, in the same colors as the terminal
  * status spine, so every worktree row shows what runs in it and what waits.
  */
-export function AgentDots({ sessions }: { sessions: AgentSession[] }): React.JSX.Element | null {
+export function AgentDots({ sessions, max = MAX_DOTS }: { sessions: AgentSession[]; max?: number }): React.JSX.Element | null {
   const { t } = useI18n()
   const states = useAgentSessionStates()
   const attention = useAttentionSessions()
   const busy = useBusySessions()
   if (sessions.length === 0) return null
-  const shown = sessions.slice(0, MAX_DOTS)
+  const shown = sessions.slice(0, max)
   const extra = sessions.length - shown.length
   return (
     <span role="img" aria-label={`${t('sidebar.runningTerminals')}: ${sessions.length}`} className="flex shrink-0 items-center gap-1">
