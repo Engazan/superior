@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.1] - 2026-11-27
+
+### Fixed
+
+- **Release build.** Align mobile dependencies with Expo SDK 58.1 so the
+  compatibility check passes and desktop packaging can start.
+
 ## [0.40.0] - 2026-11-26
 
 ### Added
